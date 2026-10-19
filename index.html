@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="In-game mod menu for Middle-earth: Shadow of War (Steam 1.21). Rebuild your army, fight with new powers and repaint Mordor. Download v1.392, read the change log, find the community on Discord."><meta name="theme-color" content="#66bff2"><meta property="og:type" content="website"><meta property="og:site_name" content="SoW:CE"><meta property="og:title" content="SoW:CE: Shadow of War Community Edition mod menu"><meta property="og:description" content="In-game mod menu for Middle-earth: Shadow of War (Steam 1.21). Rebuild your army, fight with new powers and repaint Mordor. Download v1.392, read the change log, find the community on Discord."><meta property="og:url" content="https://sow-ce.github.io/"><meta property="og:image" content="https://sow-ce.github.io/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%23c9d2df' stroke-width='6.5'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%2366bff2' stroke-width='1.6' stroke-dasharray='2.4 2.4'/%3E%3C/svg%3E"><link rel="canonical" href="https://sow-ce.github.io/"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="A mod menu for Middle-earth: Shadow of War on Steam (game version 1.21). Version 1.392 is out, with its patch notes on the site."><meta name="theme-color" content="#66bff2"><meta property="og:type" content="website"><meta property="og:site_name" content="SoW:CE"><meta property="og:title" content="Shadow of War: Community Edition"><meta property="og:description" content="A mod menu for Middle-earth: Shadow of War on Steam (game version 1.21). Version 1.392 is out, with its patch notes on the site."><meta property="og:url" content="https://sow-ce.github.io/"><meta property="og:image" content="https://sow-ce.github.io/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%23c9d2df' stroke-width='6.5'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%2366bff2' stroke-width='1.6' stroke-dasharray='2.4 2.4'/%3E%3C/svg%3E"><link rel="canonical" href="https://sow-ce.github.io/"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>SoW:CE Mod Menu</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -51,8 +51,8 @@ code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril)}
 /* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:8px;text-decoration:none;cursor:pointer;border:1px solid transparent;font-family:var(--f-display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1.1;transition:background .15s,border-color .15s,transform .15s,box-shadow .15s,color .15s}
 .btn .ico{width:1.15em;height:1.15em;flex:none}
-.btn-primary{background:linear-gradient(180deg,var(--primary-hi),var(--primary));color:#f4fbff;border-color:#4a95cc;box-shadow:0 0 0 1px rgba(102,191,242,.12),0 12px 34px -12px rgba(102,191,242,.6)}
-.btn-primary:hover{background:linear-gradient(180deg,#3f95d1,var(--primary-hi));color:#fff;transform:translateY(-1px)}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary-hi)}
+.btn-primary:hover{background:var(--primary-hi);color:#fff}
 .btn-lg{font-size:clamp(17px,1.6vw,20px);padding:17px 28px;min-height:60px}
 .btn-sm{font-size:13px;padding:9px 15px}
 .btn-ghost{background:transparent;color:var(--text);border-color:var(--edge-hi);font:600 15.5px/1.1 var(--f-body);letter-spacing:0;text-transform:none;padding:16px 22px;min-height:60px}
@@ -74,7 +74,7 @@ h1 span{display:block;font-style:italic;font-weight:600;color:var(--accent-hi);f
 .meta-line{margin-top:26px;display:flex;flex-wrap:wrap;justify-content:center;row-gap:4px;font:500 13.5px/1.5 var(--f-mono);color:var(--dim);font-variant-numeric:tabular-nums;text-shadow:0 1px 10px rgba(10,10,14,.95)}
 .meta-line span + span::before{content:"·";margin:0 12px;color:var(--faint)}
 .notice{display:inline-flex;align-items:center;gap:10px;margin-bottom:18px;padding:7px 14px;border:1px solid var(--accent-deep);border-radius:999px;color:var(--accent-hi);font-size:14px;background:rgba(15,15,20,.7)}
-.notice::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);flex:none}
+.notice::before{content:none}
 .owner-hint{margin-top:18px;padding:10px 14px;border:1px dashed var(--accent-deep);border-radius:8px;color:var(--accent-hi);font-size:14px;max-width:34em;background:rgba(15,15,20,.7)}
 .ring-legend{transform-box:view-box;transform-origin:50% 50%;animation:ring-spin 140s linear infinite}
 .ring-legend text{font-family:var(--f-tengwar);font-size:20.4px;fill:var(--accent-hi);white-space:pre;animation:kindle 2.6s ease-out both}
@@ -104,7 +104,7 @@ section[id]{scroll-margin-top:72px}
 /* features */
 .feat-layout{display:grid;grid-template-columns:232px minmax(0,1fr);gap:clamp(20px,3vw,44px);align-items:start}
 .rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 84px);background:var(--panel);border:1px solid var(--edge);border-radius:var(--r);padding:10px}
-.rail-group{font:600 10.5px/1 var(--f-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--faint);padding:16px 10px 7px}
+.rail-group{font:600 12.5px/1 var(--f-body);color:var(--faint);padding:16px 10px 7px}
 .rail-item{display:flex;width:100%;justify-content:space-between;align-items:center;gap:10px;background:none;border:0;border-radius:6px;padding:8px 10px;color:var(--dim);font:500 14.5px/1.25 var(--f-body);cursor:pointer;text-align:left}
 .rail-item em{font:500 12px/1 var(--f-mono);font-style:normal;color:var(--faint)}
 .rail-item:hover{background:var(--panel-2);color:var(--text)}
@@ -138,13 +138,14 @@ section[id]{scroll-margin-top:72px}
 /* change log */
 .wrap.narrow{max-width:960px}
 .cl-meta{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:14px;font:500 13.5px/1.4 var(--f-mono);color:var(--dim);overflow-wrap:anywhere}
-.cl-sec{display:grid;grid-template-columns:170px minmax(0,1fr);gap:22px;padding:26px 0;border-top:1px solid var(--edge)}
-.chip{display:inline-flex;align-self:start;align-items:center;gap:9px;font:600 12px/1.3 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--k);padding-top:3px}
-.chip::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--k);box-shadow:0 0 10px var(--k);flex:none}
+.cl-sec{padding:22px 0 6px;border-top:1px solid var(--edge)}
+.chip{font:700 21px/1.3 var(--f-display);color:var(--k)}
+.chip::before{content:none}
 .cl-new{--k:var(--accent)}.cl-improved{--k:var(--ok)}.cl-fixed{--k:var(--warn)}.cl-issue{--k:var(--bad)}.cl-other{--k:var(--dim)}
-.cl-sec ul{list-style:none;margin:0;padding:0;display:grid;gap:14px;min-width:0}
+.cl-sec ul{margin:10px 0 0;padding-left:22px;display:grid;gap:8px;min-width:0}
 .cl-sec li{color:var(--dim);line-height:1.55}
-.cl-sec li b{display:block;color:var(--text);font-weight:600}
+.cl-sec li b{color:var(--text);font-weight:600}
+.cl-sec li::marker{color:var(--k)}
 .hist{margin-top:30px;border-top:1px solid var(--edge);padding-top:20px}
 .hist summary{cursor:pointer;color:var(--accent-hi);font-weight:600}
 .hist-ver{margin-top:26px}
@@ -173,9 +174,9 @@ section[id]{scroll-margin-top:72px}
 @media (max-width:860px){.steps,.req-grid{grid-template-columns:1fr}}
 
 /* faq */
-.faq{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 clamp(24px,4vw,56px)}
+.faq{display:block}
 .qa{padding:24px 0;border-top:1px solid var(--edge);min-width:0}
-.qa h3{font:700 21px/1.3 var(--f-display)}
+.qa h3{font:600 17.5px/1.4 var(--f-body)}
 .qa p{color:var(--dim);margin-top:8px}
 @media (max-width:860px){.faq{grid-template-columns:1fr}}
 
@@ -197,6 +198,14 @@ section[id]{scroll-margin-top:72px}
 .btn-head{background:transparent;color:var(--text);border-color:var(--accent-deep);font:600 14px/1 var(--f-body);letter-spacing:0;text-transform:none;padding:10px 15px;gap:8px}
 .btn-head:hover{border-color:var(--accent);color:var(--accent-hi);background:rgba(102,191,242,.06)}
 .btn-head .ico{width:17px;height:17px}
+
+/* install, written as a plain list */
+.howto{margin:0;padding-left:24px;display:grid;gap:10px;font-size:17px}
+.howto li::marker{color:var(--accent);font-weight:700}
+.howto-note{color:var(--dim);margin-top:14px}
+.plain-h3{font:700 21px/1.3 var(--f-display);margin-top:38px}
+.reqs{margin:10px 0 0;padding-left:22px;display:grid;gap:6px;color:var(--dim)}
+.install-sha p{color:var(--dim);margin-top:10px}
 
 /* community band */
 .community{border-top:1px solid var(--edge);background:var(--bg-deep)}
@@ -258,7 +267,7 @@ section[id]{scroll-margin-top:72px}
     </a>
     <nav class="nav" aria-label="Page sections">
       <a href="#features">Features</a>
-      <a href="#changelog">What's new</a>
+      <a href="#changelog">Patch notes</a>
       <a href="#install">Install</a>
       <a href="#faq">FAQ</a>
     </nav>
@@ -310,12 +319,11 @@ section[id]{scroll-margin-top:72px}
   </div>
   <div class="wrap hero-center">
     <div data-slot="notice"></div>
-    <p class="eyebrow">PC mod menu for Middle-earth: Shadow of War</p>
     <h1>Shadow of War<span>Community Edition</span></h1>
-    <p class="lead">An in-game mod menu for the Steam release. Rebuild your army captain by captain, fight with powers Talion never had, and repaint Mordor, all from one window that opens with TAB.</p>
+    <p class="lead">A mod menu for Middle-earth: Shadow of War on Steam (game version 1.21). Install it with the setup, then press TAB in game to open it.</p>
     <div class="cta-row">
       <span data-slot="dl-lg"></span>
-      <a class="btn btn-ghost" href="#changelog"><span>What's new in <span data-slot="ver"></span></span></a>
+      <a class="btn btn-ghost" href="#changelog"><span>Patch notes</span></a>
     </div>
     <div data-slot="dl-note"></div>
     <p class="meta-line" data-slot="file-meta"></p>
@@ -323,31 +331,18 @@ section[id]{scroll-margin-top:72px}
   </div>
 </section>
 
-<section class="facts" aria-label="At a glance">
-  <div class="wrap">
-    <ul>
-      <li><b>10</b><span>menu tabs, from Talion to the game's own data</span></li>
-      <li><b>~45</b><span>panels, each one a Ctrl+F away</span></li>
-      <li><b>1</b><span>setup to install, update, repair or remove it</span></li>
-      <li><b>TAB</b><span>opens the menu in game</span></li>
-    </ul>
-  </div>
-</section>
-
 <section class="section" id="features">
   <div class="wrap">
     <header class="sec-head">
-      <p class="eyebrow">Features</p>
       <h2>What this mod menu includes</h2>
-      <p class="sec-lead">Grouped the way the menu groups them. Each entry shows where to find it in game.</p>
+      <p class="sec-lead">Everything here is in v1.392 and has been tested in game. It's grouped the same way as the menu's tabs, and each entry shows where to find it.</p>
     </header>
     <div class="feat-layout">
       <nav class="rail" aria-label="Menu tabs" data-slot="rail"></nav>
       <div class="feat-main">
         <div class="feat-tools">
           <label class="sr" for="feat-q">Find a feature</label>
-          <input id="feat-q" type="search" autocomplete="off" placeholder="Find a feature, like Army Grid or weather">
-          <span class="kbd">In game: Ctrl+F</span>
+          <input id="feat-q" type="search" autocomplete="off" placeholder="Search, like Army Grid or weather">
         </div>
         <p class="feat-count" data-slot="feat-count" aria-live="polite"></p>
         <ul class="feat-list" data-slot="features"></ul>
@@ -359,7 +354,6 @@ section[id]{scroll-margin-top:72px}
 <section class="section section-alt" id="changelog">
   <div class="wrap narrow">
     <header class="sec-head">
-      <p class="eyebrow">Change log</p>
       <h2 data-slot="cl-title"></h2>
       <p class="cl-meta" data-slot="cl-meta"></p>
     </header>
@@ -369,64 +363,50 @@ section[id]{scroll-margin-top:72px}
 </section>
 
 <section class="section" id="install">
-  <div class="wrap">
+  <div class="wrap narrow">
     <header class="sec-head">
-      <p class="eyebrow">Install</p>
-      <h2>Up and running in three steps</h2>
+      <h2>How to install</h2>
     </header>
-    <ol class="steps">
-      <li><span class="n">1</span><h3>Download</h3><p>Get <code data-slot="file-name"></code> from the download button<span data-slot="file-size-text"></span>.</p></li>
-      <li><span class="n">2</span><h3>Run the setup</h3><p>Close the game first. The setup finds your Steam copy, checks it, and installs the mod menu with one click. Later, the same button says Update, Repair or Play.</p></li>
-      <li><span class="n">3</span><h3>Press TAB in game</h3><p>Start Shadow of War from Steam, or press Play in the setup. TAB opens the menu.</p></li>
+    <ol class="howto">
+      <li>Download the setup, <code data-slot="file-name"></code><span data-slot="file-size-text"></span>.</li>
+      <li>Close the game, then run the setup. It finds your Steam install on its own.</li>
+      <li>Click Install, start the game from Steam, and press TAB.</li>
     </ol>
-    <div class="req-grid">
-      <div class="req">
-        <h3>Requirements</h3>
-        <dl>
-          <div><dt>System</dt><dd>Windows 10 or 11, 64-bit</dd></div>
-          <div><dt>Game</dt><dd>Middle-earth: Shadow of War on Steam, game version 1.21</dd></div>
-          <div><dt>Runtime</dt><dd>Microsoft Visual C++ x64 runtime. The setup checks for it and links the installer.</dd></div>
-          <div><dt>N editions</dt><dd>Windows N and KN also need the Media Feature Pack.</dd></div>
-        </dl>
-      </div>
-      <div class="verify">
-        <h3>Check your download</h3>
-        <p>Compare the setup's SHA-256 with this one before you run it.</p>
-        <div class="hash"><code id="sha-code" data-slot="sha"></code><button type="button" class="btn-copy" id="copy-sha">Copy</button></div>
-        <p class="small">In PowerShell, in the folder you saved it to: <code data-slot="hash-cmd"></code></p>
-      </div>
+    <p class="howto-note">Later on, the same setup handles updates, repairs and uninstalling.</p>
+    <h3 class="plain-h3">You'll need</h3>
+    <ul class="reqs">
+      <li>Windows 10 or 11 (64-bit)</li>
+      <li>Middle-earth: Shadow of War on Steam, game version 1.21</li>
+      <li>The Visual C++ x64 runtime (the setup tells you if it's missing)</li>
+      <li>On Windows N or KN editions, the Media Feature Pack</li>
+    </ul>
+    <div class="install-sha">
+      <h3 class="plain-h3">Checking the download</h3>
+      <p>If you want to make sure your copy is the real one, its SHA-256 should be:</p>
+      <div class="hash"><code id="sha-code" data-slot="sha"></code><button type="button" class="btn-copy" id="copy-sha">Copy</button></div>
+      <p class="small">In PowerShell: <code data-slot="hash-cmd"></code></p>
     </div>
   </div>
 </section>
 
 <section class="section section-alt" id="faq">
-  <div class="wrap">
+  <div class="wrap narrow">
     <header class="sec-head">
-      <p class="eyebrow">Questions</p>
-      <h2>Before you install</h2>
+      <h2>FAQ</h2>
     </header>
     <div class="faq">
-      <div class="qa"><h3>Which version of the game does it need?</h3><p>The Steam release of Middle-earth: Shadow of War, game version 1.21, on 64-bit Windows 10 or 11. The setup checks your copy before it changes anything.</p></div>
-      <div class="qa"><h3>How do I open the menu?</h3><p>Press TAB in game. Inside the menu, Ctrl+F jumps to any panel by name.</p></div>
-      <div class="qa"><h3>Will it change my save?</h3><p>Most mods run while the game runs and stop when you quit. What you change in the world through the menu, like a captain you move or bring back, is saved the way the game saves anything. SoW:CE backs up your saves every time the game starts, and the setup can restore any backup.</p></div>
-      <div class="qa"><h3>Do my mods stay on after a restart?</h3><p>Not by default, so every launch starts clean. To keep them, turn on "Remember mods between launches" in the menu under Settings, Mods &amp; Startup.</p></div>
-      <div class="qa"><h3>Windows warned me about the setup. Is that normal?</h3><p>The setup is not code-signed, so SmartScreen may say "Windows protected your PC". Download it only from this page and compare its SHA-256 with the one above. If they match, choose More info, then Run anyway.</p></div>
-      <div class="qa"><h3>Does it work with my other mods?</h3><p>Packet mods keep working, and the setup can turn them into archive mods. Another mod that also loads through winhttp.dll has to come out first; the setup tells you if it finds one.</p></div>
-      <div class="qa"><h3>How do I update or uninstall?</h3><p>Run the newest setup. Its one button says Install, Update, Repair or Play, depending on what it finds. Uninstall is the link at the bottom of the setup window. Steam's "Verify integrity" removes the Armory weapons; run the setup again to put them back.</p></div>
-      <div class="qa"><h3>Something went wrong. What should I send?</h3><p>In the setup, choose "Report a problem". It saves a report file with your logs. <span data-slot="contact"></span></p></div>
+      <div class="qa"><h3>Which version of the game does it work with?</h3><p>The Steam version, game version 1.21, on 64-bit Windows 10 or 11. Other versions won't work. The setup checks your game before it changes anything.</p></div>
+      <div class="qa"><h3>How do I open the menu?</h3><p>Press TAB in game. Inside the menu, Ctrl+F searches every panel.</p></div>
+      <div class="qa"><h3>Will it mess with my save?</h3><p>Most of it only lasts while the game is running. Things you change in the world, like moving a captain or bringing one back, get saved the same as anything else you do in game. Your saves are also backed up every time the game starts, and the setup can restore any of those backups.</p></div>
+      <div class="qa"><h3>Why do my mods turn off when I restart?</h3><p>That's on purpose, so a bad setting can't follow you into the next launch. If you want them to stay on, turn on "Remember mods between launches" under Settings &gt; Mods &amp; Startup.</p></div>
+      <div class="qa"><h3>Windows says the setup might be unsafe</h3><p>The setup isn't code-signed, so SmartScreen warns about it. Only download it from here or the GitHub release. If you want, check its SHA-256 against the one above, then click More info and Run anyway.</p></div>
+      <div class="qa"><h3>Does it work with other mods?</h3><p>Packet mods work, and the setup can convert them into archive mods. Anything else that loads through winhttp.dll has to be removed first. The setup will tell you if it finds one.</p></div>
+      <div class="qa"><h3>How do I update or uninstall?</h3><p>Run the newest setup and click Update. Uninstall is at the bottom of the setup window. If you use Steam's "Verify integrity", run the setup again afterwards to get the Armory weapons back.</p></div>
+      <div class="qa"><h3>Something broke. What do I send you?</h3><p>In the setup, click "Report a problem". It saves a zip with your logs. <span data-slot="contact"></span></p></div>
     </div>
   </div>
 </section>
 
-<section class="final" aria-label="Download">
-  <div class="wrap final-inner">
-    <div>
-      <h2>One window to install, update and remove it</h2>
-      <p>The setup does all three, and SoW:CE backs up your saves every time the game starts.</p>
-    </div>
-    <span data-slot="dl-lg"></span>
-  </div>
-</section>
 <div data-slot="community"></div>
 </main>
 
@@ -441,7 +421,7 @@ section[id]{scroll-margin-top:72px}
   </div>
 </footer>
 </div>
-<script type="application/json" id="site-data">{"release":{"version":"1.392","date":"2026-10-18","url":"https://github.com/sow-ce/sow-ce.github.io/releases/download/v1.392/SoWCE_Setup_20261018.exe","file":"SoWCE_Setup_20261018.exe","size":"77.6 MB","sha256":"00334da685a3bf64d028adf13cd096ebe811290ea2782f38131de01d51068371"},"notice":"","links":{"communityLabel":"Discord","communityUrl":"https://discord.gg/shadow-of-war-modding-community-1135521354838458438","communityText":"Questions, bug reports and ideas for the next update all go here. Find me in the Shadow of War Modding Community on Discord.","supportLabel":"","supportUrl":""},"changelog":"## New\nArmy Grid: Drag a captain to another seat and the game moves him live.\nClass and Advanced Class: Change either one from the Army Grid. The captain's kit follows.\nLive Army screen: Every Army Grid edit shows on the Army screen at once.\nShoulder pads: Show both pads on any shoulder piece.\nResurrect: A dead captain stands up on the open Army screen with his gear.\nBalrog form: A transformed captain idles in his own form on the Army screen.\nSiege scenes: The hostage execution and the Overlord's arrival, on any orc.\nFight Pits: Pit fights open in regions you do not own.\nWorld Color: Recolour the atmosphere or tint every surface.\nPlayerForge: Spectral Wraith weapons in Talion's hand outside Wraith World.\nSkill variants: Every bought variant is active at once, and Rapid Throw fires fans of daggers.\n## Improved\nFlying Mode: Flies the way you look.\nInvisible to AI: Enemies forget you again right after you strike.\nInfinite Might: The Might bar now fills.\nInfinite Arrows: The HUD stays full, with no refill flash after each shot.\n## Fixed\nInfinite Arrows: Could show 0 arrows and stop you from shooting.\nShadow Dominate: The prompt was missing while every skill variant was active.\nNemesis Chaos: Could leave Talion without his bow. The bow is equipped again.\nEmotes: Stop works, and a stopped scene no longer leaves the screen dark.\n## Known issues\nMinimizing the game, or using Alt+Tab out of fullscreen, can crash it. A fix is coming in the next build. Until then, keep the game window open.\nThe game pauses while its window is in the background. Anything you start from the menu then runs when you switch back.\n","features":"# Dashboard\nDashboard | Quick Cheats | The most-used mods on one page, one click each: First Person, Infinite Might, Infinite Arrows, No Cooldowns and more.\nDashboard > Patches | Fight Pits anywhere | Pit fights open in regions you do not own, as long as one of your captains serves there. | new\nDashboard | Find any panel | In the menu, press Ctrl+F and type what you want, like weather or cooldown, to jump straight to it.\n# Talion\nTalion > Movement | First Person Camera | See the game through Talion's own eyes, finishers and kill-cams included, while the mouse aims as usual.\nTalion > Movement | Flying Mode | Fly the way you look and pass through walls and rock. | updated\nTalion > Movement | Mounts | Summon a mount, or ride a creature that is already in the world, an orc included.\nTalion > Movement | Army menu camera | Orbit freely around the fort in the Army menu and around a captain in his close-up.\nTalion > Status | Infinite Might | The Might bar fills and stays full, so every Might ability is ready. | updated\nTalion > Status | Infinite Arrows | The quiver never runs dry and the HUD stays at full. | updated\nTalion > Status | Every skill variant at once | Every upgrade you have bought for a skill is active together, and the Skills screen shows each one selected. | new\nTalion > Status | Stacked Quick Throw | Rapid Throw fires a full fan of daggers with every throw. | new\nTalion > Appearance | Play As | Play as another character's body. In Wraith World it becomes a true wraith, with its armour, ghost weapons and a ghost mount.\nTalion > Wraith | Invisible to AI | Enemies cannot see or hear you, and they forget you again right after you strike. | updated\nTalion > Wraith | Melee reach | Strike any enemy you lock onto, at any distance, rooftops included.\nTalion > Wraith | Shadow Chain | Left click becomes a Shadow Strike execution from any range. Click again to chain to the next enemy.\nTalion > Wraith | Shadow Pull | Press E to pull an enemy to you and execute him.\nTalion > Wraith | Blast on arrival | Every Shadow Strike kill ends in a fire explosion around the target.\nTalion > Wraith | Bow aimbot | Every arrow finds an enemy wherever you aim, with the red reticle on your target. Your allies are never hit.\nTalion > Emotes | Emotes and scenes | Play cinematic scenes and gestures on Talion, and stop one whenever you like. | updated\nTalion > Store | The 2017 Market | The War Chest shelf and the Gold counter are back in GARRISON, and chests open again.\n# Combat\nCombat > Damage & Skills | No Cooldowns | Skills, summons and mounts are ready again the moment you use them.\nCombat > Movesets | Melee effects | Give every sword hit an extra effect: enemies explode, freeze or are cursed.\n# Orcs\nOrcs > Army Grid | Army Grid | Your whole army on one screen. Drag a captain to another seat and the game moves him live. | new\nOrcs > Army Grid | Class and Advanced Class | Make a captain a Defender, Berserker, Archer or another class, or give him a new Advanced Class. His kit follows. | new\nOrcs > Army Grid | Live Army screen | Each edit shows on the Army screen at once, with no need to leave and come back. | new\nOrcs > Army Grid | Armour, heads and weapons | Pick each captain's armour, head and weapons, and show both shoulder pads on any shoulder piece. | new\nOrcs > Army Grid | Resurrect | Bring a dead captain back. He stands up on the open Army screen with his gear. | new\nOrcs > Army Grid | Balrog form | Turn a captain into a Balrog. On the Army screen he idles in his own form. | new\nOrcs > Army Grid | Epic and Legendary | Raise any captain to Epic or Legendary the way a Training Order does.\nOrcs > Randomizer | Army Randomizer | Re-roll one region's army: looks, weapons, tribes and titles, with a Safe and a MAX preset.\nOrcs > Chaos | Nemesis Chaos | Randomize the nemesis system across all three of its data layers.\nOrcs > Nemesis Events > Ambushes | Force ambushes | Trigger nemesis ambushes on demand. Each one fires in its captain's own region.\nOrcs > Nemesis Events > Encounters | Savior Strike | One of your captains steps in and kills the nearest enemy with a bow or a blade, under a slow-motion kill-cam.\nOrcs > Nemesis Events > Mercenary Camp | Mercenary Camp | Hire Desolation of Mordor mercenaries as Talion, straight from the Army menu.\nOrcs > Nemesis Events > Siege | Siege scenes | Play the hostage execution or the Overlord's arrival on any orc, outside any siege. | new\n# World\nWorld > Time & Weather | Weather and time | Change the weather and the time of day live, night rain included.\nWorld > World Scripts | World Scripts | Fire a region's own scripted events, like hiding the Minas Ithil keep or raising its curse barrier.\n# Spawner\nSpawner > Entities | Spawn anything | Spawn creatures and characters as your allies or as enemies.\nSpawner > Entities | Armory | New legendary weapons for Talion, like the Devouring Blade, with full attacks and combos.\nSpawner > World War | World War | Gondorian soldiers take spawn points across the region and fight the orcs. They are there the moment you fast travel.\n# Visuals\nVisuals > World | World Color | Recolour the sun, sky, haze and exposure, or tint every surface in the world. | new\nVisuals > Weapons | PlayerForge | Change the model of Talion's weapons, spectral Wraith blades included. | new\n# Areas\nAreas | Hidden areas | Visit hidden world sections and the fortress throne rooms.\n# Engine\nEngine > Tuner | Game data browser | Browse the game's own database: 2,742 categories and 18,979 fields.\n# Mods\nMods | Community mods | Run community Lua scripts and DLL plugins.\n# Outside the menu\nSetup | One-click setup | Install, update, repair and uninstall from one window. It finds your Steam copy for you.\nSetup | Packet mod converter | The setup turns your Find/Replace packet mods into archive mods, or keeps them as live packets.\nSetup | Save backups | SoW:CE backs up your saves every time the game starts, and the setup restores any backup.\n","history":[]}</script>
+<script type="application/json" id="site-data">{"release":{"version":"1.392","date":"2026-10-18","url":"https://github.com/sow-ce/sow-ce.github.io/releases/download/v1.392/SoWCE_Setup_20261018.exe","file":"SoWCE_Setup_20261018.exe","size":"77.6 MB","sha256":"00334da685a3bf64d028adf13cd096ebe811290ea2782f38131de01d51068371"},"notice":"","links":{"communityLabel":"Discord","communityUrl":"https://discord.gg/shadow-of-war-modding-community-1135521354838458438","communityText":"If you've got questions, found a bug or have an idea for the next update, I'm in the Shadow of War Modding Community Discord.","supportLabel":"","supportUrl":""},"changelog":"## Added\nArmy Grid: drag captains between slots and they move in game right away.\nClass and Advanced Class editing in the Army Grid.\nGear and class changes show up on the Army screen without reopening it.\nShoulder pads can show on both sides of any shoulder piece.\nResurrect: dead captains get back up on the open Army screen, gear and all.\nBalrog form, with its own idle on the Army screen.\nSiege scenes (hostage execution, Overlord's entrance) on any orc.\nFight Pits in regions you don't own.\nWorld Color: recolor the sky and fog, or tint every surface.\nPlayerForge: Wraith weapons in Talion's hand outside Wraith World.\nAll bought skill variants work at once, and Rapid Throw throws fans of daggers.\n## Changed\nFlying Mode now flies where you're looking.\nInvisible to AI: enemies lose track of you again after you hit them.\nInfinite Might actually fills the bar now.\nInfinite Arrows: the HUD stays full and doesn't flash after every shot.\n## Fixed\nInfinite Arrows could show 0 arrows and stop you shooting.\nThe Shadow Dominate prompt was missing with all skill variants on.\nNemesis Chaos could take Talion's bow away. It gets re-equipped now.\nEmotes: Stop works, and stopping a scene no longer leaves the screen dark.\n## Known issues\nMinimizing the game or Alt+Tabbing out of fullscreen can crash it. It's fixed for the next build; until then, don't minimize.\nThe game pauses when it's in the background, so anything you start from the menu waits until you're back.\n","features":"# Dashboard\nDashboard | Quick Cheats | First Person, Infinite Might, Infinite Arrows, No Cooldowns and the rest of the common toggles, all on the first page.\nDashboard > Patches | Fight Pits anywhere | Pit fights show up in regions you don't own, as long as one of your captains is stationed there. | new\nDashboard | Search | Press Ctrl+F in the menu and type what you're after, like weather or cooldown, to jump straight to it.\n# Talion\nTalion > Movement | First Person Camera | Play from Talion's eyes. Works in finishers and kill-cams too.\nTalion > Movement | Flying Mode | Fly wherever you're looking, straight through walls and rock. | updated\nTalion > Movement | Mounts | Summon a mount, or jump on something that's already in the world. Orcs count.\nTalion > Movement | Army menu camera | Rotate the camera freely in the Army menu and in the captain close-up.\nTalion > Status | Infinite Might | The Might bar stays full. | updated\nTalion > Status | Infinite Arrows | Your quiver never runs out and the HUD stays at max. | updated\nTalion > Status | All skill variants at once | Every skill upgrade you've bought works at the same time, and the Skills screen shows them all selected. | new\nTalion > Status | Stacked Quick Throw | Rapid Throw throws a whole fan of daggers every time. | new\nTalion > Appearance | Play As | Play as another character. Go into Wraith World and they turn into a proper wraith, armor, weapons and mount included.\nTalion > Wraith | Invisible to AI | Enemies can't see or hear you, and they lose track of you again right after you hit them. | updated\nTalion > Wraith | Melee reach | Hit whoever you're locked onto from any distance, rooftops included.\nTalion > Wraith | Shadow Chain | Left click does a Shadow Strike execution from any range. Keep clicking to chain to the next one.\nTalion > Wraith | Shadow Pull | E pulls an enemy over to you and executes him.\nTalion > Wraith | Blast on arrival | Shadow Strike kills set off a fire explosion.\nTalion > Wraith | Bow aimbot | Arrows go to an enemy wherever you aim, and the reticle turns red on your target. It won't hit your own followers.\nTalion > Emotes | Emotes and scenes | Play cinematic scenes and gestures on Talion, and stop them whenever you want. | updated\nTalion > Store | The 2017 Market | The old War Chest shelf and the Gold counter are back in GARRISON, and the chests open.\n# Combat\nCombat > Damage & Skills | No Cooldowns | Skills, summons and mounts are ready again straight away.\nCombat > Movesets | Melee effects | Sword hits can make enemies explode, freeze or get cursed.\n# Orcs\nOrcs > Army Grid | Army Grid | Your whole army on one screen. Drag a captain to another slot and he moves in game right away. | new\nOrcs > Army Grid | Class and Advanced Class | Turn a captain into a Defender, Berserker, Archer and so on, or give him a different Advanced Class. His gear changes to match. | new\nOrcs > Army Grid | Live Army screen | Gear and class changes show up on the Army screen right away. No backing out and reopening it. | new\nOrcs > Army Grid | Armor, heads and weapons | Pick each captain's armor, head and weapons. Shoulder pads can show on both sides now. | new\nOrcs > Army Grid | Resurrect | Bring a dead captain back. He gets up on the Army screen with his gear on. | new\nOrcs > Army Grid | Balrog form | Turn a captain into a Balrog. He even idles as one on the Army screen. | new\nOrcs > Army Grid | Epic and Legendary | Bump any captain up to Epic or Legendary, the same way a Training Order does.\nOrcs > Randomizer | Army Randomizer | Re-rolls a region's army: looks, weapons, tribes and titles. There's a Safe preset and a MAX one.\nOrcs > Chaos | Nemesis Chaos | Randomizes the nemesis system itself.\nOrcs > Nemesis Events > Ambushes | Force ambushes | Start a nemesis ambush when you want one. It happens in that captain's own region.\nOrcs > Nemesis Events > Encounters | Savior Strike | One of your captains jumps in and kills the nearest enemy, bow or blade, with a slow-mo kill-cam.\nOrcs > Nemesis Events > Mercenary Camp | Mercenary Camp | Hire the Desolation of Mordor mercenaries as Talion, from the Army menu.\nOrcs > Nemesis Events > Siege | Siege scenes | The hostage execution and the Overlord's entrance, on any orc, no siege needed. | new\n# World\nWorld > Time & Weather | Weather and time | Change the weather and time of day on the spot. Night rain included.\nWorld > World Scripts | World Scripts | Trigger a region's own scripted events, like hiding the Minas Ithil keep or putting up its curse barrier.\n# Spawner\nSpawner > Entities | Spawn anything | Spawn creatures and characters, friendly or hostile.\nSpawner > Entities | Armory | New weapons for Talion, like the Devouring Blade, with working attacks and combos.\nSpawner > World War | World War | Gondorian soldiers take over spawn points and fight the orcs. They're already there when you fast travel in.\n# Visuals\nVisuals > World | World Color | Recolor the sun, sky and fog, or tint the whole world. | new\nVisuals > Weapons | PlayerForge | Swap Talion's weapon models, including the ghostly Wraith ones. | new\n# Areas\nAreas | Hidden areas | Visit hidden parts of the map and the fortress throne rooms.\n# Engine\nEngine > Tuner | Game data browser | Browse the game's own database (2,742 categories, 18,979 fields). Mostly useful if you mod.\n# Mods\nMods | Community mods | Load other people's Lua scripts and DLL plugins.\n# Outside the menu\nSetup | Setup | Installs, updates, repairs and uninstalls. It finds your Steam folder on its own.\nSetup | Packet mods | The setup can turn Find/Replace packet mods into archive mods, or leave them as packets.\nSetup | Save backups | Your saves get backed up every time the game starts, and the setup can put any backup back.\n","history":[]}</script>
 <script id="site-js">
 (function () {
   "use strict";
@@ -630,7 +610,7 @@ section[id]{scroll-margin-top:72px}
   function logHtml(text) {
     return parseChangelog(text).map(function (s) {
       return '<section class="cl-sec cl-' + s.kind + '"><h3 class="chip">' + esc(s.title) + "</h3><ul>" +
-        s.items.map(function (i) { return "<li>" + (i.t ? "<b>" + esc(i.t) + "</b>" : "") + esc(i.d) + "</li>"; }).join("") +
+        s.items.map(function (i) { return "<li>" + (i.t ? "<b>" + esc(i.t) + ":</b> " : "") + esc(i.d) + "</li>"; }).join("") +
         "</ul></section>";
     }).join("");
   }
@@ -655,15 +635,15 @@ section[id]{scroll-margin-top:72px}
     var cu = safeUrl(l.communityUrl), su = safeUrl(l.supportUrl);
     if (cu) links.push('<a href="' + esc(cu) + '" target="_blank" rel="noopener">' + esc(l.communityLabel || "Community") + "</a>");
     if (su) links.push('<a href="' + esc(su) + '" target="_blank" rel="noopener">' + esc(l.supportLabel || "Support the project") + "</a>");
-    links.push('<a href="#changelog">Change log</a>', '<a href="#install">Install</a>', '<a href="#faq">FAQ</a>');
+    links.push('<a href="#top">Download</a>', '<a href="#changelog">Patch notes</a>', '<a href="#install">Install</a>', '<a href="#faq">FAQ</a>');
     fill("foot-links", links.join(""));
     var label = esc(l.communityLabel || "Community");
     var link = cu ? '<a href="' + esc(cu) + '" target="_blank" rel="noopener">' + label + "</a>" : "";
-    fill("contact", cu ? "Bring that file to me on " + link + ", and I will take a look." : "Send that file to the developer.");
+    fill("contact", cu ? "Send it to me on " + link + "." : "Send it to the developer.");
     fill("head-cta", cu ? '<a class="btn btn-head" href="' + esc(cu) + '" target="_blank" rel="noopener">' + ICON_CHAT + "<span>Join " + label + "</span></a>"
       : '<a class="btn btn-head" href="#changelog">' + esc(verText(st.release) || "Change log") + "</a>");
     fill("community", cu ? '<section class="community" aria-labelledby="community-title"><div class="wrap community-inner"><div>' +
-      '<p class="eyebrow">Community</p><h2 id="community-title">Find me on ' + label + "</h2>" +
+      '<h2 id="community-title">Find me on ' + label + "</h2>" +
       '<p class="community-text">' + esc(l.communityText || "Questions, bug reports and ideas all go here.") + "</p></div>" +
       '<a class="btn btn-ghost btn-join" href="' + esc(cu) + '" target="_blank" rel="noopener">' + ICON_CHAT + "<span>Join the " + label + "</span></a>" +
       "</div></section>" : "");
