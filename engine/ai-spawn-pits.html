@@ -1,0 +1,913 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI spawning, fight pits, gangs, mounts - Shadow of War engine reference</title><meta name="description" content="ambient spawning (channel = allegiance), fight pits, gangs, mounts"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" class="cur" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="ai-spawning-fight-pits-gangs-mounts">AI spawning, fight pits, gangs, mounts</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Moved verbatim from
+CLAUDE.md on 2026-10-27 (original lines 7452-7811, 7981-8114); heading levels normalised, text unchanged.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Read with care:</strong>
+- SimEvent participants are a fixed-count array (descriptor +0x0C), not NULL-terminated: never write fighters into "NULL slots" (corrected 2026-10-14 in the Arena section).</p>
+<p><strong>Sections:</strong>
+- Ambient Spawn System — CHANNEL = ALLEGIANCE (CRACKED + IN-GAME PROVEN 2026-08-17)
+  - Live placement struct — vtable RVA <code>0x1DC5800</code>, slab stride <code>0x1D0</code>
+- Arena / Pit Fight System (DECODED 2026-04-16)
+  - Fight Pits (the "Gauntlet") - quests + layer Lua (DECODED 2026-10-14, static + live + emulation; levers NOT...
+- Gang Spawn Redirect Pipeline (VERIFIED)
+- Mount System Architecture (CONFIRMED SPAWNING 2026-04-20)</p>
+<hr />
+<h2 id="ambient-spawn-system-channel-allegiance-cracked-in-game-proven-2026-08-17">Ambient Spawn System — CHANNEL = ALLEGIANCE (CRACKED + IN-GAME PROVEN 2026-08-17)</h2>
+<p>Three sessions were spent editing the CAST. The cast was never the lever.</p>
+<p><strong>An <code>AI/SpawnAmbient/AITypes</code> record carries no cast — it carries an ALLEGIANCE.</strong>
+<code>Owner_Infantry</code>, <code>Invader_Infantry</code> and <code>Enemy_Infantry</code> are identical in every populated
+field except one Int, <code>GruntPlayerFollowerStatus</code>, which partitions all 250 records with
+<strong>zero exceptions</strong> (the name prefix predicts it in all 250):</p>
+<table>
+<thead>
+<tr>
+<th>status</th>
+<th>n</th>
+<th>family</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>129</td>
+<td>enemy / wildlife / DEBUG — every <code>Enemy_*</code>, <code>Balrog</code></td>
+</tr>
+<tr>
+<td><strong>1</strong></td>
+<td><strong>42</strong></td>
+<td><strong>PLAYER ALLY — the humans</strong>: <code>Gondorian_Soldier/Captain/Enlisted/General/Trainee/ShieldMaiden/Medic*</code>, <code>DLC4_Easterling_Archer/Defender/Infantry</code>, <code>GP_Ranger</code>, <code>GP_Ratbag</code>, <code>Gollum</code>, <code>*_Friendly</code>, <code>*_Follower</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>24</td>
+<td>Owner (area garrison) — all <code>Owner_*</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>17</td>
+<td>Invader — all <code>Invader_*</code></td>
+</tr>
+<tr>
+<td>4 / 5</td>
+<td>19 / 19</td>
+<td><code>FortAssault_Owner_*</code> / <code>FortAssault_Invader_*</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Two structurally different channel kinds</strong> (per-record descriptor variants in one category):
+<strong>166 of 250 have <code>fc=6</code> and NO <code>Entries</code> field at all</strong> (FactionMember-selection path); 84 have
+<code>fc&gt;=8</code> with <code>Entries -&gt; _StructuresAISpawnAmbientTypeEntry</code> (template path). Writing a template
+into an <code>fc=6</code> channel's <code>Entries</code> writes a field that record does not have — that is why every
+cast-swap attempt produced nothing.</p>
+<blockquote>
+<p><strong>CORRECTED 2026-09-30 — that "no <code>Entries</code>" reading is Anvil's DISK view, not the live record.</strong>
+Live, <code>DLC_AI_Talion</code> and <code>Gondorian_Soldier</code> (both "fc=6" above) decode with <code>header_fc</code> 13 and
+an <code>Entries</code> array of one <code>_StructuresAISpawnAmbientTypeEntry</code> primary (cell 0 Int = 0, cell 1
+Template -&gt; <code>AI/Templates::AI_Talion</code> / <code>::Gondorian_Soldier</code>). The engine's own channel resolver
+<code>0x1B3098</code> walks that array (field accessor <code>0x1B3DD0</code>, template <code>0x1B3CFC</code>) and returns the
+template - measured by live-backed emulation on both channels. So the cast-swap failures were not
+"writing a field the record lacks"; re-check that ruling before building on it.</p>
+</blockquote>
+<p><strong>THE ENGINE SUBSTITUTES <code>Enemy_X</code> -&gt; <code>Owner_X</code> | <code>Invader_X</code> AT LOAD.</strong> 11 live channels are
+authored NOWHERE in island's 228 layers (<code>Goblin_Difficulty</code> 1,001 live; every <code>Invader_*</code>), while
+<code>Enemy_DifficultyAny</code> has 1,059 authored cells and <strong>0</strong> live. <strong>Status-1 human channels are NOT
+substituted</strong> — <code>Gondorian_Soldier</code> is authored 155 times and appears live 49 times under its own
+name. So a disk edit that writes a HUMAN channel survives load; one that writes <code>Owner_*</code>/<code>Enemy_*</code>
+is pointless.</p>
+<h3 id="live-placement-struct-vtable-rva-0x1dc5800-slab-stride-0x1d0">Live placement struct — vtable RVA <code>0x1DC5800</code>, slab stride <code>0x1D0</code></h3>
+<pre><code>+0x000 vtable      +0x0AC position   +0x0B8 rotation quaternion   (world-object law)
++0x0F0 sub-object vtable 0x1DB7120
++0x158 AI/SpawnAmbient/Areas (100%)   +0x160 AlarmAreas (27%)
++0x168 AI/SpawnAmbient/Predicates (41%) — the DISTANCE GATE
++0x170 AutoNodeTag   +0x178/188/190 FortAssault Side/SpawnTag/StageList
++0x198 Inventory/Transform            +0x1C0 CHANNEL (100%)
+</code></pre>
+<p>6,323 live in island / 3,993 in Minas Ithil. <strong>Position comes from the AI NODE, not the spawner
+row</strong> — byte-exact searches for placement coordinates in layer files return 0/400 while
+<code>world_join</code>'s control returns 3,349 hits. ~2,075 authored rows -&gt; 6,323 live placements (3.05x).
+Density knobs are on <code>_StructuresAISpawnAmbientPredicateEntry</code> (121 primaries): <code>RandomWeightRange</code>
+(Enum = float-pool min/max), <code>WindowLength</code>, <code>MustBeOffScreen</code>, <code>MustBeLineOfSight</code>.</p>
+<blockquote>
+<p><strong><code>SpawnManager+0x190</code> IS THE AMBIENT-OWNED COUNT, NOT THE ARRAY LENGTH.</strong> Measured n=4:
+array 66 / <code>+0x190</code> 27 / removal-bearing 27; 112/31/31; 43/41/41; 23/23/23. The discriminator is
+<code>entry+0x28</code> (the <code>AI/SpawnAmbient/Removal</code> record). Entities spawned by a MOD carry none and are
+invisible to it, so <code>sow_war_spawner.hpp</code>'s "+0x190 == the entity-array length" is wrong — that
+reading was taken when the array happened to be all-ambient, where the two are indistinguishable.
+True occupancy is <code>(end-begin)/0x40</code>. Upside: mod spawns do NOT consume the ambient budget, so
+<code>MaxAmbientAI</code> (+0x180) and an additive spawner are independent levers.</p>
+</blockquote>
+<p><strong>IN-GAME PROVEN 2026-08-17</strong> — pointing a live placement's <code>+0x1C0</code> at a status-1 channel makes
+that spawn point produce a HUMAN, and the Love/Hate matrix makes the orcs engage with no further
+wiring. Controlled (additive War Spawner OFF, so it could not confound; it cannot produce a
+removal-bearing entity anyway): <strong>before 23 ambient-owned / 0 human; after 59 ambient-owned /
+10 human (<code>Gondorian_Soldier</code> x10)</strong>. Then at scale: <strong>1,200 conversions across Minas Ithil,
+0 failed, no crash</strong>, spread over <code>MI_NobleQuarter</code> 493 / <code>MI_CommonQuarter</code> 327 /
+<code>MI_TradeQuarter</code> 236 / <code>MI_InternmentCamp</code> 89 / <code>MI_Gorge</code> 50 / <code>MI_RoyalTerrace</code> 5.</p>
+<p>Converting changes the MIX, not the population — raise <code>MaxAmbientAI</code> too or you get the same
+headcount in different armour. Convert a RATIO (~40%): converting everything transfers the city
+rather than starting a war. Skip <code>Prisoner</code>/<code>Graugapult</code>/<code>Closet</code> channels — staged content, and
+converting them reproduces the documented "humans in cages" result.</p>
+<p>C++: <code>framework/sowframework/sdk/sow_placement_war.hpp</code> (<strong>Placement War</strong> tab, auto-applies on
+world load). Python: <code>scripts/ambient_war_apply.py</code> (<code>--apply/--revert/--ratio/--budget</code>),
+<code>placement_census.py</code>, <code>ambient_war_conversion_survey.py</code>. Offline persistence route:
+<strong>1,152 four-byte in-place sites across 64 island layers</strong> (<code>island/fagameplay</code> 126,
+<code>island/spawnconditionsfort</code> 115) via <code>scripts/layer_retarget.py</code> — surveyed, NOT yet applied.</p>
+<p>Live writes die on a loading screen (the engine re-deserialises GADB instance state), so the
+conversion is re-armed per world load rather than assumed persistent.</p>
+<h2 id="arena-pit-fight-system-decoded-2026-04-16">Arena / Pit Fight System (DECODED 2026-04-16)</h2>
+<p>Built on the <strong>SimEvent</strong> framework. Game internally calls pit fights "Arena".</p>
+<p><strong>Architecture</strong>: SimEvent defines the event -&gt; SimEventChance controls win probability -&gt;
+SimEventParticipant defines who fights -&gt; Gauntlet wraps multi-stage fight pits.</p>
+<p><strong>Key categories and record counts</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Records</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Faction/Events/SimEvent</td>
+<td>431</td>
+<td>Event definitions (Arena, Duel, Feast, etc.)</td>
+</tr>
+<tr>
+<td>Faction/Events/SimEventChance</td>
+<td>34</td>
+<td>Win probability formulas</td>
+</tr>
+<tr>
+<td>Faction/Events/SimEventParticipant</td>
+<td>572</td>
+<td>Participant configs</td>
+</tr>
+<tr>
+<td>Faction/SimEvent/Gauntlet</td>
+<td>4</td>
+<td>Multi-stage pit fights (Island x3, SnowMountain)</td>
+</tr>
+<tr>
+<td>Faction/SimEvent/GauntletTier</td>
+<td>4</td>
+<td>Tier configs (IslandTier1-3, SnowMountainTier1)</td>
+</tr>
+<tr>
+<td>Faction/SimEvent/GauntletTierStage</td>
+<td>4</td>
+<td>Per-stage fight setups</td>
+</tr>
+<tr>
+<td>Arena/CameraDirector</td>
+<td>1</td>
+<td>Camera control (Duel_ACD)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>SimEventChance Field Layout — RE-DERIVED 2026-08-07 under the slot law (live + disk agree 8/8)</strong>.</p>
+<blockquote>
+<p>The old <code>idx*4</code> table here was dense-era: right field NAMES, wrong CELLS. It listed
+<code>+0x000 StartChance = 0.0</code> and <code>+0x008 HenchmanDeltaScalar = 0.05</code>; the value 0.05 is
+actually <code>CharacterLevelDeltaScalar</code>, and <code>StartChance</code> on Arena is <strong>0.5</strong>, not 0.0 —
+so "Arena starts at zero and is decided by bodyguards" was an artifact, not a finding.
+Slots below are <code>link</code>, offsets are <code>link*8</code>. Verified against the running game
+(<code>decode_record</code>) AND the shipped GADB — every scalar identical on both sides.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Offset</th>
+<th>Name</th>
+<th>Type</th>
+<th>Arena</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>+0x000</td>
+<td>SupporterDeltaScalar</td>
+<td>Float</td>
+<td>0.0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>+0x008</td>
+<td>CharacterLevelDeltaScalar</td>
+<td>Float</td>
+<td>0.05</td>
+</tr>
+<tr>
+<td>2</td>
+<td>+0x010</td>
+<td>PlayerFollowerTotalISDeltaScalar</td>
+<td>Float</td>
+<td>0.0025</td>
+</tr>
+<tr>
+<td>3</td>
+<td>+0x018</td>
+<td>TotalInteractionScoreDeltaScalarMax</td>
+<td>Float</td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>4</td>
+<td>+0x020</td>
+<td>StartChance</td>
+<td>Float</td>
+<td>0.5</td>
+</tr>
+<tr>
+<td>5</td>
+<td>+0x028</td>
+<td>TotalInteractionScoreDeltaScalar</td>
+<td>Float</td>
+<td>0.008</td>
+</tr>
+<tr>
+<td>6</td>
+<td>+0x030</td>
+<td>PlayerFollowerTotalISDeltaScalarMax</td>
+<td>Float</td>
+<td>1.1</td>
+</tr>
+<tr>
+<td>7</td>
+<td>+0x038</td>
+<td>HenchmanDeltaScalar</td>
+<td>Float</td>
+<td>0.15</td>
+</tr>
+<tr>
+<td>8</td>
+<td>+0x040</td>
+<td>ClampFinalChance</td>
+<td>Enum</td>
+<td>pool</td>
+</tr>
+<tr>
+<td>9</td>
+<td>+0x048</td>
+<td>TraitPairs</td>
+<td>RecordLink</td>
+<td>count <strong>20</strong> (array)</td>
+</tr>
+<tr>
+<td>40</td>
+<td>+0x140</td>
+<td>RPSPairs</td>
+<td>RecordLink</td>
+<td>count <strong>0</strong> — owns NO cell on Arena</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Win formula</strong>: <code>chance = StartChance + (levelDelta * LevelScalar) + (henchmen * HenchmanScalar) + (IS * TotalISScalar)</code></p>
+<p><strong>Key SimEventChance records</strong> (StartChance / CharLevel / Henchman / Supporter, live-verified):</p>
+<ul>
+<li><code>Arena</code> — 0.5 / 0.05 / 0.15 / 0.0 — the pit-fight baseline is a <strong>coin flip</strong>, not 0</li>
+<li><code>Default_2orc_arena</code> — 0.5 / 0.02 / 0.15 / 0.15 — default 2-orc arena</li>
+<li><code>Duel</code> — 0.5 / 0.02 / 0.15 / 0.15 — nemesis duels (identical to Default_2orc_arena)</li>
+<li><code>SubjectAlwaysWins</code> — <strong>StartChance 1.0</strong>, every scalar 0, the two <code>*Max</code> fields -1.0</li>
+<li><code>SubjectAlwaysLoses</code> — <strong>StartChance 0.0</strong>, every scalar 0, the two <code>*Max</code> fields -1.0
+  (the two forced outcomes differ ONLY in StartChance — the old table gave both 0.0,
+  which made them indistinguishable)</li>
+</ul>
+<p><strong>SimEvent WinChance links - CORRECTED 2026-10-14 (live <code>decode_record</code>, slot law).</strong> The old
+list here read neighbouring cells: <code>Duel -&gt; PowerStruggle_CD</code> was the <code>RequiredCooldown</code> cell,
+<code>Gauntlet* -&gt; PS_Subject</code> the <code>WinChanceJobSubject</code> cell. Live: <code>Arena</code> / <code>ArenaFollower</code> /
+<code>ArenaTest</code> / <code>Gauntlet</code> / <code>Gauntlet2</code> / <code>Gauntlet3</code> -&gt; <code>Arena</code>; <code>Duel</code> / <code>Duel_Origin</code> -&gt; <code>Duel</code>;
+<code>DuelG</code> -&gt; <code>Default_1orc_general</code>. WinChance only decides a SIMULATED outcome (the player walks
+away from a pit fight: <code>QR:SimulateSimEvent()</code>); a watched fight is decided by the fight.</p>
+<p><strong>SimEvent layout - CORRECTED 2026-10-14.</strong> SimEvent records carry PER-RECORD descriptor runs
+(Arena 56 cells, Gauntlet 51), so there is no category-wide offset table; read through the
+record's own run (<code>decode_record</code>, <a href="aire/gamedb/simevent.py">aire/gamedb/simevent.py</a>). On <code>Arena</code>:
+<code>Participants</code> +0x80 (<strong>count 3</strong>, cells +0x80/+0x88/+0x90), then +0x98 EventOnAssignSubject,
++0xA0 UniqueSimEventGroup, +0xA8 EventOnAssignOther, +0xB0 PlayerCreateDescPicker, +0xB8
+RequiredCooldown, +0xC0 PreferredSimEventTags, +0xC8 CanStealQuestFrom, +0xD0 WinChance.</p>
+<blockquote>
+<p><strong>THE "NULL-TERMINATED PARTICIPANT ARRAY" WAS A DENSE-ERA MISREAD, AND "WRITE MORE POINTERS INTO
+THE NULL SLOTS TO ADD FIGHTERS" WROTE INTO SIX OTHER FIELDS.</strong> <code>Participants</code> is an ordinary
+fixed-count RecordLink array (descriptor +0x0C). AIRE's <code>arena_expand</code> did exactly that write
+(participant records into EventOnAssignSubject / UniqueSimEventGroup / EventOnAssignOther /
+PlayerCreateDescPicker / RequiredCooldown / PreferredSimEventTags - the wrong-declared-type
+crash class) while the engine kept reading 3; it now refuses. And the participant list does not
+decide who FIGHTS in a pit: that is the layer's spawner sets (see "Fight Pits" below).
+Live counts: Arena 3, ArenaFollower 2, ArenaTest 3, Duel 5, Duel_Origin 5, DuelG 2,
+<strong>Gauntlet 1</strong> (<code>Gauntlet_02</code>; the old table's <code>Gauntlet_01, Gauntlet_02</code> was a neighbour cell),
+Gauntlet2 1 (<code>Gauntlet_Other_Lvl_2</code>), Gauntlet3 1 (<code>Gauntlet_Other_Lvl_3</code>).</p>
+</blockquote>
+<p><strong>SimEventParticipant key fields</strong> (19 fields):</p>
+<ul>
+<li>RewardList (RL): "Arena_Subject" or "Arena_Other" -- defines fighter role</li>
+<li>ChanceToFill (Float): -0.0 for arena records</li>
+<li>Exclusive (Bool): True for extra Duel/Feast slots (3+)</li>
+<li>CanBeBodyguard (Bool): False for arena</li>
+<li>Purposes (RL): "PowerStruggle" for Duels, NULL for Arena</li>
+</ul>
+<p><strong><code>Faction/SimEvent/Gauntlet*</code> is NOT what runs the Fight Pits</strong> (4 records Island/Island2/Island3/
+SnowMountain -&gt; GauntletTier -&gt; GauntletTierStage -&gt; SimEvent <code>Gauntlet*</code>; <code>QuestConquest</code> is their
+<code>NavMarkerTypeAvailable</code>, not a gate). The pits the player plays are QUESTS - see "Fight Pits".</p>
+<p><strong>Arena Camera System</strong> (Arena/CameraDirector):</p>
+<ul>
+<li>Single record "Duel_ACD" with ArenaRadius (Float, currently -0.0)</li>
+<li>13 camera entries (ArenaCenter, Stands_Wide/Medium/Narrow, Orbital, OTS, SideCombat)</li>
+<li>8 camera objects (Center, Combatant1, Combatant2, Fallback, Stands1-4) -- all share instance</li>
+<li>Combatant1_OBJ and Combatant2_OBJ = the two fighter camera targets</li>
+<li>Adding more combatant objects may be needed for multi-fighter camera support</li>
+</ul>
+<p><strong>Arena Mob Definitions</strong> (8 records): Arena_EnemyDef/Inf/Army/Olog_MD + Friendly variants,
+each with a single "Members" RecordLink field — these define the grunt fighters around the arena.</p>
+<p><strong>Arena SpawnScenarios</strong> (AI/SpawnAmbient): ArenaCombatants, ArenaCombatantsKeep,
+ArenaEventActivator/Keep, ArenaEventFight, beast-fight scenarios (GraugVsGraug, CaragVsCaragors,
+OlogVsOlog, SlorcRace), ArenaNamedVsOrcs (Priority=10), ArenaEventActivator (Priority=2, ForceNextScenario=True).</p>
+<h3 id="fight-pits-the-gauntlet-quests-layer-lua-decoded-2026-10-14-static-live-emulatio">Fight Pits (the "Gauntlet") - quests + layer Lua (DECODED 2026-10-14, static + live + emulation; levers NOT yet run in a pit fight)</h3>
+<p>The Army-menu cards "Fight Pits - Maggots / Warriors / Champions" are <strong>18 Quest/Quests records</strong>
+<code>&lt;MI|MP|IS|DE|VO|SM&gt;_Gauntlet{,2,3}</code> (Type <code>Quest/Types::Gauntlet</code>: <code>IsGauntlet</code>, <code>CanReplay</code> True,
+<code>XPAwardOnReplay</code> True, <strong><code>ItemAwardOnReplay</code> False</strong>). Per tier only the record differs:
+<code>JobSetupSimple</code> -&gt; <code>&lt;R&gt;_Gauntlet_Lvl_N</code> -&gt; job <code>PS_Other_Cap_Gauntlet_&lt;R&gt;[_Lvl_N]</code> -&gt; builder
+<code>Faction/FactionMemberBuilder::Gauntlet_&lt;Region&gt;_LvlN</code> (the champion); <code>ItemRewards</code> (Maggots
+<code>SkillPoint</code>, Warriors <code>PC_Mirian_Comb_Arena2_&lt;Region&gt;</code> = 5000 Mirian, Champions
+<code>PS_Raise_Child1_UNLOCK</code> (Minas Ithil = Undying Loyalty) or <code>Gauntlet3_CitadelUnlock_&lt;Region&gt;</code> -&gt;
+<code>ChildItemPicker &lt;Region&gt;SlotUnlocker</code>); <code>Predicates</code> (a <code>_StructuresQuestPredicates</code> primary:
+tier N needs <code>&lt;R&gt;_Gauntlet_Lvl_{N-1}_Complete</code>, <code>PlayerFollowerFactions</code> / <code>PlayerMustOwnZoneFactions</code>
+= the region army, <code>PlayerFollowerFilter</code> <code>Faction/CountFilters::IS_Gauntlet</code> = a follower captain,
+not a prisoner, no preset). Subject job <code>PS_Subject_Cap_Gauntlet</code> excludes Easterlings.
+Completion = GameData bools <code>&lt;R&gt;_Gauntlet_Lvl_N</code> (set by the fight script, not by the quest).</p>
+<p><strong>The fight is the layer script</strong>, one prefab <code>prefabs\gameplay\quests\powerstruggle\gauntlet.prefab06c</code>
+placed in <code>&lt;region&gt;/gauntlet_00/01/02</code> (QuestRelay <code>QuestRecord</code> = the tier's quest) and, as
+<code>arena.prefab06c</code>, in <code>&lt;region&gt;/arena_00</code> (the <code>Arena</code> power struggle between two enemy captains).
+Recover with <code>call("world_script", path=...)</code>; properties with <code>call("layer_properties", layer=...)</code>.
+- Spawner sets (layer property DB, <code>minasithil/gauntlet_00</code>): <code>C1</code> = job <code>PS_Subject</code> (your
+  follower), <code>C1G</code> his gang (count = his gang trait's size), <code>C2</code> = <code>PS_Other</code> (champion), <code>C2G</code>,
+  <code>Door</code> + <code>Spectator</code> (set <code>StartEnabled</code>, 30 spawns, alignment <code>Spectator</code>). Alignments
+  <code>Duelist_A</code> (C1 side) / <code>Duelist_B</code> (C2) / <code>Duelist_C</code> (hostile to both, neutral to Spectator).
+- Timer: <code>GameData.GauntletTimerValue</code> (150 s, read at fight start) -&gt; <code>ScriptTimer</code> 10 s ticks;
+  once under 135 s left every tick gives BOTH duelists <code>Script_Quest_ArenaDamageScalar</code>
+  (<code>Arena_DamageScalar</code>: <code>Float_DmgMod_All_PCT</code> +0.15 per stack). Timeout = draw: no global var,
+  <code>QR:SetCanAwardItems(false)</code>. <code>GauntletTimeRemaining</code> (120) is not read by this script.
+- Win: C2 killed -&gt; <code>Gauntlet_BlueOrc_Win</code> (ForceLevelUp, <code>RewardLists PS_DuelWin_CanChangeRole</code>,
+  <code>LevelsToAdd</code> 0) on your follower, <code>IncrementObjective(PS_Gauntlet_Obj)</code>, the tier's global var.
+  Loss: <code>Gauntlet_BlueOrc_Lose</code> + <code>Gauntlet_RedOrc_Win</code> (+1 level, <code>ClearBuilderInstance</code>) +
+  <code>AddGauntletEnemy</code> + picker <code>GauntletEnemy_EnterHierarchy</code> (the champion joins the army).
+  Walking away: <code>QR:SimulateSimEvent()</code> (WinChance <code>Arena</code>, see above). Domination of either
+  captain ends the fight (<code>SubjectDominated</code> / <code>OtherDominated</code>).
+- <strong>Dormant hazards</strong>: remote-script objects <code>rsOil/rsCaragor/rsGhul/rsArrows/rsGas/rsRiot/rsGraug</code>
+  listen to RemoteScripts <code>PS_Arena_Oil/Caragors/Ghul/Arrows/Gas/Riot/Graug</code> in all 29 gauntlet /
+  arena / arenaonline layers; <strong>no shipped script fires any of them</strong> (only <code>PS_Arena_DisableCollision</code>).
+  <code>Riot()</code> is the only one with a working body (each spectator -&gt; Duelist A/B/C at random). Arrows /
+  Oil / Ghul-mounds walk groups (<code>GArrows</code>, <code>GSpouts</code>, <code>GGhuls</code>) that NO pit layer sets (all 15
+  gauntlet + 5 arena layers checked 2026-10-15), and <code>SetGhuls</code> has no member spawners anywhere;
+  Caragors / Gas / Graug only print.
+- <strong>The pit script is patchable live (MEASURED 2026-10-15).</strong> While a layer is loaded, the main VM's
+  global <code>resources</code> maps each loaded layer to its section table (8 live in Minas Ithil; <code>reinstall</code>
+  = the compiled-chunk cache, weak <code>__mode v</code>); a script-object class is a HavokScript <code>struct</code>
+  (<code>type(v) == "struct"</code>, e.g. <code>_t2postfallprops_SO_Script_5ac5b84f</code>: <code>__constructor</code>, <code>__index</code>,
+  methods, <code>__eventmap</code>) and its method fields can be REASSIGNED (<code>pcall</code>, no error); instances
+  look methods up through <code>__index</code> = the class, so a reassignment reaches live instances. The
+  gauntlet class (<code>_gauntlet_SO_Script_5eae30cb</code>) is absent while its quest is only PreActivate.
+  <code>scripts/pit_fights_live.lua</code> patches the 7 hazard methods, captures the fight object through the
+  <code>PS_Arena_Graug</code> remote script (empty shipped body) and gives the empty hazards bodies built from
+  calls shipped scripts make: <code>AISpawnManager:SummonNPCs(anchor, DBAISpawnTemplate.X, n,
+  DBAISummonData.Summon_Bait)</code> (Lua stub <code>0x1BB1468</code>: anchor = any object, the Fortress bait layers
+  pass a CombatExplosion; <code>Summon_Bait</code> spawns at a <code>Combat/Teleport/Query</code> point and tags the NPC
+  <code>BaitSummonNPC</code> / <code>BaitNPC</code>, so <code>System:GetObjectsWithTag</code> finds them), then
+  <code>NPC:SetAlignment(DBAlignments.Duelist_C)</code> (wild <code>Warg_Brown</code> / <code>Troll_Cave</code> list neither duelist,
+  so without it they would go for the hidden player); <code>FireManager:StartFire(obj, DBFireIgnitionType.X)</code>
+  (stub <code>0x1BB07B0</code> -&gt; <code>0x4EBC60</code>, ignites at <code>obj+0xAC</code>; 39 <code>Fire/IgnitionTypes</code>, e.g. <code>Explosion</code>,
+  <code>OilArrow</code>, <code>GraugPsnAOEImpact</code>, <code>Bip_OnFire</code>).
+  First live run (2026-10-15, Gorgoroth): <code>Summon_Bait</code> spawns went to their query point and never
+  reached the pit, and <code>GetObjectsWithTag</code> found NO spawned AI (0 even for the pit's own C1/C2 tags);
+  0 spectators spawned, so <code>Riot()</code> has nobody to turn. Now <code>DBAISummonData.None</code> at the pit centre
+  (<code>tpCamTarget</code>), new summons found by name (<code>SpawnReq*</code>, absent before the summon) through
+  <code>aiCaptain2:GetAIWithinDistance(8000, DBCombatCharacterTypeList.AI_All, false)</code>. The third-side turn
+  then called <code>SetAlignment</code> from the bridge and FAULTED (see "Script-only natives" above): every side
+  change now runs in the pit timer's TimerTick handler (<code>PIT.tick</code>). Hazards in a fight: NOT yet seen.
+- <strong>Test aids, IN-GAME CONFIRMED 2026-10-15</strong> (user: "Health + infinite timer working"):
+  <code>CCharacter:SetMinHealthPct(1.0)</code> on both captains (no damage), and the class's <code>__eventmap</code>
+  entries <code>{func, name}</code> for <code>TimerComplete</code> / <code>TimerTick</code> swapped for no-ops + <code>ScriptTimer.Create(
+  so.scriptId, "ST", false, true):Pause()</code> (no draw, no damage ramp). The fight object is captured by
+  firing <code>PS_Arena_Graug</code> through a patched (empty-bodied) method.
+- <strong><code>DB&lt;Kind&gt;.Name</code> NEVER returns nil</strong> - an unknown name returns the "Null record" placeholder, the
+  same object as <code>DB&lt;Kind&gt;.None</code>. Test a name with <code>~= DB&lt;Kind&gt;.None</code> (control: a bogus name reads
+  <code>false</code>), never <code>~= nil</code>.
+- <strong>Play-as-orc branch</strong>: <code>QR:GetPlayerFactionMemberIndex()</code> (<code>0x1A50ED8</code> -&gt; <code>0x19F4D30</code>) is 1 / 2
+  when the player's play-as key <code>[player+0x2708]</code> (+0x2710 pool index, -1 = none) matches the
+  subject / other job's FM; the script then makes the PLAYER captain 1 / 2 (<code>SetC1:SetAIToSpawn(1,0)</code>).
+  The key is set by <code>CPlayerObj::SetPlayAsFactionMemberNPC</code> (<code>0x19BFA08</code> -&gt; <code>0x19BD070(player, fm, 1)</code>:
+  seed FM+0x168, personality, class model via <code>Character/Models.PlayerVersion</code> (set ONLY on GP_Ratbag
+  and Orc_Forthog), appearance FM+0x2D8, items <code>KeepItemWhenOrc</code>). It is a complete, reversible engine
+  feature: it parks the real model at player+0x2ED8, the appearance at +0x2EC8 and the INVENTORY
+  (VisualComponent +0x2348) at +0x2EC0; <code>ClearPlayAsFactionMemberNPC</code> (<code>0x19BB794</code> -&gt; secondary
+  vtable <code>0x1F969A0</code> slot 12 <code>0x19BB610</code>) clears the key and restores all three; slot 11 <code>0x19BF838</code>
+  = play-as an FM and move to his location (gated by player+0x2EE0). No shipped Lua calls it (the
+  Ratbag tutorial pit <code>island/ratbag1_learnpit</code> has <code>tpPlayAsOrc1/2</code> points but never sets the key).
+  The FIGHT PIT branch is unfinished: <code>MissionEnd</code> decides the win on <code>aiCaptain1:IsAlive()</code>, which is
+  <code>NPC.None</code> when the player is captain 1, so a play-as fight always ends as a loss. NEVER RUN.</p>
+<p><strong>Levers</strong> (all GameDB cells read when used; <code>scripts/pit_fights_live.py</code> applies / reverts them,
+round-trip verified 32/32 writes; effects NOT yet seen in a pit fight):</p>
+<table>
+<thead>
+<tr>
+<th>lever</th>
+<th>cell</th>
+<th>read by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>repeatable rewards</td>
+<td><code>Quest/Types::Gauntlet.ItemAwardOnReplay</code> -&gt; True</td>
+<td>reward fn <code>0x19F5F18</code> (accessor <code>0x19F4200</code>)</td>
+</tr>
+<tr>
+<td>champion strength</td>
+<td>builder <code>MinLevel</code> (15..56, copied by <code>0x1C63920</code> at build), <code>PlayerBasedXPLevel</code> (NULL; e.g. <code>PlayerLevel_ZeroToPlus10</code>), <code>ArmorRowRank</code>, <code>Tribe</code></td>
+<td>when the next champion is built</td>
+</tr>
+<tr>
+<td>legendary champion</td>
+<td>builder <code>TraitMarkers</code> (Lvl1/2 <code>Marker_OrcRarity_NotLegendary_OnCreation</code> -&gt; <code>..._Legendary_Forced</code>; Lvl3 ships NO cell)</td>
+<td>same</td>
+</tr>
+<tr>
+<td>winner levels</td>
+<td><code>Gauntlet_BlueOrc_Win.LevelsToAdd</code> (0)</td>
+<td>faction event apply</td>
+</tr>
+<tr>
+<td>custom rewards</td>
+<td>quest <code>ItemRewards</code> (live, <code>0x19F5F18</code> / <code>0x1BCFE9C</code>)</td>
+<td>each completion</td>
+</tr>
+<tr>
+<td>pits in unowned regions</td>
+<td>predicates <code>PlayerMustOwnZone</code> Int: <strong>0 = any, 1 = must own, 2 = must NOT own</strong></td>
+<td>availability <code>0x1E00C4</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pits in unowned regions IN-GAME CONFIRMED 2026-10-15 (Gorgoroth)</strong>: <code>PlayerMustOwnZone</code> 1 -&gt; 0 on
+the 15 non-Minas Ithil quests + the refresh below. Lithlad still showed none: its army
+<code>Faction_desert_Real</code> had 0 living follower captains, and <code>MinPlayerFollowerFactionMembersInZone</code> 1
+(filter <code>IS_Gauntlet</code>) is the gate that refuses (emulation: with it set to 0 the DE pits pass, with
+<code>DLC4_Purchased</code> and <code>RequiredFaction</code> passing). Online pits (<code>VO_ArenaOnline</code> ..., <code>IsOnlineArena</code>)
+are WB's online arena (below). A load re-deserialises the cells; <code>--watch</code> re-applies them.</p>
+<p><strong>Online Fight Pits - three gates; two open live, the third is YOUR OVERLORD (MEASURED 2026-10-15, Gorgoroth unowned).</strong>
+<code>&lt;R&gt;_ArenaOnline</code> (R = MP IS DE VO SM; no Minas Ithil) = <code>Quest/Types::OnlineArena</code> (<code>ActivationType</code> 6,
+<code>IsOnlineArena</code> - read only by a map-icon function <code>0x18EB6B4</code>, not a gate). Opponent job <code>ArenaOnlineOther</code>
+sets <code>UseOnlineArenaOpponent</code>: the job filler <code>0x1BD40C4</code> does NOT build him, it parks the job on a pending
+list (<code>0xFA2F60</code> = vector push) for Hydra's <code>overlord_arena_matchmaking</code> (<code>0xF75450</code> / <code>0xF75D20</code>) whose reply
+<code>__online_arena_opponent__</code> is read by <code>0xF74430</code> / <code>0xF73AE0</code> (<code>SETUP_ARENA_MATCHMAKING_RESULT_MISSING_DATA</code>).
+- Gate 1 = the same predicate Int: <code>VO_ArenaOnline.Predicates</code> -&gt; primary 207 <code>PlayerMustOwnZone</code> 1. Every pit
+  quest owns its primary (27 of 27 unshared, all 2,256 quests checked offline).
+- Gate 2 = CODE. The quest system keeps one quest list per activation type at <code>QuestSystem+0x1A8 + type*0x50</code>
+  (<code>0xEA3530</code>, 7 lists; register <code>0x1B54074</code>, remove <code>0x1B56F68</code>). The refresh <code>0x4A859C</code> evaluates type 1
+  (<code>0x4A87C8</code>), type 5 (<code>0x4A8784</code> -&gt; <code>0xEA0F50</code> -&gt; <code>0xEA5180</code>) and type 6 (<code>0xEA5B10</code> -&gt; <code>0xEA1710</code> -&gt;
+  <code>0xEA5590(onlineMgr = [GM+0x6D30], quest)</code>). <code>0xEA5590</code> evaluates an online pit (<code>0x59833C</code>) only when
+  byte <code>base+0x2A36439</code> is set, or (<code>[onlineMgr+0x47C]</code> clear and) the CURRENT region's Overlord carries
+  FM+0x508 bit 27 - i.e. you own the region; anywhere else it forces the quest to Inactive.
+- <code>0x2A36439</code> = UNSET_SWITCH (<code>rva_audit</code>: 0 writes; readers <code>0xEA5590</code>, <code>0x1E47AC</code> "online modes allowed
+  here" - cached by the online tick <code>0x1E3E78</code> at <code>onlineMgr+0x47F</code>, its only use a type-5 re-check on change -
+  and <code>0xEA5180</code>, where it SKIPS the predicates of the five Online Conquest starts <code>Conquest_Base_&lt;R&gt;</code> (fort
+  conquered once, DemoNOTActive, DLC4 for DE)). Live: predicate 0 alone -&gt; <code>VO_ArenaOnline</code> stays Inactive
+  after a refresh; + switch 1 -&gt; PreActivate; switch 0 -&gt; Inactive. <code>Conquest_Base_VO</code> read PreActivate
+  before the switch (fort conquered on that save), so no visible change there.
+- <strong>Gate 3 = matchmaking is built on YOUR Overlord of the current region - not data, no switch.</strong> User test
+  2026-10-15 (Gorgoroth, gates 1+2 open): the "Ranked Pit Fight" card sat on "Loading..." forever. The online
+  arena layer's tick job (vt <code>0x1F90F48</code>, slot 1 <code>0xE255F0</code>, object = layer+0x9C8; <code>+0x1B970</code> = the quest
+  record) creates the ranked request (<code>job+0x60</code>, vt <code>0x1FCB350</code>, <code>+0x9C</code> status 1 idle / 2 pending) and
+  <code>0xF56620</code> sets status 2, <code>[GM+0x6D38]+0x1C</code> = 0, then calls the builder <code>0xF75D20([GM+0x6D38])</code>. The builder
+  takes the region (<code>FortSys+0x1B0</code>) -&gt; its army (<code>_StructuresRegionGameModeFaction</code> / <code>Region.Faction</code>) -&gt;
+  <code>0x1E4C08(ctx)</code> = that army's Overlord, and RETURNS SILENTLY unless his FM+0x508 bit 27 (player follower)
+  is set. Only then: <code>[om+0x24]</code> = 1 (busy), <code>0x1B2F174</code> ensures his online id FM+0x3D0 (writes
+  <code>"&lt;account&gt;_NPC_&lt;n&gt;"</code> when empty), and it sends <code>overlord_arena_matchmaking</code> {InvasionProtocolVersion,
+  InvasionVersion 13, ArenaModeId <code>0x5445AE2B</code> = P919("RankedOverlordArena"), InvasionTribeReleaseVersion 4,
+  InvasionRegionVersion, InvasionRegionId, <strong>OverlordNpcId</strong> = FM+0x3D0, <strong>TargetRating</strong> = FM+0x470 + 1 +
+  FM+0x4B8} via <code>0x1BDE750</code>, reply handler <code>0xF70C00</code>. Nothing reports the early return, so the request stays
+  "pending". MEASURED: live-backed emulation of the builder returned after 154 instructions with 0 writes
+  (last calls <code>0x1E4C08</code> -&gt; <code>0x18DDD4</code>); the relay recorded 57 requests that launch, none arena; the job's
+  request read status 2. That save: 1 of 6 region Overlords is a follower (Tuhorn, Minas Ithil - no online
+  pit there); Gorgoroth's Dugz carries another account's NPC id <code>24fce3c5..._NPC_5</code>. The user gates the job
+  checks first (<code>CUser+0x38</code> 3, <code>+0xE01</code> 1, <code>+0xE03/+0xE04</code> 0, vector <code>+0xFD8</code> non-empty) all passed.
+- NOT measured: whether WB still serves arena matchmaking - <code>overlord_arena_matchmaking</code> appears in none of
+  110 relay sessions (the client never got past gate 3); <code>invasion_matchmaking</code> answers 200 (332 calls); WB's
+  <code>game-settings</code> broadcast still says conquests / vendettas enabled and <code>sunset</code> returns only
+  <code>{gold: 0, chests: 0}</code>. Opening the card also sent <code>invasion_get_full_ranking_status</code> (the conquest
+  ranking summary; WB answered in 125 ms).
+- C++ lane <code>sdk/sow_pit_fights.hpp</code>, Dashboard &gt; Patches &gt; Pit Fights (<code>pitFightsAnywhere</code>, <code>pitFightsOnline</code>
+  default OFF since gate 3): the 15 local + 5 online cells 1 -&gt; 0 (journalled, 10 s re-assert, re-applied
+  after a GameDB rebuild), the switch (owned flag; cleared only if ours), a refresh after every change + once
+  more 3 s later. RAN 2026-10-15 04:18 (log "online pits checked in every region"): the online card appeared
+  in Gorgoroth and stalled at gate 3. The Patches page is collapsed sections now.</p>
+<blockquote>
+<p><strong>CORRECTED 2026-10-15 - <code>PlayerMustOwnZone</code> 2 is "must NOT own", not "any".</strong> The 2026-10-14
+emulation only tried 1 and 2 on an UNOWNED region, where "must not own" also passes. Both values on
+both kinds of region (live-backed emulation of <code>0x1E00C4(predicates, quest)</code>): unowned Gorgoroth
+<code>VO_Gauntlet</code> 0 -&gt; 1, 1 -&gt; 0, 2 -&gt; 1; owned Minas Ithil <code>MI_Gauntlet</code> 0 -&gt; 1, 1 -&gt; 1, 2 -&gt; <strong>0</strong>.
+The 3 Minas Ithil pits SHIP 0 (no ownership needed); the other 15 ship 1. Nulling
+<code>PlayerMustOwnZoneFactions</code> alone does NOT open a pit - an empty list falls back to the current
+region's faction (<code>0x1B5C820(FS, 1)</code>).</p>
+</blockquote>
+<p><strong>The quest-availability refresh is a timer cell (MEASURED 2026-10-15).</strong> The world owner's tick
+(<code>vt_0x1F68920::vf10</code>) calls <code>0x4A859C(QuestSystem = [GM+0x6C60])</code>, which re-runs every quest's
+predicates (<code>0x4A87C8</code>, <code>0x4A8784</code> ...) when <code>QuestSystem+0xE8</code> (u32) is non-zero and older than the
+ms clock <code>[[0x2702590]+8]+0x18</code> (<code>0x1749D8</code> / <code>0x16CFA4</code>), then zeroes it. Inactive quests are NOT
+re-checked otherwise (state 0's Update <code>0x1162D8</code> unlinks the quest from its update list), which is
+why a gate written live changed nothing for 40 s. Writing <code>QuestSystem+0xE8 = 1</code>: a pit whose gate
+was made to fail went <code>PreActivate -&gt; Cleanup</code> in 0.34 s; <code>Cleanup</code> (25) goes to <code>Inactive</code> on its
+next Update (<code>0x19F12E4</code> = SetState(0)) and came back to <code>PreActivate</code> by itself within minutes.
+SetState = state machine (quest+0x120, vt <code>0x1F9DFB8</code>) slot 1.</p>
+<h2 id="gang-spawn-redirect-pipeline-verified">Gang Spawn Redirect Pipeline (VERIFIED)</h2>
+<p><strong>Architecture</strong> (3-layer pointer chain from FM to spawned creature):</p>
+<pre><code>FM+0x378 → Quirk_HasGang_Normal_* (Faction/Traits/Definitions record)
+  └── Instance+0x0A0/0x0A8 → Gang_Normal_*_SpawnIn (catalyst/spawn-in record)
+       └── Instance+0x028 → GangType_* (what actually spawns)
+</code></pre>
+<p><strong>Trait Definition Instance Layout</strong> (schema varies — Normal vs Elite):</p>
+<table>
+<thead>
+<tr>
+<th>Offset (Normal)</th>
+<th>Field</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x040</td>
+<td>UI bundle path</td>
+<td><code>interface\bundles\kraken\traits\et_mightyhunters.bndl</code></td>
+</tr>
+<tr>
+<td>+0x050</td>
+<td>Icon texture path</td>
+<td><code>interface\textures\hud\traits\...\quirk_hasgang_normal_hunters.tex</code></td>
+</tr>
+<tr>
+<td><strong>+0x058</strong></td>
+<td><strong>Description localization key</strong></td>
+<td><code>Orc_Ability_Gang_Hunters_Desc</code></td>
+</tr>
+<tr>
+<td><strong>+0x060</strong></td>
+<td><strong>Display name localization key</strong></td>
+<td><code>Orc_Ability_Gang_Hunters</code></td>
+</tr>
+<tr>
+<td>+0x090/+0x098</td>
+<td>Gang spawn catalyst</td>
+<td><code>[Gang_SummonOnSpawn]</code></td>
+</tr>
+<tr>
+<td><strong>+0x0A0/+0x0A8</strong></td>
+<td><strong>SpawnIn catalyst record</strong></td>
+<td><code>[Gang_Normal_Hunters_SpawnIn]</code></td>
+</tr>
+<tr>
+<td>+0x0C0/+0x0C8</td>
+<td>HasGang inventory item</td>
+<td><code>[Item_Quirk_HasGang]</code></td>
+</tr>
+<tr>
+<td>+0x0E0/+0x0E8</td>
+<td>UIGroup link</td>
+<td><code>[UIGroup_Bonuses]</code></td>
+</tr>
+<tr>
+<td><strong>+0x0F0/+0x0F8</strong></td>
+<td><strong>GangType creature record — PRIMARY SPAWN TRIGGER</strong></td>
+<td><code>[GangType_Hunters]</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>HARD-WON RULE</strong>: Normal quirks (Hunters, Warriors, etc.) use one schema; Elite quirks (Elite*Ologs, Elite_Warriors) use a different schema with shifted offsets. Always detect offsets dynamically by scanning for the <code>Orc_Ability_Gang*\*\_Desc</code> string pattern.</p>
+<p><strong>CRITICAL</strong>: The <strong>trait-level GangType at +0x0F0/+0x0F8 is the REAL spawn trigger</strong>. Writing only to SpawnIn entries does NOT change spawns. Verified: writing GangType_FellBeast to +0x0F0 caused FellBeast icons to appear immediately. Always write BOTH the trait-level GangType AND the SpawnIn entries.</p>
+</blockquote>
+<p><strong>SpawnIn Catalyst Structure</strong> (repeating entries, variable stride):</p>
+<ul>
+<li>Entry+0x018: Summon type (e.g., <code>Summon_Gang</code>, <code>Summon_Trait_Ghuls</code>)</li>
+<li>Entry+0x028: GangType pointer ← SECONDARY write target (spawn pool definition)</li>
+</ul>
+<p><strong>Scaleform UI Label System</strong>:</p>
+<ul>
+<li>Localization keys at instance+0x058/+0x060 are looked up in a hash table</li>
+<li><strong>Writing a non-existent key shows "[INVALID STRING ID]"</strong> — DO NOT swap keys to custom text</li>
+<li><strong>CORRECT approach</strong>: Find UTF-16LE display text (e.g., L"Gang of Hunters") in heap memory and overwrite in-place with same-length-or-shorter replacement text</li>
+<li>Typically 4 UTF-16LE matches per gang type (base name, granted, exclamation variants)</li>
+<li>All localization strings are in RW heap pages (~0x6Fxxxxxx range)</li>
+</ul>
+<p><strong>Proof scripts</strong> (<code>scripts/proven/mods/</code>): <code>gang_redirect.py</code>, <code>gang_exotic_finder.py</code> (250+ GangTypes:
+Nazgul, Balrog, Drake, etc.), <code>gang_ui_label_patcher_v2.py</code> (heap UTF-16LE patching, working),
+<code>gang_ui_label_cracker.py</code> (the RE probe that decoded the layout).</p>
+<h2 id="mount-system-architecture-confirmed-spawning-2026-04-20">Mount System Architecture (CONFIRMED SPAWNING 2026-04-20)</h2>
+<p>Mounts and pet gangs are <strong>independent systems</strong>. An orc's followers (caragors walking alongside)
+are controlled by <code>Quirk_HasPets</code>_*, while the creature the orc <strong>rides</strong> is controlled by
+<code>Quirk_HasMount</code> — a completely separate trait.</p>
+<p><strong>Two independent trait chains on a mounted orc:</strong></p>
+<pre><code>FM+0x378 → Quirk_HasPets_Caragors  → instance+0x110 → GangType_Caragors  (FOLLOWERS)
+FM+0x1238 → Quirk_HasMount          → instance+0x098 → Warg_Tamed         (MOUNT/RIDE)
+</code></pre>
+<p><strong>Quirk_HasMount instance layout</strong> (Faction/Traits/Definitions):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Field</th>
+<th>Default Value</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x040</td>
+<td>Bundle path</td>
+<td>quirk_hasmount.bndl</td>
+<td>UI bundle</td>
+</tr>
+<tr>
+<td>+0x050</td>
+<td>Texture path</td>
+<td>quirk_hasmount.tex</td>
+<td>Trait icon</td>
+</tr>
+<tr>
+<td>+0x058</td>
+<td>Desc key</td>
+<td>Orc_Ability_HasMount_Desc</td>
+<td>Localization</td>
+</tr>
+<tr>
+<td>+0x060</td>
+<td>Name key</td>
+<td>Orc_Ability_HasMount</td>
+<td>Localization</td>
+</tr>
+<tr>
+<td>+0x068</td>
+<td>Self-ref</td>
+<td>Quirk_HasMount record</td>
+<td>Self-reference</td>
+</tr>
+<tr>
+<td>+0x070</td>
+<td>GearTagWeight</td>
+<td>GearTagWeight_beast</td>
+<td>Loot weight</td>
+</tr>
+<tr>
+<td>+0x078</td>
+<td>GearTagWeight</td>
+<td>GearTagWeight_mount_graug</td>
+<td>Loot weight</td>
+</tr>
+<tr>
+<td><strong>+0x088</strong></td>
+<td><strong>AI/FindMount</strong></td>
+<td><strong>FleeOnWarg</strong></td>
+<td><strong>Mount acquisition AI</strong></td>
+</tr>
+<tr>
+<td><strong>+0x098</strong></td>
+<td><strong>AI/Templates creature</strong></td>
+<td><strong>Warg_Tamed</strong></td>
+<td><strong>WHAT CREATURE THE ORC RIDES</strong></td>
+</tr>
+<tr>
+<td><strong>+0x0A8</strong></td>
+<td><strong>Combat/NPCSummon</strong></td>
+<td><strong>Flee_Mount_Warg</strong></td>
+<td><strong>Flee/summon behavior</strong></td>
+</tr>
+<tr>
+<td>+0x0E0</td>
+<td>UIGroup</td>
+<td>UIGroup_Bonuses</td>
+<td>UI grouping</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Mount trait variants</strong>: Quirk_HasMount (Warg_Tamed), ET_DireMount (Warg_Rare_Tamed),
+Dismount_Rider, Easterling_Dismount_Rider, Trait_DLC3_Nazgul_2_Mount.</p>
+<p><strong>Available AI/Templates mount creatures (23 records):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Record</th>
+<th>Creature</th>
+<th>Mount Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Warg_Tamed</td>
+<td>Warg</td>
+<td>Default mount</td>
+</tr>
+<tr>
+<td>Warg_Rare_Tamed</td>
+<td>Dire Warg</td>
+<td>Rare mount</td>
+</tr>
+<tr>
+<td>Warg_Tamed_Feral</td>
+<td>Feral Warg</td>
+<td>Aggressive variant</td>
+</tr>
+<tr>
+<td>Warg_Fire / Ice / Poison / Stealth</td>
+<td>Elemental Wargs</td>
+<td>Elemental variants</td>
+</tr>
+<tr>
+<td><strong>Troll_Tame</strong></td>
+<td><strong>Graug</strong></td>
+<td><strong>CONFIRMED: spawns Graugs</strong></td>
+</tr>
+<tr>
+<td>FellBeast / FellBeast_Tame</td>
+<td>Drake</td>
+<td>Flying mount</td>
+</tr>
+<tr>
+<td>Spider_AI_Tame</td>
+<td>Spider</td>
+<td>Spider mount</td>
+</tr>
+<tr>
+<td>Goblin_Tame / Goblin_Rare_Tame</td>
+<td>Goblin</td>
+<td>Goblin mount</td>
+</tr>
+<tr>
+<td>Orc_GraugapultRider</td>
+<td>Graugapult</td>
+<td>Siege mount</td>
+</tr>
+<tr>
+<td>Carnun_FellBeast_Friendly</td>
+<td>Carnan Drake</td>
+<td>Story mount</td>
+</tr>
+<tr>
+<td>Carnun_Warg_Friendly / Enemy</td>
+<td>Carnan Warg</td>
+<td>Story mount</td>
+</tr>
+</tbody>
+</table>
+<p><strong>FM trait picker offsets for mount system:</strong></p>
+<table>
+<thead>
+<tr>
+<th>FM Offset</th>
+<th>Record</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x1210</td>
+<td>Picker_HasPets_Caragors</td>
+<td>Pet picker</td>
+</tr>
+<tr>
+<td>+0x1218</td>
+<td>Quirk_HasPets_Caragors</td>
+<td>Pet trait (duplicate of FM+0x378)</td>
+</tr>
+<tr>
+<td><strong>+0x1230</strong></td>
+<td><strong>Picker_HasMount</strong></td>
+<td><strong>Mount picker</strong></td>
+</tr>
+<tr>
+<td><strong>+0x1238</strong></td>
+<td><strong>Quirk_HasMount</strong></td>
+<td><strong>Mount trait</strong></td>
+</tr>
+<tr>
+<td>+0x1290</td>
+<td>Picker_CaragorTamer</td>
+<td>Caragor tamer ability</td>
+</tr>
+<tr>
+<td>+0x1298</td>
+<td>CaragorTamer</td>
+<td>Tamer behavior</td>
+</tr>
+<tr>
+<td>+0x12D0</td>
+<td>Picker_FriendToBeasts</td>
+<td>Beast affinity</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Combat/MountData (31 records, 24 fields):</strong> Defines ride behavior per creature type.</p>
+<table>
+<thead>
+<tr>
+<th>Record</th>
+<th>AttachNode</th>
+<th>CombatBehaviorState</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SetMount_Warg</td>
+<td>WargMount</td>
+<td>RidingWarg</td>
+<td>Standard warg ride</td>
+</tr>
+<tr>
+<td>SetMount_FellBeast</td>
+<td>MNT_PresentationIdle</td>
+<td>(varies)</td>
+<td>Drake ride</td>
+</tr>
+<tr>
+<td>SetMount_Troll</td>
+<td>Saddle</td>
+<td>RidingTroll</td>
+<td>Graug ride</td>
+</tr>
+<tr>
+<td>SetMount_Spider</td>
+<td>SpiderMount</td>
+<td>Mounted</td>
+<td>Spider ride</td>
+</tr>
+<tr>
+<td>SetMount_OlogHai</td>
+<td>(none)</td>
+<td>RidingOlog</td>
+<td>Olog ride</td>
+</tr>
+<tr>
+<td>SetMount_Troll_Graugapult</td>
+<td>(none)</td>
+<td>RidingTroll</td>
+<td>Siege graug</td>
+</tr>
+<tr>
+<td>SetMount_Meatshield</td>
+<td>(none)</td>
+<td>(varies)</td>
+<td>Carry enemy</td>
+</tr>
+</tbody>
+</table>
+<p><strong>CONFIRMED 2026-04-20</strong>: Writing <code>Troll_Tame</code> to <code>Quirk_HasMount</code> instance+0x098 causes
+the orc to spawn with <strong>Graugs</strong> instead of Wargs. Creatures appear visually correct but
+<strong>do not animate</strong> — the orc does not mount them. Root cause: the AI mount behavior
+(<code>FleeOnWarg</code> at +0x088) and NPCSummon (<code>Flee_Mount_Warg</code> at +0x0A8) still reference
+Warg-specific behaviors. The <code>Combat/MountData</code> <code>SetMount_Troll</code> record is NOT being
+selected automatically — the game likely resolves mount config via the AI/FindMount record's
+<code>Mount_Warg</code> combat state (FleeOnWarg instance+0x010), not by creature archetype.</p>
+<p><strong>Next steps for working mount animations:</strong></p>
+<ol>
+<li>Modify FleeOnWarg instance+0x010 from <code>Mount_Warg</code> to <code>Mount_Troll</code></li>
+<li>Modify FleeOnWarg instance+0x018 from <code>Wargs</code> to Troll/Graug character type</li>
+<li>OR: Find/create a "FleeOnGraug" AI/FindMount record</li>
+<li>OR: Modify the orc's combat behavior state to force <code>SetMount_Troll</code> selection</li>
+</ol>
+<p><strong>Proof script</strong>: <code>scripts/proven/mods/mount_swap.py</code> (list/swap/revert). Offline mount swaps: Anvil <code>call("swap_mount", ...)</code>.</p><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
