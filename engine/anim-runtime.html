@@ -1,0 +1,254 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Animation runtime: what each character animates now, and how the engine gets there each frame - Shadow of War engine reference</title><meta name="description" content="the LIVE animation runtime: per-character BlendState slots `char+0x1198..+0x11B0`, AnimNodeLink `char+0x1970`, clip trackers `[[char+0x110]+0x1C0]` (clip, time, rate, weight, loop), the pose job on EngineAnimationJobThreads, AnimLink.PlayAnim; readers `anim_live` / `anim_watch`"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" class="cur" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="animation-runtime-what-each-character-animates-now-and-how-the-engine-gets-there">Animation runtime: what each character animates now, and how the engine gets there each frame</h1>
+<p>Reader: <code>aire/pipeline/anim_runtime.py</code> (<code>anim_live</code>, <code>anim_watch</code>, <code>anim_pipeline</code>; read-only).
+Tests: <code>tests/test_anim_runtime.py</code> (61 code anchors + 9 decoder / join tests, offline). Clip DATA side (ANIX,
+live push): kb/studio-tools.md "Animation Studio" and aire/documents/ANIM_STUDIO.md. Graph DATA
+side (.bvr): kb/archives-formats.md "Behaviour graphs" and aire/documents/BEHAVIOR_GRAPHS.md.</p>
+<h2 id="session-and-bounds-2026-10-28">Session and bounds (2026-10-28)</h2>
+<p>pid 35940, base 0x140000000 (region not recorded), 36-45 characters (human_ranger 20, easterling
+13, orc 2-5, warg, player). Live reads only. The game was PAUSED (unfocused; world clock frozen)
+for almost the whole session, so everything below that needs MOTION is a LEAD: no state
+transition, no clip-time advance and no blend was observed changing. Snapshots: 4.</p>
+<h2 id="graph-side-the-per-character-behaviour-state-measured-45-45-unless-noted">Graph side: the per-character behaviour state (MEASURED, 45 / 45 unless noted)</h2>
+<table>
+<thead>
+<tr>
+<th>where</th>
+<th>what</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CCharacter+0x120</td>
+<td>behaviour-interface BASE SUBOBJECT of CCharacter (ctor 0x45520C; secondary vtable 0x1F96C68 on the player, 0x1FB3AA8 on NPCs, 1 / 35 + 1)</td>
+</tr>
+<tr>
+<td>char+0x140</td>
+<td>char* the .bvr path ("behaviors\player\player_elf.bvr")</td>
+</tr>
+<tr>
+<td>char+0x578</td>
+<td>AnimationMgr = [GameManager+0x6CB0] (component +0x458, written by 0x4553DA)</td>
+</tr>
+<tr>
+<td>char+0x1140</td>
+<td>state block (component +0x4B0 sub-object 0x4557C8, +0xB70 -&gt; 0x455840 -&gt; ctor 0x300A64)</td>
+</tr>
+<tr>
+<td>char+0x1198 / +0x11A0 / +0x11A8 / +0x11B0</td>
+<td>four BlendState RECORD pointers (see below)</td>
+</tr>
+<tr>
+<td>char+0x1258</td>
+<td>the graph's BehaviorSource record (Player_Elf, Orc_Infantry ...)</td>
+</tr>
+<tr>
+<td>char+0x1970</td>
+<td>AnimNodeLink* (vt 0x1DCC0C0, ctor 0x456F14, dtor 0x4555B8)</td>
+</tr>
+<tr>
+<td>char+0x1980 / +0x1988</td>
+<td>shared_ptr to ONE manager-wide object [AnimationMgr+0x65A0] (not per character)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>char+0x11B0 = the state.</strong> A BlendState record in 45 / 45; its name is in the decoded disk
+  graph in 36 / 36 (<code>behavior_graph</code> states; control: an invented name is absent). The player read
+  IdleL, Walking_To_Idle, Sprint, RunningJumpLand_Hard, WeaponSheathe_Low, Fidget_Base_Idle_B
+  across snapshots; NPCs WalkForward, Idle, IdleToRun, TurnInPlace, Stumble, AIRidingWarg_Idle.
+  That it is the CURRENT state (and not the transition target) is a LEAD: it was never seen move.</li>
+<li>+0x11A8 equals +0x11B0 in 35 / 45 and is 0 in 10 / 45; +0x1198 equals +0x11B0 in 34 / 45;
+  +0x11A0 is 0 on every NPC (44 / 45) and set only on the player (its second machine: A_Button_<em>,
+  L_Stick_</em>, Hand_Holding). Meaning of the three: LEAD (previous / entered / tracking state).
+  Would settle it: <code>anim_watch</code> while the game is focused (<code>slot_semantics</code> counts +0x11A8 lag).</li>
+<li><strong>The slots point at per-GRAPH records, not per-character copies:</strong> every value is an entry of
+  the 28 loaded BlendState categories (one per loaded .bvr; 21,394 records), so all characters on
+  one graph share its records. A live BlendState edit therefore hits every character of that
+  graph. MEASURED by membership (BS records collected through their type entry, as <code>behavior_live_node</code>).</li>
+<li>AnimNodeLink: +0x98 AnimationMgr, +0xA0 sub-object (0x4561BC), +0xC8 the anim PlayAnim parsed,
+  +0xF0 / +0xF8 a BlendState pair (+0xF0 == char+0x11A8 in 45 / 45), +0x228 -1 / +0x22C / +0x230
+  ids (+0x230 = a serial from the counter 0x2702008), +0x270 shared_ptr (the manager object).</li>
+<li>AnimationMgr [GM+0x6CB0] (no vtable): +0x4158 count / +0x4160 0x28-byte handles {vt 0x1DB6BE0,
+  +0x20 character} - 36 / 36 characters registered; +0x6720 = 256 / +0x6728 pool of objects vt
+  0x1FD99F8 (~0xE0B8 B, perf counters at +0xDF10, a BlendState record at +0x668 in 53 / 256). The
+  link ids do not index the pool (1 / 38). Pool role: LEAD (per-character graph runtime?).</li>
+<li><strong>Not found: the transition in progress and its blend time.</strong> No StateTransition record
+  pointer sits in char+0x120..+0x19B0 or the link (every live BlendDB record type was matched,
+  460,225 records, 3,316 categories); it is deeper (link sub-objects, the pool) - open.</li>
+</ul>
+<h2 id="clip-side-the-active-clips-measured-36-characters-100-100-trackers">Clip side: the active clips (MEASURED: 36 characters, 100 / 100 trackers)</h2>
+<p><code>M = [[char+0x110]+0x1C0]</code> (model object vt 0x1F6F950 -&gt; model animation instance vt 0x1DA9700,
+45 / 45). M+0x08 = vector of <strong>0xA0-byte trackers, one per active clip</strong>; M+0x50 = the skeleton
+resource (begins with its own path); <code>[[M+0x50]+0xB0]</code> = the clip table object (vt 0x1E6F3F8),
+member list +0x78 (0x38 entries {+0x20 path, +0x28 anim object while loaded}); M+0xC8 pose-job
+descriptor, M+0xD8 its 20-byte blend entries (== tracker count, 36 / 36); M+0x118 time source;
+M+0x128 job submitted, +0x12A needs eval, +0x12B dt was 0.</p>
+<table>
+<thead>
+<tr>
+<th>tracker</th>
+<th>field (static: 0x17620C / 0x17674C / 0x175F04)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x02 u8</td>
+<td>flags: bit0 advance by the engine clock, bit1 LOOP (wrap to 0), bit3 cleared on wrap</td>
+</tr>
+<tr>
+<td>+0x04 u16</td>
+<td>delay counter (0xFFFF = none), compared with +0x40</td>
+</tr>
+<tr>
+<td>+0x08 u32</td>
+<td><strong>P919(clip name)</strong></td>
+</tr>
+<tr>
+<td>+0x0C u32</td>
+<td>current key index (key / (keys-1) tracks time / duration within 0.02 on all 4 player trackers)</td>
+</tr>
+<tr>
+<td>+0x10 f32</td>
+<td>rate (time += (dt + frac) * rate)</td>
+</tr>
+<tr>
+<td>+0x14 f32</td>
+<td><strong>weight</strong> (copied into the job entry, 0x175F04)</td>
+</tr>
+<tr>
+<td>+0x18 f32</td>
+<td>sub-millisecond remainder</td>
+</tr>
+<tr>
+<td>+0x1C u32</td>
+<td><strong>time ms</strong></td>
+</tr>
+<tr>
+<td>+0x24 i32</td>
+<td>weight-set index, -1 = whole body (LEAD: 0x1B0EE4 indexes a 0x38-byte set array with it; NOT the member index)</td>
+</tr>
+<tr>
+<td>+0x28 f32</td>
+<td>second job float (0.01 base, 0.0001 clips) - LEAD</td>
+</tr>
+<tr>
+<td>+0x44 u32</td>
+<td>key count</td>
+</tr>
+<tr>
+<td>+0x4C u32</td>
+<td><strong>duration ms</strong> == clip record +0x78 in 100 / 100</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Clip names, live:</strong> the hash is looked up in the loaded members' anim chunk directory
+  ([anim object+0x38]: +0x00 dir offset 0x10, +0x04 count, {u32 P919, u32 rel}, record name[0x30]
+  at chunk+rel, +0x78 duration). 100 / 100 trackers named with their carrier .anix. CONTROL: an
+  invented hash names nothing after all 2,768 player members (8,244 clip hashes) were scanned.</li>
+<li>Every character has tracker 0 = clip "base" (the model's own base pose, rate 1, weight 1,
+  advance 0). The other 64 / 100 trackers have rate 0 and advance 0: <strong>their time is written by
+  the graph, not advanced by 0x1760F0</strong> (LEAD: which node writes +0x1C is not found).</li>
+<li>Player at Fidget_Base_Idle_B: base + PL_Base_Idle_B (pl_fidgets.anix, 2,502 / 18,400 ms) +
+  PL_Base_L_Fist_IdleBase x2 (pl_movbase.anix) + PL_Base_L_Fist_IdleAction x2 (pl_movaction.anix),
+  all weight 1.0 with different weight sets: layered per body part, not cross-faded.</li>
+</ul>
+<h2 id="the-per-frame-path-measured-statically-every-hop-anchored-in-the-tests">The per-frame path (MEASURED statically; every hop anchored in the tests)</h2>
+<p>MAIN thread: CGameClientShell vf1 0x1A864C (@0x1A8B51) -&gt; model manager vt_0x2301178::vf1 0x1A83AC
+(@0x1A83BB) -&gt; vf14 0x1A8490 (@0x1A8528) -&gt; per model + phase 0x187A38 (@0x187D8E) -&gt; 0x1760A8:
+1. 0x1760F0 advance: per tracker 0x17620C(tracker, [M+0x50]+0xB0, dt ms, ctx) - skip unless
+   flag bit0 and rate != 0; 0x17674C wraps on loop / holds the last key; dt from M+0x118 or the
+   world clock [0x2702598]+8 -&gt; +0x10.
+2. 0x176348 submit: 0x175F04 copies {+0x14 weight, +0x28, +0x24 set, +0x1C, +0x08 clip} per
+   tracker into M+0xD8, then ThreadSystem_A [0x26FF000] vf2 queues the job (vf1 = immediate).
+WORKERS: EngineAnimationJobThread1-3 (routine 0x114CBA8) pop 0x1AFC64 from AnimJobThreadSystem
+[0x26FF018]+8 -&gt; 0x1B0E60 -&gt; <strong>pose job 0x1B0EE4</strong>. The main thread drains the same queue in
+vt_0x22C2068::vf5 0x7042FC -&gt; 0x1AF430 ("We started the job queue more than once...").
+0x1B0EE4 walks the 20-byte entries: the first non-zero weight -&gt; op0 SAMPLE 0x264E8C -&gt; 0x260740
+-&gt; 0x261360 (the sampler ANIM_STUDIO quiesces); each later one -&gt; op1 BLEND 0x182980 by its weight;
+no clip -&gt; op2 REFERENCE POSE 0x11B517C; end -&gt; op3 OUTPUT 0x1B12A4 (writes the pose out).
+Ops live in a 16 x 0x20 table 0x2A86C60 filled by 0x1188844; dispatcher 0x1B1230 asserts
+"Animation Operation not registered". Skinning hand-off after op3: not traced (LEAD).
+Graph update (who picks the state and writes tracker times): not found - LEAD, start from the
+link and the AnimationMgr pool. AnimJobThreadSystem vf6 also registers 0x16+ callback pairs
+(0x1B1B568) - likely the graph node kinds; unread.</p>
+<h2 id="levers-read-only-here-nothing-was-called">Levers (READ ONLY here; nothing was called)</h2>
+<ul>
+<li><strong>AnimLink.PlayAnim</strong> console handler 0x1BCF20C (CharacterBehaviorInterface.cpp:52): target =
+  the character named in argv[1] or the player ([CGameClientShell+0x888]); core
+  <code>0x1BDEC34(link = [char+0x1970], const char* anim) -&gt; int</code> (-1 on an empty name): parses the
+  name (0x41758C, 0x41A1E0), stores link+0xC8 / +0xD0, then <code>0x41A148([link+0x270], [link+0x22C],
+  ...)</code>. Forces a state / clip by name; which names it accepts (state vs clip) is untested.</li>
+<li>AnimLink.Dump.History 0x1BDEE0C -&gt; 0x1B32410(AnimationMgr, name) = find a registered character
+  by name (+0x4160 handles). AnimThreadLink.Break.AnimComplete = bool 0x6FE9040.</li>
+<li>For a mod: tracker fields are plain memory (weight, rate, time, loop flag) but 64 / 100 are
+  rewritten by the graph each frame; the per-graph BlendState records are the durable lever.</li>
+</ul>
+<h2 id="corrections-for-the-owner-to-apply-not-edited-here">Corrections (for the owner to apply; not edited here)</h2>
+<ol>
+<li>aire/documents/BEHAVIOR_GRAPHS.md:96-97 - "the behaviour graph is instanced per character, so
+   the copy rules are an open question." -&gt; "Records are loaded once per GRAPH (one copy per .bvr)
+   and shared by every character on it; the per-character state is CCharacter+0x1198..+0x11B0,
+   POINTERS into those records (kb/anim-runtime.md, 45 / 45, 2026-10-28). A live record edit
+   reaches every character of that graph; whether the runtime caches node values is still open."</li>
+<li>kb/studio-tools.md:112 and aire/documents/ANIM_STUDIO.md:168 - <code>[[skelobj+0x1C0]+0x50]+0xB0</code>, vt
+   <code>0x1E6F3F8</code> -&gt; "<code>[[[char+0x110]+0x1C0]+0x50]+0xB0]</code> (skelobj = char+0x110; the +0xB0 field holds a
+   POINTER to the clip table object, vt 0x1E6F3F8; member list at table+0x78)".</li>
+<li>AIRE labeler (aire/analysis/labeler.py output, not a doc): 0x819104 is labelled
+   <code>shared_impl:CCharacter::DetachCombatProp(+10)</code> but it is the engine ASSERT helper (called with
+   "Animation Operation not registered", "Stack index out of bounds"; CLAUDE.md: asserts = null write
+   at 0x819113). And the global 0x26FFA98 is still labelled "ShaderTreeManager" in listings
+   (kb/engine-anchors.md corrected it to CGameClientShell on 2026-10-15).</li>
+</ol>
+<h2 id="in-play-measured-2026-10-28-game-focused-anim-watch-seconds-20-world-clock-19-99">In play (MEASURED 2026-10-28, game focused; <code>anim_watch(seconds=20)</code>, world clock 19,992 ms)</h2>
+<p>80 characters, 369 sample rounds at 50 ms. The motion LEADs above are settled:
+- <strong>Tracker time (+0x1C) advances at the world clock's rate: median 1.0 ms per world ms</strong> over 42,123
+  consecutive same-clip pairs (p10 0.75, p90 1.317 - blend-in / rate-scaled clips), 731 loops or
+  restarts. So +0x1C is the clip's playback position in milliseconds, driven by the world clock.
+- <strong>The state slot changes as the character moves:</strong> 60 distinct state transitions, e.g.
+  Idle -&gt; IdleToRun (16), IdleToRun -&gt; RunToIdle (17 + 11), Run -&gt; Stumble (12) -&gt; Run (9),
+  Idle -&gt; Wpn_Sheathe (10), Idle &lt;-&gt; AutoPicker_Fidget (8 / 8), RunToIdle -&gt; TurnToRun (8).
+- <strong>40 clips entered</strong> in 20 s (Orc_R_Hand_Weapon 57, GInf_Base_Idle 41, GInf_Combat_Idle 39,
+  gDef_Combat_Idle 35, GInf_Combat_Idle_2_Run 22 ...).
+- <strong>Slot <code>char+0x11A8</code> is either null or equal to the state <code>+0x11B0</code></strong>: 29,520 / 29,520 samples
+  (null in 10,540). It never held a different state while one changed, so it is not "previous
+  state" (LEAD: a "state confirmed / entered" mirror). The meaning of +0x1198 / +0x11A0 stays open.
+- The pose job 0x1B0EE4 also runs on the MAIN thread in play (2.7% of MainThread samples, where it
+  shows as an outermost frame: LEAD, the main thread drains the anim job queue as 0x7042FC does).</p>
+<p>The corrections listed above were applied on 2026-10-28 (BEHAVIOR_GRAPHS.md, kb/studio-tools.md,
+ANIM_STUDIO.md marked CORRECTED; labeller: 0x819104 = EngineAssert, 0x26FFA98 = CGameClientShell).</p><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
