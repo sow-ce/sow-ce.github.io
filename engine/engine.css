@@ -1,0 +1,26 @@
+:root{--bg:#0f0f14;--panel:#141419;--edge:#262632;--text:#ebebf0;--dim:#a4a4b1;--faint:#82828f;
+--accent:#66bff2;--ok:#3ecf6e;--warn:#f2bf33;--bad:#f05252}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{display:flex;max-width:1280px;margin:0 auto}
+nav.side{width:270px;flex:none;padding:20px 16px;border-right:1px solid var(--edge);position:sticky;top:0;height:100vh;overflow:auto}
+nav.side h2{font-size:14px;color:var(--dim);margin:18px 0 6px;font-weight:600}
+nav.side a{display:block;padding:3px 0;font-size:14px;color:var(--text)}
+nav.side a.cur{color:var(--accent)}
+main{flex:1;min-width:0;padding:24px 32px 80px;max-width:980px}
+main h1{font-size:28px;line-height:1.25;margin:4px 0 16px}
+main h2{font-size:21px;margin:36px 0 10px;padding-top:12px;border-top:1px solid var(--edge)}
+main h3{font-size:17px;margin:26px 0 8px}main h4{font-size:15px;margin:20px 0 6px}
+code{font:13.5px/1.45 ui-monospace,"Cascadia Mono",Consolas,monospace;background:var(--panel);padding:1px 4px;border-radius:4px;overflow-wrap:anywhere}
+pre{background:var(--panel);border:1px solid var(--edge);border-radius:8px;padding:12px;overflow:auto}
+pre code{background:none;padding:0}
+table{border-collapse:collapse;display:block;overflow:auto;margin:12px 0;font-size:14px}
+th,td{border:1px solid var(--edge);padding:5px 8px;vertical-align:top;text-align:left}
+th{background:var(--panel)}
+blockquote{margin:12px 0;padding:6px 14px;border-left:3px solid var(--accent);color:var(--dim)}
+.muted{color:var(--faint);font-size:14px}
+input#q{width:100%;padding:10px 12px;font-size:16px;background:var(--panel);color:var(--text);border:1px solid var(--edge);border-radius:8px}
+#hits div{padding:10px 0;border-bottom:1px solid var(--edge)}#hits small{color:var(--faint);display:block}
+ul.topics{padding-left:18px}ul.topics li{margin:6px 0}
+@media(max-width:820px){.wrap{display:block}nav.side{width:auto;height:auto;position:static;border-right:0;border-bottom:1px solid var(--edge)}main{padding:16px}}
