@@ -1,0 +1,408 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Character tint and the captain colorizer (palette, shine, eyes, marks, body looks) - Shadow of War engine reference</title><meta name="description" content="tint data, colorizer keeper, eyes, marks, body looks"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" class="cur" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="character-tint-and-the-captain-colorizer-palette-shine-eyes-marks-body-looks">Character tint and the captain colorizer (palette, shine, eyes, marks, body looks)</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Moved verbatim from
+CLAUDE.md on 2026-10-27 (original lines 2224-2583); heading levels normalised, text unchanged.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Covers:</strong>
+- tint data: SMC palette, tint owner, handle records, writers, shader blend (linear space), normal / spec maps
+- colorizer: stores, the native palette rule, the render cache (stamps), per-piece splits, rebuilds
+- the keeper use-after-free (2026-10-23) and its fix; shine; eyes (materials, glow, eye-star pack, cycling fix)
+- skin / hair / ink / paint tables; unset palette entries; native eye looks via the material override API
+- the Accursed look and whole-body curse decals (atlas placements, scar materials)</p>
+<p><strong>Sections:</strong>
+- Character tint — the colours the engine APPLIED (MEASURED 2026-10-06, code + live)
+- Captain colorizer - live tint by the native palette rule (IN-GAME CONFIRMED 2026-10-21, Nurnen Army screen)</p>
+<hr />
+<h2 id="character-tint-the-colours-the-engine-applied-measured-2026-10-06-code-live">Character tint — the colours the engine APPLIED (MEASURED 2026-10-06, code + live)</h2>
+<p>The <code>.mat</code> tint constants are mostly placeholders (white = no-op, magenta (1,0,1) = unset; real
+colours only on skin / eye / warg materials of one Minas Ithil capture). Each character's real colours:</p>
+<pre><code>CChar+0x2340 -&gt; visual object (vt 0x1DA9610)                  12/12 characters
+  +0xB8 SMC: +0x28 23 piece slots (Model/SimpleModelPieces), +0xE0 15 ArmorData slots,
+             +0x178 u32[16] ARGB, alpha 0xFF = set / 0x00 = unset (142 chars: only 0/FF)
+  +0xC0 tint owner: +0x18/+0x20 vector of 0x18-byte entries
+             {+0 SimpleModelTint, +8 ArmorData (0 = base), +0x10 handle}
+handle vt 0x1DC47B8 +8 -&gt; {+0 begin, +8 end}: records
+             {u32 tag&lt;&lt;28 | P919(name) &amp; 0x0FFFFFFF, u32 size, data}, tag 2 float3, 5 float
+</code></pre>
+<ul>
+<li><strong>Colour slots</strong> (named by <code>SimpleModelTint</code> channel indices): 0 skin, 1 eye, 2 hair, 3 tattoo,
+  4 warpaint, 5 metal, 6 leather, 7 cloth, 8 bone, 9 trim, 10-15 faction metal / leather / cloth
+  / bone / trim / warpaint; 16 = channel unused. <code>docs/FACTION_COLOR_RE.md</code> (8 = "Clothing2",
+  faction slots "always 0") is wrong: faction cloth (12) is set on 75 of 142 characters.
+  <code>tools/re/orc_forge.py</code>'s <code>SMC_COLOR_DIRTY 0x1A0</code> is slot 10, not a flag.</li>
+<li><strong>Writer:</strong> <code>0x36B430</code> (per SMC slot with <code>SimpleModelPieces.Tint</code>) -&gt; <code>0x4C3634</code> (find/create
+  entry) -&gt; <code>0x2EAD20</code> (per R/G/B/A channel with index &lt; 16) -&gt; <code>0x2EAF10</code> (slot 1 = head: tattoo
+  / warpaint gated by <code>SimpleModel.TattooApplyToHead</code> / <code>PaintApplyToHead</code>) -&gt; <code>0x2EAFF4</code>: amount
+  = 1.0 (<code>0x202E5A0</code>) if alpha == 0xFF else 0.0, colour = RGB x 1/255 (<code>0x202E8C0</code>). Second writer
+  <code>0x36B5D8</code> -&gt; <code>0x4C3F58</code> -&gt; <code>0x78CD3C</code>: colours overridden by the slot's ArmorData
+  (<code>Player/SauronFollowerColorOverrides</code>, HSV-rolled), entry keyed on the ArmorData. Selection =
+  <code>0x4C3634</code>: an entry whose +8 is the slot's ArmorData wins, else the base entry. Slot -&gt; ArmorData
+  index = inverse of <code>0x36B700</code>. <code>[[X+0xC0]+8]</code> = the character's <code>Model/SimpleModel</code>.</li>
+<li><strong>Join:</strong> piece +0x80 Model record == the slot's <code>SimpleModelPieces.Model</code> (pointer equality).
+  Reading the HANDLE covers both writers, the HSV roll included. 252 slots / 0 bad handles.</li>
+<li><strong>Shader</strong> (<code>body_lod0.fxo</code> PS, disassembled): <code>c = lerp(c, diffuse * tint_ch, mask_ch *
+  amount_ch)</code> for R, G, B, A, the target always from the ORIGINAL diffuse; alpha untouched; no
+  manual gamma. <strong>The blend runs in LINEAR space</strong>: the DXGI byte in the <code>.tex</code> header is UNORM,
+  but texture creation (<code>0x1E71F0</code>) takes typeless / UNORM / sRGB triplets from the format table
+  <code>0x2777E20</code> (built by <code>0xD7590</code>) and the TEXR header carries an sRGB FLAG (character variant:
+  19 bytes after the path; 1 on <code>_d</code>, 0 on <code>_n</code> / <code>_s</code> / <code>_m</code>, two texture sets). The bake
+  linearises the diffuse, blends with the linear mask and the byte/255 tint, re-encodes sRGB.</li>
+<li><strong>Normal maps</strong> (<code>tNormalMap</code>): <strong>X in GREEN, Y in ALPHA</strong> - NOT the textbook DXT5nm order
+  (CORRECTED 2026-10-06; the first export and the weapon-texture note had them swapped). The
+  body PS decodes <code>n = (G*2-1, A*2-1, z)</code> and multiplies X by the skinned TANGENT, Y by the
+  BINORMAL (its VS writes the rows of [T B N] to TEXCOORD2..4). Confirmed on the textures with a
+  CURL ORACLE (a normal map is a height gradient, so the right assignment is curl-free): X=G,
+  Y=A wins 58/60 captured maps (relative curl 0.663 vs 0.749 swapped, 0.85-0.87 sign-flipped).
+  Y follows +v (image down): 99% of stored binormals follow +dP/dv on non-mirrored meshes (orc
+  bodies 50/50: mirrored UV islands). glTF gets (G, -A, z); the geometry mirror needs nothing
+  extra. <code>textures.normal_curl()</code> is the oracle, <code>normal_to_gltf()</code> the conversion.</li>
+<li><strong>Specular</strong> (<code>tSpecularMap</code>, linear): R = reflectance (every dielectric 167-173; the
+  material default <code>k_v?SpecularTint</code> is (0.6667 = 170/255, 1.0, 0.5); polished metal 240-255),
+  G = a mask (255 except hair / feathers; unknown), B = ROUGHNESS (tear film 27, eyes 41, ring
+  50, cloth 207-228). The shader lerps the texel toward each tint channel's
+  <code>k_v?SpecularTint</code> by mask x <code>k_f?TintAmount</code> x <code>k_f?SpecularTintAmount</code> x
+  <code>k_fSpecularTintToggle</code> (cb3[24..28]), the RUNNING value each step; the tint handles carry
+  these too. Exported as glTF metallicRoughness: roughness = B / 255, metallic = (R - 170) / 85
+  (approximate: the engine's lighting pass is not decoded).</li>
+<li>Not covered: pieces outside the 23 SMC slots (attachments: <code>0x36B430</code>'s second loop over
+  <code>X+0x88</code>, tint record at <code>[obj+0x20]+0x1B8</code>) and weapons keep the shipped constants, magenta
+  off. Talion's array is empty.</li>
+</ul>
+<h2 id="captain-colorizer-live-tint-by-the-native-palette-rule-in-game-confirmed-2026-10">Captain colorizer - live tint by the native palette rule (IN-GAME CONFIRMED 2026-10-21, Nurnen Army screen)</h2>
+<p>User: Ur-Kalmar recoloured black / red by the palette rule "looked amazing"; the keeper that puts the colours back
+after the engine rebuilds his look: "Nice that's amazing". AIRE: <code>aire/visuals/live_tint.py</code> (reads, palette_set,
+split / unsplit), <code>tint_pieces.py</code> (the engine calls), <code>tint_keeper.py</code> + <code>scripts/studio/tint_keeper.py</code> (keeper,
+<code>--plan</code>, <code>--stop</code>), <code>scripts/studio/tint_army_themes.py</code> (one theme per captain). Live only.
+- <strong>CRASH 2026-10-23 16:45:50 = a use-after-free in the keeper, MEASURED from the full dump; FIXED (cl /Zs clean, NOT
+  run in game).</strong> Full evidence: <code>aire/documents/TINT_KEEPER_UAF.md</code>. During waves of Army-screen rebuilds (all 37 stage
+  copies, 5 times in a minute) the keeper's <code>RequestParams</code> job queued SetParamVector on handle <code>0x1BE420C60</code> AFTER the
+  engine had released it: the ring held #15163 the store's release, then #18778-82 our batch; the render thread wrote
+  into the freed store (memcpy fault). The job had checked the handle by its own bytes and a FREED handle passed: merged
+  into the free block before it, its vtable and store stayed, and the allocator's footer (0xB0) sat on its use count.
+  Fix: <code>sdk/sow_tint_life.hpp</code> - every main-thread job proves its copy / piece / store by membership in the engine's
+  containers (stage holders, SpawnManager entities, the visual's tint owner + override lists) in the same job, and every
+  store write (colour, shine, glow, decal placement, stamp) is written by our own ring command (<code>0x2E99E8</code>, the poster
+  Release uses) on the render thread after that proof, in ring order. Per-piece stores moved to <code>sdk/sow_tint_pieces.hpp</code>.
+  Decals the engine puts past slot 7 are taken off that copy again. Engine facts: store refs <code>+0x1C</code> (starts 1, <code>lock
+  inc</code> <code>0x1B4828</code> / <code>0x1B4768</code>, release <code>0x1B47BC</code> -&gt; <code>0x1B47D4</code>, <code>0x2545E4</code> null-writes below zero); handle slots 3
+  float, 4 float array, 7 vector, 9 vector4, 11 vector2 (<code>0x7807AC</code>); queued binds carry a store reference, queued sets
+  a raw pointer.
+- <strong>Store</strong> (handle +0x08; ctor <code>0x4C38B8</code>, 0x28 B): +0 begin / +8 end of records {u32 tag&lt;&lt;28 | StringHash(name)
+  &amp; 0x0FFFFFFF, u32 size, data} (tag 2 float3 <code>k_c?TintColor</code> / <code>k_v?SpecularTint</code>, tag 5 float <code>k_f?TintAmount</code>,
+  <code>k_fTintSlice</code>), +0x10 bytes, +0x1C refs, <strong>+0x20 change stamp</strong>. Handle (vt <code>0x1DC47B8</code>) +0x10 notify (NULL),
+  +0x18 refs: vf1 AddRef <code>0x1BF7A4</code>, vf2 Release <code>0x1BF718</code> (refs 0 posts the store's release to the render ring),
+  vf3 SetParamFloat, vf4 SetParamFloatArray, <strong>vf7 <code>0x47E4540</code> SetParamVector(this, hash, float3*)</strong> (copies the
+  vector into the ring entry). A new handle: app <code>[base+0x26FEFD8]</code> slot 104 = <code>0x4C37C4(app, HandleRef* out, 0)</code>.
+- <strong>The native rule, live:</strong> every layer whose <code>SimpleModelTint.&lt;Red|Green|Blue|Alpha&gt;Channel</code> maps palette entry
+  e takes colour = entry RGB / 255, amount 1.0 (tattoo / warpaint / faction warpaint amounts are gated per piece:
+  left alone). One colour on every layer ("full colouring") drowned the armour's texture (user: "pinata"); the
+  palette rule recolours the way a tribe does. MEASURED tribe colours: Marauder trim DCB97D, Machine metal DC9A79,
+  Sorcerous metal F9F9F9, a Dark captain metal + trim C2CCBE, most captains A09590.
+- <strong>THE RENDER CACHE:</strong> a piece's render node builds its parameters from its stores and rebuilds only when a
+  store's stamp is NEWER than its own last build. 52 in-place float writes on 26 skin stores changed nothing on
+  screen (frame diff 0.4); moving those 26 stamps turned every skin blue within a frame (diff 40). The engine
+  stamps with a counter in the render thread's TLS (the exe's TLS block +0x140 via gs:[0x58] -&gt; [0]; one thread
+  carries it, ~7,900 a second): stamp AHEAD of it (+64) - a +1 stamp was ignored by pieces rebuilt after it.
+- <strong>Per piece</strong> (pieces sharing a SimpleModelTint share one store): piece = <code>[skel + 0x108 + slot*8]</code> (skel =
+  visual +0x90; slots 1 / 14 / 15 on the head skeleton: head owner = visual +0x60, vf3 <code>0x1BFA40</code> -&gt; owner +0xE8 or
+  <code>0x1CD640</code> -&gt; [owner +0x110], slot 1 = [headskel +0x100]), material object = piece +0x48 (vt <code>0x1FFE3E8</code>):
+  <strong>vf25 <code>0x1B46DC</code> bind / vf26 <code>0x4C3B64</code> unbind (index, HandleRef*)</strong>, main thread only (ring <code>0x272E8D8</code>).
+  Render-side list <code>[mat+0xD0]</code> = {pairs {u32 index, store<em>}, u32 count +8}; index 0 holds several stores, the
+  tint one among them. Split = new handle + the shared records + the missing layers neutral, unbind shared, bind
+  ours, then </em><em>move the OLD store's stamp</em><em> (the node watches it until it rebuilds). Never free our store while
+  the piece lives (retired, ~0.2 KB).
+- </em><em>Rebuilds:</em><em> a tribe or armour change, the Army Grid's own view refresh and some detail-view switches rebuild
+  a captain's stage look (new visual, new handles from his palette) and the colours go with the old copy
+  (Ur-Kalmar: twice in two minutes). Keep requests per FactionMember and re-apply to every drawn copy whenever a
+  value differs: stage copies through the holders (<code>[base+0x26FFB60]</code> +0x2B8 entries, summary key {FM+0x178,
+  FM+0x174}), his world body FM+0x48 -&gt; +0x2340.
+- </em><em>THE SHINE (MEASURED 2026-10-22, nemesis <code>gear_lod0.fxo</code> mode-0 PS disassembled + 6 shipped gear materials):</em><em>
+  per mask layer, in order R G B A, the specular sample is lerped toward <code>k_v?SpecularTint</code> by mask x
+  <code>k_f?TintAmount</code> x <code>k_fSpecularTintToggle</code> x <code>k_f?SpecularTintAmount</code> (cb3[7..11]); the result's x =
+  REFLECTANCE (-&gt; o2.z; 0.6667 dielectric, toward 1.0 metal), y = specular OCCLUSION (o2.y), z = ROUGHNESS (o2.x;
+  wet / blood scales it). Every gear material declares the vectors at (0.6667, 1, 0.5), amounts 0 (<code>orc_tank</code> B: 1)
+  and the toggle 1 (<code>orc_regal</code>: 0). No tint store carries them (0 of 26 captains): a shine is ADDED through the
+  handle's own setters (main thread), then written in place. The handle has NO remove slot (slots 3-13 are the
+  float / bool / vector / vector2 / vector4 / matrix setters and their array forms), so an added record can only
+  be set back to the declared default.
+- </em><em>THE EYES (MEASURED 2026-10-22, live census of 26 Army-screen captains + <code>eye_cin.fxo</code> mode-0 PS
+  disassembled; IN-GAME seen 2026-10-22 on Garl's detail view, game-window capture):</em><em> a captain's eyes are
+  SOLID material slots 5 and 6 of his HEAD piece's material object (<code>+0x1E8 + i*0x18</code>, resource <code>+0x28</code> path),
+  one material per eye (Kuga wears one plain and one crossed eye; Ur-Dag black, Ur-Heku bright). The shipped
+  family <code>characters\modelcharacters\global\eyes\eye_orc{,_black,_bright,_serpent,_undead,_cataracts,_cut,
+  _metal,_crossed}.mat</code>, <code>eye_cursed.mat</code> (<code>cursedeye.fxo</code>) and <code>olog\olog_eyes.mat</code> are resident in a loaded
+  world; <code>eye_orc_spider.mat</code> ships only inside the DLC3 gear bundle
+  <code>bundles\modelcharacters\npc\flair\thrall\olog_buff_thrall_shoulders_g.bndl</code> (the index drops <code>thrall\</code>). No
+  GADB record names them by path. The PS tints the iris by the G layer (his "Eyes" palette entry) and writes a
+  GLOW into the G-buffer emissive class = saturate((mask . k_vEmissiveTintChannelMask - range.x) /
+  (range.y - range.x)) x k_fEmissiveScale (shipped 0.05 plain, 0.35 bright, 0 cataracts), so an eye glows in its
+  own tint. Swap = the material object's slot 47 <code>0x17AF0C(obj, 0 solid, index, resource)</code> on the main thread
+  (references the new resource, releases the old one); glow = a <code>k_fEmissiveScale</code> record added to the head's
+  tint store through its handle's vf4. Garl: slots 5/6 -&gt; <code>eye_orc_undead.mat</code>, G layer 52FF7A, glow 0.4 = bright
+  green glowing eyes on screen. A Fixer head (<code>Orc_Stk_Fixer_Head</code>) is tinted like armour and has no eye layer.
+- Pieces bound to no tint store (Kuga's metal-bandage helmet, <code>metalplates.mat</code>) have a blank tint mask
+  (<code>tTintMaskMap = flatblack_alpha.tex</code>): untintable by design. An unrevealed captain (the silhouette) has no
+  tint groups at all. No piece in the Nurnen army was bound to two tint stores at once.
+- </em><em>SKIN, HAIR, INK, PAINT - the engine's own colour tables (MEASURED 2026-10-22, offline GADB + live census of 168
+  captains):</em><em> <code>Model/SimpleModelColorSetup</code> -&gt; <code>_StructuresSimpleModelColorEntry</code> {SelectionWeight, Hue in DEGREES
+  +- HueDeltaRange, Saturation / Value Min-Max 0-255, AppearanceTag}. Skin (<code>Orc_Infantry_Skin_Color</code>, every orc
+  class; the olog table the same): Greenish h63 / Fleshtone h32 / Blueish h187 at weight 1, Charcoal (<code>Tag_DarkSkin</code>)
+  / Albino (<code>Tag_WhiteSkin</code>) / Green / Brown / Blue at 0.01. Eyes (<code>Eye_Color</code>): Red 3 (<code>Tag_RedEyes</code>), Yellow 2
+  (<code>Tag_YellowEyes</code>), Blue 1, Green 1. Hair: Brown / Grey / Black 1, White 0.01. Tattoo: black (Berserker white);
+  TattooChance 0 on every class - 0 of 168 captains wear tattoos. Paint (<code>Orc_Infantry_Paint_Color</code>): red / black /
+  white / blue at 1; Berserker PaintChance 0.5 - 21 of 168 captains wear paint.
+- </em><em>AN UNSET PALETTE ENTRY HAS NO COLOUR RECORD (MEASURED 2026-10-22, Garl's world copy, 8 stores):</em><em> the engine
+  writes a layer's <code>k_c?TintColor</code> only when the entry's palette alpha is FF; an unset entry (Garl: Tattoo,
+  Warpaint) gets only <code>k_f?TintAmount</code> 0.0. The war paint layer sits on the skin masks (<code>Skin_Cloth_Warpaint_Tattoo</code>,
+  <code>Skin_Eye_Warpaint_Hair</code>), so raising its amount shows paint on any orc - after a colour record has been ADDED
+  through the handle (vf7), else the layer blends toward what the material declares. The head is gated by
+  <code>SimpleModel.PaintApplyToHead</code> (P919 0x50F21E7B; <code>[[visual+0xC0]+8]</code> = his SimpleModel): True on 182 of 185
+  shipped SimpleModels, False on 3 unused prototypes.
+- Framework (C++, cl /Zs clean): v1 RAN 2026-10-21 (the keeper themed 25 Army-screen captains, read back). v2 RAN
+  2026-10-22 00:11- (24 full-outfit themes incl. faction twins and paint, random looks spammed for 26 captains,
+  finishes: the shine records read back in Ur-Kalmar's head store, a body split of its own read back; a world body
+  coloured, 20 values). v3 built 2026-10-22, NOT run: eyes (a style per eye from the 12 materials above, glow,
+  eye looks, random eyes / everything; spider bundle loaded on demand), every Color Palette item keeps the menu
+  open, and the Army Grid right-click menu keeps itself open while picking ("Keep this menu open while picking",
+  on: <code>PushItemFlag(ImGuiItemFlags_SelectableDontClosePopup)</code> around it - ImGui 1.89.9 Begin() keeps item flags
+  for submenus - and the pickers' explicit closes routed through <code>ClosePickPopup()</code>; the header's side label reads
+  FM+0x508 bit 27 live, since the menu can now stay open across a Make Enemy). Files: <code>sdk/sow_live_tint.hpp</code>
+  (reader, own stores), <code>sdk/sow_tint_looks.hpp</code> (finishes, eye styles / glows / looks, themes, accents, random
+  generators), <code>sdk/sow_tint_palette.hpp</code> (the keeper), <code>ui/sow_ui_color_palette.hpp</code>, <code>ui/sow_ui_army_grid.cpp</code>.
+  The spider eye's own tint mask is <code>flatblack_alpha.tex</code>: its red is its diffuse (<code>eye_orc_d_spider.tex</code>), so
+  the "Eye colour" does not change it. v4 RAN 2026-10-22 (user: "Everything works amazing except for the eyes aren't
+  changing with the randomizer"): "Random everything" (top of the Color Palette menu, Looks, and once per captain for
+  the whole Army screen) = outfit + shine, skin / hair / tattoo ink from the tables above plus rarer shades (orc and
+  olog classes only: FM+0x278 <code>Orc_*</code> / <code>Olog*</code>; a man, a Nazgul or Talion keeps his skin), war paint shown about
+  half the time, eyes (style per eye, colour, glow); "Random skin and hair"; a War paint switch (His own / Shown /
+  Hidden = amount 1.0 / 0.0 on the war paint layers, the head per PaintApplyToHead); a missing colour record is added
+  before an amount goes up. The eye swaps LAND (slots 5/6 read back: Garl eye_orc_undead x2 + glow 0.4, Ratak
+  cataracts x2 + 0.15) but the user saw only the iris colour change and no emission - the eye material's own
+  emissive is a faint shine (k_fEmissiveScale 0.05-0.35, an 8-bit G-buffer channel).
+- </em><em>WHAT MAKES AN UNDEAD CAPTAIN'S EYES GLOW (MEASURED 2026-10-22, Ratak raised by Undying Loyalty: tribe
+  <code>TribeDef_Undead</code>, personality <code>Damaged903_Undead_pss_Hisses</code>, Quirk_Undead, slotless <code>I_Am_Undead_Appearance</code>)</em><em>:
+  not the eye material (<code>eye_orc_undead.mat</code> ships k_fEmissiveScale 0.05, G tint amount 0, iris radius 0) but an
+  ITEM'S PASSIVE EFFECT: <code>I_Am_Undead.PassiveFXSequencePicker</code> -&gt; <code>Inventory/FXSequencePicker::UndeadFX</code> (by
+  character type: All_Orcs / Orc_Sapper / Wargs -&gt; <code>Necro_Undead_Ambient_Orc</code>, OlogHai_All -&gt; <code>_Olog</code>,
+  Gondorian_Undead -&gt; none) -&gt; <code>fx\characters\enemy\necromancer\necro_undead_ambient(_in/_out).fxp</code>: ParticleSystems
+  "Left Eye Star" / "Right Eye Star" on the bones <code>Arrow_Head_Eye_Left</code> / <code>_Right</code> (2-3 cm ahead, material
+  <code>brandeyeglow_lut.mat</code>) + a MaterialController "EyeStar" + a dark <code>BlackSmoke_Body</code> wisp. The item handler
+  <code>0x1C0E0C</code> (inventory owner rdi; reads the field at <code>0x1C10B3</code>) -&gt; <code>0x79BFF4([rdi+0x4A0], [rdi+0x440] co, picker,
+  count)</code> -&gt; entry <code>0x79C1F4</code> (0x118 B: +0x00 picker, +0x08 count, +0x10 sequence player vt <code>0x1DB7540</code>, +0x68 the
+  character, +0xD8 its world context, +0xE0 the sequence; the player picks by <code>[co+0x60]</code> via <code>0x79C298</code>, starts
+  vf1(0)). LIVE: an <code>UndeadFX</code> entry on Ratak's ARMY-SCREEN copy (stage object vt <code>0x1F733C0</code>, the UI scene's
+  context, timer <code>[CGCS+0xAB8]</code>) + three on world characters (<code>[CGCS+0xA98]</code>). CORRECTED 2026-10-28: those two
+  slots are not timers but the WorldUI / Simulation ClientFX managers (kb/vfx-runtime.md). Talion's brands use the same nodes:
+  pickers Brand / Blade_Brand / DarkTalionBrand (+ <code>_Activated</code>) -&gt; <code>Orc01_Branded*</code> / <code>Olog_Branded*</code> (the blade
+  brand <code>_BL</code> = the stars alone; Talion / Dark Talion add a head beam, head star and smoke).
+  </em><em>Why the shipped stars read dim:</em><em> alpha peaks at <code>0x33</code> (brand) / <code>0x7A</code> (undead, blade) of each particle's
+  life, one star every 0.2 s living 0.3-0.4 s over 10 cm, and the undead / blade LOOPS fade the system IN from
+  4-5 m (<code>SystemFadeIn</code> 400 / 500 cm: gone in the Army close view; brand_loop has none). </em><em>Their pixel shaders read
+  only the particle's ALPHA</em><em> (disassembled): <code>additive_hdr_soft_tintverta</code> = texture x <code>k_cColor.rgb</code> x
+  <code>k_fHDRScale</code> (cb3[1].z) x alpha x soft-depth fade; <code>additive_soft_lut</code> = <code>tEmissiveLUT</code>(intensity) x <code>k_cTint</code>.
+  Colour and brightness live in the MATERIAL: a ParticleColor RGB edit does nothing.
+- </em><em>Starting a sequence on any copy (MEASURED 2026-10-22):</em><em> <code>StartEffectSequenceOnCharacter 0x19B7850</code> = jmp
+  <code>0x19E16CC(_, target, sequence, timer)</code> (rcx never read): list <code>[[base+0x26FFB70]+0xF38 .. +0xF40]</code> (0x30 per entry:
+  +0x20 target, +0x28 instance, instance +0xD0 sequence) de-dup on (target, sequence) - an EXITING entry included -
+  then a pooled player (<code>0x7A8760</code>) bound to <code>[target+0x58]</code> + timer (<code>0x15ADCC</code>), the sequence (<code>0x15AC30</code>), the
+  target (<code>0x114AE40</code>), vf1(0). Stop = <code>0x19E5928(_, target, sequence)</code> -&gt; the instance's vf1(2) (its exit), matched by
+  the RAW pointer at entry +0x20 (never dereferenced). Timers: <code>[CGCS+0xA98]</code> world (what 0x19B7850 passes),
+  <code>[CGCS+0xAB8]</code> the UI timer the stage's own effect runs on (CORRECTED 2026-10-28: the 4th argument picks the
+  ClientFX MANAGER = the time domain - Simulation <code>+0xA98</code>, WorldUI <code>+0xAB8</code>; kb/vfx-runtime.md). A start on a stage object (AIRE, Ur-Kalmar) built a
+  player field for field like the engine's passive one (same timer, the UI context, a live effect instance at +0x28);
+  user: "Its working" (dim: the blade-light stars). A stop while the game is unfocused leaves the entry listed until
+  its exit runs.
+- </em><em>Why rolled eye lights CYCLED on the Army screen (MEASURED 2026-10-23, live; user: "They constantly flash different
+  colors ... It just cycles them every second"):</em><em> the sequence player (vt <code>0x1DB7540</code>: +0x08 state, +0x0C pending,
+  +0x10 timer) runs states 0 enter / 1 loop / 2 exit / -1 finished; SetState (vf1 <code>0x159DDC</code> -&gt; <code>0x159DE4</code>) checks
+  only CanExit(old) / CanEnter(new), so </em><em>Stop on a FINISHED player re-enters its exit and plays a new fade-out</em><em>
+  (a copy's Col_People_17 / _14: -1, then 2 with new exit effects one read later). Finished entries leave the list
+  only in the sweep <code>0x6F8C1C</code> (state -1 -&gt; release + erase) inside the world tick <code>0x1F6EC4</code>, which is SKIPPED while
+  the world clock <code>[base+0x2702598]</code> is paused (<code>[clock+8]+0x40</code>) = on the Army screen; so the list held 85 entries,
+  3-5 old colours per copy, and the keeper's stop re-sent every 6 s flashed each one in turn. Start refuses a listed
+  pair in ANY state, so a colour rolled again could not light. The entry's target +0x20 is a WEAK handle: when the
+  Army screen closed, the 16 stars lit there stayed listed with target 0, looping forever (20 s later in the running
+  world), unstoppable by target. Fix (<code>sdk/sow_eye_stars.hpp</code> + <code>sdk/sow_tint_palette.hpp</code>, cl /Zs clean, NOT run):
+  stop only a player in state 0/1; a wanted star listed fading / finished is RESTARTED in place (its vf1(0), entry +
+  live copy + sequence + timer checked); any other pack star still lit on the copy is stopped (one light per copy);
+  stars whose copy went away are finished (SetState(-1) on target-0 entries of our sequences, asked every second for
+  8 s). Emulated against live memory on 3 real orphans: SetState(-1) runs only the loop's Exit <code>0x15A88C</code> (its
+  handle check <code>0x311E80</code>) and returns 1 with state -1. The in-place restart is not emulated (no Army screen then).
+- </em><em>Eye-star pack (BUILT 2026-10-22, AIRE <code>aire/vfx/eyestars.py</code>):</em><em> <code>eyestars_build</code> -&gt; per colour (Red, Ember, Gold,
+  Venom, Spectral, Frost, Wraith, Void, Bloodmoon, White) and tier (Glow gain 2 / Blaze gain 5) an HDR copy of
+  <code>brandeyeglow.mat</code> (k_cColor = linear colour x gain, nothing else changes) + the two eye-star nodes of
+  <code>brand_loop.fxp</code> at full alpha, denser (0.06 / 0.04 s, 1 / 2 per emission), bigger (10-18 / 14-28 cm), within
+  1.5 / 2 cm, no near fade; enter / loop / exit on <code>Col_People_00..19</code> (reserved in <code>aire/data/vfx/slots.json</code> as
+  mod <code>sowce-eyestars</code>); every phase engine-accepted + value-guarded; one 155 KB bundle in the look pack
+  <code>&lt;x64&gt;\sowframework\eyefx\eyestars\</code> (look.json: bundle, colours -&gt; sequence per tier, loop paths). The launcher
+  ships <code>eyefx</code> with the other look packs. <code>eyestars_deploy</code> (mount + load live), <code>eyestars_test(name, color, tier,
+  stop, cycle)</code>: RAN 2026-10-22 - 26 Army-screen starts accepted (cycle of all colours, Blaze); </em><em>IN-GAME CONFIRMED
+  2026-10-22</em><em> (user screenshots of Ur-Kalmar and a Dark Destroyer with Blaze stars: "Holy shit that looks
+  amazing!" - the AIRE test in launch PID 10060). Tests: <code>tests/test_eyestars.py</code>.
+- </em><em>v5 built 2026-10-22, cl /Zs clean, NOT run:</em><em> <code>sdk/sow_eye_stars.hpp</code> (the pack: mount, path register, load once
+  per process; sequence lookup; the active list; start / stop jobs on the main thread with the target re-checked)
+  + the keeper's EYE LIGHT per copy (Off / his eye colour = the nearest pack hue / a named colour / Undead mist /
+  Blade light; Glow or Blaze; orc and olog classes only; a stopped star of ours restarts only after its exit left
+  the list; copies that vanish get a stop and are forgotten); eye looks carry a light (Undead glow = Spectral Blaze,
+  new Undead mist, Demon = Red Blaze, Wraith = Frost Glow, Ember, new Void light); random eyes give a light to ~70%
+  of glowing eyes, ~22% of others. </em><em>UNDEAD CAPTAINS</em><em> (Quirk_Undead in FM+0x198, or <code>I_Am_Undead_Appearance(_OLOG)</code>
+  in FM+0x130) keep the game's look: skin / eye / hair / ink / war paint wants, eye styles, glow, paint mode and light
+  are dropped for them every tick (so the values we had replaced go back), random rolls change their outfit only,
+  and the menu shows "Undead: ... (kept)" with those controls off. </em><em>Menu borders:</em><em> the main window's edge effects
+  (border glow, fire trail, dust, tab / shadow fades) drew on ImGui's FOREGROUND list, above every popup - while a
+  popup, menu, combo or tooltip overlapped the window last frame they now draw into the window's own list with a
+  full-screen clip (<code>ui/sow_ui_main.cpp</code> OverlayOnMainWindow). Not yet seen on screen: a world body's colours, a
+  shine, shown war paint.
+  </em><em>v5 RAN in launch PID 22848 (DLL of 03:25) and drew NO star (MEASURED 2026-10-22, log + live):</em><em> the pack folder
+  mounted and its paths registered (03:31:51), but the load job never logged a result and 97 s later the lane gave up
+  ("the bundle did not load"); live: bundle not registered, the engine's active effect list empty. Cause: every eye
+  job was posted <code>kBetweenFrames</code> and refused off the main thread; on the Army screen a main-loop dispatch rarely came
+  within 200 ms, so <code>MainThread::PopOverdue</code> handed the job to the render-thread fallback, which refused it without a
+  word - 3 tries, then given up for the launch (the eye slot swaps had the same 3-try cap per copy; the spider-eye
+  bundle was asked once). Fixed (cl /Zs clean, NOT run): one gate <code>kEyeJobGate = MainThread::kAny</code> (any main-thread
+  dispatch, the loop's own or its frame wait - the same calls already ran from both through the Lua pump) for the star
+  load / start / stop, the eye slot swaps and the eye-style bundle; the star load keeps retrying (every 30 s after 3
+  tries, logged once with how many ran off-thread); the spider bundle is asked again every 15 s, up to 4 times.
+- </em><em>EVERY NATIVE EYE LOOK, AND HOW THE ENGINE PUTS IT ON (MEASURED 2026-10-22: GADB census + code + live).</em><em> No eye
+  MESH ships (eyes are head material slots 5 = left / 6 = right; the only eye meshes are giblets, the Deadeye helmet
+  and Sauron's eye). A title's eye look is an ITEM: 58 items (<code>IT_Orc_Serpent_Eyes</code>, <code>olog_eyes_spider</code>, <code>orc_Cursed</code>,
+  <code>orc_eyes_Metal_Leye</code>, <code>orc_Left_Eye_Gouge</code>, <code>BrightEyesGlow</code>, <code>HasBrand</code> ...) given by 64 titles (Serpent / Wyrm,
+  DLC3 Thrall, 21 curse titles, One-Eye, Dead-Eye, White-Eye ...). Its <code>MaterialSetVariants</code> (19, all ModelSlot 1)
+  swap only the eyeball (9 materials: bright, black, cataracts, crossed, cut, metal, serpent, spider, undead); its
+  <code>PassiveMaterialOverrides</code> (77 <code>Inventory/MaterialOverride</code> records) paint the rest; <code>FlairColors</code> set skin / eye
+  colour (serpent <code>Orc_Skin_Green_01</code> h63 s100 v160, curse <code>Orc_Skin_White</code>, brand eyes <code>Eyes_Blue_Branded</code> h222
+  s186 v156, <code>Eyes_Green_Nazgul</code> h153 s255 v255). Record params (<code>_StructuresInventoryMaterialParam</code>): a PICKER
+  (<code>Inventory/MaterialParamPicker</code>: ScarLayer / ScarPosition / ScarRotation / ScarScale / ScarRotationCosSin = 16 names
+  each, Eyes_Glow_Scale / _EmissiveRange / _LUT, SeverMask ...) or a plain ParamName; value by ParamValueType (0 float,
+  1 vec2 = float-pool pair, 4 int). E.g. <code>orc_Serpent_Eye_L</code> = layer 26 at UV (0.437, 0.854) scale 2;
+  <code>olog_spider_Head_LEye</code> layer 39 at (0.59, 0.83) scale 1.43; <code>orc_Hide_Head_Eye_L</code> k_nSeverMask 4 (the left eye
+  hidden).
+  - </em><em>The API:</em><em> item handler <code>0x1C0E0C</code> -&gt; per record <code>AddMaterialOverride 0x57AF70(visual, record, +n)</code>; removal
+    <code>RemoveMaterialOverride 0x57D530(visual, record, n)</code> (-&gt; <code>0x57D424</code>: count -= n, at &lt;= 0 material vf26 unbind +
+    free + swap-remove). visual = CChar+0x2340 (<code>0x1C06E8</code>). Add needs <code>visual+0xB2</code> != 0 and the skeleton +0x90
+    (else nothing); list <code>visual+0xC8</code> (created lazily, 0x20 B) = {begin, end} of 0x38-byte entries {+0 decal slot,
+    +8 record, +0x10 count, +0x18 handle ref, +0x20 vector}. <code>0x57B720</code>: same record -&gt; count += n only; else the
+    record's pickers, the ModelPiece's GROUP (<code>0x57BA84</code>: 0 -&gt; 2, 1-2 -&gt; 1, 3-4 -&gt; 3, 5-6 -&gt; 2, 7-12 -&gt; 4 ...), slot =
+    lowest index below min(picker size, 32) that no entry of the same group sharing a picker uses; <code>0x103F110</code>
+    fills a new factory handle (app slot 104 path) with the params at that slot; <code>0x57BE0C</code> finds the piece's
+    material (head: <code>0x308590</code>), bound at index 0 (vf25). The head / body shaders read decal slots 0-7 only.
+  - </em><em>LIVE (Orc_Spearman / Orc_Archer, guarded main-thread calls):</em><em> serpent L/R -&gt; head slots 0/1, the exact
+    records above; Cursed (7) + brand + glow range + Wraith row -&gt; curse face / black eyes head slots 0-2, the 4 body
+    curse marks body slots 0-3, HasBrand head slot 3 (its ScarRotationCosSin picker writes (0, 0) there),
+    k_vEmissiveRange (0.5, 1), k_nEmissiveLUTIndex 1.0; each remove emptied the list and unbound the stores. Natives
+    seen on world characters: a prisoner's brand decal (layer 21), an Easterling's dark brand set.
+  - </em><em>THE GLOW (head_lod0 meshtype4 PS + eye_cin PS disassembled; head .mat defaults read):</em><em> both write
+    emissive = saturate((tint mask . k_vEmissiveTintChannelMask - range.x) / (range.y - range.x)) x k_fEmissiveScale
+    on the G (eye) layer. Orc heads + <code>eye_orc.mat</code>: mask (0,1,0,0), range (0, 2), scale 0.05 - a fully masked pixel
+    glows at HALF the scale; <code>EyeGlow_EmissiveRange</code> (0.5, 1) makes it 1 x (twice as bright). Olog heads: mask 0 (no
+    head glow). G-buffer material alpha = (32 + row) / 255 (class 2): eyeballs always row 7 (own tint, <code>l(0.152941)</code>);
+    the head writes k_nBrandLUTIndex where its brand texture (t0 array, layer k_fBrandIndex 15 at the .mat's
+    k_vBrandPosition) is &gt; 0, else k_nEmissiveLUTIndex (orc heads ship 7). Rows = the EyeGlowLUT records' float:
+    Fire 0, Wraith 1, Poison 2, Nazgul 4, Cursed 5 (Fire / Poison / Cursed: no item uses them). cb3 offsets
+    (head_lod0 mt4): k_nBrandLUTIndex 520, k_nEmissiveLUTIndex 524, k_vEmissiveTintChannelMask 528, k_fBrandBrightness
+    552, k_vEmissiveRange 592, k_fEmissiveScale 600. Override stores bind AFTER the tint store; the last carrying a key
+    wins (an override's k_fEmissiveScale beats the colorizer's glow).
+  - </em><em>v6 built 2026-10-22, cl /Zs clean, NOT run:</em><em> <code>sdk/sow_tint_marks.hpp</code> - 34 TITLE LOOKS (Serpent, Spider eyes
+    (olog decals), Metal / Crazy / Black / Cut / Cataract eyes both, left, right, Mad eyes, One eye, Swollen, Cursed,
+    Cursed face, Burned eye / face, Molten, Thunderhead, Dead eye, Mad eye, Scarred skull, Bright eyes, Undead face,
+    Brand of Talion, Brand of the Dark Lord) with per-head record lists (all 79 names checked against the shipped
+    378), the look's eye materials / skin / eye colour; a GLOW COLOUR (the 5 LUT records); Blazing / Max glow adds
+    the brand range. Per drawn copy the keeper makes our records exactly the wanted set (one main-thread job per copy,
+    removals before adds, visual + owner + built flag re-checked in the job, entry recorded, a fault = never that
+    record again), stamps the head / body stores ahead (now + 400 ms) so the nodes rebuild, forgets copies no longer
+    drawn (never calls on them), clears on a load. Random eyes roll a title look ~35% (by weight, his head's kind,
+    brands / undead face never). Undead captains: none. Menu: Eyes &gt; "Looks of the game's titles" (Title look, Glow
+    colour, records on him, slot-overflow warning). Files: <code>sdk/sow_tint_marks.hpp</code>, <code>sdk/sow_tint_palette.hpp</code>,
+    <code>ui/sow_ui_color_palette.hpp</code>.
+- </em><em>THE ACCURSED LOOK, AND A WHOLE BODY OF IT (MEASURED 2026-10-22: GADB + textures + live on Tuhorn / Skoth).</em><em>
+  <code>Role_Accursed</code> (title <code>Orc_Title_Accursed</code>) gives, among others, <code>NazgulArm</code>, <code>orc_Cursed</code> / <code>olog_Cursed</code>,
+  <code>IT_Body_Scar</code>, <code>IT_Albino</code>, <code>IT_Hair_Black_Tint</code>.
+  - </em><em>The pale veined arm is an ARMOUR PIECE, not skin.</em><em> <code>NazgulArm</code> (orcs only) -&gt; <code>IB_NazgulArm</code> -&gt;
+    <code>Orc_{Slim,Buff,Stk}_NazgulArm</code> in the ACCESSORY slot (SMC slot 4), model <code>orc_buff_nazgularm.skel</code>, material
+    <code>orc_nazgularm.mat</code> (<code>gear_alphatest_lod1</code>) with its OWN 512x512 atlas: pale skin, dark veins, rot at the hand and
+    metal plates PAINTED in <code>orc_nazgularm_d.tex</code>. Its Tint is <code>Metal_Leather_FactionCloth</code> (no skin layer: it shares the
+    chest's armour store), so a Color roll recolours the body but never this arm. Its 3 PassiveMaterialOverrides
+    (<code>orc_Hide_Body_Armu_R</code> SeverMask 96, <code>orc_Hide_Armor_Arml_R</code> 32, <code>orc_Hide_Armor_Armu_R</code>) cut his own right arm away.
+  - </em><em><code>orc_Cursed</code>:</em><em> PairedItems <code>Body_Scar_BodyReplacement</code> (the body piece -&gt; <code>Orc_*_Body_Scar</code>), FlairColors
+    <code>Orc_Skin_White</code>, overrides <code>orc_curse_head_Face</code> (layer 1 = the curse face, ScarTint 1), <code>orc_Black_Eye_L/R</code>
+    (layer 34), <code>olog_curse_body_01..04</code> (layer 0 = the curse veins, on the torso), MaterialSetVariants
+    <code>Orc_Head_Black_Eyes</code>. <code>Orc_Skin_White</code> AND <code>Orc_Skin_Undead</code> are HSV s0 v255 = a WHITE tint, i.e. the body diffuse
+    itself (pale pink, the arm's skin): the "dead" skin is no tint at all.
+  - </em><em>Body decals need the SCAR material.</em><em> Normal bodies draw <code>orc_body001(v2).mat</code> / <code>olog_body001.mat</code> =
+    <code>body_noscar.fxo</code>, no decal slot; the scar twins (<code>orc_body_scar(_lods).mat</code>, <code>orc_body_stk_scar(_lods).mat</code>,
+    <code>olog_body_scar(_lods).mat</code>: <code>body_lod0/1.fxo</code>, 8 slots) use the SAME textures + the scar arrays, and the scar
+    pieces the SAME mesh (<code>Orc_Buff_Body001</code> and <code>Orc_Buff_Body_Scar</code> -&gt; <code>orc_buff_body001.skel</code>; Slim, Stocky, Olog
+    alike). The scar materials ship in <code>ui_assets.arch06</code> entry 31 beside the body meshes (resident). LIVE: Skoth's body
+    slots 0/1 swapped to <code>orc_body_scar.mat</code> / <code>_lods</code> with <code>0x17AF0C</code> (kind 0) on the main thread - read back.
+  - </em><em>Decal store records</em><em> (one store per override entry, slot N chosen by the engine; MEASURED on 2 captains):
+    <code>k_fScarLayerN</code> / <code>k_fScarRotationN</code> / <code>k_fScarTintN</code> tag 5 float, <code>k_vScarPositionN</code> / <code>k_vScarScaleN</code> /
+    <code>k_fScarRotationNCosSin</code> </em><em>tag 11 = float2</em><em>. Rewriting them IN PLACE + a stamp ahead moves a decal anywhere: Skoth
+    took 8 body records (<code>olog_curse_body_01..08</code>) re-placed over the whole body + 6 head records, all read back.
+    </em><em>IN-GAME CONFIRMED 2026-10-22</em><em> (user screenshot of Skoth: pale skin, veins over chest and arms - "Nice thats
+    it!"). Placements (all layer 0, tint kept; u, v, rotation deg, sx/sy): 01 chest (.5, .42) 0 .9; 02 back (.5, .13)
+    180 .9; 03 R arm + hand (.245, .27) 0 .51/.735; 04 L arm + hand (.755, .27) 180 .51/.735; 05 R thigh (.185, .535)
+    0 .86; 06 L thigh (.815, .535) 180 .86; 07 R shin (.18, .84) 0 .86; 08 L shin (.82, .84) 180 .86. Override entry
+    layout checked live 2026-10-22: entry +0x18 = a CMaterialOverrideHandle (vt <code>0x1DC47B8</code>) 34/34, its decal slot
+    (entry +0) = the store's <code>k_fScarLayerN</code> slot 34/34 (35 drawn visuals).
+  - </em><em>The orc body atlas</em><em> (Slim / Buff / Stocky share it; positions in the ENGINE's texcoord = AIRE's decoded uv0 -
+    <code>TextureStore</code> images are row-flipped against it: sampled as-is the torso reads cloth, flipped it reads skin, and
+    the shipped decals land on their named regions only in decoded space): R hand u .00-.15, R arm .17-.49, torso
+    .35-.65 (back v .02-.25, front .30-.54, neck hole near (.50, .29)), L arm .51-.83, L hand .85-1.0, all at v .10-.44;
+    thighs v .41-.66 and shins v .71-.97 (R u .03-.33, L .67-.97); pelvis band v .55-.68. L / R islands do not overlap
+    (no mirroring: the shipped <code>*_curse_body_L*</code> records cover the LEFT arm only). A decal of scale s covers a UV square
+    of side 1/(4s) (vec2: per axis). The olog atlas: not decoded (AIRE's uv0 pick failed on <code>olog_body001.mesh</code>).
+  - </em><em>The undead skin records do nothing here:</em><em> <code>orc_undead_body</code> / <code>_head</code> (LightbleedRange 0.5, SubSurfaceID (2, 0))
+    through AddMaterialOverride wrote ONLY <code>k_fScarRotationNCosSin</code> (0, 0) and took a decal slot (head slot 8, body
+    slot 4) - LightbleedRange / SubSurfaceID were dropped. <code>orc_undead_scar</code> = head layer 27 at (.5, .5) scale .5,
+    TintSlice 2. <code>I_Am_Undead_Appearance</code> uses none of them (skin <code>Orc_Skin_Undead</code> = white, cataract eyes,
+    <code>Orc_Head_Undead_Eyes</code>).
+  - </em><em>A keeper-managed captain's skin comes back:</em><em> white written into Tuhorn's body + head stores was put back within
+    3 s (his Color-roll want); Skoth (no want) kept it.
+  - Head regional curse records on a captain who already had the curse face: <code>orc_curse_head_LCheek/RCheek/LNeck/
+    RNeck/forehead</code> took head slots 3-7 on Tuhorn; game-window crop shows the veins on forehead, cheeks and throat.
+  - Tools (scratchpad, live): <code>body_curse_test.py</code> (show / add / remove / place / mat / matback), <code>skin_set.py</code>,
+    <code>body_uv_layout.py</code>, <code>curse_overrides_live.py</code>, <code>undead_look_items.py</code>.
+  - </em><em>v7 built 2026-10-22, cl /Zs clean, NOT run: the BODY LOOK "Cursed body"</em>* (<code>sdk/sow_tint_body.hpp</code>). Color
+    Palette &gt; Looks &gt; "Body look" (orc copies whose body material is <code>orc_body001(v2)</code> or a scar twin: Buff, Slim,
+    Stocky; olog atlas unmapped); "Random skin and hair" / "Random everything" give it to 12% of eligible orcs
+    (FM appearance <code>[FM+0x2D8]+0x28</code> body piece). Per drawn copy: body solid slots 0/1 -&gt; the scar twins (journal by
+    path, back when off; main thread, <code>kEyeJobGate</code>), the 8 body + 6 head records through <code>Marks</code> with the
+    placements above (<code>Marks::Place</code> rewrites the entry's own store keys, keeps what they held, <code>Unplace</code> puts it
+    back when no look wants the placement - the Cursed title look carries body 01..04 at the game's spots; a
+    removal of the game's own (shared) entry waits until its decal is back), white skin (the Skin want; a title look's
+    skin never overrides a body look's). Undead captains: none. Also fixed: <code>Marks</code> posted its jobs <code>kBetweenFrames</code>
+    (the starvation class of v5) -&gt; <code>kEyeJobGate</code>.</p><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
