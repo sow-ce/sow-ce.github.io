@@ -1,0 +1,701 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rendering and effects: ClientFX, shader constants, atmosphere, surface tint, cloth - Shadow of War engine reference</title><meta name="description" content="ClientFX data, shader constants, atmosphere, surface tint, cloth / iridescent gear, the render thread + command ring, the engine&#x27;s D3D11 layer and pass entry points"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" class="cur" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="rendering-and-effects-clientfx-shader-constants-atmosphere-surface-tint-cloth">Rendering and effects: ClientFX, shader constants, atmosphere, surface tint, cloth</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Moved verbatim from
+CLAUDE.md on 2026-10-27 (original lines 6666-6839, 7812-7980, 8652-8774); heading levels normalised, text unchanged.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Sections:</strong>
+- ClientFX System — the custom-VFX import surface (CRACKED OFFLINE 2026-08-19)
+  - The <code>.fxp</code> load gate is ONE function, and it never sees a filename
+  - The node factory: 36 node types, 2,228 properties, all recovered from CODE
+  - Cloning a donor drags in an unreachable material 3 times out of 4
+  - Delivery — what is settled and what is not
+  - AIRE surface (all offline, game NOT needed)
+- GPU Shader Constant Pipeline (CRACKED 2026-04-17)
+- Atmosphere System - the world's lighting look, live (MEASURED 2026-10-14, Minas Ithil)
+  - Atmosphere selection - brushes, the camera, priority; the region lighting layer (MEASURED 2026-10-26)
+  - Surface recolour - walls, ground, terrain, characters (MEASURED IN GAME 2026-10-14, AIRE-driven)
+- Anisotropic satin cloth — a new lighting class, live (USER-CONFIRMED IN GAME 2026-10-09)
+- Render thread and the command ring - the main thread's frame as the renderer receives it (MEASURED 2026-10-28)
+- The engine's own D3D11 layer and the pass entry points (MEASURED 2026-10-28, offline + live)
+- The frame on the render thread - measured call tree and pass order (MEASURED 2026-10-28)</p>
+<hr />
+<h2 id="clientfx-system-the-custom-vfx-import-surface-cracked-offline-2026-08-19">ClientFX System — the custom-VFX import surface (CRACKED OFFLINE 2026-08-19)</h2>
+<p>Everything below is MEASURED from the binary and cross-checked against the shipped
+<code>.fxp</code> corpus. <strong>No delivery claim here is in-game proven</strong> — see the delivery section.</p>
+<h3 id="the-fxp-load-gate-is-one-function-and-it-never-sees-a-filename">The <code>.fxp</code> load gate is ONE function, and it never sees a filename</h3>
+<p><code>LTFX</code> occurs <strong>exactly once in the whole 120 MB binary</strong>, as an immediate in code:</p>
+<pre><code>0x048FBB90  FxResourceLoad(rcx, rdx = stream)
+    mov  rax,[rdx] ; mov r8d,8 ; lea rdx,[rsp+0x48] ; call [rax+8]   &lt;- stream-&gt;Read
+    cmp  dword [rsp+0x48], 'LTFX'  /  cmp dword [rsp+0x4C], 8         &lt;- magic + version
+    mov  ecx,0x60 ; call 0x3DE238 ; call 0x74D000                     &lt;- new FxResource(0x60)
+    call 0x74CF10                                                     &lt;- GADB-from-stream
+    mov  [rdi+0x48], rax                                              &lt;- db at FxResource+0x48
+    (fail) lea rcx,[0x20098E8] "Failed to load the database out of a stream."
+</code></pre>
+<p>It is reached ONLY through <strong>vtable <code>0x2312340</code> slot 29</strong> (39 slots, no RTTI; ctor <code>0x1D22C0C</code>,
+dtor <code>0x1D22CC4</code>) — a resource-type handler class, one virtual per asset kind. Path resolution
+happens UPSTREAM, so the loader takes a stream object whose vtable slot 1 is <code>Read(dst,size)</code>.
+That makes it a candidate in-process entry point for registering an effect with no file at all.</p>
+<h3 id="the-node-factory-36-node-types-2-228-properties-all-recovered-from-code">The node factory: 36 node types, 2,228 properties, all recovered from CODE</h3>
+<p>Two parallel tables, both static:</p>
+<table>
+<thead>
+<tr>
+<th>table</th>
+<th>base / stride</th>
+<th>per entry</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A — descriptors</strong></td>
+<td><code>0x263F800</code> / <code>0x40</code></td>
+<td><code>+0x00</code> property array, <code>+0x08</code> COUNT, <code>+0x10</code> short name, <code>+0x18</code> desc vtable <code>0x1DB10E0</code>, <code>+0x20</code> <code>"ClientFX.&lt;Type&gt;"</code>, <code>+0x28</code> parent, <code>+0x38</code> flags</td>
+</tr>
+<tr>
+<td><strong>B — runtime</strong></td>
+<td><code>0x2681DD0</code> / <code>0x50</code></td>
+<td><code>+0x00</code> name, <code>+0x10</code> create, <code>+0x18</code> destroy, <code>+0x20/0x28</code> update/render, <code>+0x30</code> deleting-dtor thunk (reveals the node CLASS VTABLE + object size). <strong>CORRECTED 2026-10-28:</strong> not one table and no update / render slots - 36 separate 0x50-byte type entries reached through the registry <code>0x21DB460</code>; +0x20 / +0x28 / +0x30 create / delete / destroy the node's load-time KEY, +0x38 / +0x40 size and build its per-instance object (kb/vfx-runtime.md "Node types")</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>READ THE ARRAY AT <code>+0x00</code>, NOT <code>+0x30</code> OF THE NAME-ANCHORED ADDRESS.</strong> Anchoring on the
+<code>ClientFX.</code> string and reading proplist/count at <code>+0x30/+0x38</code> assigns every array to the
+PREVIOUS type — silently and plausibly: the array full of <code>NodeAttractors</code>/<code>BoltColor</code>/
+<code>Component0..3</code> then reads as <code>ClientFX.Model</code>, and <code>SceneRender</code>'s fog/HDR/DOF block reads as
+<code>ClientFX.Sound</code>. Caught only because the shipped files disagree.</p>
+</blockquote>
+<p>The arrays live in <strong>uninitialised <code>.idata</code></strong> (<code>vsize 0x4F9000</code> vs <code>raw_size 0x14CE00</code>, so
+anything above <code>0x26F8E00</code> is zero at rest) and are built at start-up:</p>
+<pre><code>thunk:  sub rsp,N ; xor edx,edx ; lea rcx,[list] ; mov r8d, count*0x48 ; call memset
+        ; add rsp,N ; jmp init            &lt;- STOP DECODING AT THIS JMP: the next type's
+                                             thunk follows the int3 padding and overwrites
+                                             the size, which makes 35 of 36 types miss
+init:   lea rcx,[list + i*0x48] ; call &lt;stub_i&gt;          (once per property)
+stub_i: PropRegister(slot, "Name", TYPE_CODE, &amp;default, annotation, 1, sub, accessor)
+          rcx          rdx      r8d        r9        [rsp+0x20] [+0x28] [+0x30] [+0x38]
+</code></pre>
+<p><strong><code>r8d</code> is the FXDB descriptor type code</strong> — the same vocabulary as the file's own descriptors
+(<code>Force</code> -&gt; 2 Float; <code>Filter</code> -&gt; 5 StringEnum with annotation <code>type=EImpulseFilter</code>). The memset
+size is the proof of the array bound: Beam's is <code>0x708</code> = 25 x 0x48 exactly.</p>
+<p>Three addressings must all be followed or the walk under-reports:
+<code>lea rcx,[rip+d]</code> (absolute slot), <code>lea rcx,[rbx+N]</code> (slot <code>base+N/0x48</code>, inside a shared GROUP
+function entered by <code>call</code>), and <strong><code>mov rcx,rbx</code></strong> (slot 0 of a group, no lea at all — omitting
+it leaves every type exactly one property short). A few properties (<code>KeyName</code>, <code>FxName</code>, every
+<code>GROUP_BEGIN</code> marker) are registered INLINE with no stub; decode those from the enclosing
+function START, never from a backward window — a misaligned backward decode resynchronises just
+before the call and silently drops the arguments.</p>
+<p><strong>50 descriptors / 2,228 properties / 2,227 named.</strong> The 14 without a <code>ClientFX.</code> name are not
+anonymous — they are the class hierarchy: <strong><code>BaseFX</code> (15, the common header every visual node
+inherits)</strong>, <code>BaseSpriteFX</code> (41), <code>BaseCreateFX</code> (38), <code>LightningComponent</code> (6),
+<code>FlareComponent</code> (4), <code>DebrisType</code> (8), <code>OcclusionQueryFX</code> (19), <code>ReferenceFX</code> (2),
+<code>FxGlobalProps</code> (5) and the five curve classes <code>CurveFloat/Int/Vector/Color/File</code> (2 each).
+Per-type counts are already FLATTENED (Lightning's 92 includes BaseFX's 15), so authoring needs
+no inheritance resolution.</p>
+<p><strong>Validated against data the code never saw: 7,653 descriptors across 40 shipped effects,
+100.000% named, and every recovered type code that was recovered matches the file.</strong> A record
+carries a SUBSET of its type's properties (Lightning: 68 of 92 — the file omits the editor
+GROUP markers), so the engine binds by HASH, not by position or completeness.</p>
+<h3 id="cloning-a-donor-drags-in-an-unreachable-material-3-times-out-of-4">Cloning a donor drags in an unreachable material 3 times out of 4</h3>
+<p>Census over 1,814 shipped effects (container sweep, 5 s): of <strong>4,398 node
+materials, 3,241 are BUNDLE-ONLY (73.7%)</strong> and only 1,157 (26.3%) ship as loose
+entries. Those materials are not broken — they resolve while their own container
+is loaded, which is correct for an effect playing on the character whose bundle
+ships them. It breaks when a node is <strong>transplanted across characters</strong>, which is
+exactly what the forge does. Measured case: the SSJ2 aura's Lightning nodes
+inherited <code>hand_of_god\materials\hog_beam_core.mat</code> from the torment donor; that
+material is section-resident in <code>player_eltariel.bndl</code> (Patch_DLC3 embb[143]) and
+ships in no loose entry, so for Talion it is unreachable and the arcs draw
+nothing. In the same build the ParticleSystem's material
+(<code>fx\common\smoke\smokeblack01a.mat</code>) IS loose — and the sparks rendered while the
+arcs did not. <strong>Run <code>call("fx_dependencies", path=...)</code> on every authored effect</strong>
+and re-point anything <code>bundle_only</code> at a loose material or ship it in the mod.</p>
+<p><strong>Two socket vocabularies coexist.</strong> Across 95 distinct attach points,
+<code>L_Hand</code> (538) outnumbers <code>LeftHand</code> (369) and <code>R_Hand</code> (93) sits beside
+<code>RightHand</code> (114): the underscore forms belong to creature/orc rigs, the plain
+forms to the player rig. A donor cloned from a creature effect therefore carries
+socket names Talion's skeleton does not have. <code>player_base.skel</code> contains
+<code>Torso</code>, <code>Head</code>, <code>LeftHand</code>, <code>RightHand</code>, <code>LeftFoot</code>, <code>RightFoot</code>, <code>Pelvis</code>,
+<code>SocketHead</code>, <code>SocketAttach</code>, <code>Socket_Ring</code>. The literal string <code>null</code>
+(223 uses) means unattached.</p>
+<h3 id="delivery-what-is-settled-and-what-is-not">Delivery — what is settled and what is not</h3>
+<ul>
+<li><strong>Only 60 <code>.fxp</code> paths exist as loose archive entries</strong> (Patch_01/_LC 60, Patch_DLC4/_LC 3,
+  Patch_07_LC 1) out of 5,915 known effects. The rest ship as <code>LTFX</code> sections inside <code>.embb</code>
+  bundles. <code>torment_troll_success.fxp</code> — the file the 2026-08-19 dead-end round tried to
+  override — is <code>in_bundle</code>, shipping inside <code>player_eltariel.bndl</code> across Patch_07/08/09/11.
+  So that round tested the loose lane on an asset that also has bundle copies, which is exactly
+  the [[loose-entry-vs-bundle-embb]] trap.</li>
+<li><strong><code>archivepatchloosefiles.txt</code> and the "path index blob" are the SAME table</strong> —
+  <code>u32 ver=1 | u32 strtab_size | strtab | u32 count | count x (P919 hash, str_offset)</code> sorted by
+  hash. It is both "what this archive overrides" and "how a loose file is found by name".
+  Verified on the staged mod: file #0 is 44 bytes declaring exactly <code>fx\custom\ssj2_aura.fxp</code> at
+  <code>0x5EB546B4</code>, hash-checked against the engine's own LOOKUP table at <code>0x1DB50D0</code> (1/1), the same
+  shape as the working splash-menu mod (2/2). The payload in the mounted archive is
+  byte-identical to source.</li>
+<li><strong>UNPROVEN:</strong> whether the engine will serve a path that exists in NO shipped archive. That is
+  the one open question and it costs a single restart —
+  <code>python scripts/fx_delivery_verdict.py --arm</code>, fast travel, then re-run without <code>--arm</code>.
+  The verdict hunts a CANARY (<code>SSJ2_Head</code>/<code>SSJ2_LeftHand</code>/<code>SSJ2_RightHand</code>, written into each
+  node's <code>KeyName</code>) rather than the path string, because we allocate the path string ourselves
+  so finding it proves nothing.</li>
+</ul>
+<h3 id="aire-surface-all-offline-game-not-needed">AIRE surface (all offline, game NOT needed)</h3>
+<pre><code class="language-python">call(&quot;fx_schema&quot;)                       # 50 classes / 2,228 properties + stats
+call(&quot;fx_node_type&quot;, name=&quot;Lightning&quot;)  # every property: name, type, DEFAULT, annotation
+call(&quot;fx_validate&quot;, path=&quot;x.fxp&quot;)       # does every descriptor exist in the engine's schema?
+call(&quot;fx_dependencies&quot;, path=&quot;x.fxp&quot;)   # every asset the effect NAMES, and whether it resolves
+call(&quot;fx_donors&quot;)                       # richest shipped template per node type
+call(&quot;bundle_extract&quot;, path=&quot;...fxp&quot;)   # read an asset that ships ONLY inside a bundle
+</code></pre>
+<p>Modules: <code>aire/analysis/clientfx_schema.py</code> (the code walk),
+<code>aire/formats/clientfx_author.py</code> (schema index, validator, dependency pre-flight, donor atlas),
+<code>aire/formats/bundle_extract.py</code> (the bundle lane). Forge: <code>scripts/fxp_forge.py</code> — now
+schema-aware (<code>add_node_auto</code>, <code>settable</code>, <code>set_checked</code>).</p>
+<blockquote>
+<p><strong>THE <code>.fxp</code> EDITOR HID MOST FIELDS (CORRECTED 2026-10-20).</strong> <code>FxpEditor.run()</code> summed descriptor
+counts until the record's cell count was covered; packed bools share cells, so it stopped early on
+<strong>23,294 of 27,889 records (83.5%) of 4,540 shipped effects</strong>, and an edit to a hidden field raised
+<code>KeyError</code>, which the build scripts' <code>try_set</code> turned into a silent skip. The run is
+<code>fields[doff : doff + N]</code>, N = the u8 after the record's u16 cell count (the main-GADB law); those
+runs tile the descriptor table in 4,540/4,540 files. Fixed in <code>scripts/fxp_editor.py</code>; the AIRE
+editor is <code>aire/vfx/fxp.py</code> (<code>FxDoc</code>, byte-identical no-op 4,540/4,540, 226,028 verified edits),
+and <code>fx_validate</code> now checks complete runs. Among the hidden fields: <strong><code>Model.ModelScale</code> /
+<code>ModelColor</code></strong> - the "draw scale 0.12 whose source was never found" is the rock donor's own
+<code>ModelScale</code> curve (0.12 -&gt; 0.0 over the node's life).
+<strong>The engine check</strong> - <code>aire/formats/clientfx_engine_check.engine_check(bytes, path)</code>: the game's own
+load (vf3 <code>0x48FBB90</code>) + process (vf4 <code>0x3E4540</code>) under Unicorn, guard-paged heap, asserts recorded;
+968 shipped effects all read to their last byte, 949 accepted clean (19 = empty-KeyList placeholders
+refused by design). Median 89 ms per effect.</p>
+<p><strong><code>_extract</code> REFUSES a path that is not a loose entry, and that is correct</strong> — resolving a
+non-entry path by name returns somebody else's bytes. But it left <strong>81.6% of the effect pool
+unreadable</strong>. The bundle lane closes most of it: <strong>loose 23.3% + bundle 56.7% = 80.0% readable,
+0 wrong magic</strong> (n=60). It needs all THREE candidate sources — the <code>BundleIndex</code>, the
+<code>fxp_bundle_members.json</code> map (which has effects the index returns nothing for, e.g. <code>rd_wind</code>
+and the whole sauron_boss_fight set), and the content-verified <code>resolve_blob</code> (which finds
+bundles the name-keyed TOC lookup misses) — and must confirm by the container's OWN path table,
+because a manifest can declare an asset its paired EMBB does not carry.</p>
+<p><strong>SWEEP CONTAINERS, NOT PATHS — measured 100x.</strong> Resolving ONE effect through the bundle lane
+costs <strong>4.0 s</strong> (40 paths / 159 s, 33 extracted), because the container is re-derived from the
+membership map every time; the 5,915-effect pool that way is <strong>~6.6 hours</strong>. A single <code>.embb</code>
+holds hundreds of sections, so opening each container ONCE and taking every <code>LTFX</code> section out
+of it collected <strong>1,814 effects from 227 containers in 6 seconds</strong>, and the exhaustive sweep —
+<strong>190,407 containers, 30,531 effect instances — took 783 s</strong>. <code>DonorAtlas.build_from_containers</code>
+(what <code>call("fx_donors", refresh=True)</code> now uses) does this and MERGES with the loose sweep,
+since the two see different halves of the pool.</p>
+<p>Result: <strong>33 of 36 node types have a shipped donor (91.7%)</strong>. The three that do not —
+<code>AnimatedPhysicsModel</code>, <code>Tracer</code>, <code>VolumetricCloud</code> — are declared by the engine with full
+property schemas (76 / 37 / 39) and used by <strong>no shipped effect anywhere</strong>. They are the only
+types where authoring cannot start from a donor.</p>
+</blockquote>
+<h2 id="gpu-shader-constant-pipeline-cracked-2026-04-17">GPU Shader Constant Pipeline (CRACKED 2026-04-17)</h2>
+<p>392 shader constant objects fully decoded — the entire Monolith render pipeline exposed.
+Objects are 0x50-byte (80 bytes) each, packed contiguously in static arrays.
+AIRE module: <code>aire.visuals.shaders</code>.</p>
+<p><strong>Object Layout</strong> (stride = 0x50):</p>
+<pre><code>+0x000  vtable ptr         → data type (Float, Vec4, Matrix, Buffer, etc.)
++0x008  size/type flags    → high word = value size (0x10=16B vec4, 0x04=4B float, 0x30=48B)
++0x010  bind address ptr   → points to self+0x040 (GPU reads from here)
++0x018  name string ptr    → &quot;k_vShadowScaleXY&quot;
++0x020  hash + sort index  → u32 name hash + u32 field_index
++0x028  prev-sibling ptr   → linked list
++0x030  next-sibling ptr
++0x038  padding (always 0)
++0x040  ** VALUE DATA **   → actual float/vec4/matrix data the shader receives
+</code></pre>
+<p><strong>Key vtable classes</strong>: 0x2001A68 (Float, 22x), 0x2001A98 (Vec4, 110x), 0x2001AE8 (Vec3/4, 54x),
+0x2001AC8/AF8 (Matrix, 38x), 0x2001AA8 (Buffer/UAV, 68x), 0x2001AB8 (Uint, 36x).</p>
+<p>~~<strong>125 persistent constants</strong> (engine sets once, safe to write anytime)~~ <strong>CORRECTED 2026-10-14
+(uncached 10 kHz sampling + code):</strong> the "persistent" grading came from a cached, low-rate read.
+<code>k_vObjectColor</code> took 114 values in 4 s - <code>0x254B80</code> refills it per DRAW from the draw item's packed
+colour <code>+0x4C</code> (only when it differs from the previous draw's); <code>k_vObjectLightColor</code>,
+<code>k_vSpecularColor</code>, <code>k_vLightBleed_Offset</code>, <code>k_fInvLightRadius</code>, <code>k_fSystemFadeAlpha</code>,
+<code>k_vGlobalForce</code>, <code>k_vClothSimulationParams1</code>, <code>k_vDirectional_Dir</code> change per light / pass / object;
+<code>k_vToneMappingParams0/1</code> and <code>k_fPaperWhite</code> are rewritten every frame by the post-process pass
+<code>0x339D6C</code> from the frame's HDR settings. A writer thread can only win some draws (the framework's
+old "GPU Color Engine" flickered for exactly this reason; archived <code>Archive/gpu_color_constants_20261014/</code>).
+Constant in the sample (but unproven as levers): k_vAmbientColor, k_vVolumetricCloud*, k_vOverdrawColor,
+k_vLightFactorTransform, k_vParticleInitialColorMin/Max, k_HairLightFactor. For the world's look use the
+atmosphere components (next section).</p>
+<p><strong>37 per-frame constants</strong> (engine overwrites each frame): k_vShadowScale<em>/Move</em> (shadow cascades),
+k_mPrev*ToClip/View (motion vectors), k_vWorldSpaceEyePos (camera position), k_v*ClipPlane (frustum planes).</p>
+<p><strong>C++ usage</strong>: Write 4-16 bytes at <code>base + global_rva + 0x040</code>. Both global entries share same heap object.
+<strong>NOTE (2026-04-17)</strong>: Python writes to shader constants DON'T take visual effect — use the
+Weather/MaterialOverride GameDB path for visual mods instead.</p>
+<h2 id="atmosphere-system-the-world-s-lighting-look-live-measured-2026-10-14-minas-ithil">Atmosphere System - the world's lighting look, live (MEASURED 2026-10-14, Minas Ithil)</h2>
+<p>Each lighting layer places <strong>AtmosphereVolume</strong> objects (vt <code>0x1FDEFB8</code>) that name component objects
+in their own context: <strong>HDRSettingsComponent</strong> (vt <code>0x1FCBEB8</code>), <strong>FogSettingsComponent</strong> (<code>0x1FCC318</code>,
+atmospheric scattering), <strong>OutdoorLightComponent</strong> (<code>0x1FCC0E8</code>, sun / moon), OutdoorShadow (<code>0x1FCC660</code>),
+SkyShadow (<code>0x1FCC548</code>), WindSettings (<code>0x1FCC430</code>), and rarely <strong>ColorGradingComponent</strong> (<code>0x1FCC788</code>,
+ONE property <code>3DLUT</code> = a LUT texture path; only 4 layers + <code>CGC_SOTP</code> in the Minas Ithil main world).
+- <strong>A component stores no values.</strong> They stay in the layer's resident ObjectPropertyDB: <code>obj+0x50</code> =
+  its ObjectRec (<code>+0</code> field count, <code>+1</code> tag <code>0x0A</code>, <code>+8</code> descriptor run, <code>+0x10</code> instance; slot law,
+  cell = instance + link<em>8, bools packed). </em><em>The atmosphere system re-reads those cells every frame.</em><em>
+  Proof: <code>ExposureAdj</code> x2 on the HDR components -&gt; <code>k_vToneMappingParams1.w</code> 0.104 -&gt; 6.656 (+6 EV) and
+  <code>k_vSpecularColor</code> x64; journaled revert -&gt; 0.104 (18/18). Green Sun/Sky/Diffuse colours -&gt; solid
+  green haze, sky and moonlight (screenshots); revert exact. Values apply even while the game is paused.
+- </em><em>Records share instances</em><em> (HDRSC_Morgul_Woods / _Sky own one): dedupe by cell address.
+- </em><em>Volume registry</em><em> = static pool <code>base+0x27293A0</code>, 0x200 slots x 16 {u64 0 used / 1 free, object</em>},
+  free-index ring at <code>+0x2000</code>, head/count <code>0x272BBA0/A4</code> (init <code>0x8BA7D4</code>). A volume's components are
+  weak refs at <code>+0x140..+0x148</code> (0x28 each: <code>+0</code> vt <code>0x2304918</code>, <code>+0x20</code> component). <code>+0x120</code> = enabled
+  byte; <code>AtmosphereController::SetEnabled</code> = <code>0x1A3428(this, bool)</code> (stores it, calls vf35). ~~volumes are
+  switched, not spatial (no extent property)~~ <strong>CORRECTED 2026-10-26: volumes ARE spatial</strong> - their
+  shapes are BRUSHES in the layer's OBJR <code>VOLM</code> block, not properties (see "Atmosphere selection" below).
+  Enable/disable blends on the GAME clock (a paused, unfocused game showed no change). The initial
+  enabled byte = property <code>StartEnabled</code>, DEFAULT TRUE (<code>0x1BF1848</code>, from base vf16 <code>0x1BF1908</code>).
+- <strong>Scope by the volume's own properties:</strong> <code>WeatherContext "Wraith"</code> = Wraith World / cinematic
+  overrides (<code>WraithAtmo</code> prio 42, <code>PresentationWraithAtmo</code>, <code>Cinema*Atmo</code>, <code>NazgulWraithAtmo</code>, in a
+  runtime context with no name table); <code>Timer "UI"</code> = menu scenes (<code>AV_Pause</code>, <code>AV_Hier*</code>, <code>AV_Map</code>,
+  <code>AV_Market</code>); else world. Live 2026-10-14: 23 world / 24 menu / 8 Wraith volumes, 18 HDR + 15 Fog +
+  7 Light world components, 179 cells.
+- <strong>Property names</strong> are P919 over exe strings (130/147 cracked from the binary): HDR <code>ExposureAdj</code>,
+  <code>Contrast</code>, <code>Saturation</code>, <code>BloomWeight/Threshold</code>, <code>HDRMax</code>, <code>HDRGreyMin/Max</code>, <code>RelativeLightScaleWorld/FX</code>,
+  <code>DynamicAmbientScalar</code>, <code>RadialBlur*</code>, each with <code>Use*Override</code> and an <code>_HDRTV</code> twin; Fog <code>SunColor</code>,
+  <code>SkyColor</code> (Int ARGB), <code>SunIntensity</code>, <code>Rayleigh_*</code>, <code>Mie_*</code>, <code>SkyExtinction</code>, <code>LightWavelengths</code>;
+  Light <code>DiffuseColor</code>, <code>SpecularColor</code> (Int ARGB), <code>Intensity</code>. A component carries a SUBSET: Minas
+  Ithil's HDR components have no SDR <code>Contrast</code> and (mostly) no <code>Saturation</code>, so those fall to the
+  engine default there. <code>Contrast_HDRTV</code> x2 changed nothing on an SDR display.
+- <strong>The LUT stage is real but rarely active:</strong> post pass <code>0x339D6C</code> binds <code>tColorGrade3DLUT1/2</code>
+  (view settings <code>+0x290/+0x298</code>, enabled byte <code>+0x288</code>, <code>k_fLUTBlend</code> <code>+0x2A0</code>, <code>k_fLUT1/2Remap</code>
+  <code>+0x2A4/+0x2A8</code>) only while a ColorGradingComponent is active. LUTs are 8x8x8 RGBA8 volume textures;
+  the engine texture object holds dims at <code>+0x50</code>, the ID3D11 resource at <code>+0x90</code>, SRVs at <code>+0x98/+0xA0</code>.
+  <code>Client/Shared.ColorGradingDefault</code> = <code>fx\common\colorgrading\baselinelut8x8.tex</code>.
+- Framework: <code>sdk/sow_world_color.hpp</code> (World Color lane: relative light / sun / sky tint,
+  intensities, haze, exposure, contrast, saturation, bloom, ambient, god rays; still-ours journal;
+  gate = SpawnManager object + volume set unchanged 2 s) + panel <code>ui/sow_ui_gpu_color.hpp</code>.
+  <strong>IN-GAME CONFIRMED 2026-10-14</strong> (user: "works perfect") - and the user's real goal was SURFACES:</p>
+<h3 id="atmosphere-selection-brushes-the-camera-priority-the-region-lighting-layer-measu">Atmosphere selection - brushes, the camera, priority; the region lighting layer (MEASURED 2026-10-26)</h3>
+<p>Code + offline data + live reads (Minas Ithil post-fall, Great Hall loaded). AIRE: <code>call("world_volumes",
+path=..., x=, y=, z=)</code> (offline), <code>call("atmosphere_live")</code> (read-only); module
+<code>aire/formats/world_volumes.py</code>, test <code>tests/test_world_volumes.py</code>.
+- <strong>Shapes = <code>VOLM</code></strong> (OBJR block 0x8A27BAE6): header counts (<code>+0x18</code> instances, <code>+0x24</code> brushes, <code>+0x28</code>
+  name entries + 1, <code>+0x34</code> faces, <code>+0x38</code> face vertices, <code>+0x3C</code> planes), planes <code>{nx,ny,nz,d}</code> at
+  <code>0x44</code> (inside = n.p &gt;= d for all), face counts, vertices, a type block {StringHash("AtmosphereBrush")
+  0xD1A57B78, u32, char[64]}, 0x28-byte brushes {AABB, first_plane, n_planes, first_face,
+  first_face_vert}, 0x30-byte instances {brush, 3 x u32, inverse translation, quat, scale}, name table
+  {P919(object name), count, first instance}; WORLD space. An AtmosphereVolume registers its brushes by
+  StringHash(its name) at activation (<code>vf16 0x1C30068</code> -&gt; engine iface vf15 -&gt; vf4). Live entry
+  <code>E+0x40</code> -&gt; {sphere, plane<em>, ..., u32 n_planes @+0x28}, <code>E+0x48</code> = the volume's registry slot (=
+  <code>vol+0x124</code>); 48/50 live brushes equal the file plane for plane, 65/65 contain their own sphere centre.
+- </em><em>The pick, every frame:</em><em> <code>0x51C43C</code> (player view update) hands the ACTIVE CAMERA's position
+  (<code>[CGameClientShell+0x898]</code> camera vf6, <code>0x1A6E3C</code>) to <code>0x2B1290(container [player+0x3340], pos)</code>:
+  a point query over every enabled brush, then per system state (<code>container+0x10/+0x18</code>: HDR vt
+  <code>0x1F673C8</code>, Fog <code>0x1F67388</code>, OutdoorLight <code>0x1F6E230</code>, OutdoorShadow <code>0x1F6E260</code>, ColorGrading
+  <code>0x22F4BD0</code>, Wind <code>0x22F4C00</code>, SkyShadow <code>0x22F4C30</code>, ScreenEffect <code>0x22F30C8</code>, Rain <code>0x22F4D40</code>)
+  <code>0x2B164C</code> takes the highest <code>Priority</code> (property read LIVE each frame, <code>0x2B182C</code>, default 0) among
+  hit volumes that own that system's component (<code>vol vf37</code>); on a tie the current winner stays. Winner
+  at <code>state+0x28</code>; it blends in with <code>vol vf39</code> over its TransitionTime (HDR <code>vf4 0x2B2CF0</code>: state =
+  lerp(state, value, w)). The TOP volume's <code>WeatherContext</code> is handed to the weather manager
+  (<code>[GM+0x6D98]</code>, <code>0x7DC5C4</code> / <code>0x7DC4A0</code>). So the look follows the camera, not the player (live:
+  query point 3.8 m behind / 2.4 m above Talion).
+- </em><em>Each region's lighting is ONE layer, chosen by the weather pattern's <code>Section</code></em><em> (Minas Ithil:
+  day01, night01, morgul, gh_night01 = <code>MI_GreatHall_Night</code>). Weather manager <code>W = [GM+0x6D98]</code>:
+  <code>+0x20</code> its WorldBundleGroup, <code>+0xA0</code> its section ids, <code>+0x1C8</code> pending pattern, <code>+0x1D8</code> loading,
+  <code>+0x1E8</code> current, <code>+0x418</code> forecast, <code>+0x421</code> swap in progress, <code>+0x1D1</code> apply now. <code>ChangeForecast</code>
+  = SetForecast <code>0x1DBBE4</code> + apply flag; Lua <code>ChangeWeatherPattern(p)</code> (stub <code>0x1B7B734</code>) sets the pending
+  pattern, CLEARS the forecast and asks no fade lock. The update <code>0x43C574</code> -&gt; <code>0x1B4CFE8</code> releases
+  every section the new pattern does not name and requests the new ones in <code>W+0x20</code>; request de-dup is
+  per group only (<code>0x4B1FE4</code>), so a layer we load ourselves is a SECOND copy.
+- </em><em>The Great Hall</em><em> (finale <code>finale_mi.lua</code>): MI_HideKeep, <code>ChangeForecast(MI_GH_Night)</code> (forecast
+  {MI_GreatHall_Night, UsePrexisting, AllowTransitions, ResetTOD}; pattern material override
+  <code>nazgul_wraithmode_ambientoverlay.mat k_fIntensity 150</code>), player holds <code>PC_Nazgul_Nearby</code> during the
+  fight, then <code>ChangeForecast(None)</code> + <code>FX_MI_KeepVolumetrics_ON</code>. gh_night01's own NazgulWraithAtmo
+  has no StartEnabled cell (starts ON) while the city copies ship false. Stacked on <code>morgul</code> instead,
+  the hall's AV00_MIGHNight (priority 1, box 9030..31030 / 4700..16700 / -27930..-5930) TIES
+  AV_Morgul_Courtyard over the whole hall (night01's AV_CityABV01 23 / day01's AV_Twr 5-6 outrank it)
+  and morgul's <code>VolFX</code> tower fog (<code>CFX_Tower</code> towervol01 350x150x350 m green Volumetric, <code>CFX_Spire</code>
+  150x450x150 m, no fade; switch RS_FX_OFF / RS_FX_ON = <code>FX_MI_KeepVolumetrics_*</code>) draws inside it.
+  Menu stage (Areas &gt; Special places, <code>sow_areas_places.hpp</code>): built, cl /Zs clean, NOT RUN. </em><em>IN-GAME CONFIRMED 2026-10-26 from AIRE</em><em> (user: "Nice tint and everything looks good", then after MI_HideKeep "THAT DID IT"): with the swap alone the main world's keep (<code>MI_Keep.DOG</code> at 20000, 0, -20000, states Alive / Hidden) still surrounded the hall and blocked the view out with flat dark teal; <code>MI_HideKeep</code> -&gt; DOG state Hidden, brush <code>+0xE2</code> visible bit 0, hall clear. The swap (PID 37128): our extra copy released + <code>ChangeForecast(MI_GH_Night)</code> -&gt; current pattern <code>MI_GreatHall_Night</code>, weather group sections = gh_night01 only (morgul and its tower fog gone), 0 morgul volumes; hall NazgulWraithAtmo off -&gt; HDR / Fog / OutdoorLight / OutdoorShadow / Wind all won by AV00_MIGHNight (ColorGrading / SkyShadow / ScreenEffect / Rain: none). Undo = <code>ChangeForecast(AdvanceTimeOfDay)</code> (that session's previous forecast) or <code>None</code>. </em><em>Which hall the game loads</em><em> (shipped data): <code>Faction/Bundle/Predicate::Pred_MI_GreatHall</code> (intact) = active quest list <code>Gondor1</code> (pre-fall, seen only in its G_10_10 / G_10_20 cutscenes), <code>Pred_MI_GreatHallDestroyed</code> = <code>QuestsWithDestoyedGreatHall</code> (<code>FinalePart30</code>, <code>Blade10Part10</code>, <code>DLC3_Intro</code>, all post-fall and all staged with MI_HideKeep + MI_GH_Night), both <code>InsideBundleVolume InternalKeep_Barrow_Volume</code>. </em><em>All 138 Minas Ithil layers surveyed offline</em>* (<code>world_volumes</code>, 2026-10-26): only 7 carry atmosphere volumes, and the only ones reaching the hall are the four LIGHTING layers day01 / night01 / morgul / gh_night01 - so the swap leaves only the hall's light before AND after the fall (pre-fall save not run). <code>parse_volm</code> fix the same day: an empty VOLM (<code>arena_00</code>) has no type block.</p>
+<h3 id="surface-recolour-walls-ground-terrain-characters-measured-in-game-2026-10-14-air">Surface recolour - walls, ground, terrain, characters (MEASURED IN GAME 2026-10-14, AIRE-driven)</h3>
+<p>The old GPU Color mod's look (k_vObjectColor tinting surface albedo) done solidly: the rain/fire
+overlay G-buffer pass recolours the albedo word (u3 bytes 0-2) of every pixel it sees, BEFORE lighting.
+- <strong>Shader:</strong> <code>scripts/overlay_tint_build.py</code> = keep-all overlay + one step at the u3 store; class 1
+  (hair) and depth &gt;= 1e6 (sky) skipped. Gates (WARP + GPU): bake vs shipped under the keep-all criteria;
+  strength 0 / white = identity; 6 parameter sets within 1/255 of a numpy model, every other output
+  identical. Surface look <code>tint</code> -&gt; <code>mods/sfx-tint</code> -&gt; <code>call("gear_fx_deploy", looks=["tint"], kind="surface")</code>.
+- <strong>Parameters through the engine's own material parameters.</strong> Overlay handle =
+  <code>[[GM+0x6D98]+0xC0]</code> (CMaterialOverrideHandle vt <code>0x1DC47B8</code>, <code>+0x18</code> u32 refs; the overlay renderable
+  is <code>+0xB8</code>, vt <code>0x1FFECD8</code>). Slots: vf3 <code>0x3094FC</code> SetParamFloat(this, StringHash, xmm2) (asserts
+  refs != 0), <strong>vf4 <code>0x2E9944</code> -&gt; <code>0x2E994C</code> SetParamFloatArray(this, count, {u32 hash, f32}[])</strong> (all
+  integer args - the native <code>call</code> op drives it), vf5 SetParamBool, vf6 <code>0x1CC2624</code> (array of another
+  kind via <code>0x11585A4</code>). Keys = <code>StringHash(name)</code> seed 0 (<code>0x114CFB0</code>); the weather update <code>0x43C574</code>
+  sets only <code>k_fWetness</code> / <code>k_fRaininess</code> this way. Both setters POST to the main-&gt;render ring
+  (<code>0x1154B34</code> / <code>0x2E99E8</code> + <code>0x17906C</code> copy the data) - main thread only; the render-side consumer
+  (<code>0x65482C</code> -&gt; <code>0x177D7C</code> per pair) writes the handle's record list <code>[this+8] -&gt; {begin, end}</code>, records
+  <code>{u32 5&lt;&lt;28 | hash &amp; 0x0FFFFFFF, u32 4, f32}</code> packed (8 + size). Reading that list = what is applied.
+- <strong>Channel:</strong> six static .mat params (<code>rainandfireoverlay.mat</code>) are BAKED at their shipped values into
+  the original code and read as the tint's: <code>k_fRippleMapArrayCount</code> (cb3[2].x) sentinel 7777 (shipped
+  40 = off), <code>k_fDripProjScale</code> (cb3[2].z) strength, <code>k_fDripHeight</code> (cb3[3].x) colour R&lt;&lt;16|G&lt;&lt;8|B
+  (exact as a float), <code>k_fDripSpeed</code> (cb3[3].y) saturation, <code>k_fDripWidth</code> (cb3[2].w) brightness,
+  <code>k_fRippleAnimSpeed</code> (cb3[1].w) flags 1 colourise / 2 skip class 2. <code>k_fRippleProjScale</code> is not baked:
+  a weather record overrides it.
+- <strong>Measured:</strong> one vf4 call -&gt; the six records exact (colour 16,721,960 = (255,40,40)); free roam in
+  dry Minas Ithil: stone walls, floors, battlements, gallows, a tree trunk, an orc and Talion's gear red,
+  lit by the region's light; hair kept; fogged distance kept the fog colour (the fog is added after
+  lighting). The Army stage did NOT change: the pass belongs to the world view. Restore -&gt; 30 / 40 /
+  6000 / 1 / 1800 / 250 read back, swap reverted.
+- Framework: <code>sdk/sow_world_tint.hpp</code> (lane: GearFx::Live surfacefx look <code>tint</code>, vf4 on the main thread
+  via <code>MainThread::Post(kBetweenFrames)</code> + OnMainThread refusal, read-back verify at 4 Hz, shader in
+  first / params out first, hands the slot to World Rain / Snow) + <code>SurfaceLook</code> in
+  <code>sdk/sow_world_color_look.hpp</code> + panel section "Surfaces" (presets now colour surfaces too).
+  <strong>IN-GAME CONFIRMED 2026-10-14 from the menu</strong> (user: "works perfect, takes a couple seconds for the
+  terrain/world to register"). The delay = world settle 1.5 s (GearFx <code>kSettle</code>) + the one-time
+  bundle load on the main thread (~0.5 s measured) + the tree swap's 1 s apply cadence, then one
+  parameter post; after a load the settle and the swap cadence repeat.</p>
+<h2 id="anisotropic-satin-cloth-a-new-lighting-class-live-user-confirmed-in-game-2026-10">Anisotropic satin cloth — a new lighting class, live (USER-CONFIRMED IN GAME 2026-10-09)</h2>
+<p>User, Ringwraith cape in sun: "Looks pretty good to me, can tell difference". Live only, nothing on
+disk; full history in memory <code>aniso-cloth-hair-brdf</code>.
+- <strong>G-buffer (deferred):</strong> MRT 0 Normals R10G10B10A2, 1 Diffuse, 2 Specular, 3 Material RGBA8. Lighting
+  <code>tiledlighting.fxo</code> CS reads Normals/Specular/Material as u0/u1/u2. <strong>Class = Material alpha
+  (o3.w) bits 28-31</strong> (0 standard, 1 Marschner hair, 2 SSS/emissive). New <strong>class 3</strong> = class-0 layout,
+  byte 2 = thread angle (0..pi), bits 24-27 = level; the lighting rewrites it to class 0 and replaces the
+  SUN's GGX <code>Vis*piD</code> with anisotropic GGX (<code>scripts/aniso_lighting_build.py</code>, v1 HLSL in
+  <code>aire/data/shaders/aniso/</code>). Cloth writer: talion_cloth's fulldeferred PS (<code>aniso_cloth_ps_build.py</code>).
+- <strong>The rain/fire overlay <code>translucent\overlay\rainandfireoverlay.fxo</code> wiped every class byte in game</strong>
+  (UAV read-modify-write of all 4 targets after the G-buffer; vanilla hair/skin classes too). A 1:1
+  recompile also shattered the Wraith view. Fix measured in game: store each UAV word only when it
+  changed (<code>scripts/overlay_keep_build.py keepall</code>). Never store constant words into the G-buffer UAVs
+  (crashed the AMD driver).
+- <strong>Delivery = live shader hot-swap</strong>: a custom bundle (new path, Live VFS + <code>live_bundle_load</code>), then
+  the tree object written into the shader-tree manager node <code>+0x30</code> (<code>scripts/shader_hotswap.py</code>,
+  journaled, still-ours revert). <strong>Material-tree nodes are per material/draw state, not per tree</strong>
+  (shipped talion_cloth had 8, linked <code>+0x00/+0x08</code>, <code>+0x10</code> path hash, <code>+0x38/+0x50</code> resource): swap
+  every node. Growing a BOOT tree member (tiledlighting from an archive) still fails to load (open).
+- <strong>Visible look = gain, not roughness</strong>: Talion's cloaks are authored very rough (spec-map roughness
+  ~216/255), so the anisotropic lobe alone barely shows; satin C = class-3 roughness x0.6, stretch
+  0.85, sun spec x4 (<code>scripts/aniso_satin_build.py</code>); every non-class-3 pixel bit-identical to shipped.
+- The Ringwraith cloak bundle = the Black Numenorean T2 cape fabric (talion_cloth) + mask/hood plates
+  (talion_armor).
+- <strong>Iridescent (thin-film) gear, material shaders only — USER-CONFIRMED IN GAME 2026-10-09</strong> ("the
+  coolest visual mod I have seen in this game"): <code>scripts/irid_armor_build.py</code> (armor = metal pixels
+  only, cloth = every pixel). <strong>cb2 is the per-view buffer every G-buffer PS shares with the lighting:
+  <code>cb2[4..6]</code> = camera-to-world rows</strong> (tiledlighting rebuilds world pos as <code>dot(cb2[4..6], (viewpos,
+  1))</code>), so column z = the camera look axis and <code>.w</code> = the camera position, readable from any material
+  PS. Hue = thin film(|N . camZ|) on the SMOOTH normal <code>(v4.z, v5.z, v6.z)</code> (world TBN rows v4..v6);
+  the bumped normal gave neon blotches. talion_armor.fxo = one PS, <code>o2.z</code> reflectance &gt; 0.667 = metal.
+  Every output except <code>o1.xyz</code> stays bit-identical (WARP gates). Live only.
+- <strong>Gear effect library (BUILT 2026-10-09)</strong> — <code>aire/visuals/gear_fx.py</code> (effects, looks, build +
+  gates + stage) and <code>gear_fx_live.py</code> (switch live): <code>call("gear_fx_effects")</code>,
+  <code>call("gear_fx_build", look="oilslick")</code> (or <code>effect=</code> + <code>metal=</code>/<code>fabric=</code> params),
+  <code>call("gear_fx_on" / "gear_fx_off" / "gear_fx_rescan" / "gear_fx_status")</code>. Effects: <code>iridescent</code>,
+  <code>rim</code>; looks <code>oilslick</code> (the confirmed one), <code>pinkchrome</code>, <code>wraithrim</code>. Targets every Talion gear
+  family that passes the gates: talion_armor, _detail, armornocull, armornocull_detail, weapon (metal
+  mask), cloth (fabric); talion_ring skipped (no pin makes its discard chain draw a test pixel). The
+  geometric-normal registers are read from the code (octahedral encode, or the copy two-sided shaders
+  make before the face flip), never from semantic numbers. One heap sweep matches every target; a look
+  switches 56 slots (2026-10-09). <strong>Materials loaded later get fresh nodes on the shipped tree</strong> -
+  <code>gear_fx_rescan</code> catches them. Tree names carry a content hash (cached names never reused).
+  Looks tried in game 2026-10-09: oilslick, wraithrim (subtle), hologram (prismatic bands, <code>{uv}</code> =
+  the first 2D sample's coordinate), mystichrome (two-tone flip), oilslickrim (a STACK of effects).
+  <strong>ORC ARMOUR TOO - USER-CONFIRMED IN GAME 2026-10-10</strong> ("wow that works amazing", Seregost, look
+  <code>orcslick</code> = iridescent 0.9): the effects build for the nemesis gear trees with
+  <code>shaders=list(NEMESIS_SHADERS)</code> (<code>solid\nemesis\gear_lod0/_lod1/_alphatest_lod0/_alphatest_lod1.fxo</code>,
+  each 3 PS variants: skeletal / meshtype4 dithered fade / meshtype5) and switch live the same way:
+  559/559 slots (128/268/85/78), world AND Army stage. GLOBAL: every orc shares these trees. The
+  test harness needed four fixes to certify them, all measured: (1) the orc PS signature carries
+  <code>SV_CullDistance</code> and the generated VS fed it random negatives, so WARP culled the triangle (seed
+  drew 0 px; <code>shader_lab._vs_source</code> keeps clip/cull distances positive); (2) pins may leave lanes
+  <code>None</code> (meshtype4 discards where <code>frac(dither t8) &gt; 1 - cb3[13].w</code>, cb3[13].xyz are real inputs);
+  (3) meshtype5 lerps reflectance toward 4 constant spec tints (amounts cb3[7].w/[9].x/[10].x/[11].x
+  in lod0, cb3[5].w/[7].x/[8].x/[9].x in lod1) and random inputs can collapse the shipped shader to
+  one value on every pixel: the gate draws further seeds (GATE_SEEDS 1-8) until three EXERCISE the
+  patch, records each seed, and picks the pin by masked pixels, not drawn; (4) non-finite outputs
+  are judged relative to the shipped shader (all 596 seen were inherited).
+  <strong>Mod-menu port (built 2026-10-09, cl /Zs clean, NOT run in game):</strong> <code>sdk/sow_gear_fx.hpp</code>, Talion &gt;
+  Appearance &gt; Gear VFX (under Player VFX; was Visuals &gt; Gear FX until 2026-10-27) (toggle + look picker, saved as <code>cheats.gearFxEnabled</code> / <code>gearFxLook</code>, ticked from
+  ApplyActiveCheats). In-process: mount <code>x64\sowframework\gearfx\&lt;look&gt;\files</code> (LiveVfs index 0) +
+  register the bundle paths, load + prefetch it on the main thread (MainThread::Dispatch, handle
+  kept, never twice per process), then every second walk each target's node-table bucket and CAS
+  node <code>+0x30</code> shipped tree -&gt; look tree. World gate = spawned &gt; 0 for 1.5 s; timeouts retry 3x.
+  Its exact walk replayed read-only on the running game: 6/6 buckets self-tagged, chains end at the
+  bucket, 56/56 slots. Looks reach the game with <code>call("gear_fx_deploy")</code> (bundle pair verified,
+  byte-compared after copy); all 6 deployed 2026-10-09.
+- <strong>Dynamic surface layer — the rain/fire overlay is a FULL-SCENE G-buffer pass (USER-CONFIRMED
+  2026-10-09):</strong> snow hot-swapped into <code>translucent\overlay\rainandfireoverlay.fxo</code> (one node-table
+  slot) whitened Lithlad's terrain, rocks, a caragor, an orc and Talion on up-facing surfaces while cliff
+  faces stayed red. The pass rebuilds world position from depth <code>t0</code> (height = its <code>r2.z</code>), reads a world
+  normal from <code>t1</code> (up = <code>t1.y</code>), owns a roof-occlusion compare map <code>t6</code> (<code>cb2[28..31]</code>, used only in its
+  rain branch, within 75 m) and the global wetness <code>cb3[3].z</code> / wet targets <code>cb3[4]</code>. Words: albedo <code>u3</code>
+  bytes 0-2; specular <code>u4</code> byte 0 ROUGHNESS (lighting alpha = r<em>r; CORRECTED 2026-10-09, was written up
+  as smoothness), 1 specular occlusion, 2 reflectance (&gt; 0.667 metal); normal <code>u2</code> bits 0-19 bump offset,
+  20-31 geometric. The rain branch's <code>r1.y</code> is the ANIMATED RAINDROP-IMPACT mask (time-scrolled <code>t4</code> noise,
+  75 m fade): it roughens, darkens and de-reflects where a drop lands - forcing it everywhere made the world
+  matte. The engine's own wetness is <code>cb3[3].z</code> (roughness lerped toward <code>cb3[4].x</code>) plus, on level ground
+  (up &gt; 0.97), the bump scaled to 15% before the ripples <code>r6.zw</code> are added. Puddles:
+  <code>scripts/overlay_rain_build.py</code> (post-processes the final words: wet sheen + darkening by porosity,
+  noise puddles on level ground at roughness 0.04 with the bump cut before the ripples; live 2026-10-09).
+  </em><em>PUDDLES WITH REFLECTIONS + DEPTH - USER-CONFIRMED 2026-10-10</em><em> ("Nice that's much better"): the
+  overlay runs BEFORE the lit image exists, and the lighting has no SSR (dielectric F0 fixed 0.04,
+  split-sum probes <code>t3</code> at mip <code>6*sqrt(r)</code>), so water is drawn in </em><em><code>lighting\fogoverlay.fxo</code></em><em>, a
+  full-screen pass AFTER lighting that reads the lit scene and rewrites it (<code>o0 = scene(t3) * T +
+  inscatter</code>; depth <code>t0.x</code>, view-to-world <code>cb2[4..6]</code>, VS: view ray = <code>s*cb2[21].zw + cb2[21].xy</code>,
+  texcoord = <code>s*2*cb2[22].xy</code>). <code>scripts/fog_water_build.py</code>: same world-noise puddle mask as the
+  overlay, water level = floor + depth (18 cm), refraction to the floor re-fetched from the lit scene,
+  per-channel extinction + murk, screen-space reflection marched from the water surface; things
+  standing in a puddle are submerged below floor + depth (floor found by a downward screen search).
+  Overlay <code>ov_rain6</code> + <code>fog_water1</code>, live only. Gate method: WARP bit identity for strength 0 (GPU
+  random-input identity is not a valid gate for recompiled float shaders) + a synthetic camera scene.
+  </em><em>Menu port (built 2026-10-10, cl /Zs clean, NOT run in game):</em><em> <code>sdk/sow_world_rain.hpp</code> + World tab &gt;
+  Day/Night &amp; Weather &gt; "World Rain" (Light/Medium/Heavy, Puddles, Rain weather; state <code>worldRain*</code>,
+  ticked in ApplyActiveCheats, exclusive with World Snow - both replace the overlay). Weather = the
+  region's own rain pattern via WeatherPatterns::Apply (no GameDB write); puddles = surface look
+  <code>rain</code> (one bundle, both trees) packaged by <code>scripts/surface_look_pack.py rain 1 live-ovrain6
+  live-fogwater1</code>, deployed with <code>call("gear_fx_deploy", looks=["rain"], kind="surface")</code>. Build <code>scripts/overlay_snow_build.py</code> (keep-all base + snow block,
+  gated strength-0 == shipped on WARP + GPU); v1 (near-white, total, flattened) was blinding, v2 darker
+  with luminance detail + 20 m bare patches. Live only.
+  </em><em>Falling snow in any region (USER-CONFIRMED 2026-10-09, Lithlad, flakes + layer):</em><em> a weather pattern =
+  lighting <code>Section</code> (world-layer bundle) + effects <code>Bundle</code> + <code>WeatherTypes</code> + <code>FXContexts</code>; the shipped
+  snow patterns outside Seregost have <code>Section ""</code> - switching to one unloads the region's lighting (BLACK
+  SCREEN; Advance Day recovers). Falling precipitation is the CLIMATE's <code>GlobalCameraFX</code>: <code>0x1B4B34C</code>
+  (from <code>vt_0x1F68920::vf4</code> per REGION load; manager <code>[GM+0x6D98]</code>, controller vector <code>+0x00/+0x08</code>, 0x28
+  entries) creates one <code>WeatherCameraFXController</code> object per entry through the ObjectServer; a
+  same-region fast travel does NOT rebuild them. A controller reads its record's <code>FXData</code> live (record at
+  controller <code>+0x128</code>). Recipe: load <code>bundles\weather\snow.bndl</code> + <code>snowmountain.bndl</code>; repoint a region
+  rain pattern (<code>DS_OL_Dark_Rain_Light</code>: Bundle -&gt; snow.bndl, WeatherTypes -&gt; <code>TypeLists/Snow_Medium</code>,
+  FXContexts[1] -&gt; "snow"); <code>Ash_Camera.FXData[0/1]</code> &lt;- <code>Snow_Camera.FXData[1/2]</code> (count kept); then
+  <code>ChangeForecast(None)</code> + <code>ChangeWeatherPattern(DS_OL_Dark_Rain_Light)</code>. Gate = Forecast predicate
+  <code>SnowMedium</code> (<code>InclusiveTypes Weather/Types/Snow_Medium</code>) + <code>NotWraith</code>. <code>write_field</code> now copies a
+  String / RecordLink (types 4/10/11/68) cell from another record (<code>value={"copy_from": ...}</code>).
+- </em><em>THE SHADER-TREE NODE TABLE (MEASURED 2026-10-09)</em>*: every shader-tree slot (boot trees AND
+  material slots) hangs in ONE static hash table at image <code>+0x27AEC38</code>: 128 buckets x 0x18
+  <code>{first, last, self}</code> (self-tagged, so a bucket is recognisable), bucket = <code>StringHash(tree path) &amp;
+  127</code> (= resource <code>+0x20</code> = node <code>+0x10</code>). Node <code>+0x00</code> next / <code>+0x08</code> prev, chain ends back at the
+  bucket. Walking ONE bucket finds every slot of a shader (talion_armor 33/33, weapon 8/8, cloth 8/8,
+  head 8 - same set as the full heap sweep). The old "list heads" <code>+0x27AF040</code> (boot lighting) and
+  <code>+0x27AEF50</code> (talion_hair) are buckets of this table. No heap scan is ever needed to find slots.</p>
+<h2 id="render-thread-and-the-command-ring-the-main-thread-s-frame-as-the-renderer-recei">Render thread and the command ring - the main thread's frame as the renderer receives it (MEASURED 2026-10-28)</h2>
+<p>Reader: <code>call("render_commands")</code> / <code>call("render_commands", frames=3)</code> (<code>aire/pipeline/render_commands.py</code>,
+read-only, no hook). Thread census: kb/live-runtime.md "Threads and the frame".</p>
+<p><strong>The render thread is a command processor.</strong> RenderThread is a static object <code>[base+0x267E338]</code>
+(thread class vt 0x1FFD4D0: vf8 name 0x7F9AE0, vf9 stub 0x7F9AF0, start stub 0x1C8F150 -&gt; trampoline
+0x797DD4), routine <strong>0x1C8F158</strong>: one-time init 0x1C8ECB8 (registers wldmsh, wldclnt, txanm, texcpu,
+<code>fog_overlay.mat</code> ...), SetEvent (ready), then <code>while (0x1C8EDE0(queue)) {}</code>. It uses ~one full core
+(970-1000 ms of CPU per second, in combat).</p>
+<p><strong>The queue</strong> = 0x272E8D8, state at +0x38: <code>+0x08</code> ring begin, <code>+0x18</code> ring end (<strong>2 MB</strong>), <code>+0xD0</code>
+read cursor, <code>+0xD8</code> write cursor, <code>+0x128</code> / <code>+0x130</code> counters. The executor 0x188E08 calls the
+qword at the read cursor with <code>rdx = &amp;cursor</code> (QueryPerformanceCounter-timed), then 8-aligns the
+cursor; <code>state+0x120</code> != 0 stops the loop.</p>
+<p><strong>A command is a bound call</strong> <code>{+0x00 thunk, +0x08 object, +0x10 method, +0x18 args}</code>. The thunk
+advances the cursor by its own fixed size (<code>mov r8,[rdx]; lea rax,[r8+N]; mov [rdx],rax</code>: 0x18,
+0x20, 0x28, ... - 35 thunk shapes seen) and tail-calls <code>method(object, args)</code>. So the ring can be
+walked exactly from its start to the write cursor (~5-10% of steps need a resync on a variable-size
+thunk). Two snapshots: 24,944 commands / 68 frames and 18,169 / 49 frames; <strong>every frame had the same
+order of its ~22-23 once-per-frame commands (68 / 68, 49 / 49)</strong>, 360-371 commands per frame, 44
+distinct methods.</p>
+<p><strong>One frame, in order</strong> (methods with their per-frame count; identity where evidence exists):
+setup 0x485420 -&gt; 0x258720 x28 -&gt; <strong>0x177D7C x53 (shader-constant uploads; module of
+k_vGreenWeights / k_vRedWeights)</strong> -&gt; <strong>3 x {0x70C0E0, 0x7146A0, 0x72FDE0} on the overlay renderable
+class vt_0x1FFECD8</strong> (the rain / fire / surface G-buffer overlay - section "Surface recolour") -&gt;
+0x5E9448 x53 -&gt; a once-per-frame block (0x1EA6B0, 0x6F1E20/30, 0x3A3C78/88/98, <strong>terrain 0x484844</strong>,
+0x70D9F0) -&gt; a long interleave on objects of class vt_0x1DAADB8 (0x485440 / 0x30C5BC / 0x258720 /
+0x1E9E98 / 0x30C554 - per-view or per-list work) -&gt; <strong>weather material overrides</strong> 0x1B7A40 /
+0x1B7A94 (module Weather/MaterialOverride) -&gt; 0x1EE09C (k_fSampleScale) / 0x33BB80 -&gt; <strong>0x6C74A8
+(<code>DrawIcosahedronInstancesIndirect</code>: light-volume instancing)</strong> -&gt; <strong>13 x {0x1791CC
+BufferTileIndices, 0x247108 material-override / dynamic vertex buffer}</strong> (tiled-lighting tiles) -&gt;
+0x339830 -&gt; a once block (0x6E3720 = the shared empty <code>ret</code>, 0x6D3EE0..F10 on vt_0x2002DE0, 0x1E8558,
+0x33651C texture bindings) -&gt; 0x1E8150 (subtree reads <code>Lith.ExposureAdjustSpeed</code> /
+<code>Lith.BlowOutWeight</code>: exposure) -&gt; 0x70E8A0 (stores one field) -&gt; <strong>0x6D5908 frame timing</strong>
+(accumulates 0x27966C4 / C8 / CC) -&gt; weather 0x38052C -&gt; <strong>Bink video 0x3322BC</strong> -&gt; 0x6FA7D8 -&gt;
+0x4C32E8 (CORRECTED 2026-10-28: not video - it reads the engine interface <code>[base+0x26FEFD0]</code>, which resolver.db
+misnames "VideoClipRequestMgr", and calls its render interface; kb/audio-video.md) -&gt; <strong>texture streaming (texuhd)
+0x3807E4</strong>. The only per-frame video command is 0x3322BC (Bink: walks the live-video list 0x267E400).</p>
+<p><strong>What this is and is not.</strong> It is the main thread's per-frame work AS HANDED to the renderer: state
+syncs, constant uploads, overlays, light volumes, tiled-light tiles, terrain, weather, exposure, video,
+streaming. It is NOT yet the GPU pass list (G-buffer, shadows, tiled lighting, post): most methods do
+their work through COM virtual calls on the D3D11 context, which the call graph does not follow, and
+the linker folds tiny methods (0x6E3720 is one empty <code>ret</code> shared by many), so a method address alone
+is not an identity (the object's class is reported beside it). <strong>Next:</strong> classify each method's
+D3D11 context slots (DrawIndexed 12, Draw 13, OMSetRenderTargets 33, Dispatch 41, ClearRenderTargetView
+50, ExecuteCommandList 58, ...) and decode the <code>ThreadCommandBuffer</code> secondary contexts
+(rtcommandbuffer.cpp) that carry the world draws.
+D3D anchors for that step (MEASURED live 2026-10-28): the engine's D3D block starts at
+<code>[base+0x272D1C0]</code> = the ID3D11Device (stored 4x, once per interface version; 99 code readers whose
+virtual calls hit the device creation slots +0x18 CreateBuffer, +0x28 CreateTexture2D, +0x38
+CreateShaderResourceView ...), then DXGI objects at +0x60..+0x98. LEAD: <code>[base+0x272D218]</code> (one
+distinct d3d11 object, a single code reader) is the immediate context, copied into the engine's HAL
+wrapper - find the wrapper's context member, then count context slots per method. 2,180 statics in
+the exe point at D3D objects (2,084 of one view / resource class).</p>
+<p><strong>D3D11 classification, first pass (2026-10-28; script <code>d3d_classify.py</code> / <code>d3d_users.py</code>, session
+scratchpad).</strong> Rule: a function is a CONTEXT USER when its virtual calls hit &gt;= 2 distinct
+context-only slot offsets (&gt;= 0x108: OMSetRenderTargets 0x108, OMSetRTsAndUAVs 0x110, indirect draws
+0x138/0x140, Dispatch 0x148, ClearRTV 0x190, ClearDSV 0x1A8, ExecuteCommandList 0x1D0, CS<em> 0x218+),
+or one of them plus a draw / Map slot. </em><em>634 / 243,839 functions qualify; control 0 / 400 random
+functions</em><em> (MEASURED). Grouped by module it is CONTAMINATED: UI / HUD widget classes with large
+vtables hit the same offsets, so the list is a LEAD catalogue, not a pass list. Render commands whose
+direct-call subtree reaches context users: 0x247108 (13/frame; CSSetUAV + OMSetRTsAndUAVs: tiled
+lighting), 0x6C74A8 (light-volume instancing; compute + targets), 0x339830 (draw + copy + compute),
+0x1E8150 (exposure: fullscreen Draw + UpdateSubresource), 0x1791CC / 0x33651C (texture binds). The
+rest dispatch virtually (0x1EA6B0: 273-function subtree, terrain 0x484844: 178, no direct context
+user), so the static walk cannot follow them. Modules that name themselves (LEAD): #83 the HAL
+("HAL::BeginScene", "HAL::BeginScene-SetState"; vt_0x2002498, vt_0x22C91F0) - CORRECTED the same
+day: that HAL is Scaleform GFx's UI renderer, not the world's (next paragraph); #963 shadows
+("ShadowDepthBias", "LowResShadows", "StaticShadows", "NearZ"); #1679 a screen-space pass on
+<code>tLastFrameMap</code> + <code>tSceneNormalMap</code> (reprojection / SSR); #63 GPU-driven vegetation
+(<code>VegetationType_DrawIndirectBuffer</code>, <code>VegetationPatch_InstanceBuffer_*</code>); #385 velocity buffer
+(<code>Game_Velocity</code>, <code>Game_SmoothedVelocity</code>); #50 projected textures / decals (FadeStartDist,
+IgnoreWraithVis); #186 GPU particles (<code>CustomGPUParticle_*</code>); #464 UI (<code>CUIMgr::Render</code>); #211
+render init (<code>RestartRender</code>, <code>globalbundles\globalrenderingconfig.bndl</code>). </em><em>Next (exact):</em>* find the
+HAL object's context member (module #83), then count only virtual calls made through a register
+loaded from it - exact per-pass D3D streams instead of the slot-offset heuristic.</p>
+<p><strong>The "HAL" is Scaleform GFx's <code>Render::HAL</code> - the UI renderer (MEASURED 2026-10-28).</strong> vt_0x2002498
+has 166 slots; 18 open their own profiler scope (0x219A6C) with a <code>HAL::</code> name, exactly Scaleform
+4.x's HAL interface: vf4 PushRenderTarget, vf11 BeginFrame, vf15 BeginScene(-SetState), vf18
+ClearSolidRectangle, vf50 DrawProcessedPrimitive, vf51 DrawProcessedComplexMeshes, vf52
+PushMask_BeginSubmit, vf55 PushBlendMode, vf58 PushFilters, vf63 DrawableCxform, vf64
+DrawableCompare, vf66 DrawableMerge, vf67 DrawableCopyPixels, vf68 DrawablePaletteMap, vf69
+DrawableCopyback, vf74 beginDisplay, vf88 applyDepthStencilMode, vf90 drawMaskClearRectangles. Its
+immediate context is the member <code>this+0x3B3C8</code>; the 24 functions reading it make only UI-style calls
+(shaders / input layout, VB / IB, blend, depth-stencil, viewports, vf82 ClearRTV + OMSetRenderTargets,
+vf108 DrawIndexedInstanced). So the UI (Flash menus, HUD) draws through Scaleform's own D3D11 HAL,
+and <strong>the world renderer reaches D3D another way</strong> (LEAD: through <code>ThreadCommandBuffer</code> "secondary
+contexts" - the string sits in 0x1C8FD4C, a virtual method with no direct caller, module #687 vt_0x22F34F8
+/ vt_0x22F5368; whether those are D3D11 deferred contexts replayed with ExecuteCommandList (slot
+0x1D0: 105 call sites in 88 functions, ambiguous by offset alone) or the engine's own recorded buffers
+is not settled). The world-pass modules found by the heuristic above (shadows #963, vegetation #63,
+velocity #385, projected textures #50, screen-space #1679, GPU particles #186) are where to trace it.</p>
+<h2 id="the-engine-s-own-d3d11-layer-and-the-pass-entry-points-measured-2026-10-28-offli">The engine's own D3D11 layer and the pass entry points (MEASURED 2026-10-28, offline + live)</h2>
+<p>Readers: <code>call("d3d_layer")</code>, <code>call("render_passes")</code> (<code>aire/analysis/d3d_layer.py</code>, offline, exact).</p>
+<p><strong>The handle.</strong> The world renderer drives D3D11 through ONE handle, <code>[base+0x272D1E8]</code>: 450 code reads
+in 96 functions. It is field <code>+0x08</code> of a static render-device object at <code>0x272D1E0</code> (its first qword
+is vt_0x1FFC508). The block's other slots: <code>0x272D1C0</code> the ID3D11Device (138 refs; 4 interface
+copies), <code>0x272D218</code> the bare immediate context (1 reader, a shutdown check), DXGI objects after it.
+Proof it is a context (MEASURED): after <code>mov rcx, [0x272D1E8]</code> the code calls <code>+0x40, +0xC8, +0xF8,
++0x1D8, +0x1F8, +0x218</code> with the same <code>(0, count, views)</code> arguments - the six stages' SetShaderResources
+(slots 8 / 25 / 31 / 59 / 63 / 67). Live, exactly one object in the process carries the immediate
+context's class (no same-class deferred contexts), and no engine heap object stores a pointer to it
+(control: three engine objects store the device: vt_0x22C5F50 +0xB0, vt_0x230CBE0 +0xA8, vt_0x230CBA0
++0x28). The handle's own vtable lives in heap memory, as a wrapping layer's would.</p>
+<p><strong>The layer</strong> (76 functions; a call counts only through a register loaded from the handle - linear
+provenance, volatile registers dropped at calls): SRV binding dominates (CS 27, VS 26, PS / DS / HS /
+GS 25 each), then CopySubresourceRegion 12, IASetIndexBuffer 11 ... Key wrappers: 0x33C8C8
+RSSetViewports (36 callers), 0x17DFA0 targets + UAVs (19), 0x388444 Dispatch (15), 0x17C1FC bind SRVs
+on all six stages (11), 0x389870 unbind SRVs 12 per stage (9), 0x3870A4 input layout + VB (8),
+0x17C56C targets + viewport (6), 0x1E978C OMGetRenderTargets + clear RT / DS (5), 0x17F1B0 IA setup,
+0x17F5A4 DrawIndexed, 0x246FC8 Draw, 0x386D50 IB + DrawIndexed, 0x17DB70 DrawIndexedInstancedIndirect,
+0x1E83A0 samplers on five stages, 0x1E8564 shaders on all stages, 0x1E938C ClearState (slot 110) +
+ClearRTV, 0x1CAA53C / 0x1CAB348 Map / Unmap, 0x1CBE0F4 DispatchIndirect, 0x5EFE84 End (queries).</p>
+<p><strong>Pass entry points</strong> = callers of the layer functions that set or clear targets, dispatch or draw
+indirectly: <strong>55</strong>, grouped by atlas module (the module name is the identity LEAD): custom render
+primitives / tessellation helpers (14), instanced + indirect with <code>k_fRenderObjectID</code> /
+<code>DrawIcosahedronInstancesIndirect</code> (10: light volumes, render IDs; 0x388444, 0x1CBE0F4, 0x337E6C,
+0x387DB8, 0x1CD2640 / 0x1CD334C ...), screen-space on <code>tLastFrameMap</code> + <code>tSceneNormalMap</code> (5:
+0x102ABF0, 0x102BCC0, 0x102CD90, 0x102DF00, 0x1030FE0), render-target clears / management (5),
+the shadow atlas ("Atlassed Shadow Sys...": 0x33B644 targets, 0x337964 / 0x33DA28 / 0x337EB8 /
+0x1CAA73C dispatch), point lights (<code>CRenderNodeLightPoint::GetCBCachedData()</code>: 0x687424,
+0x4D951C, 0x6FFD74), object-colour compute (<code>k_vObjectColor</code>: 0x1ED2F0, 0x1ED944, 0x1EDE58), GPU
+vegetation (0x101A9C0, 0x10199C0), UI (<code>uirender.cpp</code>: 0x2253D4).</p>
+<p><strong>Retired:</strong> the slot-offset heuristic above. Its "shadow" calls at <code>+0x1A8 / +0x1B0 / +0x1B8 / +0x120</code>
+take float arguments - setters on a shadow-settings object, not ClearDepthStencilView. Name passes
+only from <code>d3d_layer</code> / <code>render_passes</code>.</p>
+<p><strong>Next:</strong> the exact per-frame ORDER of these passes needs the render thread observed while it runs
+(a sampled call stack; an ETW CPU-sampling session would be the hookless way - ask first), or the
+virtual dispatch from the render commands resolved per object class. DONE 2026-10-28 without ETW:
+"The frame on the render thread" below (a suspend-and-unwind sampler).</p>
+<h2 id="the-frame-on-the-render-thread-measured-call-tree-and-pass-order-measured-2026-1">The frame on the render thread - measured call tree and pass order (MEASURED 2026-10-28)</h2>
+<p>Reader: <code>call("thread_profile", thread="RenderThread", order_of=["0x33CD60"])</code> (aire/pipeline/
+thread_profile.py; unwinder aire/analysis/stack_walk.py, tests tests/test_stack_walk.py). Each sample
+suspends only the RenderThread (median 102-105 us, p99 230-240 us; ~5% of its time at 500 Hz), copies
+its registers + 64 KB of stack + the ring read cursor, and unwinds with each frame's own unwind
+codes. <strong>Control: 4,000 / 4,000 walks (three runs: 6,000 / 6,000, 4,000 / 4,000, 4,000 / 4,000) end at
+the KRAKEN thread trampoline 0x797DD4</strong>; ~38% start inside d3d11 / the driver and resume from the
+first call-site return address whose own walk completes. No ETW, no hook.</p>
+<p><strong>The tree</strong> (share of samples with the frame on the stack; desert, in game; the three runs agree
+within 3 points). CONDITION: the game was unfocused, so the SIMULATION was paused (world clock frozen
+in a 20 s anim_watch check right after) while the renderer kept drawing the scene at ~86 fps: the
+pass structure and order are the renderer's, but time-driven work (GPU particles, motion blur input)
+may be idle and the shares can differ in play. <strong>IN PLAY (re-run focused, world clock 4,224 ms over the
+8 s run, 4,000 / 4,000 walks): the same tree and the same orders</strong> - scene command 79.3%, 0x33CD60
+56.1%, mesh pass A 24.3%, mesh pass B 20.1%, GPU particles 3.8%, object-colour compute 5.8%, Present
+7.2%; 0x33CD60 children in the same sequence (555 invocations, 554 with 2+).</p>
+<pre><code>0x797DD4 trampoline -&gt; 0x1C8F158 render routine -&gt; 0x188DB0 -&gt; 0x188E08 command executor (99.8%)
+  0x1EE210 scene command                                    82-85%
+    0x6EC61C -&gt; 0x116B694 -&gt; 0x1EAA54 (k_fSampleScale) -&gt; 0x1EABC4
+      0x1EAF30 (anim domain) 3.7-4.4%, 0x255CF8 3.0%, 0x1EB038      (run FIRST, in this order)
+      0x33BCB8 scene passes                                 73-78%  (runs LAST in 0x1EABC4)
+        0x33CD60 main pass list                             59-63%
+          0x66E93C -&gt; 0x1EE4F8 -&gt; 0x387858  mesh pass A     28.6-30%  (FIRST)
+          0x255920, 0x185410 ...
+          0x33783C GPU particles                            4.1-4.5%
+          0x384640 light accumulation (LEAD)                ~2.7%
+          0x1F02E8 -&gt; 0x1EE3E4 / 0x25619C  mesh pass B      19-20%    (LAST)
+        0x1021250 vegetation displacement + grouped particles   4.0-4.5%
+        0x33740C post chain, 0x339D6C colour-grade LUT, 0x1EDB1C ...
+        0x1EDE58 object-colour compute                     6.0-7.0%  (LAST in 0x33BCB8)
+  0x38052C -&gt; 0x38057C                                      6.8-10.2%  (a separate command)
+  0x59D048, 0x2253D4 UI (uirender.cpp), 0x2587C4, 0x1EA6B0 ...  separate commands, &lt; 3% each
+</code></pre>
+<p><strong>Order inside one frame</strong> (an invocation = consecutive samples with the parent on the stack and the
+same ring cursor; pairwise precedence of first appearance, 805 invocations of 0x33CD60, every one with
+2+ children): 0x66E93C (+943) -&gt; 0x255920 (+238) -&gt; 0x185410 (+49) -&gt; ... -&gt; 0x33783C GPU particles
+(-11) -&gt; 0x384640 (-244) -&gt; 0x1F02E8 (-925). In 0x33BCB8: 0x33CD60 first, 0x1021250 next, 0x1EDE58
+last. In 0x1EABC4: 0x1EAF30, 0x255CF8, 0x1EB038 before 0x33BCB8 (303 / 303 two-child invocations).</p>
+<p><strong>What each branch is</strong>, from the strings of every function SAMPLED under it (real frames) and from
+where the named pass entries of "The engine's own D3D11 layer" landed:
+- 0x33783C = GPU particles: <code>StandardGPUParticle.Compute</code>, <code>_ParticleBuffer0/1</code>, <code>CustomGPUParticle_
+  DrawIndirect / ParticleSource / ParticleDest</code>.
+- 0x1021250 = <code>VegetationPatch_InstanceBuffer_DisplaceInstances</code> + <code>GroupedGPUParticle_Source /
+  DestDrawIndirect</code>; the Dispatch wrapper 0x388444 runs here in 191 / 236 samples.
+- 0x33740C = the post chain: motion blur (<code>tNeighborVelocityBuffer</code>, <code>tMaxVelocityBuffer</code>), depth of
+  field (<code>k_fNearDOFParams</code>, <code>k_fFarDOFParams</code>), box blur, vignette (<code>k_fVignetteParams / Color</code>).
+  0x339D6C (the colour-grade LUT pass, "Atmosphere System" above) is its sibling.
+- 0x384640 = LEAD light accumulation: the point-light compute 0x4D951C sits under it in 28 / 28
+  samples and the target set 0x386ED4 in 56 / 65.
+- 0x66E93C and 0x1F02E8 both draw meshes (<code>There had better be a mesh by now...</code> 0x17DC48, the IA /
+  DrawIndexed pair 0x17F1B0 / 0x17F5A4). LEAD: A = the deferred G-buffer pass (first, largest, before
+  the light accumulation; the G-buffer layout is in "Anisotropic satin cloth"), B = what draws after
+  lighting (translucent / forward). Not proven: no render target was read.
+- 0x1EDE58 = the object-colour compute (<code>k_vObjectColor</code>), last in 0x33BCB8.
+- The shadow-atlas entries (0x33B644, 0x337964, 0x33DA28, 0x337EB8) got 5-14 samples each: too few to
+  place; a longer run in a scene with many shadowed lights would settle them.</p>
+<blockquote>
+<p><strong>THIS CONTRADICTS</strong> the first two sampling runs of the same day (scan-based chains, not kept): they
+put 0x179F64 above the executor in 77.9-83% of render samples and chained it to the script system
+and weather. Stale return addresses in live frames' locals; see BEHAVIOR.md law 16. The real
+unwinder never shows 0x179F64 on this thread.</p>
+</blockquote>
+<p><strong>The Present command = 0x38052C -&gt; 0x38057C (MEASURED code + live, 9-10% of the thread).</strong> 0x38057C
+takes the static block at <code>0x272D1C0</code> as <code>this</code> (the D3D block above is ONE struct): <code>+0x28</code> = the
+engine handle <code>[base+0x272D1E8]</code> (equal live), whose vf111 = ID3D11DeviceContext::Flush runs first;
+then <code>+0x88</code> = the IDXGISwapChain (vtable in dxgi.dll) vf8 = <strong>Present</strong>(sync interval, flags). The
+sync interval is 0 unless the caller's flag asks for vsync, then <code>ceil(+0x7D0 / [base+0x2A371A4])</code>
+clamped by 0x1169170 (<code>+0x7D0</code> = the display refresh, live 240; <code>[0x2A371A4]</code> live 0); flags 0x200 =
+ALLOW_TEARING when <code>+0xE0</code> bit 0x800 and 0x380750 allow it. Results: DXGI_STATUS_OCCLUDED sets
+<code>+0xA80</code>, DEVICE_REMOVED / RESET go to the error formatter 0x1C8AD0C, success increments <strong><code>+0xA8</code>
+= the presented-frame counter</strong> (<code>[base+0x272D268]</code>: 85.96 presents / s measured over 2 s, 711,773
+since launch). <code>[base+0x267E006]</code> = present enabled (live 1).</p>
+<p>Open: the render targets bound by A and B (would turn both LEADs into names) and the shadow passes.</p><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
