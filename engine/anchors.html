@@ -1,0 +1,120 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Engine anchors and the laws - Shadow of War engine reference</title><meta name="description" content="Engine anchors and the laws"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" class="cur" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="engine-anchors-and-the-laws">Engine anchors and the laws</h1>
+<p>The facts nearly every task needs, and the one-line rules each crash taught us. The full stories are in the topic pages.</p>
+<h2 id="engine-anchors">Engine anchors</h2>
+<p>The facts nearly every task needs. Details: <code>kb/engine-anchors.md</code>, <code>kb/binary-code.md</code>,
+<code>kb/factionmember.md</code>, <code>kb/gamedb-schema.md</code>.</p>
+<ul>
+<li><strong>Image vs heap.</strong> ShadowOfWar.exe always loads at <code>0x140000000</code> (RELOCS_STRIPPED, no
+  DYNAMIC_BASE): image and static addresses are fixed, <code>absolute = base + RVA</code>. The HEAP moves
+  every launch: never cache a heap address across sessions; stamp evidence with pid / base / session.</li>
+<li><strong>Code lives in two sections.</strong> <code>.arch</code> (0x1000-0x1D87C00) and executable <code>.bss a</code>
+  (0x2C89000-0x729714D, the protector's region, reached only through vtables, so <code>callers_of == 0</code>
+  there proves nothing). <code>.text</code> is a 20-byte decoy; vtables live in <code>.xtext</code>. Take executability
+  from the section table. <code>.pdata</code> is not the function universe (leaves have no entry, 26,293
+  entries are fragments): the function list is the xref index's.</li>
+<li><strong>Managers.</strong> GameManager <code>[base+0x26FFAA8]</code>. FactionSystem <code>FS = [GM+0x6C68]</code>: pools <code>FS+0x68</code>
+  (0xC0 each, members +0x18/+0x20; the MainGame pool holds every captain), army contexts <code>FS+0x98</code>
+  (38 x 0x290, ctx = entry+8), current region <code>FS+0x1B0</code> (record name), its faction <code>FS+0x1B8</code>.
+  Six "managers" are fake and must never be used: AIManager 0x2A34D00, PlayerManager 0x2A34BE0,
+  ArmyManager 0x2A34B88, FortressSystem_Global 0x2A34C08, CombatManager 0x2A34CF0, InputManager
+  0x2A34C90.</li>
+<li><strong>In the world?</strong> SpawnManager <code>[base+0x26FFBE8]</code> is NULL at the main menu. Safe to write = it is
+  live AND spawned &gt; 0 (<code>call("write_guard")</code>; the player object is persistent and proves nothing).
+  <code>SpawnManager+0x190</code> is the AMBIENT-owned count, not the array length; entries are 0x40 bytes with
+  the character at +0x20. It is reallocated mid-travel: never keep the pointer.</li>
+<li><strong>Player.</strong> <code>[base+0x2797808]</code> = first entry of the player list <code>[base+0x2A34C68]</code> (long misnamed
+  NemesisManager). CGameClientShell <code>[base+0x26FFA98]</code>: +0x888 player, +0xE50 load task (a NEW
+  pointer there = a load starting).</li>
+<li><strong>FactionMember</strong> (vt <code>0x1FD5EA0</code>) is <strong>0x528 bytes</strong>. <code>FM+0x530..</code> is NOT the FM: the appearance
+  object is <code>[FM+0x2D8]</code>, addressed as <code>[FM+0x2D8] + (off - 0x530)</code>. Valid FM = <code>[FM+0x178]</code> is a
+  GameDB record. +0x168 seed, +0x174 pool index, +0x178 faction, +0x188 combat tree, +0x198 / +0x1E0
+  trait vectors, +0x268 row record, +0x270 personality, +0x278 class, +0x318 role, +0x328 tribe,
+  +0x390 rarity, +0x3A0 builder, +0x498 inline name (Latin-1), +0x4B8 level (the UI shows +1),
+  +0x508 nemesis bits (engine setters only), +0x51B seat column.</li>
+<li><strong>CCharacter.</strong> +0xAC position (cm), +0xB8 rotation QUATERNION (x, y, z, w; +0xBC is not a yaw),
+  +0xC8 scale, +0xE2 bit 0 visible, +0x26A8 combat object, +0x2340 visual, +0x2348
+  VisualComponent (inventory), +0x23B8 follower byte, +0x2410 alignment.</li>
+<li><strong>GameDB record.</strong> +0x00 u8 field count, +0x01 0x0A (primaries 0x00), +0x08 descriptor run,
+  +0x10 instance, +0x18 category, +0x20 name. Secondary stride 0x28, primary 0x20; a category's
+  name is at cat+0x00.</li>
+<li><strong>Slot law.</strong> cell = instance + link*8 (descriptor +0x0E); descriptor +0x0C is the element COUNT
+  (0 = owns no cell); packed bools = bit link%32 of cell link/32; vec slots hold POINTERS to
+  deduplicated, SHARED blobs; type 5 = StringEnum (P919 of a NAME, never a pointer); type 7 =
+  pointer to a shared float-pool (min, max) pair; types 10 / 11 = RecordLink to a secondary /
+  primary record on disk (live descriptors say 10 for both: a link into a <code>_Structures*</code> category
+  targets its primaries). Address cells only through the record's OWN descriptor run.</li>
+<li><strong>Names.</strong> RecordLink = <code>(cat_idx*16)&lt;&lt;16 | rec_idx</code>. P919 hash: <code>h = h*919 + LUT[c]</code> (LUT at
+  0x1DB50D0; StringHash 0x423E70 seeds from r8). 14.6% of record names exist in several
+  categories: always resolve with <code>category=</code>.</li>
+<li><strong>Threads.</strong> Anything that allocates in the engine, dispatches to scripts or rebuilds a world
+  object runs on the MAIN thread (native pump / main bridge; <code>exec_main</code> holds the cross-process
+  mutex). The render thread may read. The main thread has no SEH net. Engine asserts are null
+  writes at 0x819113 (RCX = message).</li>
+<li><strong>Focus and loads.</strong> The game pauses its simulation while unfocused: a stale heartbeat or a
+  command stuck "queued" usually means tabbed out. Some loading screens re-deserialise GameDB
+  instance state, and a region change resets bundles and animation pushes: re-arm live edits per
+  load, never write during one.</li>
+</ul>
+<h2 id="laws">Laws</h2>
+<p>One line each; full text and history in <code>kb/hard-won-rules.md</code> and the topic file named.</p>
+<ul>
+<li>Never write FM / SMC / inventory / GameDB while loading: the deserialiser is rebuilding them (crash 2026-07-06).</li>
+<li>Never memcpy-clone an entity or inject into SpawnManager; create objects through the engine's factory (<code>kb/live-world-objects.md</code>).</li>
+<li>Never bulk-mutate hot-thread GameDB domains (NativeLife, Camera, Interface/WorldUI, AudioHook RTPCs, Profile, AI/Sensors, <code>_Structures*</code>) with int / vec / enum / FK writes. Repoint an enum cell only COLD, guarded on its old value (<code>kb/army-menu.md</code> camera).</li>
+<li>Never write raw bytes at a vec slot or into a shared vec blob from a bulk tool; packed bools are single-bit read-modify-write; never dereference a type-5 cell (<code>kb/gamedb-schema.md</code>).</li>
+<li>A RecordLink write must match the field's DECLARED type: SetLink only checks it is some record (crash at the shot, 2026-10-07, <code>kb/quests-story-scenes.md</code> savior).</li>
+<li>A record with header byte +0x01 bit 0x10 (every BlendDB <code>.bvr</code> record, 0x1A) is a native struct: write <code>instance + SlotOffset</code>, never <code>instance + link*8</code> (<code>kb/gamedb-schema.md</code>, 2026-10-27).</li>
+<li>Never modify shared GDB records (Smp wrappers, Facial chains).</li>
+<li>Never write FM+0x508 / +0x510 / +0x51A / +0x2A8 raw; nemesis bits go through the engine setters (<code>kb/factionmember.md</code>).</li>
+<li>Identity-scale look changes (body, class, tribe, catalog head) use RebuildDirect 0x1BC3AA8, never UpdateVisualModel 0x62EB14 on a spawned orc (2 crashes). Changing body type on a loaded orc crashes: change looks atomically or while unloaded.</li>
+<li>An engine object's own bytes never prove it is alive: re-find it in the engine's container, on the main thread, in the job that uses it (tint keeper use-after-free 2026-10-23).</li>
+<li>Never write repeatedly to scanned world-object addresses without re-checking the vptr every pass; never restore by arithmetic: journal and restore with a still-ours check.</li>
+<li>Re-resolve heap pointers on every use: SpawnManager and character controllers are replaced during travel and respawn.</li>
+<li>In-process heap scans never run on the render thread, never read PAGE_WRITECOMBINE / NOCACHE pages and never cap region size (the Havok heap is one 512 MB region; reach it through <code>[base+0x2A86760]+0x20</code>).</li>
+<li>Create an approved MinHook at boot and only enable / disable it later: late trampolines fail with MH_ERROR_MEMORY_ALLOC.</li>
+<li>Framework memory read back through GDBRuntime must sit above 16 MB.</li>
+<li>Runtime material slots: kind 0 solid, 1 translucent, 2 depth proxy (setter 0x17AF0C, main thread).</li>
+<li>Rebuild a drawn weapon with the holder pair 0x3FD21C (hide) then 0x3FD204 (show); 0x40000C / 0x3FD228 only build an empty holder.</li>
+<li>A malformed <code>.fxp</code> stalls the resource loader until restart. Ship a composed effect only after the engine check AND the value guard: load-time acceptance is not play-time safety (crash 2026-10-20).</li>
+<li>Script-only natives (NPC::SetAlignment and the other users of 0x503EF8) fault from the bridge: run them inside an engine-dispatched handler.</li>
+<li>A scene's target must still be active (in SpawnManager, alive, has an inventory), re-read in the same main-thread tick (crash 2026-10-14).</li>
+<li>Never null an engine callback that also retires state (the GARRISON header callback 0x1983288).</li>
+<li>Unused SQ03 animation slots must hold a valid quaternion; zero = engine assert = crash.</li>
+<li>One owner per shared engine cell: share it through an owner-counted gate (<code>framework/sowframework/sdk/sow_save_pause.hpp</code>), never two independent gates.</li>
+<li>Always 64-bit reads for pointers.</li>
+</ul><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
