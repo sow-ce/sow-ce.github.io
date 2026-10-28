@@ -1,0 +1,348 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Quests, story characters and scripted scenes (betrayal, sieges, savior) - Shadow of War engine reference</title><meta name="description" content="quest state machine, story characters, betrayal, army transforms, siege scenes, savior"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" class="cur" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="quests-story-characters-and-scripted-scenes-betrayal-sieges-savior">Quests, story characters and scripted scenes (betrayal, sieges, savior)</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Moved verbatim from
+CLAUDE.md on 2026-10-27 (original lines 1352-1665); heading levels normalised, text unchanged.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Sections:</strong>
+- Quests from anywhere — the quest state machine (PROVEN IN-GAME 2026-09-26, all regions)
+- Story characters exist on demand — rebuild + ambush (PROVEN IN-GAME 2026-10-01)
+- Your Overlord betrays you — forced, it takes the fort (PROVEN IN-GAME 2026-10-02)
+- Army transforms are a story step, not "add X to an army" (MEASURED 2026-10-26, user test + offline decode)
+- Siege scenes on any orc, anywhere — executions and the Overlord's arrival (IN-GAME CONFIRMED 2026-10-14)
+- Savior on demand — one of YOUR captains kills the nearest enemy (RANGED + MELEE IN-GAME CONFIRMED 2026-10-05)</p>
+<hr />
+<h2 id="quests-from-anywhere-the-quest-state-machine-proven-in-game-2026-09-26-all-regio">Quests from anywhere — the quest state machine (PROVEN IN-GAME 2026-09-26, all regions)</h2>
+<p>A mission marker is a placed quest object (vt <code>0x1F9DFE0</code>: +0x40 name, +0x58 context, +0x120
+state machine vt <code>0x1F9DFB8</code>, +0x180 <strong>trigger</strong>, +0x188 Quest record). Trigger +0x198 = NavMarker.
+- <strong>State = pending (+0x12C) unless -1, else current (+0x128)</strong> - <code>SetState</code> 0x159DE4 parks
+  current at -1 mid-transition. Dispatcher 0x1162D8, events 0 CanEnter / 1 CanExit / 2 Enter /
+  3 Update / 4 Exit. States: 0 Inactive, 1 SimEventEval, 2 PreActivate, 3 DirectActivate, 4
+  FadeOut, 10 TimeOfDay, 11-15 Load<em>, 16 InstantiateBundles, </em><em>17 Active</em><em> (CanEnter = bundles
+  loaded; Update = the fail-distance check), 19 PostActive, 20 Completed, 21 Failed, 22
+  Cancelled, 25 Cleanup.
+- <code>ActivateBypassTrigger</code> body <code>0x19F060C(obj)</code>: state &lt;= 2 -&gt; SetState(3); handlers run
+  synchronously -&gt; </em><em>main thread only</em><em>.
+- Tribe missions fail you beyond 120 m of the relay (<code>QR:SetFailObject(QR, 15000)</code> +
+  <code>RequestDistanceToObjectEvents(QR, 12000)</code> in the prefab script), so move the player first:
+  </em><em>CCharacter.TeleportToObject <code>0x658C30</code> only QUEUES</em><em> (push <code>0x659884</code> onto <code>[0x2A86880]</code>, sets
+  CChar+0x2C21 until the engine performs it) - call it on the main thread, target the quest
+  </em><em>trigger</em>* (a relay can hang over a house; the trigger is where a player stands), wait for
+  arrival + the pending flag to clear, then activate. The IMMEDIATE slot 111 from the render thread
+  faulted inside the engine on a jump into an unstreamed section and took the game down.
+  <code>CCharacter.TeleportToLastKnowNavMeshPos</code> <code>0x19B7AA0</code> is the engine's own unstuck (queued).</p>
+<h2 id="story-characters-exist-on-demand-rebuild-ambush-proven-in-game-2026-10-01">Story characters exist on demand — rebuild + ambush (PROVEN IN-GAME 2026-10-01)</h2>
+<p>On an end-game save that never had them, Daz, Gaz, Zog and Baz were rebuilt with the engine's own
+routine and their story ambushes played with their intros (user screenshots); a built copy is
+SAVED - Baz fired after a game restart. A story character is a <code>Faction/PresetMembers</code> record; a
+built orc carries it at <strong>FM+0x190</strong>.
+- <strong>Who builds them:</strong> army init (<code>Faction/Definition.PresetMembers</code>, 0xFDAC54) and quests — a
+  quest's <code>PrefetchPresetFactionMembers</code> are built FRESH at its LoadFactionBundles state
+  (0x625D98 -&gt; 0x62662C -&gt; army of the CURRENT region -&gt; 0x62666C).
+- <strong>The sequence (no hook):</strong> <code>ctx = 0x18DE04(FS+0x98, army)</code> (asserts on a non-army record:
+  check <code>[army+0x18] == [FS+0x98+0x10]</code> and the 0x290-stride entries first),
+  <code>fm = 0x1C1D378(ctx, preset)</code>, then <code>if 0x1C1C638([ctx+0xD8], preset)</code> (army's own preset)
+  <code>0x1BD2300([ctx+0x20], fm)</code>. Main thread, one tick. Level at creation = <code>NoRowXPLevel - 1</code>
+  without a row (Daz: 0); the ambush levels him.
+- <strong>Death:</strong> the build copies <code>GlobalVarToSetOnDeath</code> to <strong>FM+0x398</strong>; SetDead <code>0x626E38</code> sets
+  FM+0x508 bit 2 and that campaign variable True (Baz/Gaz -&gt; <code>BruzBrothers_*Dead</code>, which gates
+  Daz's ambush via <code>BruzBrothers_BazGazDead</code>).
+- <strong>A queued ambush request fires only in its own region:</strong> request <code>+0x18</code> must equal
+  <code>[FS+0x1B8]</code> (0x6DD92C, "The faction has changed") — Daz's, queued in the desert, sat at 566
+  retries in Minas Ithil until re-homed.
+- <strong>After the ambush</strong> the same orc is a captain of the current region (row, tribe, role,
+  rarity) and FM+0x190 is cleared. The UI shows level FM+0x4B8 + 1.
+- Tools: AIRE <code>story_member_create</code> (the proven route), <code>story_census</code>, <code>campaign_gates</code>,
+  <code>quest_gates</code>; framework Nemesis Events Force builds a missing one first (native op
+  <code>story_build</code>, same sequence — compiled, NOT yet run in game).</p>
+<h2 id="your-overlord-betrays-you-forced-it-takes-the-fort-proven-in-game-2026-10-02">Your Overlord betrays you — forced, it takes the fort (PROVEN IN-GAME 2026-10-02)</h2>
+<p>Vanilla never does it, by design, in three places: all 18 betrayal ambush defs list Overlord in
+<code>ExcludedRowRanks</code> (91 of 100 defs do); the betrayal Job <code>General_Betrayal</code> picks only
+Captain/Warchief rows; the hit-your-follower betrayal (<code>ImmediateBetrayal_Predicate</code>, 3 hits in 3 s
+then 5 in 6 s) requires <code>IsOverlord_Not</code>. No Overlord-specific betrayal VO exists.
+- <strong>Forced:</strong> <code>AI_BecomeHighestLevelFollower_Betrayal</code> (<code>NeverPickAmbusherWithJob</code> - a provided
+  ambusher is its normal mode), Force gates + the Overlord <code>ExcludedRowRanks</code> cell cleared, then
+  TriggerAmbush <code>0x6DDCB8</code> with the region Overlord's FM (must be out of the world). User-confirmed
+  twice on Seregost's Overlord: spawned in 0.5 s, betrayal with his own personality's line, follower
+  bit cleared, Overlord row kept; 15/15 cells restored each run.
+- <strong>Region ownership IS the Overlord's follower bit:</strong> <code>Faction:GetFactionPlayerOwned</code> (stub
+  <code>0x7A2800</code>) = <code>0x1E484C(FS, faction)</code> -&gt; the region's Overlord FM -&gt; <code>FM+0x508</code> bit 27, nothing
+  else. So the betrayal loses the fort: the engine shows him as the enemy Overlord and the player's
+  warchiefs were removed. Dominating him back restores follower = 1 with the row kept.
+- The fort-defence Lua (<code>OwnerNamedOnSpawn</code>) converts ANY named defender, <code>FD_Overlord</code> included, to
+  the invaders on a <code>FA_FollowerBetraysPlayer</code> event (<code>ActiveBetrayalFromAbuse</code>/<code>IsPlayerFollowerRemove</code>).
+- Not yet a C++ Force button.</p>
+<h2 id="army-transforms-are-a-story-step-not-add-x-to-an-army-measured-2026-10-26-user-t">Army transforms are a story step, not "add X to an army" (MEASURED 2026-10-26, user test + offline decode)</h2>
+<p>User (Orcs &gt; Nemesis Forge &gt; Army transforms &gt; AddOlogs): a Nurnen captain seat came back as "[INVALID STRING
+ID] / Fiery Tank" with an Easterling body. Read back live (<code>scripts/army_seat_census.py</code>): <code>Faction_island</code>
+<code>island_Row_Captain_2</code> seat 2 = a nameless <code>Easterling_Infantry</code> FOLLOWER, L76, no role / tribe / personality,
+the only Easterling among 554 members (what he was before the click: not known).
+- <code>Faction/Transforms</code> (4: AddOlogs / AddBerserkers / AddDefenders / AddSpearmen) are applied ONCE by the game,
+  in <code>mtnpass/shelob1</code> QuestComplete, to <code>Faction_MinasIthil</code> + <code>Faction_MtnPass</code> - an Act 1 step.
+- <code>ClassInjections</code> -&gt; a <code>_StructuresFactionTransformClass</code> primary {OldFactionMemberJob
+  <code>Quest/Jobs/Definition::PlayerKiller_Duel_Other</code>, ChanceArray [0,1,2,4,1], PossibleSimEvents
+  <code>Transform_IntoCaptain_&lt;class&gt;</code>}; AddOlogs runs the BERSERKER event (no Olog one ships).
+- Binding <code>0x1B755EC</code> -&gt; injection <code>0x1C261A4</code> -&gt; <code>0x1BD2A54</code> -&gt; job filler <code>0x1BD40C4</code>, which BUILDS only when the
+  job names a <code>FactionMemberBuilder</code> (<code>0x1BD42F1</code>); this job names none, so it PICKS existing members
+  (<code>0xF9A320</code> / matcher <code>0xF9BB20</code>: alive, captain rank; no species / faction / identity filter) and seats them.
+- Removed from the Forge (2026-10-26). Real captains of a class: Spawner &gt; Entities &gt; Captains.
+- Offline reader for such records: <code>scripts/gadb_record_dump.py "&lt;category&gt;" &lt;name|#primary&gt;</code> (hotchunk; a
+  RecordLink index is only valid inside the database it came from - resolving one in another archive named the
+  wrong records here once).</p>
+<p><strong>The <code>WillResurrect_&lt;death&gt;</code> events (23) are the package of a captain who CAME BACK</strong>, not "the next time he
+dies that way he returns" (the Forge v1 tooltip): each = LevelsToAdd 1, Actions 15, KeepPriority 30, RewardLists
+<code>MaybeNewRole_CheatDeath_&lt;death&gt;</code> + <code>CheatDeath_Ambush</code> + <code>Betrayal_CheatDeath_Ambush</code>,
+UseThisFactionMemberForAmbusher, LootTags <code>GearTagWeight_event_resurrected</code>. The <code>Contract_*</code> training orders
+(31) mostly = +1 level + the trait / gang / mount + <code>Upgrade_CommonOrcToEpic</code> + <code>Contract_RemoveAnEpicTrait</code>
+(element orders: only the element). Forge v2 (built, cl /Zs clean, NOT run): <code>ui/tabs/sow_tab_nemesis_forge.hpp</code>
++ <code>sdk/sow_nemesis_forge.hpp</code> - two-click confirms, game region names, labels from each record's ReplayType,
+cheat-death + any-event + army-wide levers Developer Mode only; the Forge page itself stays Developer Mode until
+seen in game.</p>
+<h2 id="siege-scenes-on-any-orc-anywhere-executions-and-the-overlord-s-arrival-in-game-c">Siege scenes on any orc, anywhere — executions and the Overlord's arrival (IN-GAME CONFIRMED 2026-10-14)</h2>
+<p>User, Gorgoroth outside a siege: the hostage execution was "INSANE to watch"; a plain grunt played the
+Fort Defense Overlord arrival WITH the Overlord's line + "Overlord has joined the battle". Wanted as a
+mod-menu "Siege" section. Test tool <code>scripts/fort_scenes.py</code>; full decode <code>aire/documents/FORTRESS_CINEMATICS.md</code>.
+All calls on the MAIN thread through the native <code>call</code> op.
+- <strong>Animate tasks</strong> (what the siege Lua does to NPCs): <code>NPC::AnimateSmartObject 0x1A8AC48(npc, AI/SmartObjects
+  rec)</code>, <code>...WithTarget 0x1A8AE68(npc, so, target)</code>, <code>AnimateClear 0x757F50(npc, bool)</code>. Kneel =
+  <code>Bip_Prisoner_Hostage_Kneeling_Looping</code>; execute = <code>Bip_KillHostage_Single</code> (attack type KillHostage_Single:
+  head chop / rip / neck break / gut stab / shoot by weapon; sync InitialAlignment 0 = the executioner walks to
+  the victim; victim filter P0070_BipedsExceptSlaves; the victim dies). Both must share a walkable surface.
+- <strong>Presentations</strong>: <code>CPlayerObj::QueuePresentation 0x734C30(player, Presentation/Relays rec, target char)</code>.
+  Camera type decided at queue (<code>0x734E1C</code>: relay <code>CameraType</code>, else the running quest's): actor-following scenes
+  (<code>FortDefense_Overlord</code>, <code>WarchiefIntro_RL</code>) need nothing; fixed fort shots need the relay cell written.
+  Dialogue rides the presentation (a grunt spoke the Overlord line); the warchief intro was silent on a grunt.
+- Extra actors (spy chief) bind the FIRST spawned character (list <code>base+0x27265B0</code>) passing the OPR - by item.
+  Check holders with the engine held test <code>0x24DF7C([char+0x2348], item)</code> first or a captain is executed.
+- <strong>The game pauses its simulation while unfocused</strong> but the native bridge still answers: queued teleports
+  (<code>CChar+0x2C21</code> = 1 until done) and presentations wait - keep a teleport marker on its point until the flag clears.
+- <strong>A scene's target must still be ACTIVE (crash 2026-10-14, MEASURED):</strong> the sequence evaluator tests the relay target
+  (<code>0x365882</code> -&gt; <code>0x2F1768</code> -&gt; item rule <code>0x275BE0</code> -&gt; held test <code>0x24DF7C([char+0x2348])</code>) unchecked; a target being
+  removed (inventory <code>+0x2348</code> = 0; his teleport never ran) faulted. Require a SpawnManager entry + alive + inventory,
+  re-read in the same main-thread tick (native <code>read</code> op); a teleport that misses refuses the scene. The all-characters
+  list keeps corpses (60 of ~120 AI entries); the SpawnManager holds the living.</p>
+<h2 id="savior-on-demand-one-of-your-captains-kills-the-nearest-enemy-ranged-melee-in-ga">Savior on demand — one of YOUR captains kills the nearest enemy (RANGED + MELEE IN-GAME CONFIRMED 2026-10-05)</h2>
+<p>User: "works absolutely perfect". Orcs &gt; Nemesis Events &gt; Encounters &gt; Savior Strike. Full health, no
+Last Chance, no attack. <code>sdk/sow_savior_ondemand.hpp</code> (ArmAlly / RestoreAlly / PickVictim / Watch).
+- <strong>Presentation sequence evaluator <code>0x3650B4</code></strong> (called per pool entry by the start routine <code>0x43E6B8</code>;
+  context = the queued message: subject -&gt; ctx+0x88, source -&gt; ctx+0x80). Order: PlayerPredicate,
+  <strong>SourcePredicate</strong> (source present -&gt; tested with the Object predicate and bound to its ActorID by
+  <code>0x43EE28</code>; a failed test FAILS the branch; no source -&gt; skipped), <strong>AssumedTargetPredicate</strong> (the
+  subject; none -&gt; branch fails), <strong>PlayersTargetPredicate</strong> (<code>0x182B5F0</code> -&gt; <code>0x523B0C([player+0x2FA0])</code>
+  = <code>[[comp+0xE68]+0xA8]</code> -&gt; combat object -&gt; +0x48 character; comp+0xE68 is the player's OWN combat
+  object; NULL while idle -&gt; branch fails), ..., <strong>AISpawnPredicate LAST</strong> (so a spawn anchored on
+  <code>Target_ACT</code> sees a source-bound victim). Field reads go through a per-category slot table
+  (<code>[0x2645720]</code> -&gt; static slots <code>0x2892A70</code>, 0x48 each; <code>cmp [slot+0x30],2</code> has-field, <code>byte [slot+0x40]</code>
+  index -&gt; <code>0x30E7B4</code>).
+- <code>PreDeath_Savior_Spawning_EVT</code> = 16 branches, first passing wins ("Saviors are in priority order");
+  every follower branch got its victim from the player's target, so a button press found nothing
+  unless a captain archer already stood near. The ally route: the branches' <code>PlayersTargetPredicate</code>
+  -&gt; NULL, <code>SourcePredicate</code> -&gt; their own <code>PreDeath_Savior_Attacker_OPR</code>; the same on
+  <code>PreDeath_Savior_Attack_SPR</code> (shared by <code>Attack_Ranged_EVT</code> / <code>Attack_EVT</code> / <code>Despawn_EVT</code>; the
+  continuation carries the source, <code>0x433B04</code>); the savior jobs' <code>PISPredicate</code> (<code>PISPred_Savior</code>,
+  loyalty &gt;= 50) -&gt; NULL (840 of 852 shipped jobs carry none). Victim = nearest hostile of
+  <code>All_Orcs_OlogHai</code>, queued as the source of <code>pres_queue</code> on the main thread. <strong>Ranged</strong> =
+  <code>Existing_Archer</code> / <code>Spawn_Archer</code> (job <code>PreDeath_Savior_Follower_Archer_SFM</code> spawns a follower archer
+  captain on a sniper perch near Target_ACT), falling back to <code>Spawn_Follower_L/R</code> (melee).
+  <strong>Melee</strong> (IN-GAME CONFIRMED 2026-10-05, user: "working perfect"): archer branches BLOCKED through the source slot (<code>IsPlayer_OPR</code>), the
+  bodyguard / existing-follower / spawned-follower branches opened. First melee test 2026-10-05: 0 allies
+  on 2 presses - the melee SPAWN predicates search a 200 sphere at Player_ACT + (+-200, 0, -25) for an
+  OFF-SCREEN point (vanilla = the Last Chance close-up camera); the arm now anchors them on Target_ACT
+  and drops RequireOffScreen - that fixed it. <code>Watch</code> restores every rule once the victim is down
+  (+4 s) or after 30 s.
+- LEAD: the jobs draw from the current region's army (Minas Ithil 2026-10-05: 1 follower archer
+  captain, 22 follower captains).
+- <strong>Execution + cinematic options (built 2026-10-05, NOT run):</strong> <code>SaviorOnDemand::Cine</code>, one Ledger,
+  restored by <code>Watch</code>. MEASURED: the melee kill is a sync attack from <code>Combat/Pool::Predeath_PL</code>
+  (Trb_F, Fatal_CS_F, IK_B, IK_F, KD_L, KD_R; all AttackExplicitValue 1000). WHICH ANIMATION plays is
+  a variant table: AnimationData <code>AnimOverridePicker</code> (Easterling picker) / <code>AnimOverrides</code> -&gt;
+  <code>Combat/AttackAnimOverride</code> -&gt; entry by the savior's weapon class (<code>0x2D5430</code>) -&gt; variants
+  <code>_StructuresCombatAttackAnimOverride</code> {Weight, Source/TargetAnimation, SourceAnimationWeapon,
+  PresentationCameraType, SeverActionTarget, Pred_<em> gates}. Chooser <code>0x2D5828</code> (all LIVE reads):
+  Weight &gt; 0 and every gate, then weighted random (<code>0x1B3B90</code> reservoir) among variants NOT played
+  within RecentAttackWindow (General_5m); if all passing are recent, the oldest - so ONE passing variant
+  always plays. Tables: <code>Bip_Bip_Standing_IK_Fatal_CS_F</code> (brutal: severs/smash/fire/poison/curse, olog
+  entries), <code>Bip_Bip_Standing_IK_Fatal_CS_Trb_F</code> (one entry, 9 tribal finishers gated by
+  <code>Pred_SourceHasItem</code>: Tribe_Black / _Beast_BeastClaws / _Industrial / _Regal / _Mystic / _Outlaw /
+  _Slaughterhouse / _Torture / _Warmonger_Arms; leaves 8614-8622 used by that entry only).
+  Slow-mo: <code>SlowMo</code> Enum pair (1, N) = N times slower (all 332 records; KillCam_13x_SM = (1,13));
+  savior kill = <code>Predeath_Savior_Named_SM</code> 10x / <code>_Regular_SM</code> 5x (both read live); the shot
+  <code>Predeath_Savior_Ranged_SM</code> slows only the PLAYER (player 50x, sim 1x). Kill-cam pools
+  <code>PreDeath_Savior_SyncSlowmo(_Ranged)_CP</code> cut grunt/olog cams at <code>Float_01_75</code>, named = NULL (whole
+  element); camera defs + element Duration/SlowMo are COPIED at presentation start (<code>0x5D0AB4</code>).
+  LEAD: a tribe's finisher clips being resident for a captain of another tribe.
+  </em><em>First test 2026-10-06: every press logged <code>custom scene unavailable</code> and played vanilla</em><em> - the
+  framework's <code>GDBRuntime::Db::Records()</code> refused categories above 8,192 records, so <code>Db::Find</code> returned
+  0 for EVERY record of Combat/Attack (16,976), AudioHooks/Actions (29,709) / Hooks (29,616) / Keys
+  (18,510) / DialogEvents (17,239). Fixed with <code>Db::FindByHash</code>: record header </em><em>+0x04 = P919(name)</em><em>
+  over the engine LUT (live 3/3), one u32 per record, hit confirmed by name (dry run 4/4 savior attacks).
+  Shadow Chain / Reach were unaffected (they walk Combat/Attack via <code>db.Category</code> themselves).
+- </em><em>Domination look (user idea 2026-10-06, built, NOT run):</em><em> the <code>Dom_Loop_EVT</code> emote's "movie scene"
+  is <code>Client/ClientFXSequence::Dom_UI</code> -&gt; <code>fx\presentations\domination\dom_ui.fxp</code> = ONE SceneRender
+  node: Contrast 1.5, opaque black fog from 3 m (black by 9 m), HDR grey 0.1-0.4, DoF 500-1200; ships in
+  <code>playerskin_talion.bndl</code> (always-set) + <code>playerskin_celebrimborwraith.bndl</code>, resident live. Applied as
+  <code>ClientFXSequence -&gt; Dom_UI</code> + <code>ClientFXTimerOverride -&gt; 1</code> on the savior's 14 scene elements (parent
+  <code>PreDeath_Savior_PreWait_ELM</code> + melee 6 + ranged 7; copied at presentation start <code>0x5D0AB4</code>); slow-mo
+  option "Domination" = Dom_UI_SM's shape (sim 30x, player 10x, RampUp 2 s).
+  IN GAME 2026-10-06: kill slow-mo + Domination look applied (log); "slow arrow" v1 left the RELEASE at
+  full speed (user, 3/3 ranged presses).
+- </em><em>Slow-mo MANAGER (MEASURED 2026-10-06, code + live):</em><em> <code>[[base+0x26FFAB0]+0x7A8]</code> (same owner as
+  CharacterBundleMgr +0x868; ticked from <code>vt_0x1F68920::vf10</code>): requested instances <code>+0x00/+0x08</code>,
+  running one <code>+0x38</code> (update <code>0x5CF55C</code> picks the lowest <code>inst+0x80</code> priority; request <code>0x5D08B8</code>).
+  Instance: <code>+0x18</code> SlowMo record, <code>+0x48</code> world time scale / <code>+0x54</code> player, both COPIED at Start
+  <code>0x5CEC10</code> (live: 1/30 after a 30x press); Period + RampUp go into real-time timers there too
+  (<code>[SLOWMO]: Start: %s</code>, logger compiled out). A finished instance lingers as current with scales 1.0.
+  </em><em>The ranged shot's slow-mo gap:</em><em> <code>Attack_Ranged_Reframe_ELM</code> (starts <code>Savior_Ranged_Attack</code> on
+  Savior_ACT, SlowMo <code>Ranged_SM</code>: sim 1x, player 50x, Period 5) -&gt; <code>SyncRefocus_Ranged_ELM</code> (0.4 s, NO
+  SlowMo) -&gt; <code>SyncSlowmo_Ranged_ELM</code> (kill-cam). Their AdvanceOnItem primaries are all-NULL.
+  Watch logs <code>[SaviorTrace]</code> (running slow-mo, world + scene scale on change, victim death frame).
+- </em><em>THE SCENE CLOCK - why slow-mo "ran out" (MEASURED 2026-10-06, code + live + one 5-press test):</em><em>
+  - Every element Duration is a timer at running-presentation <code>+0x288</code> on clock <code>[base+0x2702578]</code>
+    (<code>0x37B784</code> -&gt; <code>0x37BCE4</code>; expiry = bit 1 of <code>pres+0x6C</code>). That clock IS slow-mo channel 4 =
+    <code>SlowMo.PresentationTimeScale</code> (<code>0x5CF888</code>: ch 0 <code>0x2702598</code> world, 1 <code>0x2702548</code> player, 2
+    <code>0x2702570</code> combat companion, 3 <code>0x2702558</code> world UI, 4 <code>0x2702578</code> presentation; <code>0x5CF834</code>
+    writes <code>[clk+8]+0x28</code> num, <code>+0x2C</code> den, <code>+0x30</code> scale; reset to 1/1 by <code>0x5CEBB4</code>). Instance channel c
+    = {+0x44 enabled, +0x48 scale} + c</em>0xC. The slow-mo's Period/RampUp timers run on <code>0x2702550</code>
+    (UI: <code>0x2702588</code>), which slow-mo never scales.
+  - Live: <code>Named_SM</code> world/player (1,10), <code>Regular_SM</code> (1,5), <code>Ranged_SM</code> world (1,1) player (1,50) -
+    all three presentation <strong>(1,1)</strong>. So a 4.5 s kill-cam lasted 4.53 s of wall clock at world 1/30
+    (= 0.15 s of the execution) and the 5 s shot camera ended around the release. Shipped precedent for
+    scaling it: <code>CombatResetCamera</code>, <code>Store_Unpack_SlowmoPing_Common_SM</code> (world = player = presentation).
+  - <strong>The victim's dead byte (and its actor binding) drops as the execution STARTS</strong> (2/2 orc presses:
+    dead + kill slow-mo in the same sample, +500 / +515 ms). <code>AdvanceOnTargetDeath</code> (<code>0x37B6C4</code>) advances
+    when <code>0x430830(pres+0x2B0, TargetActor)</code> returns NULL (bit 3).
+  - <code>Presentation/AdvanceHook</code> = {Actor, Hook}: 0 FacialEnd, 1 DialogEnd, 2 AttackEnd, 5 AttackStart
+    (122 records). <code>Savior_AttackEnd</code> = {Savior_ACT, 2}; raised by <code>0x42DA2C</code> (via <code>0x42DA18</code>, the
+    attacker's <code>[obj+0x100]</code> presentation link, called from the attack path <code>0x2E0520</code>), matched by
+    <code>0x42FFEC(pres, type, actor)</code> against the element's copied hook (<code>pres+0x1C0</code>, copier <code>0x5D20C4</code>).
+  - Fix, <strong>IN-GAME CONFIRMED 2026-10-07</strong> (user: "that works perfect"): any customized press -&gt; each
+    scene slow-mo's <code>PresentationTimeScale</code> = its own
+    world entry, Period = cap x factor + 10 s; melee kill-cam <code>SyncSlowmo_ELM</code> AdvanceOnHook =
+    <code>Savior_AttackEnd</code>, Duration 8 (scene s); death advance also on the shot camera
+    <code>Attack_Ranged_Reframe_ELM</code>; v2's hand-stretched gap Duration dropped. Watch restores only after the
+    slowed world has been quiet 1.5 s (the manager re-runs Start <code>0x5CEC10</code>, re-reading the record,
+    whenever its current instance changes).
+  - Not explained: the ranged kill-cam (<code>SyncSlowmo_Ranged_ELM</code>, 4.5 s, no hook) ended after 1.86 s with
+    the grunt camera's 1.75 s cap nulled. LEAD: its camera (<code>Kill_ObituaryFar_ZoomIn_BR</code>) completing.
+  - LEAD: an orc savior never executed an OlogHai victim (1 press): the 12 s refocus timed out, the olog
+    died 34 s later in a normal fight.
+- <strong>The ranged savior never shoots (MEASURED 2026-10-07; real bolt built, NOT run).</strong> User: the bolt
+  "just appears". <code>Savior_Ranged_Attack_F/B_AN</code> are SYNC attacks (<code>AnimationData.Sync</code> -&gt;
+  <code>Combat/Sync/Savior_Ranged_Recoil_Sync_F/B</code>, clip <code>Savior_Bip_Sync_Savior_RangedKill_Front/Back_A</code>,
+  weapon anim <code>RageXbow_D2</code>): the victim's death is played in step with the archer's clip across the
+  whole distance, and no projectile flies. Orc bolts are mostly invisible in flight anyway
+  (<code>Inventory/RangedWeaponData</code>: <code>Orc_Archer_Crossbow</code> 28 m/s with <code>ShowModelWhileTraveling</code> False,
+  <code>..._SniperShot</code> velocity <strong>1e10</strong> = instant). Real bolt (<code>Cine</code> option, default on): the two attacks take
+  <code>AI_Archer_Shoot__100PercAccurate</code>'s AnimationData (<code>OrcArc_Reload_Fire</code>, no sync) and keep their OWN
+  AttackData primaries (live <code>0x5836A298</code> / <code>0x583630F8</code>, savior-only), which get <code>RangedWeaponOverride</code>,
+  <code>ActivateItemSlot</code> Ranged, <code>AlignToTargetType</code> 2 (all AI shots; 3 = the sync's), and the crossbow hit
+  reaction. <strong><code>RangedWeaponOverride</code> takes an ITEM</strong> (declared <code>Inventory.Item</code>; shipped
+  <code>AI_Archer_Upg_Shoot_EagleEye</code> -&gt; <code>Inventory/Items::Orc_2HR_Crossbow_EagleEye</code>): the shot path
+  <code>0x2E8994</code> loads it into RSI or, when NULL, the drawn weapon's item (<code>0x11F2A0(0x2DE1EC(shooter))</code>),
+  and hands it to <code>0x4031FC</code> as an Items record. <strong>v1 put a RangedWeaponData record there and the game
+  CRASHED at the shot</strong> (2026-10-07 01:24:14, RIP <code>0x1CB3C3</code>, RCX = <code>qword(str+8)+0x10</code>: that record's
+  <code>WeaponFireFX</code> string, read through the Items slot, walked as a record). Now: item
+  <code>Orc_2HR_Crossbow_NotPCFromFortWall</code> -&gt; <code>Orc_Archer_Shoot_NotPC_FromFortWall</code> (80 m/s, no gravity,
+  homing <code>MaxTurnSpeed</code> 120, model shown), guarded by <code>Items.RangedWeaponData</code> (0x328CA2CD) == that record.
+  General law: a RecordLink write must match the field's DECLARED type - <code>SetLink</code> only checks that the
+  target is some record. Second run (no crash, bolt flew): <strong>the target died AT THE RELEASE</strong> (2/2,
+  2.63 s of game time after the shot started, at 15x and 10x) and the bolt hit a corpse. The savior's
+  AttackData carries the sync's melee-style damage window, <code>ApplyDamageRange</code> <strong>(0, 10000) = 0-100 m at
+  half-angle 180</strong> (live); an ordinary shot's is (0, 50) at 45, so only its projectile deals damage. Fix
+  (built, NOT run): the savior cell repointed at the donor's pool entry + half-angle 45, shot camera cap
+  5 -&gt; 8 scene s. No camera in the data tracks a projectile (1,732 <code>Camera/Behavior</code>, 438 camera pools,
+  121 actor IDs searched): the shot is framed by <code>Predeath_Savior_RangedTargetCam_BR</code>, archer -&gt; target. The instakill stays compiled: attack-cache entry <code>+0x18</code> =
+  <code>DmgForm_All_Instakill</code> for both (live; control: the donor reads <code>DmgForm_AI_Range</code>). The bolt's trail
+  comes from <code>Inventory/FXPicker::Orc_Arrow_ProjectileFX</code> by the shooter's items: curse / flaming / poison
+  weapon, then <code>FactionPlayerFollower</code> (<code>orcarrow_trail_playerfollower.fxp</code>), sniper, power, default; all
+  resident in Minas Ithil. Rejected: the donor's AttackData (<code>HitTargetWithAttackOnShoot</code> =
+  <code>AI_BIP_BIP_ProjectileDodgeThis</code>, a dodge applied to the target at the shot) and <code>Emitter_Arrow_Barrage</code>
+  (its <code>AttackOverrides</code> swap in <code>Env_FortAssault_ArrowBarrage</code> damage for any AI target).
+- <strong>Olog saviors stand idle - CAUSE: the Army Randomizer crossed weapon species (MEASURED 2026-10-07;
+  fix built, NOT run).</strong> An olog captain that came as the melee savior never started the execution
+  (3 presses, the game's own scene too); user: it worked before using the randomizer.
+  - <strong>The weapon TYPE is the ITEM's <code>Inventory/Items.WeaponType</code></strong>, copied into the built weapon object
+    <code>+0x188</code> by <code>0x3FCF70</code> (<code>vt_0x1DB1F68::vf35</code>; the EWD is only the look). Live: the active weapon =
+    <code>[CChar+0x2348]</code> -&gt; slot <code>[vc+0x728]</code> -&gt; <code>[vc + idx*0x28 + 0x38]</code> -&gt; <code>+0x188</code> (<code>0x2DE1EC</code>/<code>0x2DE224</code>).
+  - <strong>The savior kill tables pick olog clips ONLY by that type</strong>: the olog entries of
+    <code>Bip_Bip_Standing_Instakill_F</code> (2264/2265) and <code>Bip_Bip_Standing_IK_Fatal_CS_F</code> (1541/1542) have NO
+    character gate, just <code>SourceRequiredWeaponType = WeaponTypeList/Olog_All</code> (<code>0x2D5430</code> checks source
+    char type <code>[co+0x60]</code> + weapon type per entry). An olog holding an orc-typed item draws an ORC clip.
+  - Shipped data is strictly per species: 18/18 olog melee items <code>Olog_Infantry_Melee</code>, Arquebus
+    <code>Olog_Infantry_Cannon</code>, torch <code>Olog_Torch</code>; Ranger items NULL (7) / <code>Orc_Infantry_Melee</code> (1).
+    Live after MAX+ rolls: rolled Minas Ithil ologs 4/4 held a non-olog item (berserker axe, <code>Goblin_Claws</code>,
+    defender halberd, <code>Ranger_1HS_Sword03</code>), unrolled ologs 23/23 <code>Olog_*</code>; 2 rolled orcs held olog items.
+    The randomizer judged a kit by its EWD NAME and <code>crossSkeleton</code> switched even that off.
+  - Fix (<code>sdk/sow_army_randomizer.hpp</code>, SPECIES WEAPON LAW): every hand pick (cold plan, theme, props,
+    full catalog, donor, kit fallback, post-rebuild re-apply, Army Grid pick + re-assert) requires olog
+    body &lt;-&gt; <code>Olog_*</code> item type, NOT lifted by crossSkeleton; <code>RepairSpeciesWeapons</code> (button "Repair species
+    weapons", and every roll for its region) re-kits crossed captains with their class's own type
+    (<code>&lt;Class&gt;_Melee</code> / <code>_Projectile</code>, rule &lt;= 3 kits). The save keeps the item, so the repair persists; a
+    captain already in the world updates on respawn. The pool predicate of <code>Olog_Predeath_PL</code> sets only
+    <code>Chance</code> (no weapon gate). Orcs keep NULL / Nazgul / goblin types (orc saviors executed fine).
+  - The savior's "Olog saviors" option stays (default now ON = shipped values); with it off:
+  - existing followers: finder OPRs' <code>CharacterType</code> <code>All_Orcs_OlogHai</code> -&gt; <code>Bipeds_ExceptOlogs</code> (all 8
+    non-olog types, no olog);
+  - spawned followers: the two melee spawn jobs own <strong>no <code>ExcludedCharacterType</code> cell</strong> (count 0 in their
+    run - another per-record-variant trap). They own <code>ExcludedTraitMarkerList</code> (count 1, NULL): job matcher
+    <code>0xF9BB20</code> rejects a captain when <code>0x6DC3B8(fm, list)</code> finds any of the list's <code>Markers</code> in <strong>FM+0x1B0</strong>.
+    <code>ClassMarker_Olog</code> is on 31/31 olog row captains and 0/148 orc ones (live, 518 members; Ranger/Bruz,
+    rowless, are the exceptions). No shipped list holds it alone, so the gate borrows
+    <code>MarkerList_Limiter_Terror_Caragors</code> (1 cell; 0 GADB refs, 0 pointers in 3.88 GB of heap with control
+    137, name in no string/layer) and restores its <code>Marker_Limiter_FearCaragor</code>. <code>sdk/sow_savior_ondemand.hpp</code>
+    <code>impl::SetOlogGate</code>; the trace logs <code>[SaviorTrace] element &lt;name&gt;</code> per scene step for the real cause.
+- <strong>Melee slow-mo after the kill + invisible tribe weapon (user 2026-10-06; fixes built, NOT run):</strong>
+  - The melee execution element <code>PreDeath_Savior_SyncRefocus_ELM</code> (12 s, no SlowMo, no advance flag)
+    is ended from INSIDE the shipped savior clip; a forced variant's clip does not end it, so the kill
+    played at 1x and the slow-mo kill-cam came after it. With any option changed it and
+    <code>SyncRefocus_Ranged_ELM</code> get <code>TargetActor</code> = Target_ACT + <code>CanTargetBeAttacked</code> +
+    <code>AdvanceOnTargetDeath</code> (the kill-cam element ships that pair): the kill-cam starts at the death.
+  - <strong>The tribe weapon is an ITEM in live inventory slot 7</strong> (<code>InventorySlot::Tribe</code>): CChar <code>+0x2348</code>
+    VisualComponent (vt <code>0x1FD63F0</code>) slot vectors <code>+0x4D0 + i*0x18</code>; item vt <code>0x1FDABF8</code> <code>+0x38</code>
+    Items / <code>+0x40</code> EWD. 10 spawned orcs: Machine <code>Orc_TrbVis_Industrial_Harpoon</code>, Terror
+    <code>Orc_TrbVis_Torturer_ChainHookX2</code>, Outlaw <code>Orc_Trb_Blackguard_Bola</code>; some have no slot 7. Only
+    <code>Savior_..._Fatal_CS_Trb_F</code> draws Tribe (<code>AttackData.ActivateItemSlot</code>); the other three savior
+    kills draw Melee. A tribal variant forced onto a Melee-drawing kill, or onto a captain whose slot 7
+    holds another tribe's weapon, animates a prop he does not hold: the weapon vanished.
+  - Fix (<code>sdk/sow_savior_ondemand.hpp</code>): tribal kills draw Tribe on all four; <code>Watch</code> rewrites the
+    forced tribe's item + EWD into slot 7 of every candidate (new orc followers, and those within
+    60 m at the press) every frame until the death; the savior (granted, within 4 m of the victim at
+    death) KEEPS it, the others are restored only into a provably-still-ours instance (same
+    SpawnManager, still spawned, same slot-7 instance holding our item). No tribe weapon -&gt; brutal
+    fallback (<code>Cine::FallbackToBrutal</code>): a new captain at once (200 ms grace), one already near when he
+    closes to 6 m of the victim. Warmonger (gauntlet, no weapon data) keeps drawing Melee.
+  - Not yet seen: whether a weapon already shown on his body updates; another tribe's weapon model
+    being resident; whether the kept weapon is SAVED (the save stores item hashes).</p><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
