@@ -1,0 +1,654 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GameDB schema: descriptors, slot law, value encodings, RecordLinks, record writes - Shadow of War engine reference</title><meta name="description" content="descriptors, slot law, type codes, StringEnum, shared vec blobs, RecordLinks, float pool, record writes"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" class="cur" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="gamedb-schema-descriptors-slot-law-value-encodings-recordlinks-record-writes">GameDB schema: descriptors, slot law, value encodings, RecordLinks, record writes</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Moved verbatim from
+CLAUDE.md on 2026-10-27 (original lines 6160-6665); heading levels normalised, text unchanged.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Read with care:</strong>
+- Type 5 is a StringEnum (P919 of a name), never a Vector2 and never a pointer. Vec blobs are shared.</p>
+<p><strong>Sections:</strong>
+- GameDB Schema Format (PROVEN 2026-04-13)
+- GameDB Field Value Atlas (PROVEN 2026-04-14)
+- RecordLink On-Disk Encoding (CRACKED 2026-04-23)
+- GameDB Float-Range Pool (DISCOVERED 2026-04-14)
+- GameDB Record-Level Writes (CORRECTED 2026-07-22 — slot law)</p>
+<hr />
+<h2 id="gamedb-schema-format-proven-2026-04-13">GameDB Schema Format (PROVEN 2026-04-13)</h2>
+<p>Field Descriptor: 16 bytes each, stored in a contiguous array per schema.</p>
+<pre><code>+0x00  u32   Field name hash (game-specific hash, P=919 polynomial)
++0x04  u32   k-th entry of the run's ASCENDING sorted-hash list — a parallel
+             array, NOT this descriptor's own sorted hash (CORRECTED 2026-07-28:
+             Combat/Attack descriptor[0] is AnimationData yet carries
+             ActionsOnAttackStart_Source's hash). Run-boundary detection by
+             monotone break is still valid — the list is what ascends.
++0x08  u8    Absolute field index (inherited schema offset, may skip GROUP markers)
+             MECHANISM (2026-10-05): a GROUP_BEGIN/END marker IS a slot in the
+             type's static schema object (PropRegister arg 7 = 0x80000080 /
+             0x40000080) but owns no field index, so index = slot - markers
+             before it (Combat/Node: KBMNode slot 16 = index 14). See &quot;GADB
+             Field Bindings&quot;
++0x09  u8    Sort-order index
++0x0A  u8    TYPE CODE: 1=Boolean(4B), 2=Float(4B), 3=Integer(4B), 4=String(8B),
+                        5=StringEnum(8B cell: P919 of an enum NAME), 6=Int64(8B),
+                        7=Enum(4B: 32-bit POINTER to a shared (min,max) float-pool
+                        pair), 8=Vector3(12B), 9=Vector4(16B), 10=RecordLink(8B),
+                        11=RecordLink to a PRIMARY record(8B), 68=String(8B)
+             **TYPE 5 IS A STRINGENUM, NOT A VECTOR2 (MEASURED 2026-10-19)** -
+             see &quot;Type 5 = StringEnum&quot; below. The DB Explorer's &quot;Vector2&quot; is
+             type 7 (e.g. `RequiredScaleRange`, a float-pool pair).
+             **CODE 11 WAS MISSING FROM THIS TABLE UNTIL 2026-08-16** and it is
+             not rare: 27,088 of the main GADB's 361,939 descriptors use it
+             (7.5%), third behind RecordLink and Bool. 10 and 11 are BOTH
+             RecordLinks and differ only in which side of a category they
+             address — 10 a SECONDARY record, 11 a PRIMARY (inline struct
+             array) entry. Measured: `AITypes.Entries` -&gt;
+             `_StructuresAISpawnAmbientTypeEntry/primary[30]` = 11,
+             `Character/Alignments.Alignment` -&gt; `_StructuresRelationship/
+             primary[37]` = 11, while `SpawnScenarioSetup.ScenarioType` -&gt;
+             `SpawnScenario/Cage` = 10 and `_StructuresRelationship.Others` -&gt;
+             `Character/Alignments/...` = 10. Random 70-category sweep:
+             **type 11 -&gt; primary 38/40 (95.0%), type 10 -&gt; secondary 69/71
+             (97.2%)** (4 residuals unchased, suspected `resolve_recordlink`
+             side-picking, not a type-rule failure). Anvil's `TYPE_NAMES`
+             already mapped `11: 'RecordLink'`, so only this table was stale.
++0x0B  u8    Zero (padding)
++0x0C  u16   Flags
++0x0E  u16   Link/bucket index
+</code></pre>
+<p><strong>Type 5 = StringEnum (MEASURED 2026-10-19, live + disk; <code>aire/gamedb/string_enum.py</code>).</strong> Every
+reader called it "Vec2" and dereferenced the cell as a blob pointer. It is an enum held BY NAME:
+- <strong>disk:</strong> the cell is the string-block offset of the enum NAME, read forward from the root type
+  name like any String (632 -&gt; <code>GameUnpause</code>, 24116 -&gt; <code>MenuAux6</code>, 27496 -&gt; <code>Request</code>, 33168 -&gt;
+  <code>Wraith</code> ...);
+- <strong>live:</strong> the loader stores <strong>P919(name) in the low dword of the 8-byte cell, high dword 0</strong> -
+  <strong>336,338 of 336,338</strong> live type-5 cells (no zeros, no pointers); 12/12 disk names hashed to
+  their live cells. P919 folds case, so <code>HIGH</code> and <code>High</code> are ONE value.
+- The same reflection system already said so elsewhere: BlendDB type 5 is a string enum
+  (1,516/1,516, <code>behavior_db.py</code>), ClientFX PropRegister type 5 is a string enum, and FXDB type 5
+  (<code>scripts/fxp_editor.py</code>). The framework's Market gold prompt writes <code>P919("MenuAux7")</code> =
+  <code>0xB425069D</code> into type-5 Input cells and the game honours it (IN-GAME CONFIRMED 2026-09-28).
+- <strong>Read as a pointer, a hash can land in live heap data</strong> - the GameDB heap lives below 4 GB
+  (records at 0x7Bxxxxxx-0x7Cxxxxxx in recent sessions), inside the range a 32-bit hash covers.
+  That is where the old decoders' "Vector2 slots that point at a RECORD (tag 0x0A08)" came from,
+  the three false <code>disk_delta</code> vec deltas (<code>_StructuresSplashMovie.Locale</code>,
+  <code>_StructuresCombatPlayPredicate.PlayAction</code>, <code>_StructuresCameraAnimatedPropertyDef.Type</code>), and
+  the <strong>SAFE WORLD ROLL v5 crash class</strong>: it swapped 8 bytes between the addresses the hashes
+  named (FULL 6,896 writes over 163 addresses; in a BESTIARY twin one of the 55 was a live heap
+  pointer).
+- <strong>Index:</strong> <code>call("string_enum_build")</code> (17 s, cached <code>aire/data/engine/string_enum_names.json</code>):
+  <strong>963 names over 1,772,448 disk cells, 455 fields, 25 archives, 0 hash collisions</strong> (350
+  offsets unresolved); names 100% of live type-5 cells. <code>call("string_enum", value=0x7C1ABA9B)</code> -&gt;
+  <code>GameUnpause</code>; <code>call("string_enum", name="MenuAux7")</code> -&gt; hash + whether any GADB uses it.
+- <strong>Write it by name, never as floats:</strong> <code>write_field(..., value="MenuAux7")</code> (refuses a name no
+  shipped GADB uses unless <code>{"name": ..., "allow_unknown": True}</code>), WriteGate kind
+  <code>"string_enum"</code>; WriteGate kind <code>"vec2"</code> is refused (<code>no_vec2_type</code>). The substrate tuner /
+  editor refuse type-5 and Vec3/Vec4 writes. Anvil's display shows the name (3,036/3,036 sampled
+  values in 228 categories). C++: <code>GDBRuntime::T_StringEnum</code> (was <code>T_Vec2</code>).
+- <code>resolver.db</code> <code>gamedb_fields.type_name</code> still reads "Vector2" for 321 type-5 rows (seeded
+  before the fix; the seeder now writes "StringEnum"): <strong><code>type_code</code> is the authority</strong>.
+- World layers' ObjectPropertyDBs carry no type 5 (5 layers, 3,218 descriptors: types 1/2/3/4/8
+  only); <code>world_props</code> reads one as a name if it ever appears.</p>
+<p><strong>Vec3/Vec4 blobs are SHARED (MEASURED 2026-10-19, live).</strong> The engine deduplicates vector
+values: <strong>2,597 blobs, 145 serve more than one category; one (0,0,0) blob serves 78 fields in 53
+categories</strong> (12 of them hot or blocked). A write BEHIND a vec pointer changes every field that
+shares the blob - SAFE WORLD ROLL v5 rewrote Interface, camera and weather vectors that way.
+Permute by trading blob POINTERS, never write a blob in place from a bulk tool. AIRE's
+<code>write_field</code> still writes behind the pointer on request and says <code>shared_blob_note</code>; the C++
+Tuner vec editor and the chaos ladder's vec mode still write blobs in place (open item).</p>
+<p><strong>Shared instances (MEASURED 2026-10-19, live).</strong> <strong>3,394 of 676,930 record instances are
+pointed at by more than one record.</strong> An "owner" is a record that DECLARES cells there: 3,363
+have one owner (the rest are zero-field records), 23 have none, 8 have two - same-layout
+duplicates in <code>_StructuresServer.NPCBundleListPicker</code>. A per-record tool must de-duplicate by
+CELL ADDRESS (a write through one record is a write through every record sharing the instance)
+and write only cells the record itself declares.</p>
+<p>Field COUNT is at record header byte 0 (byte 1 always 0x0A).
+Record layout: <code>+0x00=field_count|0x0A, +0x08=schema_ptr, +0x10=instance_ptr, +0x18=category_ptr, +0x20=name_ptr</code>
+Category header: name string pointer is at <code>category+0x00</code>, NOT +0x20 (live-verified 2026-07-06 —
+reading cat+0x20 returns "" for every record class tested; it silently broke identity category
+pinning and RecordMap's category index for pool-walked records until fixed).</p>
+<p><strong>Metadata pool structure (REd 2026-07-28, <code>aire/analysis/schema_meta.py</code>, <code>call("schema_meta_export")</code>)</strong>:
+it is a deduplicated TEXT string pool in the <code>.xtext</code> section — <strong>not a pointer table</strong> (zero
+qword/dword references to any field-name string exist anywhere in the binary; that was checked
+first). Fields form contiguous runs terminated by the owning category path in DOT form (over 726
+ground-truth categories: marker lands after the run 412x, inside 306x, before 8x).</p>
+<ul>
+<li><strong>Trustworthy: field NAMES.</strong> 12,222 distinct names across 2,709 categories, each accepted only
+  when its P=919 hash matches a real field hash of the category filing it.</li>
+<li><strong>NOT trustworthy: per-field attribution of types/docs/constraints.</strong> Dedup destroys the
+  field↔annotation adjacency. Cross-checked against live FK targets: attaching <code>public &lt;Type&gt;</code>
+  forward = <strong>3.3%</strong> agreement (66/2027); backward = 58% (147/255). Both fail, so all of it is
+  emitted under <code>unverified_attribution</code> and never merged into the verified <code>fields</code> map.</li>
+<li>The pool is also far sparser than it looks: the WHOLE binary holds only 325 <code>type=</code>, 161 <code>min=</code>
+  and 5 <code>max=</code> annotations. It is <strong>not</strong> a source of per-field ranges — the live
+  <code>call("value_atlas_export")</code> envelopes are.</li>
+</ul>
+<p>GROUP_BEGIN/GROUP_END markers (DB Explorer metadata) are NOT in runtime descriptors — but the
+DB Explorer's <strong>schema metadata table is still embedded in retail <code>ShadowOfWar.exe</code> as plaintext</strong>
+(DISCOVERED 2026-07-28, file offsets ~0x1B5B000-0x2004000): a deduplicated string pool holding
+every field NAME, its declared TYPE as a dotted category path (<code>public Combat.Bool &lt;name&gt;</code>),
+doc comments, <code>GROUP_BEGIN=</code>/<code>GROUP_END=</code> markers and constraint annotations (<code>min=0.0f;max=5.0f</code>).
+725 of 2,891 category paths appear verbatim. This is ground truth for naming — no hashing needed —
+and is the source that finally cracked the last orphans. Adjacency parsing is NOT sufficient
+(the pool is deduplicated and interleaved). <strong>SOLVED 2026-08-03 by going through CODE instead</strong>
+— see "Schema Builders" below: the engine builds each schema by calling a per-field registration
+stub, so annotations bind by CALL rather than by string proximity.</p>
+<p>Hash algorithm: <code>h=0; for c in name: h=(h*919+LOOKUP[c])%2^32</code>
+LOOKUP: A-Z=a-z=1..26, 0-9=27..36, _=38. Dictionary: 11,755 entries = 100% coverage.
+<strong>Field names CAN START WITH A DIGIT</strong> (<code>3DRotation</code>, <code>3DMapShapeHuntingColor</code>) — this is why the
+last 4 orphans survived every attack: every harvesting regex in the pipeline anchored on
+<code>[A-Za-z]</code>. Never anchor an identifier scan to a leading letter.
+<strong>Native hash (LOCATED 2026-07-13, Unicorn-verified 12/12)</strong>: ~~the hash is ALWAYS INLINED — no
+standalone <code>hash(str)</code> exists (2,090 candidates emulated)~~ <strong>CORRECTED 2026-10-05: a standalone
+one exists - <code>StringHash</code> <code>0x423E70</code> (12-instruction leaf), identified by the library lane's
+behaviour test. It starts from <code>r8</code> as a SEED (no accumulator clear), so an emulation that leaves
+<code>r8</code> non-zero sees a different hash - the likely reason the 2026-07 sweep missed it.</strong> Inlined
+copies exist too (PropRegister <code>0xC6DA00</code> hashes every field name). LOOKUP byte table at RVA <code>0x1DB50D0</code>
+(full ASCII-indexed, punctuation included). Canonical inlined copy: hashed-string registry wrapper
+at RVA <code>0xF4E0F0</code> (0x55 bytes) — hash accumulates in <strong>R10D</strong>, complete at loop-exit <code>0xF4E12E</code>,
+then binary-searches a global registry. <code>call("emulate_hash", name=...)</code> runs this natively.</p>
+<p><strong>ORPHANS: ZERO (2026-07-28)</strong> — <code>call("hash_orphans")</code> returns <code>[]</code>. The last 4 were read out of
+the exe metadata table and hash-verified: <code>3DMapShapeLightMaterial</code> (0x2FFF710A, String2) /
+<code>3DMapShapeTextureParam</code> (0x41A3BCE5, String) / <code>3DMapShapeHuntingColor</code> (0xAC224227, Int) in
+<code>_StructuresZoneMapSettings</code> — the last sits right beside its sibling <code>HierarchyMapShapeHuntingColor</code>
+— and <code>3DRotation</code> (0xA37788CC, Enum) in <code>Interface/ElementAttribute</code>. The 8 <code>Unknown*</code> entries were
+never placeholders: <code>UnknownSkillName</code>, <code>UnknownMemberBuilder</code>, <code>UnknownFactionMemberScale</code> etc. are
+Monolith's OWN names, present verbatim in the exe. They now carry <code>name_source: exe_metadata</code> in
+<code>named_schemas.json</code>, and <code>HashCracker.orphans()</code> skips anything so marked. Do NOT "re-crack" them —
+synthesized P=919 collisions (the old <code>hash_crack</code> token soup) are worthless; only corpus-backed
+names count.</p>
+<p>Descriptor flags: 0=nullable RecordLink (14% constant), 1=standard active (40% constant).</p>
+<p><strong>UNIFORM SLOT LAW (2026-07-22 — supersedes the 2026-07-11 two-class ruling; proven by
+on-disk GADB bit-fingerprint oracle, 900+ categories adjudicated, dense won ZERO):</strong></p>
+<ul>
+<li><strong>EVERY schema is slot-addressed.</strong> Live instance offset = descriptor <code>link</code> (+0x0E) <code>* 8</code>
+  (uniform 8-byte cells); on-disk GADB value index = <code>link</code>. "Dense" (size accumulation)
+  NEVER existed — it only looked right where links were sequential. All pre-2026-07-21
+  offset tables derived by accumulation have SHIFTED FIELD NAMES (values were real, names
+  wrong): e.g. "BaseSpeedMultiplier +0x40 = 2.3" is actually AimingRadiusScale; the real
+  BaseSpeedMultiplier is slot +0x80 (default 1.0); PhysicsCharacterGravity slot +0x60 = -2000.</li>
+<li><strong>Packed bools</strong> (434 categories, e.g. Inventory/Items): bool <code>link</code> is a BIT index —
+  value = bit <code>link%32</code> of the u32 cell <code>link/32</code>. Detect: any bool/non-bool link collision.
+  Bool writes MUST be single-bit RMW (full-cell writes clobber sibling bools). Verified
+  40/40 records vs disk (Inventory/Items cell 0 = 14 bools, bits 0-13).</li>
+<li><strong>Vec3/Vec4 slots hold a POINTER to the value blob</strong> — the floats live BEHIND the
+  pointer (disk stores blob byte-offsets). NEVER write 12/16 raw bytes at the slot: it
+  stomps the pointer + neighboring slot (proven crash class). Edit via deref - and know
+  the blob is SHARED (deduplicated: one (0,0,0) serves 78 fields in 53 categories), so a
+  bulk tool trades blob POINTERS instead of writing blobs. (CORRECTED 2026-10-19: there is
+  no Vec2 type - type 5 is a StringEnum, P919 of an enum name, and must never be
+  dereferenced. See "Type 5 = StringEnum" above.)</li>
+<li><strong>Per-record variants</strong>: sparse categories can carry RECORD-SPECIFIC descriptor runs
+  (same hashes, different links) — always address through the record's OWN schema_ptr
+  (rec+0x08). Run length = monotone sorted_hash prefix (record-header byte 0 is the TAG low
+  byte, NOT fc, above 255 slots). Duplicate links inside a run are LEGITIMATE (bool bit
+  indices + patch-era aliases) — never truncate on them.</li>
+<li><strong>Oracle</strong>: live values must bit-match the on-disk GADB under the correct rule
+  (unique-value cells, cross-record columns, RL-encoding→live-pointer prediction where
+  <code>(cat_idx*16)&lt;&lt;16|rec_idx</code> decodes via the DISK category order — paths use '.' on disk,
+  '/' live).</li>
+<li>
+<p><strong>ARRAY LAW / descriptor +0x0C is a COUNT (CRACKED 2026-07-28 from the engine's own resolver
+  at RVA ~0x278760)</strong>. The accessor reads:</p>
+<p>movzx eax, word ptr [rcx+0Ch]    ; element COUNT  (NOT "flags")
+  cmp   r8d, eax                   ; index bounds check
+  jae   default
+  movzx ecx, word ptr [rcx+0Eh]    ; link = BASE slot
+  mov   rax, qword ptr [r10+10h]   ; record -&gt; instance
+  add   ecx, r8d                   ; link + index
+  mov   eax, dword ptr [rax+rcx<em>8] ; value = inst + (link+index)</em>8</p>
+</li>
+</ul>
+<p>So a field owns cells <strong>[link, link+count)</strong> and <code>+0x0C</code> is the element count, not flags.
+  Globally validated: <code>max(link+count) &lt;= sum(count)+2</code> in <strong>all 2,562</strong> categories, zero
+  exceptions. Distribution: 16,146 scalars (count=1), <strong>1,669 EMPTY arrays (count=0)</strong>, 543
+  true arrays (count 2-7+).
+  - <strong>count==0 owns NO cell.</strong> Its link still points where it would start, so reading it
+    returns a NEIGHBOUR's value — this is the entire "duplicate link" mystery, and it was
+    producing real garbage (Combat/Attack had 8 such fields reporting other fields' records).
+    <code>crack_schema</code> marks them <code>empty: True</code>; <code>decode_instance</code> returns None.
+  - <strong>count==1 is a SINGLE field, set or not</strong>: a scalar RecordLink has count 1 while NULL
+    (<code>Faction/Rewards/Definitions.TriggerAmbush</code> / <code>RewardOnSpawn</code> on all 1,239 records). "Not
+    empty" is not "set" - test the value. MEASURED 2026-10-09: the framework's chaos-reward
+    filter used <code>!Field::Empty()</code> as "set", called every definition risky and built an empty
+    pool in every session (fixed: <code>NativeTraits::HoldsLink</code>, built, NOT run).
+  - <strong>count&gt;1 decodes as a LIST</strong> (Combat/Attack <code>Predicates</code> count=8 -&gt; the 8 predicate
+    records at cells 8-15; <code>Category</code> count=3 -&gt; cells 5-7). Sum of counts == the record's
+    cell count exactly (23 for that record).
+  - This raised the 13 quarantined categories from ~0.15 to 0.79 disk-oracle agreement, and the
+    residual gap turned out to be an ORACLE limitation, not a decode error — see below.
+- <strong>CELL IDENTITY LAW (PROVEN 2026-07-28)</strong>: <strong>live instance cell <code>i</code> IS on-disk value index
+  <code>i</code>, 1:1.</strong> Verified by pointer-identity joins (decode each disk RecordLink to the exact live
+  record-header address it must materialize to, then find which live cell holds it): 1,000+
+  unambiguous joins across quarantined AND control categories, <code>i == j</code> in <strong>100%</strong>. Live and
+  disk address the SAME slot space — no translation, no per-category rule needed to move between
+  them. What remains category-specific is only which field NAME owns a cell.
+- <strong>QUARANTINE LIFTED 2026-07-28 — all 13 <code>dense_aligned</code> categories are now <code>sparse</code>.</strong>
+  They are ARRAY-BEARING schemas (Combat/Attack, Combat/SummonData, Profile/BindingSets,
+  Interface/AchievementSetup, ...). The <code>dense_aligned</code> verdicts were a <strong>disk-oracle artifact</strong>:
+  the engine assigns slots at GADB LOAD (the link is not stored on disk) and array fields take
+  contiguous blocks, so live cell order legitimately diverges from the disk's flat value array —
+  the oracle structurally cannot adjudicate them, and <code>dense_aligned</code> "won" only by walking array
+  cells. Evidence for lifting:
+  1. the engine's OWN resolver (~RVA 0x278760) proves <code>inst + (link+index)*8</code> with count at +0x0C;
+  2. live structural probe over the 13: slot+array = <strong>3,734 valid / 16 garbage (99.6%)</strong> vs
+     dense_aligned = 1,967 valid / <strong>249 garbage</strong> (88.8%) — the test does discriminate;
+  3. count-aware probe = <strong>3,528 valid / 0 garbage</strong>, identical to a 40-category control group;
+  4. semantic coherence (<code>Predicates</code> count=8 -&gt; 8 real predicate records).
+  <code>sow_engine_layoutmap.hpp</code> regenerated: <strong>Unverified 13 -&gt; 0</strong> (2,124 Sparse + 445 SparsePacked
+  + 322 Empty = 2,891 — every category classified).
+  <strong>CAVEAT: this is ADDRESSING only.</strong> Write-safety is a separate matter — <code>Profile/BindingSets</code>
+  is a hot-thread input domain on the never-bulk-mutate list, and that ban still applies.
+  Note <code>abs</code> (+0x08) was a red herring: it ties <code>dense_aligned</code> exactly in every quarantined
+  category because both are sequential, and loses outright on controls (<code>Faction/Events/Setup</code>
+  under <code>link*8</code> gives FortDefenseEvent→FortDefense, KilledOnQuestEvent→ActiveKilledOnQuest;
+  under <code>abs*8</code> it gives NULL/HalfEmpty garbage).</p>
+<p><strong>Bool-packing detection needs LIVE evidence, not just link collision</strong> (2026-07-28): a run whose
+bools do not collide looks full-cell but can still be bit-packed. <code>crack_schema(probe_inst=...)</code>
+and <code>SchemaLayoutMapper._bool_mode_live()</code> settle it by reading the cell — a full-cell bool must
+be 0/1. This repaired <strong>8 categories</strong> in the shipped map whose "cell" bools actually hold
+3.0f / 1000.0f / 0x1A (<code>Interface/Menu/MenuSelection/Action/Game</code>, <code>_StructuresSystemInfoData</code>,
+<code>AI/DispatchConfig</code>, <code>_StructuresFaction.HierarchyModelChoiceSort</code>,
+<code>Faction/Events/Replay/Predicates/Advance</code>, <code>Faction/World/Presentation/Advance</code>,
+<code>Combat/NodeTransitionType</code>, <code>Interface/Tutorial/Menu/LayerData/Equipment</code>). This is a WRITE
+hazard, not cosmetic: a full-cell write to a packed cell clobbers up to 31 sibling bools.
+<code>sow_engine_layoutmap.hpp</code> regenerated — SparsePacked 434 -&gt; 442, Sparse 2114, Unverified 13,
+Empty 322.</p>
+<p>Exporters (all in <code>aire/gamedb/schema_layout.py</code>):
+<code>call("schema_layout_export")</code> → <code>tools/re/data/schema_layout_map.json</code> (cross-session merge);
+<code>call("schema_layout_disk_audit")</code> → disk-oracle verdicts merged into the map;
+<code>call("schema_layout_native_export", refresh=True)</code> → full pipeline + generates the C++ header
+<code>framework/sowframework/ui/tabs/sow_engine_layoutmap.hpp</code> (2,891 categories classed
+Sparse/SparsePacked/Unverified/Empty — <strong>0 Unverified since 2026-07-28</strong>, every
+category classified);
+<code>call("atlas_ranges_native_export")</code> → live per-field value envelopes →
+<code>sow_engine_atlasranges.hpp</code> (atlas-clamped randomization);
+<code>call("value_atlas_export")</code> → <strong>regenerates <code>field_value_atlas.json</code> under the slot law</strong>
+(<code>aire/gamedb/value_atlas.py</code>). The 2026-04 atlas was dense-era — every value read from the
+wrong cell (78% of its Vec entries were garbage like 3.58e+36) while still being loaded by
+Anvil's randomizer + the substrate bridge/editor. Regenerated 2026-07-28: 2,562 categories,
+18,540 named fields, ground truth restored (BaseSpeedMultiplier 1.0, gravity -2000, capsule
+125) and Vec garbage down to 14%. The dense-era file is in
+<code>Archive/dense_era_20260728/</code> for provenance — do NOT restore it.</p>
+<p>AIRE decode: <code>aire.gamedb.GameDBAnalyzer</code>. <code>aire._util.crack_schema</code> is <strong>slot-law native
+since 2026-07-28</strong> — it derives offsets from each record's OWN descriptor run (<code>link*8</code>),
+flags packed bools with a <code>bit</code> index (when the run shows no link collision it settles packing
+from live evidence via <code>probe_inst</code> — a full-cell bool must read 0/1; this beat the exported
+map in 8 categories whose "cell" bools actually hold 3.0f/1000.0f/0x1A), truncates the run at
+the first sorted-hash drop
+(the header field count is the tag low byte and overcounts). No layout map needed live: the
+per-record run IS the truth. <code>decode_instance</code> derefs vec blob pointers and reads packed
+bools bitwise; <code>write_field</code> does single-bit RMW for packed bools and writes vecs behind the
+pointer. <code>aire.gamedb.discover.AutoDiscovery</code> shares the same cracker. Anvil (offline, no
+descriptor run available) still consumes <code>schema_layout_map.json</code>.</p>
+<p><strong>ANVIL'S OFFLINE DECODER WAS THREE LAWS BEHIND — REPAIRED 2026-08-07</strong>
+(<code>official_gadb_modifier.decode_record_fields</code>, live-validated 148/148 scalars = 100.0%
+across all 12 layout classes; the same sweep before the fix scored map-link 268/299 and
+descriptor-order 150/299 on the "dense" class alone, i.e. a coin flip):</p>
+<ul>
+<li>
+<p><strong>The on-disk descriptor carries an ELEMENT COUNT, not "flags"</strong> — the disk descriptor
+  is 15 bytes and the runtime one 16, the difference being the runtime <code>+0x0B</code> pad.
+  <strong>FIELD ORDER CORRECTED 2026-08-16 — it was recorded here as
+  <code>link+0 hash+2 sorted+6 abs+A sort+B type+C count+D</code>, which is the right BYTES read
+  from the wrong PLACE.</strong> The real disk descriptor mirrors the runtime one exactly,
+  minus the pad:</p>
+<p>hash u32 @0 | sorted u32 @4 | abs u8 @8 | sort u8 @9
+  | type u8 @0x0A | count u16 @0x0B | link u16 @0x0D</p>
+</li>
+</ul>
+<p>The old reading is the same bytes shifted 13 forward, and <code>15 - 2 = 13 =
+  len("GameDatabase\0")</code> — so it is correct <strong>by cancellation, for exactly one database</strong>,
+  because the descriptor base was also 13 bytes high (see the string-block origin note
+  below). Adjudicated by counting how many descriptors carry a KNOWN type code, base x
+  layout:</p>
+<table>
+<thead>
+<tr>
+<th>container</th>
+<th>root type</th>
+<th>root_len</th>
+<th>correct base+layout</th>
+<th>old base+layout</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>world layer OBJR</td>
+<td><code>ObjectPropertyDB</code></td>
+<td>17</td>
+<td><strong>255 / 255</strong></td>
+<td>0 / 255</td>
+</tr>
+<tr>
+<td><code>.bvr</code> behaviour graph</td>
+<td><code>BlendDB</code></td>
+<td>8</td>
+<td><strong>2,018 / 2,127</strong></td>
+<td>77 / 2,127</td>
+</tr>
+<tr>
+<td>main GADB</td>
+<td><code>GameDatabase</code></td>
+<td>13</td>
+<td><strong>334,851 / 361,939</strong></td>
+<td>334,850 / 361,939 (tie)</td>
+</tr>
+</tbody>
+</table>
+<p>The residuals in every case are type code <strong>11</strong>, and <code>334,851+27,088 = 361,939</code> /
+  <code>2,018+109 = 2,127</code> land exactly on the descriptor count, so all three are <strong>100.0%
+  valid</strong>. Independent confirmation: under the corrected reading <strong>361,939 of 361,939
+  hashes (100.0%) resolve to a named field</strong> in the P=919 dictionary — a wrong base or
+  layout yields garbage hashes and near-zero naming.
+  <strong>DO NOT change Anvil's copy without changing both halves in the same edit.</strong>
+  <code>decode_record_fields</code> is live-validated 148/148 THROUGH the cancellation, and the main
+  GADB is what Anvil, the engine graph and the C++ Tuner all read; moving the base alone
+  silently corrupts every descriptor. The correct reader lives in
+  <code>scripts/layer_typed_decode.py</code>.
+  Measured: high byte 0 across all 23,690 descriptors sampled. Anvil read one
+  cell per descriptor, so <code>count==0</code> fields returned a NEIGHBOUR's value —
+  <code>Faction/Loot/LootTable</code> printed three different field names on one cell, each naming a
+  record the field does not hold. Now <code>&lt;empty array&gt;</code>; <code>count&gt;1</code> decodes as a real list
+  (<code>Client/PlayerMovement.AimingTeleportExclusiveTags</code> -&gt; its 5 <code>Tags/*</code> records).
+- <strong>The <code>layout</code> verdict gate was retiring 62% of the GADB to descriptor order.</strong>
+  <code>value_index_map</code> required <code>layout == "sparse"</code>, but the shipped
+  <code>schema_layout_map.json</code> still stamps <strong>1,324 categories <code>dense</code></strong>, 43 <code>dense_aligned</code>,
+  312 <code>ambiguous</code> — verdicts the uniform slot law retired. The map's <code>link</code> is correct
+  regardless of the stale string, so <code>slot_plan</code> no longer gates on it and reports the
+  verdict as provenance instead.
+- <strong>Packed bools were all reading True.</strong> The map already carries <code>bool_mode: "packed"</code>;
+  Anvil ignored it and read the whole cell. Now bit <code>link%32</code> of cell <code>link/32</code>. Every one
+  of the 31 residual mismatches in the pre-fix sweep was this.
+- <strong>Bonus: phantom duplicate fields.</strong> <code>get_record_schema</code> returns <code>rec.fc</code> descriptors,
+  but <code>fc</code> counts value SLOTS and a field can own several — the tail belonged to the NEXT
+  record (<code>PlayerMovement</code> listed 38 entries with its last 5 repeated). The run is the
+  monotone <code>sorted_hash</code> prefix; <code>sum(count)</code> over it must equal <code>fc</code>, reported as
+  <code>run_balanced</code> rather than assumed.</p>
+<blockquote>
+<p><strong>THE RECORD HEADER CARRIES ITS FIELD COUNT — the run rule above was still wrong
+(CORRECTED 2026-10-01, live-verified).</strong> The on-disk header byte long called the
+"tag" (<code>u16 fc | u8 &lt;this&gt; | u32 doff | u8 flag</code>) IS the record's descriptor count —
+the same number as the live record header byte 0. Equal to the running game's count
+for <strong>33,423/33,428 sampled secondaries and 21,119/21,119 primaries</strong> (the 5 are
+<code>Server/NPCBundle/Lists</code> records - CORRECTED 2026-10-05: not an engine rewrite. The
+framework's Bundle ForceLoad wrote 30 into their byte 0, mistaking this field count for a
+slot count; see "Creature bundles" below). It looked
+"constant per category" only because a category's records share one schema. The
+rebuilt decoder walked until <code>sum(count) &gt;= fc</code>, which counts every PACKED bool as a
+cell although up to 32 share one, so <strong>237,871 of 694,740 records (34%) lost their
+tail</strong>: <code>Faction/PresetMembers::BruzBrothers_Baz</code> decoded 37 of its 70 fields and
+<code>GlobalVarToSetOnDeath</code>, <code>SetDead</code>, <code>CanBeNemesis</code>, <code>InvolvedQuests</code> ... did not exist
+offline. <code>OfficialGADBModifier.run_length</code> (and <code>aire/armory/gadb.py run()</code>) now read
+the byte; the new runs only ever EXTEND the old ones (0 shorter), so no previously
+decoded value moved. Structural cross-check: inside every one of the 694,740 runs
+<code>abs_idx</code> (+0x08) counts up and the sorted-hash column is exactly the sorted list of
+that run's own hashes; the run then claims every one of the record's cells.</p>
+</blockquote>
+<p><code>show_record</code> now also returns <code>layout</code>, <code>bool_mode</code>, <code>slot_source</code>, <code>run_len</code>,
+<code>cells_claimed</code> and <code>unclaimed_cells</code> — a record can legitimately carry cells no
+descriptor claims, and saying so beats letting a neighbouring field appear to hold them.
+<code>slot_source: "descriptor_order_unverified"</code> marks the remaining guess so it can never be
+mistaken for a measurement. <code>value_index_map</code> is kept as a back-compat shim.</p>
+<blockquote>
+<p><strong>ZERO-FIELD RECORDS AND PACKED INSTANCES (MEASURED 2026-10-16, live, every category).</strong>
+- <strong>8,231 records in 146 categories carry field count 0</strong> (Combat/Predicates/TypeOfAttack
+  2,601, RemoteScript 792, Presentation/Predicates/Types/Camera 788, Faction/Loot/Tag 675,
+  Tags 371 ...). The largest count anywhere is 167 (primaries 132), so header byte 0 = 0
+  never means 256: it means NO fields. <strong>All 8,231 share ONE schema pointer</strong> (the start of
+  the descriptor table, which is also a real record type's run), so a descriptor walk on them
+  reads that run as phantom fields. <code>GDBRuntime::Schema()</code> returned the phantom run until
+  2026-10-16 (now empty); any cache keyed by schema pointer alone must also key the field
+  count (<code>sdk/sow_record_extend.hpp</code> fixed the same day).
+- <strong>Instances are packed back to back</strong>: the next record's instance starts exactly
+  <code>extent * 8</code> bytes later (483/484 traits, 3,000/3,000 Combat/Attack). Reading N cells
+  from an instance shorter than N reads the NEIGHBOUR's cells - the Nemesis Chaos tab's
+  old Deep Chaos did exactly that with N = 32 (72% of what it shuffled in Faction/*).
+  Address cells only through the record's own descriptors.</p>
+</blockquote>
+<h2 id="gamedb-field-value-atlas-proven-2026-04-14">GameDB Field Value Atlas (PROVEN 2026-04-14)</h2>
+<p>Full-database field enumeration: every record in every category read live.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Categories enumerated</td>
+<td>2,562</td>
+</tr>
+<tr>
+<td>Total fields</td>
+<td>18,979</td>
+</tr>
+<tr>
+<td>Fields with valid values</td>
+<td>17,264 (93%)</td>
+</tr>
+<tr>
+<td><strong>Fields NAMED</strong></td>
+<td><strong>18,975 (100.0%)</strong></td>
+</tr>
+<tr>
+<td>Hash dictionary entries</td>
+<td>11,755 (P=919 polynomial)</td>
+</tr>
+<tr>
+<td>RecordLink FK fields mapped</td>
+<td><strong>6,536 / 6,536 (100%)</strong> — 3,936 live, 490 inferred, 2,110 dormant</td>
+</tr>
+<tr>
+<td>FK source categories</td>
+<td>2,114</td>
+</tr>
+<tr>
+<td>FK target categories</td>
+<td>1,245</td>
+</tr>
+<tr>
+<td>FK edges</td>
+<td>16,446</td>
+</tr>
+<tr>
+<td>Enum value tables</td>
+<td>447 (230 true int, <strong>148 float-pool</strong>, 58 float-in-enum)</td>
+</tr>
+<tr>
+<td>Float-pool entries</td>
+<td>1,433 (1,091 ranges + 40 fixed + 300 struct)</td>
+</tr>
+<tr>
+<td>Float fields with ranges</td>
+<td>1,650</td>
+</tr>
+<tr>
+<td>Boolean toggle fields</td>
+<td>2,270</td>
+</tr>
+<tr>
+<td>Inheritance families</td>
+<td>4 major (33 MenuLayer siblings + 6 MenuTreeBase + 3 + 2)</td>
+</tr>
+<tr>
+<td>Shared schema pointers</td>
+<td>95 (serving 550 categories)</td>
+</tr>
+</tbody>
+</table>
+<p>Top moddable domains: Interface (5,639 fields), Combat (2,570), Faction/Nemesis (2,054),
+AI (1,086), Quest (546), Inventory (492), Presentation (386), Character (209).</p>
+<p>Atlas data: <code>tools/re/data/field_value_atlas.json</code> — <strong>regenerate with</strong>
+<code>call("value_atlas_export")</code> after any layout-rule change; the counts in the table above are
+from the 2026-04 dense-era harvest and are historical. Live read/write/validate = AIRE
+(<code>GameDBAnalyzer</code>, <code>visuals.writers</code>, <code>understanding.WriteSafetyAnalyzer</code>).</p>
+<h2 id="recordlink-on-disk-encoding-cracked-2026-04-23">RecordLink On-Disk Encoding (CRACKED 2026-04-23)</h2>
+<p><strong>Formula</strong>: <code>RecordLink_u32 = (category_index * 16) &lt;&lt; 16 | record_index</code></p>
+<p>Equivalently: <code>RL = (cat_idx &lt;&lt; 20) | rec_idx</code></p>
+<p><strong>Decoding</strong>: <code>cat_idx = (RL &gt;&gt; 16) / 16</code> and <code>rec_idx = RL &amp; 0xFFFF</code></p>
+<p><strong>CRITICAL NOTES</strong>:</p>
+<ol>
+<li><code>category_index</code> is the 0-based sequential index in the GADB's category array (sorted by hdr[5])</li>
+<li><code>record_index</code> is the 0-based index within the target category's record array</li>
+<li>For categories with SECONDARY records (sc &gt; 0), rec_idx indexes into secondary records</li>
+<li>For <code>_Structures*</code> categories (inline struct arrays), rec_idx indexes into PRIMARY records (pc)</li>
+<li><code>0xFFFFFFFF</code> = null RecordLink (no reference)</li>
+<li><code>0x00000000</code> = null (record index 0 in category 0, treated as null in context)</li>
+</ol>
+<p><strong>On-disk type 10 fields contain MIXED DATA</strong> — not all are true RecordLinks:</p>
+<ul>
+<li>IEEE754 floats (e.g., <code>0x3F800000</code>=1.0, <code>0xBF800000</code>=-1.0) stored in type 10 slots</li>
+<li>True RecordLinks have hi16 always a multiple of 16 (cat_idx * 16)</li>
+<li>65% of type 10 values are valid RecordLinks; 35% are float/int values</li>
+</ul>
+<p><strong>Validation</strong> (2742 categories, 1,954,704 non-null type 10 values):</p>
+<ul>
+<li>1,271,632 values match formula (hi16 % 16 == 0, valid cat_idx, valid rec_idx)</li>
+<li>683,072 mismatches are ALL float values (0.8, 0.4, -1.0, etc.)</li>
+<li>ZERO genuine RecordLinks failed the formula</li>
+</ul>
+<p><strong>Examples</strong> (Cat[155] = AI/SpawnAmbient/AITypes):</p>
+<ul>
+<li><code>0x6E400457</code> → Cat[1764] Inventory/Items rec[1111] = "Torch" (0x6E40/16=1764)</li>
+<li><code>0x6E400B77</code> → Cat[1764] Inventory/Items rec[2935] = "Item_Quirk_Fearless"</li>
+<li><code>0x61D00109</code> → Cat[1565] _StructuresAISpawnAmbientTypeEntry primary[265]</li>
+</ul>
+<p><strong>To construct a RecordLink</strong>: <code>((cat_idx * 16) &lt;&lt; 16) | rec_idx</code> — Anvil provides <code>make_recordlink()</code>.</p>
+<p><strong>LIVE link cells (MEASURED 2026-10-14, Minas Ithil, every link cell of 2 records + 2 primaries per
+category):</strong> a live descriptor carries type <strong>10 for both sides</strong> (0 type-11 descriptors seen; the
+on-disk 11 is not kept), so the type code cannot say which side a link targets. The TARGET CATEGORY
+does: links into a <code>_Structures*</code> category hit its PRIMARIES <strong>4,506/4,506</strong>, links into any other
+category hit named records <strong>10,533/10,533</strong>, 0 fields hit both. Every <code>_Structures*</code> category also
+has exactly one named record, a placeholder <code>DEFAULT_RECORD_NAME&lt;Type&gt;</code> (777 of 799), never a target.
+A link value lands exactly on a header (0 inside one) or outside every array: the misses are one
+field, hash <code>0xEF874E83</code>, whose RecordLink-typed cells hold numbers (75.0f, 1300) in several
+Combat categories. Live category header: +0x18 owning DB, +0x20 type-table entry, +0x28 u32 record
+count, <strong>+0x2C u32 the category's own table ordinal</strong>, +0x38 / +0x48 record / primary arrays; the
+table is 2,742 contiguous categories starting 3 slots after <code>find_category_table_base</code>.</p>
+<h2 id="gamedb-float-range-pool-discovered-2026-04-14">GameDB Float-Range Pool (DISCOVERED 2026-04-14)</h2>
+<p>148 Enum fields (type_code 7) previously classified as "string_ptr" are actually <strong>32-bit
+pointers into a global float-pair parameter pool</strong>. Each pool entry = 8 bytes: <code>(min, max)</code>.</p>
+<p>These are <strong>shared templates</strong> — many records point to the SAME pool entry. Modifying one
+pool entry changes behavior for ALL records referencing it. Global tuning levers.</p>
+<p>Key moddable parameters:</p>
+<ul>
+<li><code>AI/Perception.SimulatedRecognizeEnemyDistance</code>: [1600, 2200] — detection range</li>
+<li><code>AI/PursuitConstraint.Range</code>: [500, 800] to [2500, 4500] — chase distances</li>
+<li><code>AI/Alertness/TransitionPredicate.Duration</code>: 0-10s — alert state timers</li>
+<li><code>Combat/Hint/Distances.Distance</code>: [0, 200] to [700, 2000] — combat distances</li>
+<li><code>Combat/Predicates/Distance.Distance</code>: [0, 40] to [200, 800] — trigger ranges</li>
+</ul>
+<p><strong>ASLR</strong>: Pool pointers change every session. Must walk live GameDB (AIRE) to find current addresses.</p>
+<h2 id="gamedb-record-level-writes-corrected-2026-07-22-slot-law">GameDB Record-Level Writes (CORRECTED 2026-07-22 — slot law)</h2>
+<p>Direct 4-byte writes to record instance fields. Each record has its own instance data
+(instance_ptr at record+0x10), so modifying one record does NOT affect others.</p>
+<blockquote>
+<p><strong>The slot law has an exception (MEASURED 2026-10-27): a record whose header byte +0x01 has bit
+0x10 is a native struct, not cells.</strong> Every BlendDB (<code>.bvr</code>) record is one (318,372 / 318,372
+live records = 0x1A; main GameDB 278,865 / 278,865 = 0x0A). Its field lives at
+<code>instance + SlotOffset(type, field)</code> (kb/gamedb-bindings.md "The engine's own field-read
+path"; aire/formats/blenddb_layout.py), and <code>instance + link*8</code> is a DIFFERENT field. Check
+the flag before any record write.</p>
+<p><strong>The 2026-04-15 offset table was dense-derived and NAME-SHIFTED</strong> (values real, names
+wrong). Corrected under the slot law (offset = link*8), live-verified 2026-07-21:</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Record</th>
+<th>Field</th>
+<th>Slot offset</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Client/PlayerMovement</td>
+<td>PlayerMovement</td>
+<td>BaseSpeedMultiplier</td>
+<td>+0x080</td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>Client/PlayerMovement</td>
+<td>PlayerMovement</td>
+<td>AimingRadiusScale</td>
+<td>+0x040</td>
+<td>2.3 (the old "BaseSpeed +0x40")</td>
+</tr>
+<tr>
+<td>Client/PlayerMovement</td>
+<td>PlayerMovement</td>
+<td>PhysicsCharacterGravity</td>
+<td>+0x060</td>
+<td>-2000</td>
+</tr>
+<tr>
+<td>Client/PlayerMovement</td>
+<td>PlayerMovement</td>
+<td>StandCapsuleHeight</td>
+<td>+0x078</td>
+<td>125</td>
+</tr>
+<tr>
+<td>Client/PlayerMovement</td>
+<td>PlayerMovement</td>
+<td>FallDamageMaxHeight</td>
+<td>+0x088</td>
+<td>1200 (old table called it "StandCapsuleHeight")</td>
+</tr>
+<tr>
+<td>Faction/Events/SimEventChance</td>
+<td>(all)</td>
+<td>fields at idx*8 slots</td>
+<td>StartChance +0x00, CharacterLevelDeltaScalar +0x08, ...</td>
+<td>the old idx*4 table is half-wrong</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Consumption model (chaos-ladder verified 2026-07-22)</strong>: writes always land, but fields
+split into live-read (AI perception/pursuit pools, difficulty scalars, SimEvent chances,
+equipment stats, weather — instant effect) vs cached-at-init (movement/physics configs —
+need respawn/fast-travel/reload to apply). Test with re-init before declaring a field dead.
+<strong>Answered from code since 2026-10-05</strong>: <code>call("field_flow", category=, field=)</code> says per field
+whether the read value is used in place or COPIED, by which function, into what, and what re-runs
+the copier (see "GADB Field Consumption").</p>
+<p>Live field control (all 18,979 fields, 11 types, pool writes, record writes, RL redirect,
+snapshot/revert) = AIRE. For the in-DLL UI, the <strong>C++ Tuner SDK v2</strong> (<code>framework/sdk/tuner_protocol.h</code>
++ <code>tuner_imgui_example.cpp</code>) walks GameDB natively using <code>tools/re/data/tuner_offline_schema.json</code>
+(7.7MB, no Python at runtime). For persistent (on-disk) field edits, use Anvil <code>call("field_edit", ...)</code>.</p><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
