@@ -1,0 +1,202 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Live world objects: bind, move, summon, clone, storm - Shadow of War engine reference</title><meta name="description" content="bind, move, summon, clone, storm"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" class="cur" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="live-world-objects-bind-move-summon-clone-storm">Live world objects: bind, move, summon, clone, storm</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Moved verbatim from
+CLAUDE.md on 2026-10-27 (original lines 1666-1838); heading levels normalised, text unchanged.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Sections:</strong>
+- Live world objects — bind, move, summon (PROVEN IN-GAME 2026-09-24)
+- Live clone — TRUE spawning through the engine's object factory (PROVEN IN-GAME 2026-09-24)
+- Live storm — projectiles from the sky over the whole area (PROVEN IN-GAME 2026-09-24)</p>
+<hr />
+<h2 id="live-world-objects-bind-move-summon-proven-in-game-2026-09-24">Live world objects — bind, move, summon (PROVEN IN-GAME 2026-09-24)</h2>
+<p>Any loaded, named world object can be relocated live through the engine's own
+<code>GameBase:CopyXForm</code> (<code>0x1823B70</code> = SetPosition <code>0x1454EC</code> + SetRotation <code>0xEF690</code>), run on the
+main-thread poller. No hook, no file, no raw write to the moved object. User-confirmed in order:
+a street bench on Talion's rooftop; a barrel brush that arrived SOLID, bow-targetable and
+destructible; then <strong>all 46 wasp-nest prefabs in Minas Ithil (782 objects, 0.6 s)</strong> hanging in
+rings around Talion, swarms live, shooting them working in place.</p>
+<ul>
+<li><strong>One object-name table PER WORLD CONTEXT</strong> (vt <code>0x1DB5D58</code>, 32 live: main world 66,594,
+  lighting 3,194, <code>ambientpostfall</code> 2,418, t1/t2 prop sets, player-spawned 381, UI scenes). Every
+  placed object holds <code>[obj+0x58]</code> = its context; names hang at <code>[ctx+0x68]</code> (0x800 buckets x 0x18,
+  <code>hash &amp; 0x7FF</code>, node at <code>obj+0x28</code>: +8 next, +0x10 hash, +0x18 char*).</li>
+<li><strong><code>Class.Create(scriptId, name, b3, relative)</code></strong> (<code>0x5013A8</code> -&gt; <code>0x501B64</code>) resolves <code>name</code> in
+  the scriptId's OWN context only; a miss or class mismatch returns <code>Class.None</code> (no fault).
+  <code>scriptId = {PrefabName, PropertyName, Instance}</code>; <code>Instance</code> is a WEAK handle (payload
+  <code>udata+0x20</code>, instance at <code>+0x48</code>) that goes NULL when the prefab's cell streams out. Live
+  scriptIds are harvested from suspended engine coroutines (<code>debug.getregistry()</code> +
+  <code>debug.getlocal</code>).</li>
+<li><strong>Only 117 of 125 classes use that generic Create.</strong> <code>AINavMeshObstacle</code>, <code>AINodeAbstract</code>,
+  <code>AINodeSet</code>, <code>ParticleSurface</code>, <code>Prop</code>, <code>QuestRelay</code>, <code>ScriptTimer</code>, <code>TeleportPoint</code> were not
+  verified generic and <code>ScriptObject.Create</code> is <code>0x501CAC</code>. The main thread has NO SEH — never
+  call a Create outside <code>aire/data/live_objects/generic_create_classes.json</code> with the 4-arg shape.</li>
+<li><strong>Collision follows ownership.</strong> CopyXForm moves render + any physics the object OWNS (setter
+  path <code>0x274C3C</code> forwards to the body at <code>obj+0x98</code>). <code>.WM</code> DOG brushes (vt <code>0x1DBD570</code>, 607/634
+  own pieces) and cage brushes (<code>0x1FA3C00</code>, 84/84) arrive solid. 97% of FireProps (bench, barrel
+  stacks) own NO pieces — their collision is baked in the section's static <code>PhysicsBSP</code>, so they
+  move walk-through.</li>
+<li><strong>A destructible prop is a PREFAB.</strong> Moving only the brush left <code>.CE</code>/FX behind: the arrow
+  broke it, the sound played, no explosion at the new spot. Move the whole <code>&lt;prefix&gt;.*</code> group.</li>
+<li>Arbitrary coordinates go through <strong>markers</strong> — TeleportPoint-class objects (vt <code>0x1DC9C38</code>,
+  ~270 loaded) whose transform is raw-written (vptr checked, journaled), CopyXForm'd onto, and
+  restored byte-exact (verified 270/270 after the summon).</li>
+<li>Moves are live state: they revert when the cell re-streams; nothing is saved.</li>
+</ul>
+<pre><code class="language-python">call(&quot;live_objects_scan&quot;)                                  # directory (bindable contexts)
+call(&quot;live_objects_find&quot;, pattern=r&quot;\.WM$&quot;, limit=20)      # nearest, live-verified
+call(&quot;live_place&quot;, name=&quot;Barre_40.WM&quot;, offset=[-250, -60, 0])
+call(&quot;live_place_group&quot;, prefix=&quot;WaspN_16&quot;, offset=[0, 150, 500])
+call(&quot;live_summon&quot;, family=&quot;WaspN&quot;, radius=600, spacing=350, height=200)
+</code></pre>
+<p>Modules: <code>aire/pipeline/live_objects.py</code> (directory, binding, single moves),
+<code>aire/pipeline/live_groups.py</code> (prefab groups, summon). Summon RELOCATES the world's own
+prefabs; <code>live_clone</code> (below) creates NEW ones.</p>
+<h2 id="live-clone-true-spawning-through-the-engine-s-object-factory-proven-in-game-2026">Live clone — TRUE spawning through the engine's object factory (PROVEN IN-GAME 2026-09-24)</h2>
+<p>New world objects, built by the engine's own factory on the main thread, while the game runs.
+No hook, no file, no memcpy. User-confirmed in order: a cloned crate beside Talion; a cloned
+barrel brush (visible once its flags byte was copied); then the <strong>whole grog-barrel prefab
+<code>Barre_169</code> — 48 objects, a NEW barrel the player can poison for orcs to drink</strong>; then 12 new
+wasp nests (204 objects, 0 faults).</p>
+<p><strong>Main-thread native bridge (the enabler).</strong> The main VM ships <code>package.loadlib</code> (<code>0x1D17020</code> -&gt;
+worker <code>0x1D0DEC0</code> = IAT <code>LoadLibraryA</code> <code>0x1D92228</code> + <code>GetProcAddress</code> <code>0x1D92220</code> -&gt; pushcclosure
+<code>0x1D09E00</code>; failure returns ZERO values). The main-thread poller loads the framework export
+<code>sowce_native(lua_State*)</code> (<code>sdk/sow_main_native.cpp</code>, in the SHARED target — a static-lib
+export is dropped by the linker) and calls it inside the engine's own script tick: measured
+<code>main tid=&lt;first thread&gt; mainvm=1</code>. Every engine call there is SEH-guarded (main-thread LUA has no
+such net); <code>call</code> is refused unless <code>L+0x10</code> equals the main VM's global state. Args are hex
+STRINGS (HavokScript numbers are float32). <code>lua_pushstring</code> = <code>0x4082D8</code>. AIRE:
+<code>aire/pipeline/main_native.py</code> (<code>live_native_ping/_read/_call</code>). A running process keeps the OLD
+dll (LoadLibrary returns the loaded module) — a rebuild needs a restart.</p>
+<p><strong>The engine path.</strong>
+- <strong>ObjectServer</strong> <code>[base+0x26FF058]</code> (vt <code>0x22C0B28</code>, LithTech <code>ILTServer</code> lineage): <code>vt[8]</code>
+  <code>0x43D630</code> = CreateObject(template) = copy <code>0x43D680</code> + creator + post-create; <code>vt[14]</code>
+  <code>0x502034</code> = find by name; <code>vt[4]</code> drives the time-sliced ObjectSet streamer <code>0x43DBC8</code>.
+- <strong>Creator</strong> <code>0x1CD454(_, CObjectCreateParams*)</code> — also what the batch loader <code>0x11B4EC0</code> calls.
+  Allocates from the class holder, runs the ctor, <code>ReadProps</code> (<code>vt+0x60</code>), sets the transform,
+  registers the name, links into the ObjectSet, builds components (<code>vt+0x68</code>), activates
+  (<code>vt+0x80/+0x70/+0x48</code>).
+- <strong>Class descriptor</strong> <code>[[obj+0x78]]</code>: <code>+0</code> name, <code>+8</code> parent, <code>+0x18</code> placement ctor, <code>+0x20</code>
+  dtor, <code>+0x2C</code> object size; 304 classes in the static table at <code>0x2A61E48</code>.
+- <strong><code>CObjectCreateParams</code></strong> (defaults <code>0x43DAA0</code>): <code>+0x01</code> flags -&gt; <code>obj+0xE2</code> (bit0 visible,
+  <code>0xC</code> solid; FireProp's ReadProps fills it, a DOG brush's does not), <code>+0x04</code> pos, <code>+0x10</code> scale,
+  <code>+0x14</code> quat, <code>+0x30</code> -&gt; <code>obj+0xD4</code>, <code>+0x34</code> -&gt; <code>obj+0xD8</code>, <code>+0x40</code> class holder (<code>obj+0x78</code>),
+  <code>+0x168</code> inline name (interned), <code>+0x188</code> name ptr (0 = use <code>+0x168</code>), <code>+0x198</code> <strong>ObjectRec</strong> —
+  the object's record in the layer's <code>ObjectPropertyDB</code> (<code>obj+0x50</code>; ReadProps pulls every
+  property from it), <code>+0x1A0</code> <strong>ObjectSet</strong> (= the world context, <code>obj+0x58</code>). Loader entries
+  (0x50 B): <code>+0</code> holder, <code>+8</code> name, <code>+0x10</code> word, <code>+0x18</code> index, <code>+0x1C</code> pos, <code>+0x28</code> quat.
+- <strong>Render + collision are bound BY NAME.</strong> <code>vt+0x68</code> -&gt; <code>0x333430</code> asks the set's resource table
+  (<code>set-&gt;vt+0x28</code> <code>0x3334F0</code>, table <code>set+0x98</code>) with key <code>obj+0x40</code> = the registered name. A
+  clone under a NEW name is created but draws nothing; a clone under its SOURCE's name gets the
+  model and physics. Duplicate names are legal — insert <code>0x115ED3C</code> appends, lookup <code>0x4DC078</code>
+  walks from the tail — so the <strong>newest</strong> node answers: a cloned DOG binds the cloned brushes
+  and states during post-create.
+- <strong>A prefab clone mirrors the batch loader</strong>: create EVERY member (one main-thread chunk), then
+  post-create (<code>vt+0xA8</code>) each (a second chunk). ScriptObjects/StartupCommands are skipped by
+  default (they would run the prefab's scenario Lua again).
+- <strong>Clone copies ONE AT A TIME.</strong> Because the newest node answers a name, 12 nest copies cloned
+  in a single batch all bound the LAST copy's <code>DOGS_Alive</code> (measured: 4/4 DOGs shared one state
+  object, 1/6 brushes linked) — meshes drew, nothing reacted. Completing each copy (create -&gt;
+  post-create -&gt; DOG state) before the next exists keeps every copy wired to itself (3/3 DOGs
+  with their own state objects).
+- <strong>A cloned DOG must be put in its initial state.</strong> The DOG post-create (<code>0x4871190</code>) collects
+  its 32 state links (<code>DOG+0x190</code>) but does not ENTER one — a streamed set gets that later, a
+  clone never does. Brush <code>+0x148</code> = its current DOG state object; null = hits route nowhere.
+  <code>0x5ADF0C(dog, StateType record)</code> is <code>DynamicObjectGroup:Script_SetState</code>'s body (ready flag
+  <code>+0x22C</code> set -&gt; queued at <code>+0x160</code>, else immediate <code>0x5AEABC</code>); the record is the SOURCE DOG's
+  current state (<code>dog+0x188</code> -&gt; state object <code>+0x180</code>, e.g. <code>Alive</code>). With it the cloned nests
+  <strong>drop, swarm and explode when shot</strong> (user-confirmed).
+- A lone DOG brush clone is invisible unless <code>params[1]</code> = the source's <code>obj+0xE2</code> flags — its
+  ReadProps does not fill them (FireProp's does).
+- The player's position point is <strong>~90 above the feet</strong> (a grog barrel anchored at player-60
+  floated ~30); <code>live_clone</code> measures offsets and rings from the feet.
+- Clones live in the source's ObjectSet and die with it when the cell re-streams.</p>
+<pre><code class="language-python">call(&quot;live_native_ping&quot;)                                     # bridge up? main thread?
+call(&quot;live_clone&quot;, name=&quot;Crate_127.FP&quot;, offset=[200, 0, 0])  # one object
+call(&quot;live_clone&quot;, prefix=&quot;Barre_169&quot;, offset=[0, 0, 300])   # a whole interactive prefab
+call(&quot;live_clone&quot;, prefix=&quot;WaspN_39&quot;, count=12, radius=700, height=250)
+</code></pre>
+<p>Module: <code>aire/pipeline/live_clone.py</code>.</p>
+<h2 id="live-storm-projectiles-from-the-sky-over-the-whole-area-proven-in-game-2026-09-2">Live storm — projectiles from the sky over the whole area (PROVEN IN-GAME 2026-09-24)</h2>
+<p><code>ce:ExplodeAt(x, y, z)</code> (stub pops 3 numbers; impl <code>0x1A4E604</code>, floats in xmm1-3) detonates any
+CombatExplosion at coordinates — 24 <code>BarrelStack_Fire</code> blasts around Talion, user-confirmed.
+CombatExplosion payload = the record at <code>CE+0x170</code> (<code>BarrelSingle/Stack_Fire</code>,
+<code>*_WraithFire</code>, <code>FirePit_NormalFire</code>, <code>Barrel_Broken_OilSpilled</code>, <code>WargCage_Knockback</code>).</p>
+<p><strong>CombatProjectileEmitter</strong> (vt <code>0x1FAC3F0</code>): <code>FireProjectile</code> <code>0x1A4E91C</code> fires item
+<code>[e+0x158]</code> (SetItemOverride's slot, stub <code>0x1BABDE8</code> = just that store) else <code>[e+0x150]</code>, at
+target object <code>[e+0x180]</code> + base <code>[e+0x188..0x190]</code> + random <code>[e+0x194..0x19C]</code>. The loaded
+<code>ProjecB_*/ProjecS_*.CPA</code> are <code>Emitter_Arrow_Barrage</code> arrow-rain emitters. <code>live_storm</code>
+(<code>aire/pipeline/live_storm.py</code>) hangs every targeted emitter over its own cell of a disk,
+shares the target markers at one centre (identity rotation, so offsets stay world-axis) and
+fires them in waves — 1,280-1,536 projectiles per run, user-confirmed across the area.</p>
+<ul>
+<li><strong>Aim at each cell's GROUND.</strong> A projectile resolves AT its aim point and has a max travel:
+  aimed at the player's rooftop height they hung mid-air over the streets; aimed 30 m below they
+  burst mid-air. Ground per cell = 15th-percentile height of ground-placed objects in the
+  directory (AI nodes <code>0x1DB0478</code>/<code>0x1FB8328</code>, nav obstacles <code>0x1DCB420</code>, spawner placements
+  <code>0x1DC5800</code>); emitter = ground + height, aim = ground - 60. Worked.</li>
+<li><strong>Flight is GADB data</strong> (<code>Inventory/RangedWeaponData</code>, live-editable via <code>set_field</code>):
+  <code>AI_TrollFire_RangedWeapon</code> ships <code>velocity</code> 15000, <code>LifeTime</code> 1, <code>MaxRange</code> 10000,
+  <code>ShowModelWhileTraveling</code> False (the rock is INVISIBLE in flight), and
+  <code>AOEOnRemoveNeverStopped</code> = its impact AoE (a flight that expires detonates mid-air). Set
+  3000-4000 / 12 / 60000 / True for watchable 60-150 m falls.</li>
+<li><strong><code>ProjectileFX</code> (String2, tc 68) is the in-flight trail — a heap <code>char*</code></strong>; Anvil shows it
+  empty because a PATCH GADB fills it (live: <code>graug_rockthrow_projectile_fire.fxp</code>). Repoint
+  the cell at a resident FX's string (<code>fx\weapons\grenades\grenade_fire.fxp</code>, the orc fire
+  grenade) — journaled in <code>aire/data/live_objects/storm_string_journal.json</code>.</li>
+<li><strong>A payload is visible only if its FX is RESIDENT</strong> — check by name with
+  <code>call("live_resource", paths=[...])</code> (below), never by guessing. Payloads that rendered in
+  Minas Ithil: <code>Emitter_Arrow_Barrage</code>, <code>PS_Fire_Arrow</code>, <code>Orc_Grenade_Fire</code>,
+  <code>AI_TrollFire_RangedProjectile</code>, <code>Mounted_TrollFire_RangedProjectile</code>.</li>
+<li><strong><code>Emitter_Graugapult_Barrage</code> is a WARNING MARKER, not a weapon</strong> (CORRECTED 2026-09-25):
+  <code>Model/Weapon_Invisible</code>, no fire FX, and <code>AOEOnImpact</code> / <code>AOEOnRemoveNeverStopped</code> both NULL —
+  it raises the <code>Graugapult</code> HUD icon and does nothing else, loaded bundles or not (user-confirmed
+  twice: icon only). The real catapult weapon is <code>Troll_Graugapult_Fire</code> (velocity 850, gravity 10,
+  impact <code>Combat/AOE/Graugapult_Hit_Fire</code> = 4 ticks, only <code>Graugapult_Hit_Tick_Fire_Inner</code> carries
+  a visual: <code>AOEFX</code> slot 10 = <code>fx\weapons\graugapult\graugapult_explosion.fxp</code>).
+  <strong>The old line here — "the explosion depends on bundle-only materials, so Minas Ithil gives
+  audio + shake and NO visual" — was WRONG</strong>: <code>live_resource</code> shows the explosion, both fire-trail
+  effects and their materials RESIDENT with live references in Minas Ithil (the region ships
+  catapults; the trail material is held by <code>minasithil.bndl</code>). The troll firebomb carrying
+  <code>Graugapult_Hit_Fire</code> renders the real catapult explosion.</li>
+<li>LEAD: a sustained storm renders its FIRST wave and then only the gameplay side (damage, audio)
+  — consistent with a ClientFX instance budget; stagger fire to stay under it.</li>
+</ul>
+<pre><code class="language-python">call(&quot;live_storm&quot;, item=&quot;AI_TrollFire_RangedProjectile&quot;, radius=7000, height=15000,
+     waves=40, follow_every=10)
+call(&quot;set_field&quot;, category=&quot;Inventory/RangedWeaponData&quot;, record=&quot;AI_TrollFire_RangedWeapon&quot;,
+     field=&quot;AOEOnImpact&quot;, value=&quot;BarrelStack_Fire&quot;, value_category=&quot;Combat/AOE&quot;)
+</code></pre><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
