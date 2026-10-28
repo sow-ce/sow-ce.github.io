@@ -1,0 +1,534 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GameDB from code and disk: schema builders, field bindings, field consumption, string block - Shadow of War engine reference</title><meta name="description" content="schema builders, type table, field bindings, field consumption, string block"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" class="cur" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="gamedb-from-code-and-disk-schema-builders-field-bindings-field-consumption-strin">GameDB from code and disk: schema builders, field bindings, field consumption, string block</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Moved verbatim from
+CLAUDE.md on 2026-10-27 (original lines 9611-9929); heading levels normalised, text unchanged.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Sections:</strong>
+- Schema Builders — declared schema from CODE (CRACKED 2026-08-03)
+- GADB Field Bindings — the schema OBJECTS, and who reads each field (CRACKED 2026-10-05)
+  - The TYPE TABLE - what binds a category to its object (CRACKED 2026-10-05)
+  - Field bindings, built on the type table
+  - The engine's own field-read path (DECODED 2026-10-27, MEASURED)
+- GADB Field Consumption — does a live edit take effect, and when (BUILT 2026-10-05)
+- GADB String Block — offset base (CORRECTED 2026-08-02, live-verified 100.00%)
+- GADB Offline Modification (Anvil's substrate, PROVEN)</p>
+<hr />
+<h2 id="schema-builders-declared-schema-from-code-cracked-2026-08-03">Schema Builders — declared schema from CODE (CRACKED 2026-08-03)</h2>
+<p><code>call("schema_from_code", field="BaseSpeedMultiplier")</code> / <code>call("schema_builder_decode", rva=...)</code>,
+OFFLINE. Module <code>aire/analysis/schema_builders.py</code>.</p>
+<p><strong>Every field has its own ~90-byte registration stub</strong> (1 caller, 1 callee) whose strings are that
+field's name AND its own annotations; <strong>a per-category builder calls every stub in declaration
+order</strong>. Binding comes from the CALL, so it attributes what the deduplicated string pool cannot:</p>
+<pre><code>sub_843EDC                        &lt;- Client/PlayerMovement builder, 36 stubs
+  0xC75150   "GROUP_BEGIN=ThermalVent"
+  0x1631698  "AimingRadiusScale", "min=1.0"
+  0x16316F8  "public Tags", "AimingTeleportExclusiveTags"
+  0x163580C  "BaseSpeedMultiplier", "min=0.0"
+</code></pre>
+<p><strong>Validated 34/34 fields, 0 code-only, 0 live-only = 100.0%</strong> against the live descriptor run.
+Yields what live descriptors do NOT carry: declared TYPES, <strong>min/max constraints</strong>, and
+<strong>GROUP_BEGIN/GROUP_END</strong> (the markers this file says are absent from runtime descriptors — they
+are, they live in the builder). Coverage: <strong>99% of field names have a stub, 91% reach a builder</strong>
+(random 300-name sample, 215 distinct builders).</p>
+<p><strong>FULL SWEEP</strong> — <code>call("schema_builder_sweep", out="tools/re/data/declared_schemas.json")</code>, ~90s:
+14,387 stubs -&gt; <strong>2,382 builders, 0 decode failures</strong>; <strong>17,094 fields, 7,154 with a declared
+TYPE, 1,443 with min/max</strong>. Category identity is a TWO-SIDED (F1) field-set match with a floor:
+<strong>1,003 identified + 39 partial_builder</strong>, 1,020 distinct categories. A one-sided score let a
+63-field builder claim a 3-field category off one shared name (<code>Predicate</code>) — 58 builders all
+claimed <code>_StructuresMoraleInfluence</code>. The 1,340 "unresolved" are NOT missing schemas: median
+field count <strong>1</strong>, and the 89 substantial ones are mostly other reflection tables (script API
+<code>__index</code>/<code>SetVisible</code>, FX <code>KeyName</code>/<code>BindToObject</code>). <code>type=EFalloff</code> is a second annotation
+form alongside <code>public &lt;Type&gt;</code> (+638 types).</p>
+<p>Derived artifacts (<code>aire/analysis/declared_types.py</code>):</p>
+<pre><code class="language-python">call(&quot;declared_fk_export&quot;,     out=&quot;tools/re/data/declared_fk_types.json&quot;)
+call(&quot;declared_ranges_export&quot;, out=&quot;tools/re/data/declared_ranges.json&quot;)
+call(&quot;declared_unresolved&quot;)
+</code></pre>
+<p><strong><code>declared_fk_types.json</code></strong> — 7,154 declared types, <strong>5,146 resolved to a real category</strong>, of
+which <strong>1,182 are <code>dormant_declared</code>: an FK target the live sweep CANNOT produce</strong> because the
+field is NULL in every live record. <strong><code>declared_ranges.json</code></strong> — 368 categories, 1,088 declared
+min, only 3 max (bounds are floor-heavy; atlas envelopes remain the source for upper bounds).</p>
+<p><strong>Declared types validated against the live FK map: 3,722/5,015 = 74.2%</strong> (baseline 3.3%).
+<strong>The declared type is a TYPE name, NOT the category path</strong> — a naive compare scores only 33.7%.
+Observed relations: <code>Quest.QuestList</code>-&gt;<code>Quest/QuestLists</code> (pluralised), <code>Faction.FortAssaultGroup</code>
+-&gt;<code>Faction/FortAssault/Group</code> (segments CONCATENATED), <code>Interface.KeyMap</code>-&gt;<code>Interface/GFX/KeyMaps</code>
+(middle segment dropped). The 74.2% uses only two normalisation rules and the residual misses are
+the same systematic variation — do NOT read the remainder as wrong types.</p>
+<p>Traps: <code>function_labels.json</code> keys are <code>'0x'</code>-hex — <code>int(k)</code> parses none and yields a silently
+empty index; and a stub's FIRST string is not necessarily the name (<code>["AllowNegative",
+"CamLandDownTime"]</code>) — adjudicate against the P=919 corpus.</p>
+<h2 id="gadb-field-bindings-the-schema-objects-and-who-reads-each-field-cracked-2026-10-">GADB Field Bindings — the schema OBJECTS, and who reads each field (CRACKED 2026-10-05)</h2>
+<p><code>aire/analysis/field_bindings.py</code>; <code>call("field_bindings_build")</code> / <code>call("field_binding", ...)</code>.
+OFFLINE (~75 s), <strong>LIVE-VERIFIED</strong>. Schema Builders (above) say who DECLARES a field; this says
+who READS it.</p>
+<p><strong>Every reflected type has a static SCHEMA OBJECT</strong> in the zero-at-rest part of <code>.idata</code>
+(file-backed only to <code>0x26F8E00</code>): one <strong>0x48-byte slot per field</strong>, zeroed by a static
+initializer that then tail-calls the builder:</p>
+<pre><code>sub_A7EB0:  lea rcx,[0x2955C80] ; mov r8d,0x1B0 ; call memset ; jmp builds_schema:AI/Templates
+builder:    lea rcx,[0x2955C80] ; lea rdx,"GlobalVarUnlock" ; call PropRegister 0xC6DA00   (inline)
+            lea rcx,[0x2955CC8] ; call registers_field:AI/Templates.CharacterModel        (stub)
+stub:       mov rbx,rcx ; mov r8d,0xA (type) ; lea rdx,"CharacterModel" ;
+            mov [rsp+0x30],2 (flags) ; call 0xC6DA00
+</code></pre>
+<p><code>0xC6DA00(slot, name, type_code, &amp;default, ...)</code> is the SAME PropRegister the ClientFX node
+factory uses (same 0x48 stride) - GADB categories, ClientFX nodes and BlendDB (<code>.bvr</code>) types are
+one reflection system. <strong>Slot k = descriptor absolute index k</strong>, except that a GROUP_BEGIN/END
+marker is a slot too (arg 7 <code>0x80000080</code> / <code>0x40000080</code>, annotation <code>GROUP_BEGIN=&lt;group&gt;</code>) and
+owns no index. The memset size is the object's exact extent (AI/Templates 0x1B0 = 6 slots,
+Character/Models 0x1D40 = 104).</p>
+<p><strong>A compiled getter names its field only through the object.</strong> <code>GetCharacterModel 0x16680C</code>
+calls three per-field leaf helpers, each loading a CONSTANT POINTER to the object
+(<code>[0x266CB70]</code> = <code>0x142955C80</code> at rest) and touching slot 1:</p>
+<pre><code>slot+0x20  lookup key    (0x1822494: mov rax,[G] ; add rax,0x68 ; ret  -&gt; slow path 0x115AE24)
+slot+0x30  state         (0x166858:  cmp dword [rax+0x78],2 ; setge al  -&gt; descriptor cached)
+slot+0x40  u8 index      (0x166868:  mov al,[rax+0x88]  -&gt; fast path 0x30E7B4/0x47E6F50:
+                          value = [rec+0x10] + ([desc+0xE] + i)*8, desc = [rec+8] + index*16)
+</code></pre>
+<p>So <code>(object, offset)</code> IS a field identity - no displacement guessing.</p>
+<h3 id="the-type-table-what-binds-a-category-to-its-object-cracked-2026-10-05">The TYPE TABLE - what binds a category to its object (CRACKED 2026-10-05)</h3>
+<p><code>aire/analysis/type_table.py</code>; <code>call("type_info", ...)</code> / <code>call("type_table_capture")</code>. The
+engine keeps a static reflection TYPE TABLE in the file-backed part of <code>.idata</code> - the same 0x40-byte
+entry shape as the ClientFX "Table A" (they are one table system):</p>
+<pre><code>+0x00 schema object   +0x08 slot count (== the memset extent, 2,699 / 2,699)
++0x10 short name      +0x18 description / "Struct" / empty sentinel 0x1DB10E0
++0x20 TYPE NAME       +0x28 PARENT entry (single inheritance: 517 of 2,686 derive)
++0x30 0               +0x38 flags (0 / 2 struct / 8 / 10)
+
+0x266CB70  0x2955C80  6     Template  -                              AI.Template
+0x264ABA0  0x286D8B0  0x68  Models    "Character Model definitions." Character.Models
+0x2650EE0  0x28CCCC0  0x13  Node      "Data for a Melee node"        Combat.Node
+</code></pre>
+<p>The getters' "constant pointer" (<code>[0x266CB70]</code>) is entry +0x00 of this table. <strong>A LIVE category
+header holds its type entry at <code>+0x20</code></strong> (AI/Templates -&gt; 0x266CB70), and the on-disk GADB names
+each category's type (<code>gadb_category_index</code> <code>type</code>). Scan: <strong>3,099 entries; all 2,686 entries the
+live links prove real are found; every parent pointer lands on another entry.</strong> The offline
+type-name join agrees with the live link for 2,706 categories and <strong>contradicts it 0 times</strong>; the
+7 it cannot split are names registered twice (<code>CurveInt</code>/<code>CurveFloat</code>/<code>CurveVector</code>/<code>CurveColor</code>/
+<code>CurveFile</code> exist as both a ClientFX and a GADB struct; <code>WorldUI.StorePredicate</code> twice). 29
+categories have a NULL type link live. Names may contain a SPACE (<code>Profile.Bindings PC</code>).</p>
+<p><strong>Schema slots, live (<code>type_table_capture</code>, read-only, 3.7 s).</strong> PropRegister <code>0xC6DA00</code> fills
+each 0x48-byte slot at start-up: <code>+0x00</code> name ptr, <code>+0x08</code> annotation, <code>+0x10</code> default (16 B),
+<code>+0x20</code> P919(name), <code>+0x24</code> type code, <code>+0x28</code> arg 6, <code>+0x2C</code> flags (GROUP 0x80000080 /
+0x40000080), <code>+0x30</code> state (0, cached &gt;= 2 later), <code>+0x38</code> accessor (called once), <code>+0x40</code> its
+return = the descriptor index. One read of the zero-at-rest data gives <strong>26,935 slots of 2,951
+types, all 26,935 named and every name equal to the hash the engine stored beside it</strong>, 2,463
+group markers. The image never moves, so <code>category_types.json</code> + <code>schema_slots.json</code>
+(<code>aire/data/engine/field_bindings/</code>, exe-fingerprint guarded) serve every later session offline.
+<strong>Measured across two launches</strong> (PID 37456 -&gt; 32240, both in Minas Ithil): category links <strong>2,742 /
+2,742 identical</strong>, all <strong>26,935 slots identical</strong> (name, hash, type, flags, accessor), and of the
+22,630 slots cached in both, the engine's cached descriptor index differs <strong>0</strong> times - the
+binding cache is a deterministic start-up fact, so the field-binding oracle holds offline.</p>
+<h3 id="field-bindings-built-on-the-type-table">Field bindings, built on the type table</h3>
+<p>Objects are the type-table extents; slot names come from the live slots (the registration decode
+is the fallback and is CROSS-CHECKED: <strong>25,070 / 25,070 decoded slot names equal the engine's</strong>);
+an object's categories are the categories whose type entry owns it - EXACT, so the 385
+"identical-schema ties" of the positional matcher are settled (0 ambiguous; 14 types are
+genuinely SHARED by several categories, e.g. <code>Profile.Analog</code> by the Durango/Orbis/PC input
+categories). Positional matching against the descriptors is now validation: <strong>18,186 / 18,403
+slots (98.8%)</strong> agree under a per-object index offset - the ancestors' non-marker fields for 2,287
+derived types, 0 for types whose base is not a GADB type; the residue is fields resolver.db lacks
+(<code>BaseTypes.BezierCurve.ControlPoints</code>), hash-verified live.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>objects (type table + 38 decoded spans with no entry)</td>
+<td>2,989</td>
+</tr>
+<tr>
+<td>objects bound to GADB categories / categories with an object</td>
+<td>2,540 / <strong>2,567</strong></td>
+</tr>
+<tr>
+<td>typed objects with no category (ClientFX, BlendDB <code>NamedNode</code>, structs)</td>
+<td>411 (labelled by TYPE name)</td>
+</tr>
+<tr>
+<td>registrars (builders incl. those that INLINE PropRegister) - excluded from readers</td>
+<td>3,748</td>
+</tr>
+<tr>
+<td><code>helpers</code> (touch a slot) / naming a GADB field</td>
+<td>43,287 / <strong>39,960</strong></td>
+</tr>
+<tr>
+<td><code>accessors</code> (call a one-field helper) / naming a GADB field</td>
+<td>14,556 / <strong>13,425</strong></td>
+</tr>
+<tr>
+<td>agreement with <code>declared_schemas</code> F1 identity where both exist</td>
+<td>969 / 992</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Live oracle (read-only):</strong> for every slot the running engine has cached (<code>+0x30 &gt;= 2</code>), the
+descriptor at <code>[rec+8] + ([slot+0x40])*16</code> in a record of the identified category carries
+<code>P919(slot name)</code>: <strong>14,558 / 14,558</strong>; control (the neighbour slot's name) <strong>0 / 14,310</strong>.
+Verified accessors: <code>0x16680C</code> -&gt; AI/Templates.CharacterModel, <code>0x166680</code> -&gt;
+Character/Models.Bundle (slot 91 = field 91), <code>0x310C00</code> / <code>0x1A052A8</code> / <code>0x1A055F8</code> -&gt;
+Combat/Node.KBMNode (slot 16 = field 14 + 2 markers) - the last two were found by hand during the
+Shadow Chain work; this derives them.</p>
+<p>Five registration shapes, each of which broke a simpler decoder:
+1. stub with the slot in <code>rcx</code> from the builder (the common case);
+2. <strong>inline</strong> call in the builder - invisible to <code>schema_builder_decode</code>, which follows stubs only
+   (1,682 slots; AI/Templates.GlobalVarUnlock);
+3. <strong>self-contained first-field stub</strong> that loads the base itself
+   (Character/Models.CharacterModelPicker) - grouping slots by registering function split such
+   objects into 1-slot fragments;
+4. group functions handed a base, registering <code>[rbx+N]</code> - per-function summaries composed
+   bottom-up;
+5. <strong>PropRegister INLINED</strong> into the builder (<code>Interface/Menu/MenuTreeNode/*</code>): name/annotation/
+   default stored straight into the slot, P919 hash computed in place. Its slot writes looked like
+   4,056 "direct reads" until registration writers were recognised (a write to a slot's static
+   member = registrar). The live slots name these without any decoder.</p>
+<p>Consumers: labeler tier <code>field_binding</code> (59,244 functions, incl. <code>builds_schema:</code> for registrars),
+engine-graph stage <code>field_bindings</code> (type plane, see the graph section). Tests:
+<code>tests/test_field_bindings.py</code>, <code>tests/test_type_table.py</code> (incl. the live oracle + control).</p>
+<h3 id="the-engine-s-own-field-read-path-decoded-2026-10-27-measured">The engine's own field-read path (DECODED 2026-10-27, MEASURED)</h3>
+<p>Every RecordLink field accessor (5,215 of them) is one template that calls BOTH halves of the
+read, and the two caller sets are identical (5,215 / 5,215 / intersection 5,215):</p>
+<pre><code>accessor(record):
+  slot = the field's static PropRegister slot (0x48 B, filled at start-up)
+  if [slot+0x30] &gt;= 2:  GetLinkCellFast 0x30E7B4(record, byte [slot+0x40], elem, &amp;default)
+  else:                 GetLinkCellSlow 0x115AE24 -&gt; GetLinkCellByName 0x68BB08(record, &amp;hash, ., elem, &amp;default)
+</code></pre>
+<ul>
+<li>GetLinkCellFast <code>0x30E7B4</code> (leaf + tail in <code>.bss a</code> 0x47E6F50): descriptor <code>[rec+8] + idx*16</code>,
+  <code>elem &lt; u16 [desc+0x0C]</code> else the default, cell = <code>[[rec+0x10] + (u16 [desc+0x0E] + elem)*8]</code>.
+  No type check: the cached index already proved the field.</li>
+<li>GetLinkCellByName <code>0x68BB08</code>: FindDescriptor, then <code>type &amp; 0x3F == 10</code> (RecordLink) and
+  <code>elem &lt; count</code>, same cell read. If record byte +0x01 has bit <strong>0x10</strong>, the read goes to
+  ReadLinkReflected <code>0x16CE2E8</code> instead (below).</li>
+<li>FindDescriptor <code>0x25180C(record, &amp;hash)</code> (693 callers): binary search over the record's
+  16-byte descriptor run. Record byte +0x01 bit <strong>0x01</strong> -&gt; the run is sorted by its own +0x00
+  hash and is searched directly; bit clear -&gt; FindDescriptorPermuted <code>0x251BD0</code>, which searches
+  the +0x04 column (the run's hashes, sorted) and returns <code>run + byte [entry+9]*16</code>. This is the
+  sort index schema_guard documents (<code>aire/gamedb/schema_guard.py</code>): the run stays in field order
+  and carries its own sorted permutation.</li>
+<li>ReadLinkReflected <code>0x16CE2E8</code> -&gt; ReadReflectedField <code>0x5DA158(type, &amp;hash, record, elem, &amp;out)</code>:
+  the category's TYPE entry <code>[[rec+0x18]+0x20]</code> (see the type table above), FindSlotByHash
+  <code>0x251BA8</code> (linear over the type's 0x48-byte slots, key slot+0x20), SlotOffset <code>0x251C24</code> (walks
+  the slots in order, accumulating each one's size and alignment through 0x251CAC, not decoded)
+  and reads the record's instance as a NATIVE STRUCT: <code>inst + offset</code>; slot type 8 / 9 = 16-byte
+  elements; slot +0x28 (arg 6) == -1 = a <code>{ptr, u32 count}</code> vector with a bounds assert (null
+  write at 0).</li>
+<li><strong>Live census (2026-10-27, in world, read-only): all 278,865 secondary records of 2,742
+  categories have byte +0x01 == 0x0A</strong> (bits 0x01 and 0x10 clear). A GameDB record therefore
+  always takes the permuted search and the instance cell; a live FK write is never bypassed by
+  the reflected path. <code>schema_guard.capture</code> skips any record whose tag is not 0x0A; that loses
+  nothing for the main GameDB (0 such records).</li>
+<li><strong>MEASURED 2026-10-27 (was a LEAD): BlendDB records ARE the flag-0x10 population.</strong> All
+  318,372 live BlendDB records (3,316 categories of the loaded <code>.bvr</code> graphs, found through their
+  type entries) carry +0x01 = <strong>0x1A</strong>. Their instance is a NATIVE STRUCT laid out by SlotOffset:
+  each slot in order takes <code>size</code> rounded to 8 (0x251CAC: 0 for flags &amp; 0x280 - group markers and
+  editor-only fields; 16 for arrays (arg6 != 1) and Vector4; 12 Vector3; 5 Bool; 8 other
+  scalars). Read at those offsets, BlendState Priority / DefaultBlendTime / StartPct / Looping /
+  Mirrored / Gravity equal the disk decode for 10,697 / 10,697 records each (control +8: 0 / 0 /
+  2 on the discriminating fields). aire/formats/blenddb_layout.py, actions
+  <code>behavior_field_offsets</code>, <code>behavior_live_node</code>. The 0x01 (sorted run) population is not found.</li>
+</ul>
+<p><strong>The typed getter family (DECODED 2026-10-27, from code; callers = distinct functions).</strong> Every
+type has a FAST getter (cached descriptor index in <code>dl</code>, <code>elem &lt; count</code>, cell = <code>[[rec+0x10] +
+(link+elem)*8]</code>, else <code>*default</code>) and a BY-NAME getter (FindDescriptor, <code>type &amp; 0x3F</code> check,
+<code>elem &lt; count</code>, the flag-0x10 reflected branch, same cell). Fast and by-name caller counts match
+per type because the accessor template calls both.</p>
+<table>
+<thead>
+<tr>
+<th>type</th>
+<th>fast</th>
+<th>by name</th>
+<th>reflected (flag 0x10)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 Bool</td>
+<td>GetBoolFast <code>0x274AE8</code> (1,634): bit <code>link &amp; 31</code> of dword cell <code>link &gt;&gt; 5</code></td>
+<td>GetBoolByName <code>0x1157114</code> (1,850), no reflected branch</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2 Float</td>
+<td>GetFloatFast <code>0x30E6B4</code> (1,517)</td>
+<td>GetFloatByName <code>0x115B43C</code> (1,539)</td>
+<td>0x5DA0FC</td>
+</tr>
+<tr>
+<td>3 Int</td>
+<td>GetIntFast <code>0x278758</code> (1,010)</td>
+<td>GetIntByName <code>0x1169594</code> (1,015)</td>
+<td>0x176CE98</td>
+</tr>
+<tr>
+<td>4 String</td>
+<td>GetStringFast <code>0x1CB3B0</code> (1,165)</td>
+<td>GetStringByName <code>0x115A54C</code> (1,184); GetStringByHash <code>0x1152454</code> (537: hash by value, elem 0)</td>
+<td>0x16CE290</td>
+</tr>
+<tr>
+<td>7 float pair</td>
+<td>GetFloatRangeFast <code>0x311320</code> (354): the cell is a POINTER, 8 bytes copied from it</td>
+<td>not traced</td>
+<td>-</td>
+</tr>
+<tr>
+<td>10 RecordLink</td>
+<td>GetLinkCellFast <code>0x30E7B4</code> (5,215); GetLinkCellFastB <code>0x30E7A4</code> (537, a byte-identical copy sharing its tail)</td>
+<td>GetLinkCellSlow <code>0x115AE24</code> / GetLinkCellByName <code>0x68BB08</code>; 0x16CEE38 (537, wraps it)</td>
+<td>ReadLinkReflected <code>0x16CE2E8</code></td>
+</tr>
+</tbody>
+</table>
+<p>Field REFERENCES (a cell handle, used by writers and array walkers): MakeFieldRef <code>0x2775C0</code>
+(2,085 callers; <code>(out, record, descriptor)</code>) builds 0x28 bytes <code>{+0x00 record, +0x08 cell ptr,
++0x18 u16 type, +0x1A u16 count, +0x1C u8 bool bit, +0x20 hash}</code>. For type 1 the cell pointer is
+<code>inst + (link &gt;&gt; 5)*8</code> and the bit <code>link &amp; 0x1F</code>: the packed-bool law, in the engine's own code.
+Flag 0x10 records go to 0x60B5FC. MakeFieldRefByName <code>0x1957C4(out, record, &amp;hash)</code> =
+FindDescriptor + MakeFieldRef (a zeroed ref when absent). FieldIterBegin <code>0x465A78</code> (1,836) copies
+the ref and adds <code>+0x28</code> index = 0, <code>+0x2C</code> count = <code>+0x1A</code>; FieldIterAtEnd <code>0x2774A8</code> (827) is
+<code>[it+0x28] &gt;= [it+0x2C]</code> (the AI attachment spawner 0x1AED2AC walks
+<code>AI/CharacterAttachmentSets.AttachedCharacters</code> this way). RecordIndexOf <code>0x1898E8</code> (435):
+<code>-1</code> for null, else the record's index in its category (primaries: <code>(rec - [cat+0x48]) &gt;&gt; 5</code>).</p>
+<h2 id="gadb-field-consumption-does-a-live-edit-take-effect-and-when-built-2026-10-05">GADB Field Consumption — does a live edit take effect, and when (BUILT 2026-10-05)</h2>
+<p><code>aire/analysis/field_flow.py</code> (+ the generic follower <code>aire/analysis/value_flow.py</code>);
+<code>call("field_flow_build")</code> (~70 s offline) / <code>call("field_flow", category=, field=)</code> /
+<code>call("field_flow", rva=)</code> / <code>call("field_flow", verdict="copied", prefix="Combat/")</code>. Folded into
+<code>explain</code> (<code>field_consumption</code>) and the engine graph (stage <code>field_flow</code>).</p>
+<p>A GADB write always lands; whether it CHANGES anything depends on what the reading code does with
+the value. Field bindings name the readers; this follows the value out of each read:</p>
+<table>
+<thead>
+<tr>
+<th>verdict</th>
+<th>fields</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>live</code></td>
+<td>8,685</td>
+<td>used where it is read (compare / compute / deref / passed on): an edit applies the next time that code runs</td>
+</tr>
+<tr>
+<td><code>copied</code></td>
+<td>2,275</td>
+<td>stored into an IDENTIFIED object (typed, handed in as an argument, or a global): an edit applies when the COPIER runs again</td>
+</tr>
+<tr>
+<td><code>both</code></td>
+<td>695</td>
+<td>some consumers use it, others copy it</td>
+</tr>
+<tr>
+<td><code>stored</code></td>
+<td>144</td>
+<td>stored only where the destination is unresolved (a container slot a call just returned)</td>
+</tr>
+<tr>
+<td><code>returned_only</code> / <code>unknown</code></td>
+<td>112 / 878</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>(12,789 fields; 5,752 strong copies, 653 fields with a TYPED destination.) Every copy says what it
+CARRIES: <code>value</code>; <code>pointer</code> (a float-pool pair / vec POINTER: editing the values behind it stays
+live, repointing the cell needs the copier); <code>link</code> (a RecordLink's record pointer: same, for the
+linked record); <code>derived</code> (computed from it - <code>Bool.Value</code> read through a link, a unit scale);
+<code>flag</code> (a constant stored on a branch taken from the value - compiled <code>present = 1</code> / <code>max &gt; 0</code>
+bytes). Every copier carries <code>triggers</code> = its NAMED ancestors (console commands, script bindings,
+known functions, named vtable methods, message strings) = what re-runs it.</p>
+<p><strong>Oracles, both recorded independently by live work:</strong> the PlayerCompanion group compiler
+<code>0x1881264</code> - <strong>11/11</strong> documented fields copied at the documented offsets; the targeting-cache
+compiler <code>0x1C0B634</code> (arg0 = entry + 8) - <strong>10/10</strong> documented entry offsets including both
+control-dependent flags:</p>
+<pre><code>e+0x0C/+0x14  DistanceRange / DistanceRangeNoInput max (loaded THROUGH the pool pointer)
+e+0x20/+0x24  ScreenWidth (held in xmm1 across the next accessor) / ScreenHeight
+e+0x168       MaxAngle            e+0x195  RequireLOS
+e+0x190       MaxDistance_PlayerAlly * 100.0 (`mulss [0x202E8C4]`: the field is in METRES)
+e+0x1B5       flag, set when that product &gt; 0.1   (the "compiler sets the byte iff max &gt; 0")
+e+0x1B0/0x1B1 RequireStraightPath: present = 1 when the link is set; value = Bool.Value(link)
+</code></pre>
+<p>The whole compiled layout: <code>call("field_flow", rva=0x1C0B634)</code> (69 fields).</p>
+<p><strong>Measured mechanisms the follower needed</strong> (<code>value_flow.py</code>, each found on a real function):
+xmm clobber sets; the prologue stack model (<code>mov rax,rsp ... lea rbp,[rax-0x57]</code> makes [rbp-0x30],
+[rax-0x38] and [rsp+0x20] one key); out-parameters and ARRAY ITERATORS (<code>lea rcx,[rbp-0x30];
+call init(iter, rec); call at_end(&amp;iter); call current(&amp;iter)</code> - array fields never return in rax);
+a field accessor handed an already-tracked local is REFILLING it with another field (0x499724 reuses
+one out-param for every accessor - without this, one field "copied" its neighbour's value);
+intra-function jumps to a merge point; chained getter reads; SETcc/CMOVcc on value-derived flags.
+<strong>Generic readers are found by BEHAVIOUR</strong>: a callee whose RESULT a one-field wrapper returns, or
+that it tail-jumps to (<code>jmp sub_1CB3B0</code> in 1,081 wrappers). Counting calls admitted the engine
+assert <code>0x819104</code> (every wrapper calls it on failure) as a "reader".</p>
+<blockquote>
+<p><strong>"Many fields copied" does NOT mean "runs at load" — a <code>compile_time</code> verdict was built and
+WITHDRAWN the same day.</strong> <code>_StructuresCombatAttackData.AOE</code> / <code>AOEOnStart</code> came out
+compile-time, but the in-game blast-on-arrival came from LIVE writes to exactly those cells: the
+copier <code>0x2DED44</code> sits under <code>CombatProp::PlayAttack</code> / <code>CPlayerObj::StartAttackType</code>, i.e. it
+runs at every attack start. When a copy is refreshed is answered by the copier's TRIGGERS:
+- targeting cache <code>0x1C0B634</code> &lt;- <code>0x1B69838</code> &lt;- "Failed to initialize subsystems" / RestartRender
+  (load time);
+- <strong>PlayerCompanion groups <code>0x1881264</code> &lt;- <code>Player.SetCharacterModelOverride</code> /
+  <code>ClearCharacterModelOverride</code> / <code>SetModelOverride</code> / <code>SetPlayAsFactionMemberNPC</code> /
+  <code>Skin_User_Selection</code></strong> - LEAD (call graph, not run): the user-tested "live edit changed
+  nothing" should take effect after a skin / model change;
+- <strong><code>Client/PlayerMovement.BaseSpeedMultiplier</code> is copied to player <code>+0x550</code> by <code>0x187F94C</code>,
+  under the same model-override family</strong> - LEAD that a skin change re-applies movement fields
+  without a fast travel (the type table calls PlayerMovement "console variables").</p>
+</blockquote>
+<p>Coverage limit, stated: a field with no field-binding reader is <code>not_read</code> here (20 of 36
+<code>Client/PlayerMovement</code> fields, e.g. <code>StandCapsuleHeight</code> - its slot has no helper anywhere, so it
+is read by a path the schema objects do not show). Freshness follows field_bindings + type_flow
+outputs. Tests: <code>tests/test_field_flow.py</code> (both oracles, xmm case, behaviour readers, the
+withdrawn compile-time claim).</p>
+<h2 id="gadb-string-block-offset-base-corrected-2026-08-02-live-verified-100-00">GADB String Block — offset base (CORRECTED 2026-08-02, live-verified 100.00%)</h2>
+<p><strong>String offsets are measured from the ROOT TYPE NAME, not from the parser's <code>sb_start</code>.</strong> The root
+type (<code>"GameDatabase\0"</code> — 12 chars + null = <strong>13 bytes</strong>) IS string offset 0 of the block.</p>
+<blockquote>
+<p><strong>"TWO DIFFERENT ORIGINS, BOTH REAL" IS WITHDRAWN — CORRECTED 2026-08-16. THERE IS ONE
+ORIGIN.</strong> This section used to add that <code>h[0]</code>/<code>string_block_size</code> and therefore <code>desc_start</code>
+are measured from just AFTER the root type. They are not: <strong><code>h[0]</code> INCLUDES the root type
+name</strong>, so</p>
+<pre><code>desc_start = root_start + h[0]                      (NOT root_end + 1 + h[0])
+val_start  = desc_start + descriptor_count * 15     exact — no fudge, no search
+</code></pre>
+<p>Verified exactly, three containers with three different root lengths:</p>
+<table>
+<thead>
+<tr>
+<th>container</th>
+<th>root type</th>
+<th>root_len</th>
+<th><code>root_start + h0 + n*15</code></th>
+<th>measured <code>val_start</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>world layer OBJR block</td>
+<td><code>ObjectPropertyDB</code></td>
+<td>17</td>
+<td>46 + 2236 + 3825</td>
+<td><strong>6107</strong></td>
+</tr>
+<tr>
+<td><code>.bvr</code> behaviour graph</td>
+<td><code>BlendDB</code></td>
+<td>8</td>
+<td>115 + 64684 + 31905</td>
+<td><strong>96704</strong></td>
+</tr>
+<tr>
+<td>main GADB (hotchunk[0])</td>
+<td><code>GameDatabase</code></td>
+<td>13</td>
+<td>71 + 10412928 + 5429085</td>
+<td><strong>15842084</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The old <code>desc_start</code> was high by exactly <code>root_len</code>, which is what the value-section
+"13 bytes fewer" search was absorbing — and it is also why the DISK DESCRIPTOR FIELD ORDER
+was recorded 13 bytes off (see the Anvil decoder section above). The parser's fixed <code>- 16</code>
+search window worked only while <code>root_len &lt;= 16</code>, so <strong>every container with a 16+ character
+root type refused to parse at all</strong> — <code>ObjectPropertyDB</code> (17) raised "Cannot locate value
+section preamble in GADB", which made every world placement layer look like an unknown
+format. Fixed in <code>official_gadb_modifier.__init__</code>: derive <code>nominal_end - root_len</code>, check
+the preamble is there, else fall back to the scan widened by <code>root_len</code>. Control after the
+change: <code>OpsCaragorCage</code> fc 11 and the same <code>ScenarioType</code>, 22 SpawnAmbient categories,
+250 distinct AITypes — unchanged.</p>
+</blockquote>
+<p><code>OfficialGADBModifier._read_str</code> used to compensate with a BACKWARD WALK to the previous null. The
+block uses shared-SUFFIX storage, so any name that is a suffix of a longer string came back as the
+enclosing string — <code>"Unpause"</code> read as <code>"GameUnpause"</code>, <code>"DLC4_GliderDissolvePitch"</code> as
+<code>"\CDLC4_GliderDissolvePitch"</code>, some record names as a neighbouring category name.
+<code>_find_full_string</code> (category paths) was worse: its <code>&gt;= string_block_size</code> bound also rejected the
+tail of the block, so <strong>~95 categories parsed with an EMPTY path</strong>.</p>
+<p>Fix is surgical — <code>sb_start</code>/<code>desc_start</code>/<code>val_start</code>/rebuild math must NOT move, only the string
+base: <code>str_base = root_start</code>, <code>str_span = string_block_size + 13</code>, forward read, no walk.</p>
+<p>Measured against live memory, full sweep of every record in every category:
+<strong>263,815 / 263,818 exact (100.00%)</strong> vs <strong>67.4%</strong> for the backward walk (3 residuals are non-ASCII).</p>
+<blockquote>
+<p>The parser's own <code>-16</code> fudge for a value section "13 bytes fewer observed in practice" was the
+SAME 13. A magic constant appearing in two unrelated fudges is a base error, not a quirk — and a
+compensating heuristic ("walk backward to find the true start") is a bug report, not a solution.
+<strong>This warning was right and was still under-applied</strong>: the same 13 turned out to be load-bearing
+in a THIRD place (the disk descriptor field order) and a FOURTH (<code>desc_start</code> itself). When a
+constant equals the length of something in the file, it is that thing — chase every use of it.</p>
+<p><strong>Anything derived from Anvil record/category names before 2026-08-02 may be wrong</strong> for
+suffix names. Rescan the archive index rather than trusting the cache (done 2026-08-02:
+374,288 records re-indexed; <code>list_records</code> now returns <code>Pause</code>/<code>Unpause</code>, was
+<code>GamePause</code>/<code>GameUnpause</code>).</p>
+</blockquote>
+<p><strong><code>_read_str_forward</code> (field VALUE strings) was broken the same way</strong> — verified separately
+against live over 753 String/String2 fields: <strong>old reader 0/753, corrected base 753/753</strong>. It
+read from <code>sb_start</code>, i.e. 13 bytes past the origin, so every value string came back TRUNCATED
+by whatever prefix those bytes cut off (<code>'AD16_OverlordDefeated'</code> → <code>'Defeated'</code>,
+<code>'Zone Map'</code> → <code>'ewZoneMap'</code>). All three readers now share one base. Consequence: String fields
+are a COMPARED lane in <code>disk_delta</code> instead of a skipped one.</p>
+<h2 id="gadb-offline-modification-anvil-s-substrate-proven">GADB Offline Modification (Anvil's substrate, PROVEN)</h2>
+<ul>
+<li>The GADB is stored <strong>RAW</strong> (no Firebird container) as entry[0] of hotchunk.arch06.</li>
+<li>Records are tightly packed — in-place expansion impossible; Anvil's substrate rebuilds the
+  entire value section when a record needs extra RecordLink slots (identity rebuild = byte-perfect).</li>
+<li>Injection uses <strong>append-and-redirect</strong>: new compressed data appended at archive end, entry table
+  pointer redirected; original data untouched; <code>.vanilla</code> backup created automatically.</li>
+<li>Oodle chunked compression: 56.7MB → 7.5MB (13.2%), 867 chunks, round-trip exact.</li>
+<li>ALL of this is driven through <code>call("bake"/"field_edit"/"swap_spawn"/...)</code> — never hand-roll it.</li>
+</ul>
+<hr />
+<h2 id="the-category-cache-1-260-statics-that-name-a-gamedb-category-measured-2026-10-28">The category cache - 1,260 statics that name a GameDB category (MEASURED 2026-10-28, offline)</h2>
+<p>Reader: <code>call("category_cache", q="Combat/")</code> (<code>aire/analysis/category_cache.py</code>, cached to
+<code>aire/data/gamedb/category_cache.json</code>).</p>
+<p><code>0x1B09BBC</code> (vt_0x1FBD460::vf3, one 70 KB function) fills the static slots 0x26FFCE8..0x2701FD8 and <code>0x1BFDC4C</code> 34 more past it - <strong>1,260 slots in all</strong> (CORRECTED the same day from 1,119, which counted only the first initializer and only <code>rdx</code> name loads):
+for each category name <code>StringHash(name)</code> -&gt; category lookup <code>0x45A0E0</code> -&gt; <code>mov [slot], rax</code>. <strong>1,027</strong>
+slots are read by other code, so a function that reads slot X provably works with category X. Most read:
+Interface/Shared 80, Interface/ElementSetup 53, Faction/Definition 51, Inventory/Items 41, Quest/Quests 39, Quest/Objectives 32, Quest/Jobs/Definition 29, Profile/CommandSets 26, Interface/Color 23, Faction/Events/Events 21, Faction/Roles/Definitions 20, Profile/GlobalOptions 18. The labeller now takes these as named globals <code>cat:&lt;Category&gt;</code> (weak tier, never above an
+identity): 1,944 functions carry the evidence with the full 1,260-slot cache (628 newly read
+<code>uses:cat:&lt;Category&gt;</code> after the first run; named 82.0% -&gt; 82.1%, direct evidence 56.0% -&gt; 56.4%). The planner's own step table (0x2A359D8, kb/ai-planner.md) is a separate, older cache.</p>
+<h3 id="lua-db-types-gamedb-categories-measured-2026-10-28-offline-live-read-agrees-200-">Lua DB* types -&gt; GameDB categories (MEASURED 2026-10-28, offline; live read agrees 200 / 200)</h3>
+<p>Reader: <code>call("lua_db_types", q="Faction")</code>. The world scripts name GameDB records through <code>DB*</code> types
+(<code>DBDOGStateType.EnvOps_...</code>, <code>DBFaction.MinasIthil</code> ...). <code>0x1B9F69C</code> registers each type name
+against a category-cache slot through <code>0x1CFF2E4</code> ("WBDBRecordLookup"): 200 types, all resolved:
+DBAIAlertnessLevel = <code>AI/Alertness/Level</code>, DBAIAlertnessProfile = <code>AI/Alertness/Profile</code>, DBAIAlarmLevel = <code>AI/SpawnAmbient/AlarmLevels</code>, DBAICircleAlly = <code>AI/CircleAlly</code>, DBAIInvestigation = <code>AI/Investigation</code>, DBAISensorSet = <code>AI/SensorSets</code>, DBAITemplate = <code>AI/Templates</code>, DBAITalk = <code>AI/Talk</code>, DBAICount = <code>AI/Count</code>, DBAISpawnTemplate = <code>AI/SpawnAmbient/AITypes</code>, DBAISummonData = <code>Combat/SummonData</code>, DBPursuitConstraint = <code>AI/PursuitConstraint</code>, DBFaction = <code>Faction/Definition</code>, DBFactionPersonality = <code>Faction/Personalities</code>, DBFactionSimEvent = <code>Faction/Events/SimEvent</code>, DBFactionSimEventList = <code>Faction/Events/SimEventList</code>, DBFactionSimEventPicker = <code>Faction/Events/SimEventPicker</code>, DBFactionAmbushDef = <code>Faction/Ambush/Definition</code>, DBRegion = <code>Regions/Region</code>, DBTravelPoint = <code>Regions/TravelPoint</code>, DBFactionDefinition = <code>Faction/Definition</code>, DBFactionPreset = <code>Faction/PresetMembers</code>, DBFactionRole = <code>Faction/Roles/Definitions</code>, DBFactionRoleList = <code>Faction/Predicates/RoleLists</code>, DBFactionMemberCountFilter = <code>Faction/CountFilters</code>, DBFactionTribe = <code>Faction/Tribes/Definitions</code>, DBFactionTribeList = <code>Faction/Tribes/Lists</code>, DBFactionEvent = <code>Faction/Events/Events</code>, DBFactionEventList = <code>Faction/Events/EventLists</code>, DBFactionTransform = <code>Faction/Transforms</code>, DBFactionReward = <code>Faction/Rewards/Definitions</code>, DBFactionMonument = <code>Faction/Monuments</code>, DBFactionBundlePredicate = <code>Faction/Bundle/Predicate</code>, DBFactionBundleVolume = <code>Faction/Bundle/Volume</code>, DBFactionFortUpgradeDefinitionList = <code>Faction/FortUpgrade/Lists</code>, DBFactionFortUpgradeTransform = <code>Faction/FortUpgrade/Transforms</code>, DBFactionAreaOwnershipTransform = <code>Faction/AreaOwnershipTransform</code>, DBFactionLocationList = <code>Faction/LocationLists</code>, DBFortUpgradeDefinition = <code>Faction/FortUpgrade/Definitions</code>, DBFortUpgradeGroup = <code>Faction/FortUpgrade/Group</code>, DBArea = <code>AI/SpawnAmbient/Areas</code>, DBAlarmArea = <code>AI/SpawnAmbient/AlarmAreas</code>, DBLocation = <code>AI/SpawnAmbient/Locations</code>, DBOffMeshCapabilitySet = <code>PathSystem/OffMeshCapabilitySets</code>, DBSpawnPredicate = <code>AI/SpawnAmbient/Predicates</code>, DBNodeTag = <code>AI/SpawnAmbient/NodeTags</code>, DBSlowMo = <code>SlowMo</code>, DBQuestObjective = <code>Quest/Objectives</code>, DBQuestObjectiveList = <code>Quest/ObjectiveLists</code>, DBQuestObjectivePicker = <code>Quest/ObjectivePicker/Lists</code>, DBQuest = <code>Quest/Quests</code>, DBQuestList = <code>Quest/QuestLists</code>, DBQuestType = <code>Quest/Types</code>, DBQuestFailureReason = <code>Quest/FailureReason</code>, DBQuestMemberResolution = <code>Quest/UIMemberResolution</code>, DBQuestCheckpoint = <code>Quest/Checkpoints</code>, DBQuestJob = <code>Quest/Jobs/Definition</code>, DBQuestJobGroup = <code>Quest/Jobs/Group</code>, DBDynamicChallenge = <code>Quest/DynamicChallenge</code>, DBDynamicChallengeGoal = <code>Quest/DynamicChallengeGoal</code>, DBTutorialGameplay = <code>Interface/Tutorial/Gameplay</code>, DBTutorialPausing = <code>Interface/Tutorial/Pausing</code>, DBNavMarkerType = <code>Interface/NavMarkerTypes</code>, DBMapMarker = <code>Interface/MapMarker</code>, DBNavMarkerCharacterOverride = <code>Interface/NavMarkerCharacterData/Override</code>, DBProfileCommandSet = <code>Profile/CommandSets</code>, DBAlignments = <code>Character/Alignments</code>, DBCharacterModels = <code>Character/Models</code>, DBCharacterRenderIDSetup = <code>Character/RenderIDs/Setup</code>, DBCharacterRenderID = <code>Character/RenderIDs/IDs</code>, DBAchievements = <code>Interface/Achievements</code>, DBCollectables = <code>Interface/Collectables</code>, DBText = <code>Interface/GFX/Text</code>, DBGameProfileData = <code>Interface/GameProfileData</code>, DBSmartObjects = <code>AI/SmartObjects</code>, DBSmartObjectPicker = <code>AI/SmartObjectPicker</code>, DBFixedArcherSetup = <code>AI/FixedArcherSetup</code>, DBCharacterModelsSkeletonsNodes = <code>Character/Models/Skeletons/Nodes</code>, DBCharacterStateTagVolume = <code>Character/StateTagVolume</code>, DBInventoryItem = <code>Inventory/Items</code>, DBSKillItem = <code>Inventory/Skill/Skills</code>, DBInventoryItemCategoryList = <code>Inventory/ItemCategoryList</code>, DBObstacleCosts = <code>PathSystem/ObstacleCosts</code>, DBCombatAttack = <code>Combat/Attack</code>, DBCombatAttackType = <code>Combat/Predicates/TypeOfAttack</code>, DBCombatAttackTypePicker = <code>Combat/AttackTypePicker</code>, DBCombatNode = <code>Combat/Node</code>, DBCombatCollider = <code>Combat/Collider</code>, DBCombatTree = <code>Combat/Tree</code>, DBCombatState = <code>Combat/States/Definitions</code>, DBCombatAppliedState = <code>Combat/States/AppliedState</code>, DBCombatCategory = <code>Combat/Category</code>, DBCombatAOE = <code>Combat/AOE</code>, DBCombatProp = <code>Combat/Prop</code>, DBCombatCharacterType = <code>Combat/CharacterType</code>, DBCombatCharacterTypeList = <code>Combat/Predicates/CharacterType</code>, DBCombatAimAtNode = <code>Combat/AimAtNode/Nodes</code>, DBCombatHint = <code>Combat/Hint</code>, DBCombatBuff = <code>Combat/Buffs</code>, DBCombatWeaponModeData = <code>Combat/PlayerWeaponModes/Data</code>, DBCombatWeaponModeSlowMo = <code>Combat/PlayerWeaponModes/SlowMo</code>, DBCombatWeaponMode = <code>Combat/PlayerWeaponModes/Modes</code>, DBCombatThreat = <code>Combat/Threat</code>, DBCombatBehaviorState = <code>Combat/BehaviorState</code>, DBCombatVisionModeFXSetup = <code>Combat/FX/VisionModeSetup</code>, DBCombatInterrogationOption = <code>Combat/Interrogation/Options</code>, DBCombatResourceGain = <code>Combat/ResourceGain</code>, DBCombatVariableFloat = <code>Combat/Stat/Variable/Float</code>, DBCombatSeverAction = <code>Combat/Sever/Actions</code>, DBCombatSeverFX = <code>Combat/Sever/FX</code>, DBCombatCooldown = <code>Combat/Cooldown</code>, DBCombatDispatchPredicate = <code>Quest/AutoObjectives</code>, DBDOGScriptID = <code>DynamicObjectGroup/ScriptID</code>, DBDOGVisGroup = <code>DynamicObjectGroup/VisGroup</code>, DBDOGStateType = <code>DynamicObjectGroup/StateType</code>, DBDOGTag = <code>DynamicObjectGroup/Tag</code>, DBDOGTagList = <code>DynamicObjectGroup/TagList</code>, DBFactionTrait = <code>Faction/Traits/Definitions</code>, DBFactionTraitList = <code>Faction/Predicates/TraitLists</code>, DBFactionTraitSpawnerHijack = <code>Faction/Traits/SpawnerHijack</code>, DBFactionRow = <code>Faction/Rows</code>, DBFactionSimEventResultTypePicker = <code>Faction/Events/SimEventResultTypePicker</code>, DBFactionMemberBuilder = <code>Faction/FactionMemberBuilder</code>, DBFactionSimEventSequence = <code>Faction/SimEvent/Sequence</code>, DBFactionSimEventSequenceGroup = <code>Faction/SimEvent/SequenceGroup</code>, DBCameraTransition = <code>Camera/Transition</code>, DBScenarioCategory = <code>AI/SpawnAmbient/SpawnScenarioCategory</code>, DBScenarioSetup = <code>AI/SpawnAmbient/SpawnScenarioSetup</code>, DBPerspectivePuzzle = <code>PerspectivePuzzle/Puzzle</code>, DBGruntTrait = <code>Faction/Grunt/Trait</code>, DBSetMountData = <code>Combat/MountData</code>, DBFireIgnitionType = <code>Fire/IgnitionTypes</code>, DBWorldActiveTagDef = <code>WorldActiveTag/Definition</code>, DBPresentationEvent = <code>Presentation/Events</code>, DBPresentationElement = <code>Presentation/Elements</code>, DBPresentationTicket = <code>Presentation/Tickets</code>, DBPresentationRelay = <code>Presentation/Relays</code>, DBPresentationScriptKey = <code>Presentation/ScriptKey</code>, DBInventoryItemDisplayPredicate = <code>Inventory/DisplayPredicate</code>, DBAIMoraleModifier = <code>AI/Morale/Modifiers</code>, DBAIMoraleRange = <code>AI/Morale/Ranges</code>, DBBattleNodeSetup = <code>AI/BattleNodeSetup</code>, DBAnimationNames = <code>ReferencedAssets/Animation</code>, DBCinematicReference = <code>Character/CinematicsReferences</code>, DBRemovalPolicy = <code>AI/SpawnAmbient/Removal</code>, DBAIDispatchConfig = <code>AI/DispatchConfig</code>, DBBandType = <code>AI/BandTypes</code>, DBLeadPlayer = <code>AI/LeadPlayer</code>, DBXPEvent = <code>XPEvent</code>, DBWorldInfo = <code>WorldInfo</code>, DBDemoSequence = <code>DemoSequence/Definition</code>, DBDemoSequenceScriptCall = <code>DemoSequence/Attribute/ScriptCall</code>, DBLoadingScreen = <code>Interface/LoadingScreen</code>, DBTag = <code>Tags</code>, DBMapCanvasSettings = <code>Interface/MapCanvasSettings</code>, DBMapDisplayTarget = <code>Interface/MapDisplay/Targets</code>, DBGameDataVariable = <code>GameData/Variables</code>, DBGameDataInt = <code>GameData/Predicate/Ints</code>, DBGameDataFloat = <code>GameData/Predicate/Floats</code>, DBGameDataBool = <code>GameData/Predicate/Bools</code>, DBGameDataPredicate = <code>GameData/Predicate</code>, DBDifficultyRange = <code>Difficulty/Ranges</code>, DBCombatScarType = <code>Combat/Scar/Type</code>, DBVisionMode = <code>Client/VisionMode</code>, DBNodeTrackingContext = <code>Character/NodeTrackingContext</code>, DBPerception = <code>AI/Perception</code>, DBPerceptionTargetType = <code>AI/Perception/TargetTypes</code>, DBHierarchyTutorial = <code>Faction/HierarchyTutorial</code>, DBScenarioOverride = <code>AI/SpawnAmbient/SpawnScenarioOverrideList</code>, DBScenarioOverride = <code>AI/SpawnAmbient/SpawnScenarioOverrideList</code>, DBWeatherType = <code>Weather/Types</code>, DBWeatherForecast = <code>Weather/Predicates/Forecast</code>, DBWeatherDefinition = <code>Weather/Predicates/Forecast</code>, DBWeatherPattern = <code>Weather/Patterns</code>, DBDialogEvent = <code>AudioHooks/DialogEvents</code>, DBAudioHookKey = <code>AudioHooks/Keys</code>, DBAudioHookAction = <code>AudioHooks/Actions</code>, DBAudioHookConversation = <code>AudioHooks/Conversations</code>, DBAudioHookMixState = <code>AudioHooks/MixStates</code>, DBCharacterBundle = <code>Server/NPCBundle</code>, DBNPCBundle = <code>Server/NPCBundle</code>, DBNPCBundleList = <code>Server/NPCBundle/Lists</code>, DBRemoteScript = <code>RemoteScript</code>, DBFX = <code>Client/ClientFXList</code>, DBFXSeq = <code>Client/ClientFXSequence</code>, DBEquippableItem = <code>Inventory/EquippedWeaponData</code>, DBArmorData = <code>Inventory/ArmorData</code>, DBMaterialXForm = <code>Combat/FX/MaterialController/Transforms</code>, DBMaterialState = <code>Combat/FX/MaterialController/States</code>, DBOutputChannel = <code>ScriptOutputChannel</code>, DBGroupFilter = <code>ScriptGroupFilter</code>, DBFAComposition = <code>FortAssault/Composition</code>, DBFASide = <code>FortAssault/Side</code>, DBFAFilter = <code>FortAssault/Filter</code>, DBFASpawnTag = <code>FortAssault/SpawnTag</code>, DBGatherParams = <code>AI/SpawnAmbient/GatherParams</code>, DBAutoNodeTag = <code>AI/SpawnAmbient/AutoNodeTag</code>, DBMobMood = <code>Mob/MobMood</code>, DBMobMoodList = <code>Mob/MobMood/List</code>, DBPlayerMovement = <code>Client/PlayerMovement</code>.</p><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
