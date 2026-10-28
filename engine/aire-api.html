@@ -198,6 +198,13 @@ call(&quot;resource_paths&quot;, q=&quot;graugapult&quot;)         # the engine'
 call(&quot;thread_profile&quot;, thread=&quot;RenderThread&quot;,  # (ADDED 2026-10-28, read-only) sampling profiler with
      order_of=[&quot;0x33CD60&quot;])                    # REAL unwinding (stack_walk.py): call tree + child order
                                                # per invocation; suspends only that thread (~100 us)
+call(&quot;world_part_context&quot;, key=...)            # (ADDED 2026-10-28) CADB = Talion's traversal lines
+                                               # (hang / pull-up / vault / rail run masks, planes,
+                                               # volumes, owners); kb/assets-world.md &quot;OBJR closed&quot;
+call(&quot;world_part_blocks_misc&quot;, key=...)        # PFDG prefab tree, KEYF motion paths, Clutter meshes,
+                                               # SWFX weather points
+call(&quot;world_context_live_check&quot;)               # CADB file vs the live ContextActionDB, picking the
+                                               # SERVED patch .objres by content (BEHAVIOR law 17)
 call(&quot;anim_live&quot;, target=&quot;player&quot;)             # (ADDED 2026-10-28, read-only) what a character animates
                                                # now: .bvr state char+0x11B0, clip trackers (clip, time,
                                                # rate, weight, loop) at [[char+0x110]+0x1C0]+0x08
