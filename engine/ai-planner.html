@@ -1,0 +1,418 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI planner: steps, their runtime classes and the step interface - Shadow of War engine reference</title><meta name="description" content="the NPC planner `[char+0x2CE8]`, the plan tree `[char+0x2D38]` (active step stack, priority list, tick / select / update / unwind), the 66 step types and their classes, the step interface; live reader `ai_plan`"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" class="cur" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="ai-planner-steps-their-runtime-classes-and-the-step-interface">AI planner: steps, their runtime classes and the step interface</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Created 2026-10-27 from
+the engine atlas session (offline code reading + class identity; no live writes).
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Sections:</strong>
+- The planner and its steps (DECODED 2026-10-27)
+- The step interface (MEASURED on Flee / FleeAmbush, 2026-10-27)
+- Planner construction and the step factory (MEASURED 2026-10-28, offline)
+- The plan tree: where the running steps live, and its tick (MEASURED 2026-10-28, live + offline)
+- Combat behaviour measured live (2026-10-28) and the global AI constants
+- Open leads</p>
+<hr />
+<h2 id="the-planner-and-its-steps-decoded-2026-10-27">The planner and its steps (DECODED 2026-10-27)</h2>
+<p>Every NPC's behaviour runs through a PLANNER object at <code>[character+0x2CE8]</code> that executes STEPS.
+A step type is a GameDB category under <code>AI/Planner/Steps/</code> (its records hold the tuning:
+<code>FleeAmbush.TraitsRequired</code>, <code>FleeAmbush.SearchDistance</code>, ...) with a C++ class that implements it.
+<code>AI/Planner</code> has 69 categories: <code>Context</code>, <code>Steps</code> (the base), <code>Trees</code> and 66 step types:</p>
+<p>Animate, AssembleAtNode, Attack, AttackPreview, Attract, BaitAttract, BeckonWithTalk,
+CaptureBattleNode, CheerExitCombatSpaceSource, CircleAlly, CircleTarget, CombatRecoil, CombatState,
+CombatTaunt, CombatWeaponChange, Cower, DespawnOffscreen, ElevateTransientAlarm, ExitCombatSpace,
+Fall, FindAlertnessSource, FindPreceivedOpponent, Flee, FleeAmbush, FollowLeader, FollowRoute,
+FollowWaitForBand, GiveUpOnPlayer, GoTo, GoToAndMount, GoToCircleAlly, GoToPreferredAttackPosition,
+GoToRallyPoint, Idle, Investigate, Investigating, LeadPlayer, LeaveObstacle, MenaceTask, Mounted,
+MoveTowardSpawner, NodeAnimate, Patrol, PerformSyncAction, PresentationIdle, Priority,
+ReactToAlertnessChange, ReactToAreaAlarmLevelChange, ReactToDeadBodyInvestigation,
+ReactToGlimpsed, ReactToKnownDeadBody, ReactToMoraleModifier, Retreat, RetreatIdle,
+RetreatToDistance, ReturnToBandLeader, ReturnToBattleNode, ReturnToConfinementNode,
+ReturnToPursuitConstraint, TauntOpponentNonAttackable, TraitCatalystReaction, UseAttackNode,
+UseFixedArcherNode, UseWorkNode, WargChaseTarget, WargCircleTarget.</p>
+<p><strong>Runtime classes, named by the category their methods read</strong> (<code>class_category</code>, rule in
+kb/binary-code.md "Engine atlas"; all RTTI-less; reads = methods' field reads in that category /
+all their category reads):</p>
+<table>
+<thead>
+<tr>
+<th>step</th>
+<th>vtable</th>
+<th>reads</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BaitAttract</td>
+<td>vt_0x1DCAE08</td>
+<td>5/5</td>
+</tr>
+<tr>
+<td>CheerExitCombatSpaceSource</td>
+<td>vt_0x1DC62B8</td>
+<td>5/5</td>
+</tr>
+<tr>
+<td>Cower</td>
+<td>vt_0x1FBCF08</td>
+<td>8/8</td>
+</tr>
+<tr>
+<td>DespawnOffscreen</td>
+<td>vt_0x1FBCE78</td>
+<td>5/7</td>
+</tr>
+<tr>
+<td>FindAlertnessSource</td>
+<td>vt_0x1FBCDE8</td>
+<td>5/5</td>
+</tr>
+<tr>
+<td>FindPreceivedOpponent</td>
+<td>vt_0x1FBCD58</td>
+<td>5/5</td>
+</tr>
+<tr>
+<td>Flee</td>
+<td>vt_0x1DC5010</td>
+<td>5/5</td>
+</tr>
+<tr>
+<td>FleeAmbush</td>
+<td>vt_0x1FBCCC8</td>
+<td>7/7</td>
+</tr>
+<tr>
+<td>GiveUpOnPlayer</td>
+<td>vt_0x1DB0D38</td>
+<td>3/3</td>
+</tr>
+<tr>
+<td>Idle</td>
+<td>vt_0x1DB57B0</td>
+<td>5/5</td>
+</tr>
+<tr>
+<td>Investigate</td>
+<td>vt_0x1DC4ED0</td>
+<td>4/5</td>
+</tr>
+<tr>
+<td>Investigating</td>
+<td>vt_0x1DB55F0</td>
+<td>3/3</td>
+</tr>
+<tr>
+<td>ReactToAlertnessChange</td>
+<td>vt_0x1DB5720</td>
+<td>5/5</td>
+</tr>
+<tr>
+<td>ReactToAreaAlarmLevelChange</td>
+<td>vt_0x1DB5520</td>
+<td>4/4</td>
+</tr>
+<tr>
+<td>RetreatIdle</td>
+<td>vt_0x1FBC8C0</td>
+<td>3/3</td>
+</tr>
+<tr>
+<td>WargChaseTarget</td>
+<td>vt_0x1DCB0D8</td>
+<td>3/3</td>
+</tr>
+</tbody>
+</table>
+<p>Nearby AI classes named the same way: AI/SmartObjects vt_0x1DB0478 / vt_0x1DC5F50,
+SmartObjectPicker vt_0x1DB0608, SpawnAmbient/SpawnVolume vt_0x1DCAEC8, SpawnScenarioSetup
+vt_0x1FB6668, BattleNodeCapture vt_0x1FB9E90, LeadPlayer vt_0x1FBCA70, Corpse vt_0x1DC6208,
+TargetSelects vt_0x22FF778, Services/ExtraData/TraitTracker vt_0x22FF748, MoveTowardSpawner
+vt_0x1DA94B8, BandTypes/BandTypeData/FollowLeader vt_0x1FBAC38. The other 50 step types read no
+field through a recognised accessor in their own methods; their classes are among the unnamed
+vtables in the same modules (<code>module_dossier(rva=0x3EC558)</code> lists them with their slots).</p>
+<h2 id="the-step-interface-measured-on-flee-fleeambush-2026-10-27">The step interface (MEASURED on Flee / FleeAmbush, 2026-10-27)</h2>
+<p>Six step classes in the planner module fill the same slots (vf0, vf1, vf5, vf8, vf9, vf10, +vf16).
+Read from Flee (vt_0x1DC5010) and FleeAmbush (vt_0x1FBCCC8):</p>
+<table>
+<thead>
+<tr>
+<th>slot</th>
+<th>Flee / FleeAmbush</th>
+<th>role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vf0</td>
+<td>0x72A3AC / -</td>
+<td>scalar deleting destructor: dtor 0x72A3E0, then <code>0x8C4370(this, 0x5F0)</code> when bit 0 of the flag is set. <strong>A Flee step is 0x5F0 bytes</strong>; 0x8C4370 (5-byte thunk, 4,839 callers) is the sized <code>operator delete</code></td>
+</tr>
+<tr>
+<td>vf1</td>
+<td>0x780680 / 0x780690</td>
+<td>writes 2 bytes to <code>out</code>: <code>{class constant (Flee 1, FleeAmbush 0), this+0x19}</code>; the vf1s of all step classes sit together at 0x780680-0x780710</td>
+</tr>
+<tr>
+<td>vf3</td>
+<td>-</td>
+<td>PREPARE(ctx): called on each candidate right before vf5 at plan selection (0x191030)</td>
+</tr>
+<tr>
+<td>vf4</td>
+<td>-</td>
+<td>RELEASE: after a rejected vf5, and after vf10 when a step leaves the stack</td>
+</tr>
+<tr>
+<td>vf5</td>
+<td>0x4473A4 / 0x444964</td>
+<td><strong>EVALUATE(ctx, &amp;out) -&gt; status at plan SELECTION</strong> (0x191030): 0 = take this step, non-zero = reject (CORRECTED 2026-10-28, twice: first "begin", then "called from the tree build" - that call, 0x45B614 &lt;- 0x45B290, is the ServiceSet loop on SERVICE objects, not steps). Returns <strong>2</strong> when the precondition fails (<code>NPC::IsFleeing(this+8)</code> false; FleeAmbush also needs the player's bodyguard, <code>TraitsRequired</code> and <code>SearchDistance</code> from its record)</td>
+</tr>
+<tr>
+<td>vf7</td>
+<td>-</td>
+<td>called on the finished step during unwind; a non-null result is copied into the parent's context (LEAD: result payload)</td>
+</tr>
+<tr>
+<td>vf8</td>
+<td>0x4E7DD0 / 0x7F7DE0</td>
+<td><code>return true</code> (both); the vf8s sit together at 0x7F7CC0-0x7F7E90</td>
+</tr>
+<tr>
+<td>vf9</td>
+<td>0x3EC558 / 0x1B01438</td>
+<td>UPDATE(forced, ctx = tree+0x48, &amp;out) -&gt; status, from 0x191ADC every tick: 0 = keep running, 1 or 2 = finished; returns 2 (abort) when <code>[planner+0x810]</code> no longer equals the target the step stored (Flee <code>this+0x5E0</code>, FleeAmbush <code>this+0x430</code>)</td>
+</tr>
+<tr>
+<td>vf10</td>
+<td>0x359844 / 0x1B012D0</td>
+<td>END(reason): reason 1 when the step finished with status 1, else 2. Cancels the step's move request (0x44344C on <code>this+0x20</code> / <code>this+0x48</code>), stops fleeing (0x359988), clears <code>[planner+0x697]</code>, sets <code>[planner+0x500] = 1.0f</code></td>
+</tr>
+<tr>
+<td>vf11</td>
+<td>-</td>
+<td>EVENT(msg): 0x3F5B38 sends one message to every active step (from character vf19)</td>
+</tr>
+<tr>
+<td>vf12 / vf13</td>
+<td>-</td>
+<td>CHILD FINISHED, on the parent: vf13 when the child returned 1, vf12 when it returned 2; a non-zero return ends the parent too (behaviour-tree propagation, 0x3763A8)</td>
+</tr>
+<tr>
+<td>vf14</td>
+<td>-</td>
+<td>called on every active step by 0x3F566C (from 0x4428B0, which also reads <code>AI/Count/Configuration.RunSimulation</code>)</td>
+</tr>
+<tr>
+<td>vf15</td>
+<td>-</td>
+<td>STILL VALID(ctx) -&gt; bool: 0x3F5AD0 (from character vf53) unwinds the stack from the first step answering false</td>
+</tr>
+<tr>
+<td>vf16</td>
+<td>- / 0x1B00D28</td>
+<td>debug description: appends "Approaching" or "<not active>"</td>
+</tr>
+<tr>
+<td>vf17</td>
+<td>-</td>
+<td>debug filter match (0x1B04B68, only while the byte at 0x2A361F1 is set; filters at 0x2A361F8 / 0x2A36200)</td>
+</tr>
+</tbody>
+</table>
+<p>Status meaning (LEAD): 1 = succeeded, 2 = failed / aborted - Flee returns 2 both for a failed
+precondition and for a lost target. Would settle it: <code>ai_plan_watch</code> around a step that
+completes normally (a GoTo arriving).</p>
+<p>Step object: <code>+0x08</code> the NPC (CCharacter), <code>+0x10</code> the step's definition RECORD (its
+<code>AI/Planner/Steps/&lt;Type&gt;</code> record; the field accessors take it), <code>+0x19</code> a byte that vf1 reports.
+Planner object <code>[character+0x2CE8]</code>: <code>+0x810</code> the current target / plan the steps validate
+against, <code>+0x7D0</code> read by Flee's update, <code>+0x697</code> byte and <code>+0x500</code> float reset on END, <code>+0x910</code>
+= despawn requested (memory: war-spawner-pile-backlog).</p>
+<p><strong>Why it matters for mods:</strong> a step's behaviour is tuned by its record (writable through the
+write gate, <code>field_flow</code> says when a change is picked up), and its preconditions are code in vf5 /
+vf9. Status 2 from either ends the step, so "make orcs never flee" is a precondition question
+(<code>NPC::IsFleeing</code>, the record's gates), not a matter of patching the step.</p>
+<h2 id="planner-construction-and-the-step-factory-measured-2026-10-28-offline">Planner construction and the step factory (MEASURED 2026-10-28, offline)</h2>
+<ul>
+<li><strong>The planner object</strong>: the AI character class (vt_0x1FB3640) constructs it in 0x49B858
+  (<code>lea rcx, [this+0x2CE8]; call 0x49CB20</code>): 0x49CB20 = <code>malloc(0xFF8)</code> + constructor 0x45F354, stored
+  at <code>[character+0x2CE8]</code> - a 0xFF8-byte object with no vtable (seven 0x58-byte sub-objects at
+  +0x118..+0x328 built by 0x45FC68, more members after). The character's destructor 0x49CEC0
+  tears down +0x2CE8, +0x2CE0, +0x2CD8 in reverse order. 779 functions read the pointer (64-bit
+  loads of <code>[x+0x2CE8]</code>, byte scan + disassembly check), including the NPC script natives
+  (<code>NPC::Search</code>, <code>NPC::CircleMidPoint</code>) and character methods vf19 / vf54 / vf75 / vf111.</li>
+<li><strong>The step tree is built once, at character setup</strong>, from the NPC's <code>AI/CharacterTypes.PlanTree</code>
+  record (accessor 0x7279C0) and stored at <code>[character+0x2D38]</code> (next section): <code>vt_0x1FB3640::vf12</code> (0x3FA718) -&gt; 0x45AFDC -&gt;
+  0x6FC774 -&gt; 0x6FC7B8 -&gt; ... -&gt; <strong>the step FACTORY 0x45CEE8</strong> (2,800 bytes). The factory reads the
+  step record's category (<code>[record+0x18]</code>) and compares it with a table of cached category
+  pointers at 0x2A359D8 + n x 0x18, jumping to the type's creator: Flee 0x6E71D8 -&gt; ctor 0x6E7288,
+  FleeAmbush 0x6EB52C -&gt; 0x6EB5DC, Cower 0x1ADD54C -&gt; 0x1B02E84 (all three only called from the
+  factory). So <strong>a step's GameDB record TYPE selects its C++ class</strong>. The factory recurses
+  (0x45CEE8 -&gt; 0x45C724 -&gt; 0x45CEB0 -&gt; 0x45CEE8): composite steps build their child steps.</li>
+<li><strong>Slot calls located</strong>: vf10 (<code>+0x50</code>, END) is called by 0x3EB9C4, reached from character vf17
+  (0x4A1764), the character destructor 0x49CEC0 and the tick's reset request (below).
+  CORRECTED 2026-10-28: "vf5 is called by 0x45B614 from the tree build" - 0x45B290 is called with
+  <code>[character+0x2D00]</code> and each <code>AI/CharacterTypes.ServiceSet</code> record (the loop at 0x45B1B8), so
+  that <code>+0x28</code> call is on a SERVICE; steps get vf5 at plan selection (next section).</li>
+<li><strong>All 64 factory branches mapped</strong> (live category table + the creator's constructor chain; script
+  <code>step_factory_map.py</code>, 2026-10-28): 64 / 64 resolve a category and a class vtable; the 16 classes
+  named by <code>class_category</code> above agree 16 / 16. Shared bases seen in the constructor chains:
+  vt_0x1FBD1D8 (every step), vt_0x1DAA7E8 / vt_0x1DB5500 / vt_0x1DB1050 (move-request steps:
+  Flee, FleeAmbush, DespawnOffscreen). The live reader <code>ai_plan</code> names steps from their record's
+  category, so it needs no table.</li>
+</ul>
+<h2 id="the-plan-tree-where-the-running-steps-live-and-its-tick-measured-2026-10-28-live">The plan tree: where the running steps live, and its tick (MEASURED 2026-10-28, live + offline)</h2>
+<p>The planner at <code>+0x2CE8</code> holds NO step (a two-level pointer scan of its 0xFF8 bytes over 40 NPCs
+found only stray hits; <code>+0x7F8</code> is an intrusive list of observer hooks from many objects). The
+steps live in the <strong>plan tree</strong> at <code>[character+0x2D38]</code>, a unique_ptr: 0x45AFDC builds it with
+0x6FC774 from the PlanTree record and move-assigns it (0x75F2DC; the old tree is freed by 0x3EB630).
+Live check, desert, 74 / 74 spawned NPCs (all vt_0x1FB3640) have one; trees: BasicEnemy 62, Warg 6,
+BasicEnemy_Archer 5, Troll 1.</p>
+<table>
+<thead>
+<tr>
+<th>tree offset</th>
+<th>holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>the <code>AI/Planner/Trees</code> record</td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>the NPC</td>
+</tr>
+<tr>
+<td>+0x10</td>
+<td>the root step: AttackPreview <code>ForcedAttack</code> in 74 / 74</td>
+</tr>
+<tr>
+<td>+0x18 / +0x20</td>
+<td><strong>ACTIVE STACK</strong>, 0x18-byte entries <code>{u8 ticks, u32 status @+4, u64 @+8, step* @+0x10}</code>, root first, the running leaf last. Example: <code>Priority:IsFleeing (ticks 0) -&gt; Flee:Flee (ticks 1)</code></td>
+</tr>
+<tr>
+<td>+0x30 / +0x38</td>
+<td>every step of the tree, 0x10-byte pairs <code>{step*, u8 forced_ok @+8, u8 presentation_ok @+9}</code>, in the order selection tries them. BasicEnemy: 53 steps, 53 / 53 resolve to a typed record</td>
+</tr>
+<tr>
+<td>+0x48</td>
+<td>the context passed to step slots</td>
+</tr>
+<tr>
+<td>+0x50 / +0x51 / +0x52</td>
+<td>replan request / presentation latch / reset request</td>
+</tr>
+</tbody>
+</table>
+<p>A step's <code>+0x10</code> record names its type through its category (<code>AI/Planner/Steps/&lt;Type&gt;</code>), so the
+vtable-to-type table is not needed to read a plan.</p>
+<p><strong>The tick</strong> <code>0x1919C8(tree, forced)</code>:
+- callers: <code>vt_0x1FB3640::vf119</code> (0x2F79A4, per frame, forced = 0, skipped while 0x11548E0(npc))
+  and 0x2FD850 (forced = 1), reached from 0xF41E30's batch right after
+  <code>Quest_AI_REPLAN_Requesting_replan...</code> (a quest-requested replan ticks at once). The label
+  "RigidBody::vf2" that 0x2F79A4 carried was a vtable-split artifact (kb/binary-code.md, phantom starts).
+- <code>+0x52</code> set -&gt; 0x3EB9C4 ends every active step (vf10) and clears it.
+- the planner's presentation state (0x190FF0 = <code>planner+0xB20 || +0xB18 || +0xB1C</code>) is latched in
+  <code>+0x51</code>; on its rising edge 0x4E7E04 ("presentation started") unwinds the plan, so a scene pre-empts
+  whatever the NPC was doing.
+- <code>+0x50</code> set and character vf113(1) true, or an empty stack -&gt; 0x3F65F4 -&gt; <strong>SELECT</strong> 0x191030:
+  walk +0x30 in order, skip the running step and every pair not allowed now (0x191374: a forced
+  tick needs byte +8, a presentation needs byte +9), call vf3 then vf5; <strong>the first step whose vf5
+  returns 0 is pushed</strong> - list order is priority order.
+- <strong>UPDATE</strong> 0x191ADC: each stack entry with <code>ticks != 0</code> and status 0 gets vf9; a non-zero result
+  either parks in the entry (when a deeper entry follows) or finishes the top step via 0x376E28.
+- <strong>UNWIND</strong> 0x376E28 / 0x3763A8: the finished step gets vf10(reason) and vf4 and is popped; its
+  parent gets vf13 / vf12 with the child's status and ends too when that returns non-zero.</p>
+<p>Other tree methods: 0x3F5B38 (vf11 event broadcast, from character vf19), 0x3F5AD0 (vf15
+validity, from character vf53), 0x3F566C (vf14, from 0x4428B0).</p>
+<p><strong>Read it live:</strong> <code>call("ai_plan")</code> (every NPC: tree, stack, leaf; 74 NPCs in ~0.1 s; first run
+read leaves Attack 10, FollowLeader 9, Flee 8, CircleTarget 7, MenaceTask 7, FollowRoute 7,
+CombatRecoil 7, Idle 6, Mounted 5, ...), <code>call("ai_plan", steps=True)</code> (+ the priority list),
+<code>call("ai_plan_watch", seconds=30)</code> (leaf transitions; BUILT, the one run so far saw a frozen world
+clock - game unfocused - so transitions are NOT yet measured). Code anchors guarded by
+<code>tests/test_ai_plan.py</code> (13 / 13).</p>
+<p><strong>Why it matters for mods:</strong> "what is this orc doing and why" is a pure read. A behaviour change
+has three levers, in increasing risk: the step's RECORD (tuning, read by vf5 / vf9), the pair
+bytes +8 / +9 (whether a step may be chosen in a forced replan / during a presentation), and the
+ORDER of +0x30 (priority). None of them has been written yet; the pair bytes and the order are
+per-NPC heap state, re-built with the tree (<code>vt_0x1FB3640::vf12</code>), so a write would last until the
+NPC's tree is rebuilt.</p>
+<h2 id="combat-behaviour-measured-live-2026-10-28-and-the-global-ai-constants">Combat behaviour measured live (2026-10-28) and the global AI constants</h2>
+<p><strong>Live combat capture (MEASURED, desert, 73.5 s of world clock, 1,215 samples, read-only;
+<code>combat_capture.py</code> in the session scratchpad):</strong> up to 17 NPCs engaged against the player, one
+fight circle (the player's) the whole time. In 122 timeline samples, NPCs whose leaf step was
+<code>Attack</code>: 0 in 65, 1 in 32, 2 in 25, never 3+. Typical snapshot: 10-12 in <code>CircleTarget</code>, 1-2 in
+<code>Attack</code>. Leaf transitions: CircleTarget -&gt; Attack 30, Attack -&gt; CircleTarget 25,
+GoToPreferredAttackPosition -&gt; CircleTarget 25, CircleTarget -&gt; CombatRecoil 19, CircleTarget -&gt;
+GoToPreferredAttackPosition 17, CombatRecoil -&gt; CircleTarget 16. So the planner's CircleTarget /
+Attack alternation IS the fight circle handing out attack turns (kb/combat-systems.md "Fight
+circle"). The suspend byte <code>npc+0x2C21</code> never fired and no stack entry parked a status in the
+whole capture (both stay open leads).</p>
+<p><strong><code>AI/Constants</code> (one record, <code>Constants</code>)</strong>: PersonalBubbleDistance 50, ThreatUnseenTime 10 s,
+OnScreenCheckDelay 0.1 s, RetreatThreshold 3, RetreatCount -1, BrandedDefendPlayerMinimumRange
+500, Find<em>UnreachablePositionDelay pools, BattleNodeMaxSelectionsPerFrame 255 / Child 32,
+</em><em>MaximumAllyGruntsInCombatSpace 10 / MaximumOpponentGruntsInCombatSpace 10</em>* (registered
+<code>min=0;max=10</code>), DefaultCharacterModel Orc_Infantry, NPCKnockBackAttack NPC_Knock_Back. The grunt
+caps are read through 0x6DD4B0(ally): a live override <code>[[GameManager]+0x6C60]+0x588</code> (ally) /
+<code>+0x58C</code> (opponent) wins when &gt;= 0, else the record (the <code>System::ClearRetreatCount</code> label on the
+record getter is a shared-body name). The same field exists on <code>Quest/Quests</code> (<code>min=-1;max=10</code>):
+LEAD - the quest system (<code>[GM+0x6C60]</code>, vt 0x1FCD308) copies the active quest's value into the
+override; both read -1 in free roam (MEASURED).</p>
+<p><strong><code>AI/Simulation/*</code> (15 categories) = the cheap crowd AI of army battles:</strong> 12 <code>Configurations</code>
+(OrcDefender, Spiders, FellBeast, ...) each pick animation pools (Idle / Movement / OffMesh /
+Activity / Attack / Recoil), <code>CanTargetNonSimulated</code>, riders, and an attack budget
+<code>AttackThrottling</code> {AttackCapacity, AttackWeight}: Grunt 4 / 1 (four grunts on one target),
+Named 4 / 4 (one), Warg 8 / 4, Troll 20 / 20, FellBeast 40 / 4. A second attacker limit,
+separate from the fight circle.</p>
+<p><strong><code>AI/LeadPlayer</code> (16 records)</strong>: escort / guide NPCs (e.g. DLC3_Architect): ReachRadius,
+LeadRange / SlotRadius pools, WaitWidth / WaitExtension, beckon delays + audio prompt, repath
+delays, MovementData -&gt; <code>AI/BandTypes/BandMovementData</code>.</p>
+<h2 id="open-leads">Open leads</h2>
+<ul>
+<li>Status 1 vs 2 meaning (LEAD above) and vf8 (<code>return true</code> in both read classes).</li>
+<li>The quest replan batch 0xF41E30 (0xA8-byte entries) and what <code>forced</code> changes beyond pair byte +8.</li>
+<li>What suspends the plan: 0x11548E0(npc) = <code>byte [npc+0x2C21] != 0</code>, the same byte 0x2FD850
+  checks, so ONE byte stops both ticks (MEASURED, code; 0 / 74 NPCs had it set in the desert read).
+  Writers (byte scan, 4 sites in 4 functions): 0x659884 sets it to 1 for the character at <code>+0x20</code>
+  of an entry whose byte <code>+0x58</code> is set (callers 0x658CBC / 0x6597C8, then
+  <code>CCharacter::IsPlayer</code>); 0x4C4B70 clears it while walking 0x60-byte entries <code>{+0x20 character}</code>
+  that also query <code>CCharacter::GetMount</code> (LEAD: a synchronized-action / attach owner takes the NPC
+  over). Would settle it: read the byte live during a mount, a brutal sync kill and a dialogue.</li>
+<li>The debug switch byte 0x2A361F1 + filters 0x2A361F8 / 0x2A36200 (0x1B04B68): whether the
+  planner's debug output survives in this build (logging is mostly compiled out).</li>
+<li>50 step types without a <code>class_category</code> name (the factory map types all 64 by construction).</li>
+</ul><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
