@@ -1,0 +1,735 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Identity: engine graph, RecordLink spine, primary records, name ambiguity, ASLR hygiene - Shadow of War engine reference</title><meta name="description" content="engine graph, RecordLink spine, primary records, name ambiguity, ASLR hygiene"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" class="cur" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="identity-engine-graph-recordlink-spine-primary-records-name-ambiguity-aslr-hygie">Identity: engine graph, RecordLink spine, primary records, name ambiguity, ASLR hygiene</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Moved verbatim from
+CLAUDE.md on 2026-10-27 (original lines 4340-4865); heading levels normalised, text unchanged.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Read with care:</strong>
+- "Live Record Resolution" (2026-04) is superseded by the RecordLink spine (idmap / rl_resolve).</p>
+<p><strong>Sections:</strong>
+- Engine Graph — the unification layer, and its silent-orphaning trap (AUDITED 2026-08-03)
+- RecordLink Spine — the cross-session primary key (BUILT 2026-08-02)
+- Primary Records — the other 60% of the GADB (CRACKED 2026-08-03)
+- Record-Name Ambiguity (MEASURED 2026-07-28)
+- ASLR Reference Hygiene (AUDITED 2026-07-28)
+- Live Record Resolution (PROVEN 2026-04-23)</p>
+<hr />
+<h2 id="engine-graph-the-unification-layer-and-its-silent-orphaning-trap-audited-2026-08">Engine Graph — the unification layer, and its silent-orphaning trap (AUDITED 2026-08-03)</h2>
+<blockquote>
+<p><strong>REBUILT 2026-10-05 on the xref index (SCHEMA_VERSION 6): 2,764,885 nodes / 6,040,321 edges,
+182 s</strong> (<code>engine_graph_3220bdc8276aebf8</code>). The native stage is now <code>native_index</code>
+(<code>graph_planes.ingest_native_index</code>, 10 s): one <code>function</code> node per FUNCTION (243,845), the
+26,293 <code>.pdata</code> fragments and 4,822 tails as <code>function_fragment</code> / <code>function_tail</code> nodes
+<code>PART_OF</code> their function, and edges the per-entry call graph never had:
+<code>CALLS</code> 433,248 (function level, site counts), <code>TAIL_CALLS</code> 28,308, <code>TAKES_ADDRESS</code> to functions
+33,390 (callback registration), <code>CALLS_IMPORT</code> 4,802 to 560 <code>import</code> nodes (real IAT),
+<code>READS_GLOBAL</code> 13,402 / <code>WRITES_GLOBAL</code> 3,665 / <code>TAKES_ADDRESS</code> 7,411 to every global the
+resolver stage names (SpawnManager: 52 readers, writers <code>0x1A902C8</code> + <code>0x1A90C60</code>). Struct-access
+profiles of fragments are summed into their function (12,173 folded). The stage deletes its own
+<code>source='xref_index'</code> rows before re-ingesting, so an index rebuild updates the graph in place
+instead of minting a new database. <code>static_callgraph.json</code> is the fallback only.
+<strong>FIXED 2026-10-05 (native_index revision 1) - the global join depended on BUILD ORDER.</strong> It
+joined to "any node with an rva", so once later stages added <code>gadb_type</code> / <code>schema_object</code> /
+structural <code>vtable</code> nodes, an incremental re-run produced 52,768+ extra READS/TAKES edges a cold
+build would not have (READS_GLOBAL 13,402 -&gt; 56,690). It now joins to the resolver's kinds only
+(singleton, manager, rtti_class, resolver vtables) - back to 13,402 / 3,665 / 7,403 - and deletes
+<code>function</code> nodes the index no longer lists when nothing references them (34 removed after the
+runtime-pointer fix). A stage must never read nodes a LATER stage creates.
+Also fixed: <code>label_enrich</code> picked its graph by FILE SIZE (now: newest finished build with
+schema-builder edges) and was not idempotent - a second run voted domains from its own guesses
+(named 63.0% -&gt; 85.7% with no new evidence); it now restarts from a fresh sweep.</p>
+<p><strong>TYPE-FLOW PLANE JOINED 2026-10-05: classes and object layouts from CODE</strong> (<code>type_flow</code> stage,
+<code>graph_code_planes.ingest_type_flow</code>, ~7 s, rows tagged <code>source='type_flow'</code>; graph now
+<strong>2,833,741 nodes / 6,269,569 edges</strong>). It puts <code>aire/analysis/type_flow.py</code> +
+<code>vtable_discovery.py</code> into everything that reads the graph:
+- <strong>4,097 RTTI-less <code>vtable</code> nodes</strong> (<code>properties.source = "structural"</code>, each confirmed by a
+  constructor storing it at <code>[obj+0]</code>) with 50,994 slots as <code>VTABLE_SLOT</code> edges. Vtable nodes
+  2,139 -&gt; 6,232;
+- <code>SETS_VTABLE</code> 13,472: function -&gt; vtable it stores into an object (constructors/destructors);
+- <code>VIRTUAL_CALLS</code> 4,426: function -&gt; the ONE implementation a typed virtual call reaches
+  (<code>details</code>: <code>slot</code>, receiver type <code>via</code>, <code>sites</code>);
+- 12,366 <code>object_type</code> + 52,315 <code>object_field</code> nodes: <code>ACCESSES_FIELD</code> 96,722 (reads / writes /
+  widths), <code>FIELD_OF</code>, <strong><code>POINTS_TO</code> 6,387</strong> (field <code>X+0x18</code> -&gt; type <code>X+0x18</code>, i.e. the object
+  loaded from that field - nesting is traversable), <code>HAS_VTABLE</code> 6,706, <code>IS_OBJECT_OF</code> 115
+  (global types -&gt; their manager/singleton node).
+Verified: 0 dangling endpoints over all new edges. CResourceBundle, which has no RTTI and so had
+NO node before, reproduces from code alone: slots 0-3 = AddRef <code>0x3DEDA0</code> / Release <code>0x3DEA38</code> /
+Prefetch <code>0x3DECC8</code> / Discard <code>0x3DEAEC</code>, vtable set by <code>0x3DB434</code> and <code>0x3DB6EC</code>, and
+Prefetch's virtual call resolves to AddRef through slot 0. Tests: <code>tests/test_graph_type_flow.py</code>.</p>
+</blockquote>
+<p><code>call("engine_graph_build")</code> joins the worlds into one addressable graph. Binary + GADB + live was
+<strong>1,263,879 nodes / 3,554,782 edges</strong>; with the ASSET and WORLD planes added 2026-08-03 it is
+<strong>2,719,724 nodes / 5,906,289 edges</strong> (3.64 GB; ~275 s cold for the original stages + ~60 s assets
++ ~60 s world once their offline caches exist). Nine stages, all verified running end-to-end.</p>
+<table>
+<thead>
+<tr>
+<th>Node kind</th>
+<th>Count</th>
+<th></th>
+<th>Edge predicate</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gamedb_record_entry</code></td>
+<td>694,632</td>
+<td></td>
+<td><code>CONTAINS_RECORD_ENTRY</code></td>
+<td>694,632</td>
+</tr>
+<tr>
+<td><code>gamedb_record</code></td>
+<td>278,866</td>
+<td></td>
+<td><code>CALLS</code></td>
+<td>436,821</td>
+</tr>
+<tr>
+<td><code>function</code></td>
+<td>235,018</td>
+<td></td>
+<td><code>ACCESSES_OFFSET</code></td>
+<td>362,788</td>
+</tr>
+<tr>
+<td><code>gamedb_field</code></td>
+<td>19,661</td>
+<td></td>
+<td><code>REFERENCES_CATEGORY</code> (live FK)</td>
+<td>58,924</td>
+</tr>
+<tr>
+<td><code>singleton</code> / <code>vtable</code> / <code>rtti_class</code></td>
+<td>5,633 / 2,139 / 1,400</td>
+<td></td>
+<td><strong><code>VTABLE_SLOT</code></strong></td>
+<td><strong>31,415</strong></td>
+</tr>
+<tr>
+<td><strong><code>script_member</code> / <code>script_table</code></strong></td>
+<td><strong>651 / 137</strong></td>
+<td></td>
+<td><strong><code>DECLARES_FK_TARGET</code></strong></td>
+<td><strong>3,895</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Fourteen ingestion stages, in run order: <code>resolver</code>, <code>native_index</code> (was <code>native_callgraph</code>),
+<code>native_struct_access</code>, <code>schema_layout</code>, <strong><code>type_flow</code></strong>, <strong><code>field_bindings</code></strong>, <strong><code>field_flow</code></strong>,
+<strong><code>libraries</code></strong>,
+<code>offline_gamedb</code>, <strong><code>declared_schema</code></strong>, <strong><code>assets</code></strong>, <strong><code>world_layers</code></strong>, <strong><code>script_api</code></strong>,
+<code>live_session</code>. <code>native_index</code>, <code>assets</code>, <code>world_layers</code> and <code>script_api</code> live in
+<code>aire/pipeline/graph_planes.py</code>; the code-analysis planes <code>type_flow</code>, <code>field_bindings</code>,
+<code>field_flow</code> and <code>libraries</code> in <code>aire/pipeline/graph_code_planes.py</code> (graph_planes.py passed the file-size
+guideline). All are reached through thin builder methods with a lazy import, so a plane module can
+use the id helpers without a circular import.</p>
+<blockquote>
+<p><strong>FIELD-BINDING + TYPE PLANE JOINED 2026-10-05</strong> (<code>field_bindings</code> stage, ~30 s, <code>source=
+'field_bindings'</code>; graph now <strong>2,841,934 nodes / 6,356,138 edges</strong>): <strong>3,099 <code>gadb_type</code> nodes</strong>
+(the engine's type table, with its own descriptions) joined by <code>INHERITS_FROM</code> 863 and
+category <code>HAS_TYPE</code> 2,713; 2,989 <code>schema_object</code> nodes <code>OF_TYPE</code> their type and <code>SCHEMA_OF</code>
+their categories (exact); <code>REGISTERS_SCHEMA</code> 3,748 (builders, inline PropRegister included);
+<strong><code>BINDS_GAMEDB_FIELD</code> 40,670</strong> (function -&gt; field whose slot it touches; <code>details</code>: slot,
+members key/state/index, access) and <strong><code>ACCESSES_GAMEDB_FIELD</code> 13,444</strong> (through a one-field
+helper; <code>details.via</code>). Joined to the EXISTING <code>gamedb_field</code> nodes by (category, name); 0
+dangling. <strong>14,265 of 19,650 field nodes have an identified READER.</strong>
+<code>Character/Models.Bundle</code> &lt;- <code>0x166680</code> via <code>0x1666CC</code>/<code>0x1666E0</code>/<code>0x1875A80</code> is one hop, and
+<code>AI/Planner/Steps/Attack</code> -HAS_TYPE-&gt; <code>AI.Planner.Step.Attack</code> ("Supports the Animate script
+command.") -INHERITS_FROM-&gt; <code>AI.Planner.Step.SimpleBase</code> is two. See "GADB Field Bindings".
+<strong>LIBRARY PLANE</strong> (<code>libraries</code> stage): <code>library</code> nodes, <code>IN_LIBRARY</code> 13,886 (confidence 0.99 for
+the region lane), identified routines stamped on the function nodes (<code>routine</code>, <code>routine_lane</code>).
+<strong>FIELD CONSUMPTION PLANE</strong> (<code>field_flow</code> stage, 5 s, <code>source='field_flow'</code>; graph now
+<strong>2,841,837 nodes / 6,376,011 edges</strong>, 0 dangling): <code>COPIES_GAMEDB_FIELD</code> 4,057 (copier -&gt;
+field; <code>details</code>: into, what, size, at, via), <code>READS_GAMEDB_FIELD_LIVE</code> 16,693, and
+<strong><code>COPIED_INTO</code> 363: GADB field -&gt; the type-flow <code>object_field</code> it is compiled into</strong>
+(<code>Inventory/RangedWeaponData.AttackableSphereRadius</code> -&gt; <code>class:vt_0x1FAC690</code> +0x358/+0x35C/+0x360
+by <code>0x10EEA4</code>); <code>properties.consumption</code> stamped on 11,922 <code>gamedb_field</code> nodes. See "GADB Field
+Consumption".</p>
+<p><strong>THE ASSET PLANE IS JOINED (2026-08-03)</strong> — <code>assets</code> stage, ~60 s. The shipped inventory and the
+GADB were two disconnected worlds; the graph knew records but nothing about the bytes they pull
+off disk.</p>
+<table>
+<thead>
+<tr>
+<th>node / edge</th>
+<th>count</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>archive</code></td>
+<td>72</td>
+<td>every <code>.arch06</code>, with its measured naming-error count</td>
+</tr>
+<tr>
+<td><code>archive_entry</code></td>
+<td>479,031</td>
+<td>a BLOB, addressed by (archive, entry index) — never by name</td>
+</tr>
+<tr>
+<td><code>asset</code></td>
+<td>413,612</td>
+<td>logical paths: 401,052 shipped + the referenced-but-unshipped</td>
+</tr>
+<tr>
+<td><code>CONTAINS_BLOB</code></td>
+<td>479,031</td>
+<td>archive -&gt; blob</td>
+</tr>
+<tr>
+<td><code>NAMES_BLOB</code></td>
+<td>479,029</td>
+<td>logical path -&gt; blob, at <strong>confidence 0.5</strong> when the name is shared or contradicted by the blob's magic</td>
+</tr>
+<tr>
+<td><strong><code>NAMES_ASSET</code></strong></td>
+<td><strong>26,445</strong></td>
+<td>GADB record -&gt; asset, with every naming FIELD listed</td>
+</tr>
+<tr>
+<td><strong><code>SHIPS_IN_BLOB</code></strong></td>
+<td><strong>10,439</strong></td>
+<td>asset -&gt; the blob that actually ships it</td>
+</tr>
+</tbody>
+</table>
+<p>One edge per (record, asset) PAIR, not per link: the edge key is
+<code>(src, predicate, dst, session)</code>, so emitting one row per link silently collapsed the 2,416 pairs
+where a record names the same asset through two fields — and the surviving row's <code>field</code> would
+have been whichever was written last. All fields now ride in <code>details.fields</code>.</p>
+<p><strong>29 records the link names have no node from the GADB stage</strong> — the graph's GADB plane is ONE
+extracted database while the asset link merges all 25 GADB-bearing archives, so patch-only
+records (<code>Marketplace/Images</code>, War Chest textures, DLC bundle definitions) exist on one side
+only. They get a node stamped <code>identity_source: asset_link_merged_gadb</code> rather than leaving an
+edge pointing at nothing.</p>
+<p>Deliberately NOT ingested: the 1.87M bundle-membership edges for assets no record names — they
+answer a question <code>asset_bundles</code> already answers in O(1) and would roughly double the graph.
+That bound is stated in the stage coverage; an unstated bound reads as coverage that does not
+exist.</p>
+<p><strong>THE WORLD PLANE IS JOINED (2026-08-03)</strong> — <code>world_layers</code> stage, backed by <code>WorldCatalog</code>
+(<code>call("world_catalog_build")</code>, ~34 min once, cached to <code>aire/data/world/layer_catalog.json</code>).
+<strong>1,303 of 1,303 layers decoded, 0 failures</strong>: 559,988 placed instances, 85,771 GameDB
+references from the embedded Lua (<strong>84,000 = 98.8% resolved</strong>, and the remainder is fully
+accounted for — see the reference-resolution law below), 194,655 lines of scenario Lua across
+977 layers.</p>
+<table>
+<thead>
+<tr>
+<th>node / edge</th>
+<th>count</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>world_layer</code></td>
+<td>1,303</td>
+<td>keyed <code>&lt;region&gt;/&lt;stem&gt;</code> from the layer's OWN content, not its entry name</td>
+</tr>
+<tr>
+<td><code>world_object</code></td>
+<td>558,907</td>
+<td>authored objects (<code>pCage_00.DOG</code>) — the join key for naming live objects</td>
+</tr>
+<tr>
+<td><code>engine_object_class</code></td>
+<td>148</td>
+<td><code>AINodeMenacePlace</code>, <code>DynamicObjectGroup</code>, <code>LightCube</code>, ...</td>
+</tr>
+<tr>
+<td><code>LAYER_BLOB</code></td>
+<td>1,303</td>
+<td>layer -&gt; the exact archive blob it lives in</td>
+</tr>
+<tr>
+<td><strong><code>LAYER_REFERENCES_RECORD</code></strong></td>
+<td><strong>123,410</strong></td>
+<td>layer -&gt; GADB record; 20,248 refs are pinned to ONE category by their <code>DB&lt;Kind&gt;</code>, the rest spread <code>1/len(candidates)</code> confidence</td>
+</tr>
+<tr>
+<td><code>LAYER_USES_ASSET</code></td>
+<td>136,206</td>
+<td>layer -&gt; asset (joins straight into the asset plane)</td>
+</tr>
+<tr>
+<td><code>PLACES_OBJECT</code> / <code>OBJECT_OF_CLASS</code> / <code>PLACES_CLASS</code></td>
+<td>558,907 / 537,472 / 22,728</td>
+<td>what a layer places, and how many of each class</td>
+</tr>
+</tbody>
+</table>
+<p><strong>This is what makes the graph span code AND content</strong>: <code>intro_bg</code> →
+<code>INT_010A_TalionCBConversation</code> → <code>AudioHooks/Conversations</code> → <strong>built by <code>0x83E3E8</code></strong> is one
+traversal — world scenario to GADB record to the function that builds its schema.</p>
+<p>String-table names are kept only when they resolve to a real record. <code>_INTERESTING</code> matches any
+<code>PS_*</code>/<code>Amb_*</code> token and a layer's binary sections are full of printable runs that satisfy it
+(<code>PS_WPQfWPOmWRWQW_XRSgXRQTW...</code>), so an unresolved string name is noise, not a finding — a
+<code>DB&lt;Kind&gt;.&lt;Member&gt;</code> Lua reference is structural and is kept either way.</p>
+<p><strong>REFERENCE RESOLUTION — the last 4%, closed and fully accounted (2026-08-04).</strong> The first pass
+resolved 82,361 of 85,771 references and left 3,410 "unknown". None of that shortfall was a
+decoder gap; it was three separate mistakes, each with its own fix:</p>
+<ol>
+<li><strong>The lookup table was incomplete.</strong> <code>record_to_category_map.json</code> carries <strong>153,977 of the
+   270,537</strong> names the shipped GADBs declare, and stores ONE category per name, so it can
+   neither answer for the other <strong>116,561</strong> nor express an ambiguous name. A miss there is
+   indistinguishable from "not a record" — 122 of the "unknown" names were real records all
+   along. <code>aire/gamedb/record_index.py</code> (<code>call("record_index_build")</code>, ~17 s) merges every
+   GADB-bearing archive in archcfg order instead. <strong>+1,639 references resolved.</strong>
+   <strong>CONSUMERS MIGRATED 2026-08-04.</strong> The complete index was added BESIDE the legacy file
+   rather than replacing its readers, so <code>Cortex._load_offline_data</code> and
+   <code>EngineGraphBuilder._record_categories</code> still served the old answers. Both now resolve
+   through <code>RecordNameIndex</code> (legacy file kept only as a fallback, and the fallback says so in
+   the log). Measured on the migration: <strong>116,561 names the legacy map cannot answer</strong> and
+   <strong>56,640 ambiguous names it collapses to a single category</strong> — but <strong>0 entries whose stored
+   category is not a declaring category</strong>, so the legacy map was INCOMPLETE, never wrong.
+   <code>CompatibilityManifest</code> now fingerprints <code>record_name_index.json</code> too; keying the graph only
+   on the legacy map would let it go stale silently.</li>
+<li><strong><code>DB&lt;Kind&gt;</code> is the GADB TYPE NAME with its separators dropped</strong> (<code>Faction.Trait</code> -&gt;
+   <code>DBFactionTrait</code>, <code>Combat.Attack</code> -&gt; <code>DBCombatAttack</code>), matched under the same normalization
+   family the declared types needed (last segment, concatenation, de-pluralisation). That makes
+   the kind a SCOPE, not just a label: it pins <strong>20,248 of 27,695 ambiguous references (73%)</strong> to
+   exactly one category. Verified on 5,000 scoped edges — <strong>0 whose category disagrees with its
+   kind</strong>. <code>call("db_kind", kind=...)</code> exposes it.</li>
+<li><strong><code>_DBREF</code> matches any <code>DB&lt;ident&gt;.&lt;ident&gt;</code></strong>, and a layer's binary sections manufacture
+   plenty (<code>DB0ICB0ICB.x</code>, <code>DBM.I_</code>). 769 references were regex artefacts. A kind is credible if
+   it NAMES A REAL TYPE, or &gt;=2 members resolve <em>and</em> it reads as a class or has &gt;=10 hits, or it
+   resolves once <em>and</em> reads as a class — that last clause exists because <code>WeatherDefinition</code> is
+   real and appears once while <code>F3FNE</code> is not. Rejected references are FLAGGED <code>noise</code> with a
+   reason, never deleted.</li>
+</ol>
+<p><strong>What genuinely remains is the GAME's own dangling data: 1,002 refs / 27 names.</strong> 954 refs over
+19 names are <code>absent_from_its_own_category</code> — the kind names a real, populated category and the
+record is simply not in it (<code>PC_Bip_Sync_Intrgtn_Idle</code> in <code>Combat/Attack</code>, <code>ChatterExplosionIncrement</code>
+in <code>AudioHooks/Keys</code>, <code>dx_ne_ps_ExecPace</code> in <code>AudioHooks/DialogEvents</code>, and — conclusively —
+<code>WhatEverWeNameThisOne</code> in <code>Presentation/Relays</code>). The other 48 refs / 8 names have a near name
+in the target category (<code>AI_BIP_PC_PreDeath_Humiliator</code> vs <code>..._R</code>) and are kept as LEADS, never
+auto-resolved: <code>Pass_FearCam_PIS_Test_IT</code> vs <code>Pass_HateCam_PIS_Test_IT</code> is a different record.
+<code>call("world_catalog_reresolve")</code> redoes all of this in ~1 s without re-sweeping the layers.</p>
+<p>Trap avoided: the first sweep capped stored objects at 400/layer and <strong>silently dropped 59% of
+them</strong> (227,107 of 558,908). The richest layer holds 7,365, so the caps now sit above the
+measured maximum and exist only as a runaway guard — the re-sweep stores <strong>558,908 / 558,908,
+0 truncated</strong>. A per-layer named object is keyed by (layer, NAME); repeats inside a layer are
+counted in <code>instances_with_this_name</code> rather than overwriting each other.</p>
+<p><strong>THE LIVE PLANE IS JOINED (2026-08-03).</strong> It previously contributed NOTHING and said nothing:
+measured <strong>0 nodes carrying an address, 0 carrying a session id, 0 edges tagged <code>live</code></strong> while
+<code>include_live=True</code> reported success. Cause: every source in <code>ingest_live_session</code>
+(<code>record_map._addr_to_name</code>, <code>gdb._category_cache</code>, <code>world.entities</code>, <code>vtcracker._vtable_methods</code>)
+is an in-memory structure that only exists after a full 14-phase <code>map()</code> <strong>in the same process</strong>
+— and <code>map</code> persists nothing. <code>_ingest_live_spine</code> needs no <code>map()</code>: it reads the cached IdMap
+and the persisted census. Now <strong>2,742 live addresses, 2,743 session-scoped nodes, 6,011 <code>live</code>
+edges</strong>, in ~1 s.</p>
+<table>
+<thead>
+<tr>
+<th>node / edge</th>
+<th>count</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>live_session</code></td>
+<td>1</td>
+<td>pid, base, state, region — the anchor everything session-scoped hangs off</td>
+</tr>
+<tr>
+<td><code>live_category</code></td>
+<td>2,742</td>
+<td>category header + <code>rec_array</code>/<code>prim_array</code> + counts</td>
+</tr>
+<tr>
+<td><code>MATERIALIZES_CATEGORY</code></td>
+<td>2,742</td>
+<td>live address -&gt; the offline category</td>
+</tr>
+<tr>
+<td><code>HAS_LIVE_INSTANCES</code></td>
+<td>527</td>
+<td>which classes are ACTUALLY instantiated (672,904 objects)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Record-level addresses are deliberately NOT stored.</strong> There are 694,632, they die with the
+process, and the spine recomputes any of them from <code>rec_array + idx*0x28</code> in under a second —
+persisting them would nearly double the database to preserve nothing, the exact anti-pattern
+the ASLR hygiene rules warn about. What IS stored is the anchor and the durable fact (which
+classes live, and how many). Full traversal verified: <strong>live <code>Client/PlayerMovement</code> @
+<code>0x7B95DDF0</code> -&gt; GADB category -&gt; builder <code>0x843EDC</code></strong>.</p>
+<p><strong>STAGE CACHES ARE KEYED ON INPUT FILES, NOT ON STAGE CODE.</strong> Editing a stage leaves its cache
+valid, so the new logic never runs and the build reports success while silently omitting the
+new edges (caught when name-inferred stubs failed to appear). <strong>Bump <code>SCHEMA_VERSION</code> whenever
+a stage's output shape changes</strong> — it is part of <code>_source_token</code> and is the intended lever.
+<strong>CORRECTED 2026-10-05: for ONE stage, bump <code>STAGE_REVISION[&lt;stage&gt;]</code> instead</strong>
+(<code>aire/pipeline/engine_graph.py</code>). A <code>SCHEMA_VERSION</code> change empties EVERY table
+(<code>DELETE FROM edges/nodes/coverage/runs/graph_meta</code>) and forces a full cold build. A stage
+revision is folded into that stage's token only (revision 0 leaves the token byte-identical, so
+nothing else re-runs), and the stage then purges its own <code>source=</code> rows and rewrites them.
+Measured: <code>resolver</code> 1 + <code>type_flow</code> 1 re-ran just those stages, in place, in 52 s and 10 s.</p>
+<p><strong><code>declared_schema</code> (added 2026-08-03)</strong> carries what the LIVE descriptor run structurally
+cannot. <strong>955 of its 3,895 FK edges are <code>dormant_declared</code></strong> — a field's declared target that
+the live sweep can NEVER observe, because the field is NULL in every live record; before this
+stage those relationships existed nowhere in the graph. It also patches <strong>1,069 fields with
+declared <code>min</code>/<code>max</code></strong> (the only <em>declared</em> bounds; the value atlas is observed, not declared)
+and adds the Lua script API.
+Coverage is 3,895 of 3,913 <strong>attachable</strong> entries, and every exclusion from the 5,712 total is
+enumerated rather than left as an unexplained shortfall: 1,498 have no declared target, 301
+belong to a builder whose category was never identified, 18 name a field the category does not
+declare. Do NOT use <code>resolved_to_category</code> (5,146) as the denominator — it counts entries that
+can never become an edge and reports a permanent false deficit.
+~~The script API records <strong>no class name</strong>, only a registration stub whose member list mixes
+methods with class-like names, so nodes are keyed by STUB (<code>script_table</code>) — naming them would
+be a plausible-looking lie.~~ <strong>REFUTED 2026-08-04 — see the SCRIPT-API plane below.</strong> The class
+name IS recorded; it is POSITIONAL, and ranking candidates by how many stubs share them is what
+made it look absent.</p>
+<p><strong>THE SCRIPT-API PLANE IS JOINED (2026-08-04)</strong> — <code>script_api</code> stage, <code>aire/analysis/script_api.py</code>,
+<code>call("script_api_build")</code>, ~13 s offline. The graph could follow a scenario layer's Lua
+(<code>DynamicObjectGroup.Create(...)</code>, <code>cageDOG1.Script_SetState(...)</code>) exactly nowhere: the plane was
+keyed by stub because the class name was believed unrecoverable.</p>
+<p><strong>The class name is in the stub — POSITIONALLY.</strong> Every binding is a ~90-byte LEAF stub that
+stores two strings in two ADJACENT stack slots and the CLASS is always the one at the larger
+offset:</p>
+<pre><code>lea rax, [rip + member]  ; mov [r11-0x20], rax   &lt;- MEMBER
+lea rax, [rip + class]   ; mov [r11-0x28], rax   &lt;- CLASS
+lea r8d, [r9 + 2]        ; declared arg count
+call &lt;registrar&gt;         ; shared arg-count/diagnostic helper
+call &lt;implementation&gt;    ; the real accessor
+</code></pre>
+<p>Frame size varies (-0x28/-0x20, -0x38/-0x30, -0x48/-0x40, -0x58/-0x50, -0x78/-0x70); the relative
+ORDER never does. <strong>This is why a frequency heuristic fails and position does not</strong>: ranking by
+how many stubs share a string promotes <code>Serialize</code> (125 stubs), <code>Cast</code> (124) and <code>Create</code> (123)
+— members that nearly every class registers — into the class column. That is the exact artefact
+behind the old "member list mixes methods with class-like names" ruling.</p>
+<p><strong>15 registrars, discovered by SHAPE not by address</strong> (a hardcoded single registrar found 1,574
+of 5,923 sites): 5,923 stub sites, <strong>5,498 decoded (92.8%)</strong> -&gt; <strong>144 classes, 1,560 members,
+1,290 implementation RVAs</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>node / edge</th>
+<th>count</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>script_class</code></td>
+<td>142</td>
+<td>the engine's own class vocabulary</td>
+</tr>
+<tr>
+<td><code>script_member</code></td>
+<td>1,558</td>
+<td>one per registered <code>Class.Member</code></td>
+</tr>
+<tr>
+<td><code>DECLARES_SCRIPT_MEMBER</code></td>
+<td>1,558</td>
+<td>class -&gt; member</td>
+</tr>
+<tr>
+<td><code>IMPLEMENTED_BY</code></td>
+<td>2,037</td>
+<td>member -&gt; the function behind it</td>
+</tr>
+<tr>
+<td><strong><code>SCRIPT_CLASS_OF</code></strong></td>
+<td><strong>87</strong></td>
+<td>script class -&gt; the <code>engine_object_class</code> a layer places</td>
+</tr>
+</tbody>
+</table>
+<p><strong>87 of 144 classes are confirmed by a completely independent derivation</strong> — the world catalog's
+class vocabulary, which comes from placement-layer CONTENT, not from the binary. 48 placed
+classes have no script binding (pure data/render components: <code>StaticLightOctreeCell</code>,
+<code>FogSettingsComponent</code>) and 57 script classes are never placed (managers: <code>AISystem</code>, <code>DOGMgr</code>).
+Verified traversal: <code>desert/camp_00</code> -PLACES_CLASS-&gt; <code>DynamicObjectGroup</code> &lt;-SCRIPT_CLASS_OF-
+<code>DynamicObjectGroup</code> -DECLARES_SCRIPT_MEMBER-&gt; <code>Script_SetState</code> -IMPLEMENTED_BY-&gt; <code>0x5ACDC8</code>.</p>
+<p>Also a labelling tier: <code>label_source: script_api</code> names <strong>1,233 functions <code>Class::Member</code></strong> from
+direct evidence, 176 of them upgraded off a weak <code>str:</code> label. These previously scored things
+like <code>domain:render</code> by a 1-hop majority vote — a neighbourhood, not a name.</p>
+<p>Grading, because two decode slips survive: a candidate registered as a MEMBER by &gt;=10 classes
+that owns &lt;=1 member itself is stamped <code>probable_decode_artifact</code> (2: <code>Create</code>, <code>Cast</code>) and kept
+out of the graph and the label index; <code>CombatManager</code> and <code>AISystem</code> register one member each and
+stay <code>singleton_lead</code>.</p>
+<p><strong>What this lane does NOT do: name vtables.</strong> Measured, so it is not re-attempted blindly — the
+1,290 implementations intersect the vtable slot map in <strong>0</strong> places (script bindings call
+non-virtual accessors, which then dispatch virtually at run time), and <code>Class.Create</code>'s
+implementation is a thin wrapper that reaches only shared allocator plumbing, so every class
+returns the same two <code>.xtext</code> addresses.</p>
+<p><strong>THE CODE↔DATA BRIDGE — the weakest join, and how it was strengthened (2026-08-03).</strong>
+The original bridge was displacement matching: <code>function -ACCESSES_OFFSET-&gt; native_offset
+-MAY_MAP_TO_GAMEDB_FIELD-&gt; gamedb_field</code>. That is a SHORTLIST, not an identification —
+measured <strong>median 3, mean 63, max 3,820 candidate fields for a single offset</strong>, and only
+<strong>34</strong> confirmed matches (<code>OFFSET_MATCHES_FIELD</code>) in the entire graph. A displacement like
+<code>+0x40</code> matches hundreds of schemas; treating that as a link would be a false identity claim.
+The schema builders give the SAME link as an identity, because it is a fact about CALLS:
+<code>BUILDS_SCHEMA</code> (<strong>1,042</strong> builder→category, carrying the F1 match as <code>confidence</code>) and
+<code>REGISTERS_FIELD</code> (<strong>11,808</strong> stub→field). Identity-level code↔data links went
+<strong>34 → 12,884</strong>; <strong>59.6% of fields now have an identified registering function</strong> and
+<strong>37.2% of categories an identified builder</strong>. Spot-validated against independently
+documented facts: <code>Client/PlayerMovement</code> ← builder <code>0x843EDC</code> (f1=1.0),
+<code>BaseSpeedMultiplier</code> ← stub <code>0x163580C</code>.
+A second, WEAKER grade closes part of the rest: 1,340 builders never had their category
+resolved, but 85.7% of GADB field names are declared by exactly one category, so those stubs
+can be attributed by name. Emitted at <strong>confidence 0.5</strong> with <code>inferred_by: unique_field_name</code>
+and kept a separate grade on purpose — the two-sided F1 match exists precisely because a
+one-sided name score once let a 63-field builder claim a 3-field category. Adds 855 edges;
+fields with a registering function <strong>59.6% → 62.0%</strong>.
+<strong>The remaining ~38% is not a decoder gap.</strong> It belongs to the 1,723 categories with no
+identified builder, and those builders are mostly not GADB schema builders at all — of their
+stubs, 2,472 name a field that is not in the GADB and 1,597 are ambiguous. Chasing them further
+would add noise, not coverage.
+<strong>CORRECTED 2026-10-05 — it WAS partly a decoder gap, and the bridge now has READERS.</strong> The
+stub-only decode never sees a slot registered INLINE in the builder (<code>GlobalVarUnlock</code> in
+AI/Templates: 1,682 slots engine-wide) nor a self-contained first-field stub, and it identified
+categories by field-SET F1, which cannot use order. Reading the schema OBJECTS instead (see
+"GADB Field Bindings") binds <strong>2,567 categories to their object EXACTLY through the engine's
+own type table</strong> (0 ambiguous) and, the part this note never had, names the functions that
+READ each field: <strong>14,265 field nodes have a <code>BINDS_/ACCESSES_GAMEDB_FIELD</code> edge</strong>, all
+live-verified by the engine's own cached descriptor index (14,558/14,558, control 0/14,310).
+Registration links (<code>REGISTERS_FIELD</code>) say who DECLARES a field; these say who USES it.</p>
+<p><strong>THREE dispatch mechanisms reach a function, not one.</strong> <code>callers_of</code> now reports all three
+and unions them into <code>reachable</code>: direct <code>CALLS</code> (static call graph), <code>vtable_refs</code> (virtual
+dispatch — see the <code>.bss a</code> law above), and <strong><code>tail_calls</code></strong> (entered by <code>jmp</code>). The third was
+found by this audit: <strong>every GameDB schema builder is tail-called</strong>, so <code>0x843EDC</code> — a function
+that demonstrably builds <code>Client/PlayerMovement</code>'s schema — scored <code>callers=0, vtable_refs=0</code>
+and reported <em>unreachable</em>. The static call graph records <code>call</code> edges only. The tail-call scan
+runs ONLY when the other two lanes are empty, so the O(1) fast path is unaffected. Bogus RVAs
+(including addresses inside <code>.bss a</code>) still report <code>reachable: False</code>.
+Trap: <code>classify_rel32_hit</code> returns <code>{disp_rva, kind}</code> and <strong>no <code>mnemonic</code></strong> unless the
+disassembler was initialised — filtering on <code>mnemonic</code> silently matched nothing and made the
+whole lane read as "no tail calls exist". Filter on <code>kind</code>.</p>
+</blockquote>
+<p><strong>Both former gaps are CLOSED (2026-08-03).</strong> The asset index and the world placement layers are
+in the graph — see the <code>assets</code> and <code>world_layers</code> stages above. The earlier objection ("asset
+paths alone are disconnected filler") was right about paths and wrong about the plane: what makes
+them worth ingesting is the record→asset LINK plus content-verified blob addressing, so a path
+node is never orphaned. World layers were gated on "multi-GB extraction must be cached first" —
+that cache is <code>WorldCatalog</code> (<code>aire/data/world/layer_catalog.json</code>).</p>
+<p>What remains outside: the 1.87M bundle-membership edges for assets no record names (stated bound,
+queryable via <code>asset_bundles</code>), and per-instance placement rows for every layer (summarised as a
+class census + named objects; full placements stay in <code>world_instances</code>).</p>
+<blockquote>
+<p><strong>ROOT CAUSE OF THE CHURN: hashing a WAL SQLite file's BYTES (FIXED 2026-08-03).</strong>
+The fingerprint hashed <code>resolver.db</code>'s raw bytes. resolver.db is a <strong>WAL</strong> database, so a
+checkpoint rewrites pages and the file digest moves <strong>while every table is unchanged</strong> —
+measured: all 15 tables identical in row count and values, <code>sha256 f93c2089… -&gt; 8c2f42fd…</code>.
+The graph is keyed by that digest, so it minted a fresh empty 2 GB database on nearly every
+run (four distinct fingerprints in one afternoon: <code>3644081…</code>, <code>3b3c9b9…</code>, <code>a5f790d…</code>,
+<code>4d97004…</code>). The earlier mtime fix was correct but addressed the wrong volatility.
+<code>CompatibilityManifest._fingerprint_file</code> now digests any <code>.db</code>/<code>.sqlite</code> input by its
+<strong>LOGICAL CONTENT</strong> — rows of every table in name order, skipping the volatile
+<code>sessions</code>/<code>crash_log</code>/<code>sqlite_sequence</code> bookkeeping — and drops <code>size</code> from the digest for
+the same reason. <strong>Measured stable across 3 separate processes; 0.25 s for 101,666 rows.</strong>
+It still moves when knowledge genuinely moves, including value-only edits like
+<code>vtable_slot_counts_refresh</code> that row counts alone would miss.</p>
+<p><strong>NEVER PICK THE GRAPH BY FILE SIZE — pick it by FINGERPRINT (2026-08-04).</strong> Sibling graphs are
+within ~0.2% of each other in size, so "largest wins" silently selects a stale one: the verify
+pass after adding the script-API plane read the 3,667 MB PREVIOUS graph instead of the current
+3,660 MB one and reported <code>script_class = 0</code>, i.e. a correct build looked like a failed stage.
+Resolve through <code>Cortex._ensure_engine_graph()</code> (fingerprint) — note <code>label_enrich</code>'s
+<code>_graph_semantics()</code> still picks by size and should be treated with the same suspicion.</p>
+<p><strong>THE GRAPH IS KEYED BY A CONTENT FINGERPRINT AND FAILS SILENTLY WHEN IT MOVES.</strong>
+<code>_ensure_engine_graph</code> names the DB <code>engine_graph_&lt;sha256[:16]&gt;.sqlite</code> over the CONTENT of
+resolver.db + tuner_offline_schema.json + field_hash_dictionary.json + record_to_category_map.json
++ the exe + the archive inventory. Any content change correctly mints a NEW database — but
+nothing carried the old one forward, and <strong>every lookup returned <code>ok: true</code> with <code>nodes: 0</code> and
+<code>node: null</code></strong>, which is indistinguishable from "this function is not in the graph".
+Found this way: a <strong>2.06 GB graph (1,250,814 nodes / 3,516,860 edges) sat on disk unreachable</strong>
+because that session's <code>vtable_authority_apply</code> rewrote resolver.db, while three fresh empty
+80 KB databases were minted in a single afternoon by ordinary status calls.
+<code>engine_graph_status</code> now returns <code>built: false</code> + <code>reason</code> + <code>other_graphs</code> (siblings with their
+node counts), and <code>engine_graph_function</code>/<code>_record</code> return <code>ok: false</code> instead of empty adjacency.
+<strong>Rebuild after ANY resolver.db write</strong> — and do resolver.db writes FIRST, graph build LAST.</p>
+<p><strong><code>VTABLE_SLOT</code> (added 2026-08-03, SCHEMA_VERSION 3).</strong> Before it, the ONLY inbound edge to a
+<code>function</code> node was <code>CALLS</code>, so the graph could not represent virtual dispatch at all: 792 of
+2,139 vtable nodes had no edges, and the <code>.bss a</code> methods were not even nodes. The graph knew
+classes EXISTED but not what they DO. Now <code>vtable -&gt; function</code> with a slot index, giving both
+directions — method -&gt; owning class (<code>0x2D72600</code> -&gt; <code>hknp::internal::streamcontactsolver</code> slot 6)
+and class -&gt; methods (<code>PhysicsWorld_vt</code> -&gt; 37, matching <code>vtable_methods</code>). <strong>2,139/2,139 vtable
+nodes now connected; 20,764 functions are reachable ONLY through this edge.</strong>
+Slot runs are bounded by the next known vtable start and capped at 256; a run that hits the cap
+is a long pointer run containing unregistered vtables, so it is reported with
+<code>class_confidence: "uncertain"</code> and its class name is withheld rather than asserted.
+<strong>CORRECTED 2026-10-05 — the slot index was NEVER STORED until now.</strong> The edge dict carried it
+under <code>"properties"</code>, and <code>add_edges</code> writes only <code>"details"</code>: <strong>0 of 31,415</strong> edges had a slot
+number, so "method X is slot N of class Y" could not be answered from the graph. Now
+<code>details = {slot, slots, class}</code>. Edges upsert per (vtable, method), so a method filling several
+slots of one vtable (shared stubs) kept only the LAST slot - 2,097 of 31,415 edges fill more
+than one; <code>slots</code> lists all of them and <code>slot</code> is the lowest (<code>merge_slot_edges</code>). Filled in
+place via <code>STAGE_REVISION["resolver"] = 1</code>.</p>
+</blockquote>
+<h2 id="recordlink-spine-the-cross-session-primary-key-built-2026-08-02">RecordLink Spine — the cross-session primary key (BUILT 2026-08-02)</h2>
+<p><code>aire/pipeline/idmap.py</code>. Live keys records by heap ADDRESS (dies with the process) or by NAME
+(ambiguous — see below); disk keys them by ORDINAL, <code>RL = (cat_idx * 16) &lt;&lt; 16 | rec_idx</code>, which is
+unique and survives every restart. The Cell Identity Law proved the bijection in 2026-07; this
+materialises it, so a finding from session N re-points in session N+1 instead of being re-resolved
+by name with the ambiguity risk each time.</p>
+<ul>
+<li><strong>Alignment is MEASURED, never assumed</strong>: <code>audit_alignment()</code> reads real record names on both
+  sides. Result <strong>1.0000</strong> — 2,742/2,742 categories matched, <strong>278,865 records on each side</strong>,
+  live-only = disk-only = 0.</li>
+<li><strong>Fast because it is CATEGORY-level</strong>: ~2,742 category headers read; record addresses are
+  COMPUTED (<code>rec_array + rec_idx * 0x28</code>), never enumerated. This is what retires the
+  "never use resolve_record, hand-walk the table" workaround — the walk IS the tool now.</li>
+<li>Session cache guarded by (pid, base, module_size); a cache from a dead process is refused.</li>
+<li>Live table slots holding stray pointers are rejected by a printable-alphabet check — without it
+  the walk reports ~200 garbage "categories".</li>
+<li><strong>RL targets are not all secondary</strong>: <code>rec_idx</code> indexes PRIMARY records for <code>_Structures*</code>
+  inline-array categories (unnamed, absent from the live secondary pool) — <code>describe_rl</code> returns
+  <code>target_kind</code>. And <strong>921 categories carry <code>DEFAULT_RECORD_NAME*</code> at index 0</strong>, a disk-side
+  "unset" sentinel the engine resolves at load; a differing live pointer there is expected.</li>
+</ul>
+<h2 id="primary-records-the-other-60-of-the-gadb-cracked-2026-08-03">Primary Records — the other 60% of the GADB (CRACKED 2026-08-03)</h2>
+<p>The RecordLink spine originally addressed 278,865 <strong>secondary</strong> records = <strong>40.1%</strong> of the
+database. The other <strong>415,767</strong> are <strong>PRIMARY</strong> records — the inline struct-array entries of
+736 <code>_Structures*</code> categories. RecordLinks point at them, but nothing could resolve them.</p>
+<pre><code>category +0x40   u32 primary count        (400/400 categories == disk count)
+category +0x48   primary record array     (stride 0x20, 250/250)
+primary  +0x00   u32 field count
+primary  +0x08   schema ptr
+primary  +0x10   instance ptr             (slot law holds: instances packed fc*8 apart)
+</code></pre>
+<blockquote>
+<p><strong>A primary header carries NO 0x0A tag byte.</strong> A secondary starts <code>06 0A 00 00</code>, a primary
+<code>06 00 00 00</code>. Every structural scan in the codebase keys on <code>byte[1] == 0x0A</code>, so primaries
+return ZERO hits and look like they do not exist. That single byte is why they were invisible.</p>
+</blockquote>
+<p>Validated <strong>736/736 categories against the disk primary count, 0 mismatches</strong>; decoded values
+are semantically coherent (<code>_StructuresFactionDifficultyEntry</code> primaries decode to the difficulty
+bands: <code>[55,9999]-&gt;Enemy_VeryHard</code>, <code>[30,55]-&gt;Enemy_Hard</code>, <code>[10,30]-&gt;Enemy_Easy</code>).</p>
+<p><strong>Spine coverage is now 278,865 + 415,767 = 694,632 records = 100% of the GADB</strong> — a number that
+independently equals the engine graph's <code>gamedb_record_entry</code> node count. <code>addr_of</code> resolves a
+primary-target RL to a live address, and <code>disk_delta</code>'s <code>rl_target_primary</code> skip lane is gone.</p>
+<h2 id="record-name-ambiguity-measured-2026-07-28">Record-Name Ambiguity (MEASURED 2026-07-28)</h2>
+<p><strong>14.6% of live record names are ambiguous</strong> — 21,850 of 149,968 distinct names exist in more
+than one category (184,064 records walked). Worst: <code>Default</code> in <strong>95</strong> categories, <code>Player</code> 45,
+<code>True</code> 35, <code>Balrog</code> 35, <code>Warg</code> 25, <code>Troll</code> 25.</p>
+<p>An unscoped <code>resolve_record("Balrog")</code> therefore returns a real, plausible-looking address that
+may belong to an entirely different category — silently. Rules:</p>
+<ul>
+<li><strong>Always pass <code>category=</code></strong> when resolving, or use <code>call("record_info", ...)</code>, which returns
+  every colliding candidate (proven case: <code>Quirk_HasMount</code> exists in BOTH
+  <code>Faction/Traits/Definitions</code> and <code>Interface/Movies</code>).</li>
+<li><code>RecordMap.resolve</code> now logs a WARNING on an ambiguous unscoped lookup instead of guessing
+  quietly; <code>strict=True</code> refuses outright.</li>
+<li><code>search_data</code> returns the exact hit <strong>plus</strong> the related family (an exact match used to
+  suppress the other ~100 <code>Nazgul_*</code> records) and falls back to FIELD-name search.</li>
+</ul>
+<h2 id="aslr-reference-hygiene-audited-2026-07-28">ASLR Reference Hygiene (AUDITED 2026-07-28)</h2>
+<p>Full key-aware audit of every reference file for absolute addresses that die on the next launch
+(judge by KEY — <code>address</code>/<code>ptr</code>/<code>instance</code>/<code>schema_ptr</code>, NOT by magnitude: 32-bit field HASHES
+and RecordLink codes look like addresses and are not).</p>
+<ul>
+<li><strong>Replay paths are already ASLR-safe.</strong> <code>WriteLedger.revert</code> has a PID guard (a ledger from a
+  dead process is refused outright) plus a still-ours check; the PlayAs revert re-resolves its
+  record by NAME and refuses when the instance moved; the merc journal is still-ours-guarded.
+  Journals holding absolute addresses are therefore validated before use, never blindly replayed.</li>
+<li><strong><code>named_schemas.json</code> / <code>inheritance_tree.json</code> carried dead pointers</strong> from the 2026-04
+  session (2,708 <code>schema_ptr</code> + 144 <code>ptr</code>). Nothing consumed them (zero call sites), so they were
+  renamed to <code>*_stale_session_only</code> — a naive future reader now gets None instead of a wrong
+  address. Everything else in <code>tools/re/data/</code> is clean.</li>
+<li>Session-specific BY DESIGN, rebuild each launch: <code>data/live_record_map.json</code>,
+  <code>live_mega_probe_results.json</code>, <code>singleton_scan.json</code>, <code>static_record_index.json</code>,
+  <code>aire_full_dump.json</code>, <code>_meta/live_full_showcase.json</code>.</li>
+<li><code>call("map")</code> builds the world model IN MEMORY and it dies with the process — <strong><code>map</code> alone
+  persists nothing</strong>. To get a referenceable snapshot run map -&gt; <code>save(path=...)</code> -&gt; <code>organize()</code>
+  in ONE process; evidence is stamped per session under <code>aire/data/_meta/evidence/</code>.</li>
+</ul>
+<h2 id="live-record-resolution-proven-2026-04-23">Live Record Resolution (PROVEN 2026-04-23)</h2>
+<p><strong>20,984 records resolved</strong> from live memory using GameDB pool walking + brute force region scan
+(now an AIRE capability: <code>aire.gamedb.RecordMap</code> / <code>Cortex.resolve_record</code>).
+Strategy: seed records from 526 FM/SMC fields -&gt; read record tag (0x0A08 etc.) -&gt; walk contiguous
+pools backward/forward by stride 0x28 -&gt; enumerate all siblings.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FMs scanned (all pools)</td>
+<td>526</td>
+</tr>
+<tr>
+<td>Real nemesis captains</td>
+<td>139 (6 regions)</td>
+</tr>
+<tr>
+<td>Seed records from FM/SMC</td>
+<td>1,649</td>
+</tr>
+<tr>
+<td>Additional from pool walk</td>
+<td>21,558</td>
+</tr>
+<tr>
+<td><strong>Total live records</strong></td>
+<td><strong>20,984</strong></td>
+</tr>
+<tr>
+<td>Static index resolved</td>
+<td><strong>1,877/1,877 (100.0%)</strong></td>
+</tr>
+<tr>
+<td>Unresolved</td>
+<td><strong>0</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>STALE (corrected 2026-08-03).</strong> The "purged / unreachable" list below is a 2026-04 artifact of
+the brute-force region scan and is NO LONGER TRUE — the RecordLink spine addresses <strong>694,632
+records = 100% of the GADB</strong>, with <code>live_only_categories = disk_only_categories = 0</code>. Verified
+live: <code>rl_resolve("Enemy_DifficultyAny", category="AI/SpawnAmbient/AITypes")</code> -&gt; RL <code>0x09B000A6</code>
+-&gt; <code>0x7BA5DC38</code>, name-verified, and <code>rl_at</code> round-trips it back. Resolve through
+<code>rl_resolve</code>/<code>idmap</code>, not the old scan. Kept for provenance only:</p>
+</blockquote>
+<p>Categories purged from index (unreachable heap regions, no ASLR path):</p>
+<ul>
+<li><code>AI/SpawnAmbient/AITypes</code> (GangType_ records — separate AI heap)</li>
+<li><code>NemesisForge/FirebirdFactionPersonality</code> (personality metadata — separate heap)</li>
+<li><code>NemesisForge/FirebirdFactionRole</code> (role metadata — use <code>Faction/Roles/Definitions</code> instead)</li>
+<li><code>Faction/Rewards/Types</code> / <code>XPLevel</code> (AdvancedClass metadata — use <code>Faction/Rewards/Definitions</code>)</li>
+<li>DLC4 loot drop records (not orc appearance data)</li>
+</ul>
+<p>Output: <code>data/live_record_map.json</code> — name -&gt; hex ASLR address for all 20,984 records.
+This map is session-specific (ASLR). Rebuild each game launch.</p><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
