@@ -1,0 +1,350 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Live bundles: shipped, custom and foreign content; creature bundles - Shadow of War engine reference</title><meta name="description" content="bundle registry, custom and foreign bundles, CharacterBundleMgr"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" class="cur" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="live-bundles-shipped-custom-and-foreign-content-creature-bundles">Live bundles: shipped, custom and foreign content; creature bundles</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Moved verbatim from
+CLAUDE.md on 2026-10-27 (original lines 1839-2157); heading levels normalised, text unchanged.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Sections:</strong>
+- Live bundles — load any shipped bundle into the running world (PROVEN IN-GAME 2026-09-25)
+  - An armour piece needs TWO bundles (IN-GAME CONFIRMED 2026-10-08)
+  - Foreign-game models in game — the Halo CE Pelican (PROVEN IN-GAME 2026-09-25)
+  - A creature wearing a foreign body — the Pelican drake, via Blender (PROVEN IN-GAME 2026-09-25)
+  - Custom bundles — content that exists in NO archive, loaded live (MEASURED 2026-09-25)
+- Creature bundles — CharacterBundleMgr, what decides which creatures exist (MEASURED 2026-10-05)</p>
+<hr />
+<h2 id="live-bundles-load-any-shipped-bundle-into-the-running-world-proven-in-game-2026-">Live bundles — load any shipped bundle into the running world (PROVEN IN-GAME 2026-09-25)</h2>
+<p>Any <code>.bndl</code> the archives ship can be made resident live, from any region, through the engine's own
+bundle registry — no hook, no file change, nothing persists. <strong>A/B proof, user-confirmed:</strong> the
+catapult impact's <code>AOEFX</code> string was pointed at <code>fx\demo\grondcageexplosion.fxp</code>, an effect that
+ships ONLY in the Mount Doom fort layer. Volley A (bundle absent, <code>live_resource</code> = not
+resident): firebombs landed with NO explosion. Live-load <code>dlc3_fortmtnpass.bndl</code> (46 MB,
+<code>live_resource</code> = resident). Volley B: "way more catapult bomb".</p>
+<p><strong>The registry</strong> (owner built by <code>0x119E5D4</code>, which publishes <code>owner+0x30</code> in
+<code>[base+0x2A86750]</code> and <code>owner+0x800</code> = the resource system in <code>[base+0x2A86758]</code>):</p>
+<pre><code>owner vt 0x22C0FF8 (+8: 0x22C0FC0)    slot 24 0x3DC538(owner, Bundle** out, path) forces .bndl
+owner+0x718  registry: +0x28/+0x30 rows {u64 hash, CResourceBundle*, u64}, 0x18 each
+get-or-create 0x1B5DC0(registry, path, &amp;handle)
+CResourceBundle vt 0x1E6E678 (0x178 B): slot0 AddRef 0x3DEDA0, slot1 Release 0x3DEA38,
+  slot2 Prefetch 0x3DECC8, slot3 Discard 0x3DEAEC
+  +0x08 char* path  +0x14 refs  +0x18 LOADED CONTENT (vector of resource handles)
+  +0x20 manifest resource (+8 data: null = the .bndl does not exist)
+  +0x28 u16 prefetch count  +0x2A u8 GENERATION (++ per load and per discard, not a state)
+  +0x70 paired .embb path
+</code></pre>
+<p>Laws, each measured:
+- <strong>The registry row holds NO reference.</strong> Release at zero unregisters and destroys the bundle
+  (<code>0x1B5C9C</code>), detouring to <code>0x10DD00A</code> if the prefetch count is still nonzero; Discard asserts
+  it is never the final release. Contract = keep a HANDLE and a PREFETCH; unload = Discard THEN
+  Release. <code>live_bundle_unload</code> returns exactly the pairs its per-process journal took.
+- <strong>Ask for the SHIP path.</strong> AIRE's index path drops folder segments the archive folder table
+  stores (<code>cloaks\player_rhovaniont3_cloak.bndl</code> is <code>cloaks\rhovanion_cloak\...</code>,
+  <code>sectionsandlayers\dlc3_fortmtnpass.bndl</code> is <code>sectionsandlayers\dlc3\...</code>). The short form
+  registers an entry whose manifest never arrives (benign — the engine ships 10 such rows).
+  <code>live_bundle_load</code> resolves through <code>model_asset_path</code> first.
+- <strong>Loading a region's layer does NOT place it.</strong> 32 world contexts before and after the fort
+  load, objects 73,893 -&gt; 73,870 (streaming churn). Its 121 resources load in the same state as
+  engine-loaded bundles (data present, flag 1) while the world stays unchanged.
+- <strong>Every character bundle is already resident in a loaded region</strong> (Balrog, Witch-king,
+  Graug-a-pult: 544 registered, 534 loaded) — region CONTENT is what is missing.
+- <strong>An unreferenced resource is CACHED, not freed</strong> (<code>0x1BEAAC</code>: refcount 0 -&gt; unlinked from
+  an unused list at <code>+0x10</code> and reused). "Discarded" is not "gone"; test residency BY NAME.
+  <strong>A/B tests must run the absent volley FIRST</strong> — once an effect played with the bundle loaded,
+  unloading does not reliably remove it.</p>
+<p><strong>Resource residency by name</strong> (<code>live_resource</code>): <code>StringHash 0x423E70</code> = P=919 over the LUT at
+<code>0x1DB50D0</code>, seeded by <code>r8</code> (pass 0; the loop never clears it); table <code>resSys + (h &amp; 0x7FF)*0x18</code> (0x800 buckets, head <code>+8</code>); node =
+<code>resource+0x10</code> (<code>+8</code> next, <code>+0x10</code> hash); resource <code>+0x08</code> data, <code>+0x28</code> name, <code>+0x30</code> refs,
+<code>+0x52</code> type (27 bundle, 48 .fxp, 20 .mat). Control: <code>globalrenderingconfig.bndl</code> resident, an
+unloaded bundle's manifest reads absent.</p>
+<blockquote>
+<p><code>fx_dependencies</code> reports world-layer-carried materials as UNRESOLVED (its BundleIndex cache is
+partial). Before calling an asset missing, read the carrier's own path table (<code>embb_probe</code>) and
+the live table (<code>live_resource</code>).</p>
+</blockquote>
+<pre><code class="language-python">call(&quot;live_bundles&quot;, filter=&quot;dlc3&quot;)                        # the live registry (no focus needed)
+call(&quot;live_bundle_need&quot;, asset=&quot;fx\\demo\\grondcageexplosion.fxp&quot;)   # which bundles carry it
+call(&quot;live_resource&quot;, paths=[&quot;fx\\demo\\grondcageexplosion.fxp&quot;])    # resident right now?
+call(&quot;live_bundle_load&quot;, path=&quot;worlds\\retail\\mtnpass\\sectionsandlayers\\dlc3_fortmtnpass.bndl&quot;)
+call(&quot;live_bundle_unload&quot;, all=True)
+</code></pre>
+<p>Module: <code>aire/pipeline/live_bundles.py</code> (journal
+<code>aire/data/live_objects/bundle_journal_session_only.json</code>). Main-thread calls — the game must be
+focused and the poller mounted in this process.</p>
+<h3 id="an-armour-piece-needs-two-bundles-in-game-confirmed-2026-10-08">An armour piece needs TWO bundles (IN-GAME CONFIRMED 2026-10-08)</h3>
+<p>Geometry = <code>&lt;piece&gt;_g.bndl</code> (piece <code>ArmorDataDynamicBundle</code>: <code>.mesh/.skel/.anix</code> only). Material +
+textures = a set-wide <code>&lt;set&gt;_&lt;slot&gt;_m.bndl</code> (<code>flair\rogue\rogue_chest_m.bndl</code>: 2 LTMI + 4 TEXR,
+shared by the Slim/Buff/Stk/Olog pieces), named by the DESIGN: <code>Inventory/ArmorData</code> slot 0
+<code>DynamicBundle</code> (hash 0xDF9F0919, the dictionary's "BaseWeight" collision) on the AD whose ModelPicker
+lists the piece. The engine loads both through a gear load request (vt <code>0x1DB4F78</code>, ctor <code>0x400AB8</code>:
+AD.DynamicBundle + EWD.DynamicBundle + piece.ArmorDataDynamicBundle, registered with <code>[GM+0x6C88]</code>),
+created ONLY for an equipped ITEM (orc give path <code>0x355474</code> -&gt; <code>0x61B868</code> -&gt; <code>0x4B4C7C</code>, item equip
+<code>0x40136C</code> -&gt; <code>0x401680</code>, item re-skin <code>0x645890</code>). A piece written straight into an appearance gets
+no request: mesh in memory, its <code>.mat</code> a registered resource with NO DATA -&gt; bare torso or warped
+skin. MEASURED after a MAX roll (Lithlad): 23 of 219 worn pieces / 10 of 22 captains, all randomizer
+picks; loading their 19 <code>_m</code> bundles live filled the same stubs (refs 3 -&gt; 5, data present), census
+0 of 219 missing, and the captains dressed on screen. The save loader <code>0x1C112F8</code> restores non-item
+pieces (<code>smc_nonequipment_record_list</code> -&gt; <code>0x1162D40</code>) with no request, so a saved roll needs its
+bundles requested again after every restart. Framework: <code>sdk/sow_gear_residency.hpp</code> MaterialIndex +
+<code>ArmyRNG::PumpRegionDressSweep</code> (built, NOT run).</p>
+<p><strong>A bundle the engine holds for SOMEONE ELSE's item is borrowed (MEASURED 2026-10-17, live census).</strong>
+After a Safe roll in Minas Ithil every armour slot of 25 captains held a piece and the trace said "0
+waiting, 0 not loadable", yet 4 of 148 worn pieces drew nothing: Nakra's legs / Luga's arms were
+<code>Orc_Buff_Industrial_*</code>, resident only because two Machine-tribe Buff captains wore the Industrial tribe
+items in the PREVIOUS roll. This roll changed their tribe; the rebuild dropped their gear requests, the
+bundles were released and their registry rows destroyed (no <code>orc_buff_industrial_*_g</code> row at all; the
+piece's <code>.skel</code> a resource with refs 1 and no data, its <code>.mesh</code> absent; control Glutton pants both
+resident). A 5th piece had its mesh but a <code>.mat</code> with no data (the design's <code>_m</code> released the same
+way). GearResidency counted an engine-held path as Resident and took no reference. Fix (built, cl /Zs
+clean, NOT run): <code>Service::Hold</code> takes our own handle + prefetch on every engine-held path before a
+piece goes on (getter on a registered bundle = same object; 0 MB; refused below the gear cache's VRAM
+reserve), and the randomizer's settle-time DRESS AUDIT checks every worn piece in the resource table
+(<code>.mesh</code> by the <code>.skel</code>'s stem + every <code>.mat</code> of set 0 with data; a Python twin flagged exactly the
+broken 4 of 148, 0 unknown) and re-seats a missing one (empty piece, then the piece) once it loads.</p>
+<h3 id="foreign-game-models-in-game-the-halo-ce-pelican-proven-in-game-2026-09-25">Foreign-game models in game — the Halo CE Pelican (PROVEN IN-GAME 2026-09-25)</h3>
+<p>User screenshot: orcs in Minas Ithil swinging the <strong>Halo: Combat Evolved Pelican</strong> as a weapon.
+No archive edit, no restart, no hook. The chain, every link measured:</p>
+<ol>
+<li><strong>Donor out of the other game</strong> — <code>aire/model/halo_ce.py</code> reads MCC <code>halo1\maps\*.map</code> (Halo CE
+   cache, version 13, stored UNCOMPRESSED): tag index -&gt; <code>mod2</code> gbxmodel -&gt; parts (68-byte vertices,
+   u16 strips) at any LOD -&gt; OBJ. Pelican = <code>vehicles\pelican\pelican</code> in <code>b30.map</code>, 10 parts,
+   5,668 verts, 32.3 m at 3.048 m per Halo unit. Any CE vehicle/weapon/character reads the same way.</li>
+<li><strong>Into a SoW mesh</strong> — rigid import into a copy of a WEAPON mesh (<code>slave_broom.mesh</code>), bound to
+   the palette index the carrier's own geometry uses (both broom groups: palette <code>[1]</code> =
+   <code>broom_handle</code>), shipped with a byte copy of the carrier's skeleton under new paths.</li>
+<li><strong>Live</strong> — a custom bundle (<code>bundles\sowce\sowce_pelicanwep.bndl</code>) served by Live VFS and loaded
+   with <code>live_bundle_load</code>; then <code>Model.ModelFile</code> (a live <code>char*</code>) of <strong>68 orc melee weapon
+   records</strong> repointed to <code>characters\sowce\pelican\pelican_wep.skel</code> (journaled,
+   <code>pelican_arm.py --revert</code>). Orcs BUILT after the swap carry the Pelican; existing ones keep
+   what they built. A loading screen re-deserialises the GADB and undoes the repoint (the bundle
+   stays resident) — re-arm after travel.</li>
+</ol>
+<p>What did NOT render, and why (do not re-attempt):
+- <strong>ClientFX <code>Model</code> nodes on an AOE impact draw nothing</strong> — not our Pelican, not a byte copy of
+  the shockwave ring, not even the SHIPPED globally-resident ring with the rest of the Grond effect
+  hidden (control). Effects are the wrong carrier for models in this context.
+- <strong>Placed props are baked layer geometry.</strong> A world context's per-name table (<code>ctx+0x98</code>: sorted
+  P919 name hashes -&gt; 744 shared records of cull radius/bounds/material instance; <code>T+0x48</code> pieces
+  are <code>.mat</code> instances, not meshes) — a new object cannot be pointed at a <code>.mesh</code> through it.
+- <strong>Weapons (and characters) render a model BY PATH</strong> — <code>Model.ModelFile</code> names the <code>.skel</code>, the
+  <code>.mesh</code> pairs by stem. That is the carrier that works.</p>
+<p>Traps measured on the way:
+- <strong><code>graft</code> leaves a resized arena's LOD ladder stale</strong> — <code>[800 x15, 4469]</code> after importing into an
+  800-triangle arena (only the last slot updated). Fix structurally: <code>parse_container</code> -&gt; ladder
+  <code>u16[16]</code> at <code>blob_off + arena_table + i*48 + 0x10</code> = the arena's triangle count; bounding sphere
+  at <code>blob_off + 0x2C</code> (cull, cx, cy, cz, radius). Their FILE offsets move with the arena count —
+  hardcoding the 1-arena offsets (<code>+0x60/+0xA0</code>) corrupted a 2-arena mesh.
+- <strong><code>decode_skeleton</code> gave every bone its SUCCESSOR's name (FIXED 2026-09-25, all v17 rigs).</strong> A
+  record is <code>[u32 name_off][u8 flag][f32 pos[3]][f32 quat[4]][u32 children]</code>; the reader took
+  <code>name_off</code> from quat+20, which is the NEXT record's. Positions and the tree were right, only the
+  labels slid by one (record 0 is <code>Null</code>, last name came out <code>ull</code>). Verified on the drake (Pelvis
+  has spine+2 legs+tail, Head has 10 face children, Saddle sits on the neck) and the player rig
+  (<code>Null, pNull, Pelvis, Torso_Base ... L_Hand</code>, 80/80 L/R bones on one side). Consequence: any
+  earlier by-name lookup (incl. geometry <code>calibrate</code> labels) pointed at the neighbouring record —
+  e.g. <code>R_Hand</code> resolved to <code>R_Arml</code>. The broom (3 bones) still decodes wrong — a separate
+  small-SKEL defect, unsolved.
+- <strong>A vertex palette byte indexes the SKEL NAME-TABLE order, <code>Null</code> = 0 — not the bind array.</strong>
+  The name table is written level by level (<code>Null, Pelvis, Spine1, L_Legu, R_Legu, Tail, Spine2
+  ...</code>). Skinning oracle on the drake: co-weighted bones within 2 tree steps 74% (name-table) vs
+  33% (record order) vs 2% (random); median vertex-to-own-bone 26.5 vs 106.6 vs 445.7. Holds on 6
+  player body meshes too (0.47-0.68 vs 0.04-0.13). <code>SowSkeleton.runtime_names</code> / <code>runtime_of()</code>;
+  <code>retarget._map_bones</code> maps by name into this space.
+- <strong><code>tools/re</code> shadows the stdlib <code>re</code></strong> once <code>tools/</code> is on <code>sys.path</code> (the scripts' fxp helpers
+  add it) — import <code>re</code>/<code>json</code> before it, or the next <code>import json</code> dies in a circular import.
+  A scratch script named <code>inspect.py</code> shadows the stdlib <code>inspect</code> the same way.</p>
+<h3 id="a-creature-wearing-a-foreign-body-the-pelican-drake-via-blender-proven-in-game-2">A creature wearing a foreign body — the Pelican drake, via Blender (PROVEN IN-GAME 2026-09-25)</h3>
+<p>User screenshots in Lithlad: the summoned drake mount renders as the Halo CE Pelican, flies with
+the drake's own AI and animation, is ridden ("Hold [L SHIFT] Grab Enemy"), and its fire breath
+comes out of the Pelican's nose. No archive edit, no hook.</p>
+<ul>
+<li><strong>The drake = 2 model pieces + 1 animation rig</strong>, all in <code>bundles\modelcharacters\fellbeast\
+  fellbeast.embb</code> (ui_assets.arch06, 37.9 MB, 213 sections): <code>Model/Smp_Fellbeast_Body</code> -&gt;
+  <code>body\fellbeast_body.skel/.mesh</code> (10 groups / 8 arenas: LOD0 arena 6, LOD1 arena 7, 6 gore-cap
+  LOD arenas), <code>Model/Smp_Fellbeast_Head</code> -&gt; <code>head\fellbeast_head.skel/.mesh</code> (head AND wing
+  membranes), <code>Model/Cha_FellBeast</code> -&gt; <code>fellbeast_base.skel</code> (146 bones; body/head rigs are the
+  same 134 bones with identical bind poses). <code>MaterialSets</code> = 2 primaries x 4 <code>.mat</code> cells: set 0
+  live (body, bodylods, 2 gore caps), set 1 the DEATH swap (<code>fellbeast_death.mat</code> ...) — repoint both.</li>
+<li><strong>Blender route (headless, <code>blender.exe -b --factory-startup --python</code>):</strong> AIRE exports the rig
+  (corrected names, bind heads) + reference meshes in Blender axes — SoW = (bx, bz, by) x 100,
+  a mirror, so winding flips on the way in; Blender builds the armature, fits the donor, binds it
+  by VERTEX GROUP named after the bone, saves a <code>.blend</code> for review and exports a skinned <code>.glb</code>.
+  AIRE <code>load_donor(glb)</code> -&gt; <code>retarget.plan(space="gltf", scale=100, align_feet=False)</code> (align_feet
+  would re-centre it) -&gt; 134/134 bones mapped into runtime space, placement round-trips EXACTLY.</li>
+<li><strong>Emptying drake groups:</strong> graft a one-triangle degenerate group into every group you do not
+  want drawn (keep_carrier=False); flat LOD ladder = arena triangle count (the shipped drake mesh
+  is flat); recompute the bounding sphere, never radius 0.</li>
+<li><strong>Vertex colour is a MASK on this rig</strong> (R binary, G/B 255, A small; lowest LODs all R=255):
+  the importer's median fill gave R=0 = the special value; write (255,255,255,0).</li>
+<li><strong>OBJ -&gt; Blender needs OBJ V convention</strong> (<code>export_obj(flip_v=True)</code>); Blender's glTF export
+  flips V back to the top-down space the engine samples. The DDS-convention OBJ the direct route
+  wants came out V-inverted through Blender (hull sampled the bay half of the atlas).</li>
+<li><strong>Where it can be armed:</strong> the main-thread poller lives only in Minas Ithil script layers and
+  drakes cannot be summoned there. Load the bundles in Minas Ithil (+ pin <code>fellbeast.bndl</code>), fast
+  travel, then write the Model records AFTER the loading screen (writes need no main thread;
+  loaded bundles survived the travel). <code>scratchpad/drake/arm_drake.py --load | --write | --revert</code>.</li>
+<li><strong>Lithlad (<code>desert</code>) layer scripts are PRECOMPILED</strong>: <code>SCRI</code> flag 0 = HavokScript bytecode
+  (<code>\x1bLuaQ</code> + TNIL..TSTRUCT type table); flag 1 = Lua source. All 8 standalone Lithlad parts are
+  flag 0, every base region ships source (99/115/97/105/86 source hosts), so the text-injection
+  poller cannot host there. Candidate route: a flag-1 part that <code>loadstring</code>s the original
+  bytecode, then wraps its StartupCommands — needs a binary-<code>loadstring</code> test in a private VM first.</li>
+</ul>
+<h3 id="custom-bundles-content-that-exists-in-no-archive-loaded-live-measured-2026-09-25">Custom bundles — content that exists in NO archive, loaded live (MEASURED 2026-09-25)</h3>
+<p>A bundle we author (<code>EmbbContainer(paths, payloads).build()</code> + <code>BndlManifest("Bundles/Types:
+WorldQuest").sync_from(...)</code>, <code>verify_pair</code> ok), served by Live VFS from <code>mods/live-custom/files/</code>
+under NEW paths (<code>bundles\sowce\sowce_fx.bndl</code> -&gt; <code>fx\sowce\sowce_boom.fxp</code>), is loaded by the
+engine's own registry: manifest read, content loaded, the effect registered BY NAME as a type-48
+resource with data — and fired on the catapult impact (user: "I believe so"). <code>live_bundle_load</code>
+accepts a path no archive ships when <code>GetLooseFilePath</code> resolves BOTH <code>.bndl</code> and <code>.embb</code> to a
+live mount (<code>source: live_vfs</code>).</p>
+<ul>
+<li><strong>An effect REFERENCE never loads anything.</strong> Pointing <code>AOEFX</code> at a new loose path — even one
+  <code>live_vfs_resolve</code> confirms is served — created no resource at all. The FX system FINDS
+  resident effects; only a bundle (or startup) makes them resident. Loose <code>.fxp</code> delivery is out.</li>
+<li><strong>A MALFORMED EFFECT STALLS THE ENGINE'S RESOURCE LOADER UNTIL RESTART.</strong> A forge-rebuilt effect
+  (Grond explosion re-tinted + a grafted SceneRender node; <code>fx_validate</code> OK, 21 nodes) was refused
+  by the FX parser (resource data null, refs 4) and every later load then hung — our next custom
+  bundle AND a shipped cloak that had loaded in 0.25 s. A MISSING file is benign; a MALFORMED one
+  is not. The files are in <code>Archive/live_custom_rejected_20260925/</code>.
+  <strong>CAUSE FOUND 2026-10-20 (emulation of the game's own loader, <code>aire/formats/clientfx_engine_check.py</code>):</strong>
+  every <code>.fxp</code> ends with a u32 = the count of the database's (u32, u32) pair table (db+0x68, 0 in
+  968/968 shipped effects); the forge never wrote it, so the GADB body reader <code>0x4B9B50</code> read 4 bytes
+  past end of file (<code>0x4B9C60</code>). With the 4 bytes added: accepted, 21/21 nodes. (LEAD: on the raw async
+  stream vt <code>0x1E71010</code> a read at EOF never returns - the stall.) **CORRECTED too: categories ARE sorted</li>
+<li>by the engine's StringHash(path)<strong> (371/371; header word 5 = that hash, 1,915/1,915; the loader
+  binary-searches them, <code>0x115B4D4</code>), and the forge's descriptor runs were cut by <code>FxpEditor.run()</code>.
+  All three fixed in <code>scripts/fxp_forge.py</code>; the AIRE composer is <code>aire/vfx/compose.py</code>.
+  </strong>Guard (2026-10-20):** <code>live_bundle_load</code> runs the game's own <code>.fxp</code> loader offline on every custom
+  effect whose header shape never loaded in game (<code>fx_structures_proven.json</code>), and refuses only a
+  rejection (<code>engine_rejected</code>). <code>allow_unproven_fx=True</code> skips the check. Composed effects (nodes
+  from several donors) are now safe to ship when the check accepts them - see "VFX Studio".</li>
+</ul>
+<h2 id="creature-bundles-characterbundlemgr-what-decides-which-creatures-exist-measured-">Creature bundles — CharacterBundleMgr, what decides which creatures exist (MEASURED 2026-10-05)</h2>
+<p><code>CharacterBundleMgr</code> (<code>CharacterBundleMgr.cpp</code>) = <code>[base+0x26FFAB0]+0x868</code> (the owner's vt
+<code>0x1F68920</code> is labelled "TimeManager" in the manager table - doubtful). It owns which creature
+MODELS are in memory. Read live + static; one recorded fast travel (Nurnen -&gt; Lithlad).</p>
+<pre><code>+0x00 entries, +0x08 u32 count (146 = Server/NPCBundle records), +0x10 category check
+  entry 0x30: +0 NPCBundle rec, +0x08/+0x10 vector&lt;CResourceBundle*&gt; (vt 0x1E6E678, the SAME
+  objects as the file registry - an entry HOLDS references to its .bndl files), +0x28 loaded
++0x18/+0x20, cap +0x28  queue {rec, u8 unload}          +0x30 current WorldInfo record
++0x38 always set (Nemesis, Playerskin_Talion)            +0x50 world set   +0x68 override set
++0x80 extra set (Playerskin_DarkTalion)                  +0x98/+0xA0 two override LIST slots
++0xA8 provider = _StructuresWorldInfoBundleData primary   +0xB0 dirty byte
+</code></pre>
+<ul>
+<li><strong>Update <code>0x4B4FFC</code></strong>: when dirty, wanted = expand(first override list, or default) + the always/
+  extra sets; world set = expand(provider's list); reconcile <code>0xE9F360</code> = request what is new
+  (<code>RequestBundleLoad 0x4B6204</code>), queue what dropped out for unload; then drain the queue, firing
+  loaded/unloaded events through the global script agent (<code>GM+0x6CF0</code>).</li>
+<li><strong>A list's size is its field DESCRIPTOR's element count</strong>, read by <code>0xE9EA30</code>: every
+  <code>Server/NPCBundle/Lists</code> record has 2 fields (bundle array <code>0x7AB8B862</code> + an empty second
+  array), so header byte 0 = 2. <code>World_Island_Day</code> 6 (Goblin, Spider, Warg_Base, Fellbeast,
+  Troll_Base, Troll_Poison), <code>World_MinasIthil_Day</code> 9. <strong>Vanilla keeps a region's whole creature
+  set loaded for the visit.</strong> There is no engine picker.</li>
+<li><strong>A region change resets everything</strong>: every set and every loaded creature bundle cleared,
+  on-demand loads included; then rebuilt (skin set first, then the world set, ~3 s to resident).
+  Direct <code>RequestBundleLoad</code>s persist WITHIN a region (no set owns them, so no reconcile drops them).</li>
+<li><strong>Spawn gate <code>0x16652C</code></strong> (template -&gt; model -&gt; NPCBundle -&gt; <code>IsBundleLoaded 0x1665B4</code>): a
+  missing bundle is requested ONLY when the region's <code>WorldInfo.IsTestWorld</code> is set (<code>0x5B85B4</code>);
+  retail regions have it 0, so the spawn is REJECTED (<code>[AI|SPAWNAMBIENT|REJECT] ... doesn't have
+  character bundle loaded</code>). Do not flip <code>IsTestWorld</code>: <code>0x5B813C</code> (28 callers) skips test worlds
+  in its world lookup, and loading screen / telemetry read it too.
+  Disassembled from the shipped exe (2026-10-05): <code>desc = ResolveCharDesc 0x166878(rdx)</code> reads ONLY
+  the template + SpawnManager (<code>SM+0x78</code> per-template override table, <code>SM+0x80</code> count, <code>SM+0x88</code> the
+  AI/Templates category - a foreign record asserts); rcx is never read. Then <code>GetCharacterModel
+  0x16680C</code> / <code>GetCharacterBundle 0x166680</code> (plain field getters); <strong>a NULL bundle = spawn allowed</strong>
+  (94 of 177 templates: every orc/olog class, tamed wargs, FellBeast - always-resident data). The
+  chain called live with rcx = 0 from the main thread matched the GADB read 6/6 (Gondorian_Soldier
+  -&gt; Gondorian_Soldiers, MaleCivilian -&gt; Gondorian_Civilians, AI_Talion -&gt; DLC_AI_Talion, Balrog -&gt;
+  Balrog, Orc_Defender / FellBeast -&gt; none).</li>
+<li><strong>Memory accounting (the engine's own, read-only):</strong> <code>CResourceBundle</code> slot 6 (<code>0x6E001C</code>) =
+  {loaded, total, bytes}, memoized at <code>+0x60</code> flag / <code>+0x64</code> / <code>+0x68</code> / <code>+0x6C</code> once complete;
+  bytes = sum of u32 <code>res+0x38</code> over content <code>[bundle+0x18]</code> vector <code>+0x20/+0x28</code> plus the first
+  <code>[content+0x18]</code> entries of vector <code>+0x00</code> (<code>0x6E00CC</code> + cold <code>0x112931A</code>). Mirror matched the
+  engine's cached value exactly (1,099,088). Lithlad: Nemesis 234 MB, player skins 205 MB,
+  Warg_Base 48 MB, Troll_Base 30 MB, Easterlings 23 MB, Fellbeast 17 MB; all loaded 570 MB.</li>
+<li><code>WorldInfo.MaxBundleSizePC</code> (1096 retail, consoles 548, <code>VerifySizeOnPack</code>) is a PACK-TIME budget:
+  no runtime code reads it (control: <code>IsTestWorld</code> has a cache slot + 90 code users; these have none).</li>
+<li><strong>Bundle loads do NOT consume low address space</strong> (MEASURED 2026-10-05, 2 loads via
+  <code>RequestBundleLoad</code> on the main thread, idle noise 0): Balrog 15.2 MB engine-accounted -&gt;
+  +30 MB commit; Nazgul_base 36.0 MB -&gt; +120 MB commit and <strong>+120 MB dedicated VRAM</strong>; both resident
+  3.5 s after the request; below-4 GB free (43-44 MB, largest hole 2.2 MB) unchanged. Real GPU cost
+  is ~3x the engine's byte count, so a budget must use MEASURED deltas, not <code>res+0x38</code> sums.
+  On this PC the game holds 6.35 GB VRAM in Lithlad (24 GB card).</li>
+<li>Script/console API: <code>System:LoadOverrideNPCBundleList(list, slot&lt;2)</code> / <code>LoadDefaultNPCBundleList</code>
+  write the override slots + dirty; <code>CharacterBundleMgr.Dump / LoadOverrideBundle /
+  LoadDefaultBundleList</code> (command table at <code>0x2674408</code>); quests unload their overrides
+  (<code>[QUEST]: %s: Unloading character bundle override</code>).</li>
+<li><strong>Framework facts this exposed:</strong> Bundle ForceLoad (<code>sdk/sow_bundle_forceload.hpp</code>) rewrote
+  region lists (taking byte 0 as a slot count) and evicted the region's wildlife - invisible /
+  under-map caragors, riders sunk on absent mounts; with it off caragors returned (user-confirmed).
+  Defaults changed 2026-10-05 (no list rewrite, no byte-0 write, pump re-arms on every travel).
+  <strong>The spawn-gate hook is RETIRED (2026-10-05, user: "no hooks"). RUN: build 11:08 logs
+  <code>[BundleCapture] not installed - creature bundles are native</code>, user: "everything seems
+  normal/working".</strong> The hook code is archived (<code>Archive/bundle_capture_hook_20261005/</code>, MANIFEST +
+  restore.py); <code>sdk/sow_bundle_loader.hpp</code> is now hook-free with the same API, so nothing in the
+  framework can install it. <code>sdk/sow_bundle_loader.hpp</code> MinHooked <code>0x16652C</code> at every boot, requested a
+  bundle only after a spawn had been rejected for it, and lent its captured rcx to
+  <code>RequestBundleForRecord</code> - which the chain never reads. Replaced by: <code>sdk/sow_bundle_resolve.hpp</code>
+  (the gate's chain called directly; NPCBundle / AI/Templates / Character/Models / AITypes records)
+  for Spawner v2, the mount panel and the counter randomizer; and declared NEEDS from every
+  framework spawner (Placement War, Clone Army, War Spawner, WarDirector's enabled lanes, Spawn
+  Chaos's rollable tiers, ForceLoad's own bundle list + ambient mix, Boss Invasion Day). ForceLoad
+  no longer writes any region list at all - its rows and <code>SeedInvasion</code> are declared bundles (the
+  old slot 0/1 writes replaced each region's first two creatures).</li>
+<li><strong>Load everything, measured (2026-10-05, 24 GB card, Lithlad):</strong> 129 <code>RequestBundleLoad</code>s in one
+  main-thread chunk (362 ms) -&gt; all resident in ~9 s, nothing refused; engine bytes 622 -&gt; 4,337 MB but
+  real cost <strong>+571 MB dedicated VRAM, +665 MB commit</strong>, FPS 59-60 throughout. Shared resources make the
+  engine's byte sum overstate a burst ~6x (while a single Nazgul_base cost 3x ITS sum) - only a measured
+  delta is a budget. Below-4 GB free 49 -&gt; 38 MB (largest hole 2.2 -&gt; 1.3 MB) while resident.</li>
+<li><strong>A fast travel releases all of it</strong> (Lithlad -&gt; Nurnen, 1 Hz recorder): 141 loaded -&gt; 0 in the
+  wipe, then the 9 of Nurnen's own set; dedicated 7,068 -&gt; 6,095 MB, commit 11,507 -&gt; 10,655 MB,
+  below-4 GB back to 42.4 MB / 2.9 MB hole. Nothing accumulates across regions; "load everything"
+  must be re-issued per region (ForceLoad re-arms on the manager-rebuilt edge).</li>
+<li><strong>Channel -&gt; bundle is plain GADB data:</strong> <code>AITypes.Entries[]</code> -&gt; <code>_StructuresAISpawnAmbientTypeEntry
+  .AITemplate</code> (0xE8A2CCF2) -&gt; <code>AI/Templates.CharacterModel</code> (0xB32EA6F8) -&gt; <code>Character/Models.Bundle</code>
+  (0x7AB8B862). 10/10 Placement War channels resolve: Gondorian_Soldiers x6, Easterlings_Base x3,
+  Gondorian_Civilians x2 (Trainee, Medic_Archer), Idril (ShieldMaiden). With nothing declaring them,
+  those three humans' bundles arrived 49 s after the travel, i.e. after rejected spawns.
+  <code>sdk/sow_bundle_needs.hpp</code>: modules declare channels, ForceLoad requests their bundles first after
+  every re-arm (even with ForceLoad off); roster and load-all prefetch are batched against the
+  per-process DXGI budget (<code>sdk/sow_vram_budget.cpp</code>, <code>IDXGIAdapter3::QueryVideoMemoryInfo</code>;
+  reserves 768 / 1536 MB, 128 MB per bundle per batch, one burst when &gt;= 2 GB above the reserve).
+  <strong>RUN 2026-10-05</strong> (build 03:45): log <code>[Vram] budget 23748 MB</code>; Nurnen -&gt; Cirith Ungol, 5 Hz
+  recorder from the manager wipe: the 4 Placement War bundles requested at <strong>3.87 s, in the same
+  0.2 s sample as the engine's own region set</strong> (the rebuild instant - nothing can go earlier),
+  roster at 8.77 s (the pump only moves on once IsBundleLoaded reports the needs resident),
+  the rest by 10.81 s - 141 requested in 11 s (was: humans 49 s after the travel). Entry <code>+0x28</code>
+  flips at REQUEST, so it cannot time residency. <strong>USER-CONFIRMED 2026-10-05: the war mod's humans
+  appear instantly after a fast travel in every region.</strong></li>
+</ul><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
