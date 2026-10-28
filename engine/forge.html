@@ -1,0 +1,279 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Forge: math-driven weapon and armour modelling (Blender 5.2, offline) - Shadow of War engine reference</title><meta name="description" content="Forge (`D:\SoWCE_Forge`): math-built weapons / armour in Blender, SoW weapon mesh constraints, bake laws"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" class="cur" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="forge-math-driven-weapon-and-armour-modelling-blender-5-2-offline">Forge: math-driven weapon and armour modelling (Blender 5.2, offline)</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Created 2026-10-27.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Sections:</strong>
+- Where it lives and how to run it (BUILT 2026-10-27, offline only)
+- SoW weapon mesh constraints (MEASURED 2026-10-27)
+- Bake laws (MEASURED 2026-10-27)
+- Route into the game (NOT RUN)</p>
+<hr />
+<h2 id="where-it-lives-and-how-to-run-it-built-2026-10-27-offline-only">Where it lives and how to run it (BUILT 2026-10-27, offline only)</h2>
+<p>The toolkit lives on D: for space: <code>&lt;local path&gt;</code> (README, <code>docs/FORGE_GUIDE.md</code> = the full
+reference: module map, formulas, sources). It is NOT under <code>aire/</code> and imports nothing from the
+repo; it reads game assets only through files AIRE exported (<code>reference/numenorean_t1.obj</code>).</p>
+<pre><code>blender -b --factory-startup -P D:/SoWCE_Forge/build.py -- designs/ithil_warden.py --bake
+blender -b --factory-startup -P D:/SoWCE_Forge/build.py -- designs/uruk_pauldron.py --bake
+&quot;C:/Program Files/Blender Foundation/Blender 5.2/5.2/python/bin/python.exe&quot; D:/SoWCE_Forge/tests/test_geometry.py
+</code></pre>
+<p>One design spec -&gt; dense sculpt source + game carrier from the SAME definition -&gt; per-pair Cycles
+bake with fitted cages -&gt; albedo / roughness / metallic + SoW <code>_d</code> <code>_n</code> <code>_s</code> packings -&gt; review
+renders (sculpt and carrier from the same cameras) + numeric probes -&gt; <code>.blend</code> + <code>_lo.glb</code>.
+About 60 s per build on the RX 7900 XTX (HIP).</p>
+<p>Results 2026-10-27 (all parts closed and outward): Ithil Warden sword carrier 632 tris / source
+213,344; Uruk pauldron carrier 2,530 / source 381,750; SDF spiked pommel 87,108 quads.</p>
+<h2 id="sow-weapon-mesh-constraints-measured-2026-10-27">SoW weapon mesh constraints (MEASURED 2026-10-27)</h2>
+<p>Reference: <code>bundles\modelweapons\player\1h_sword\player_1hs_numenoreanswordt2.embb</code> mesh 0
+(<code>player_numenoreanswordt1.mesh</code>), AIRE <code>model_open</code> / <code>model_view</code> / <code>model_export</code> + OBJ slices.</p>
+<ul>
+<li>Frame: grip point at the origin, blade +Y, width Z, thickness X (the flat faces +-X); bounds
+  X +-4.35, Y -34.9..102.1, Z +-7.74 cm. Blender mapping (x, -z, y) / 100 is a proper rotation,
+  so a Blender glTF export carries SoW axes (exported GLB bounds x 100 = SoW bounds, all 6 extents).</li>
+<li>810 vertices / 1,320 triangles, one bone "Twitch", stride-64 half4 vertices, cull distance 140
+  (N = 1 sword).</li>
+<li>Blade carrier rings: 12 vertices (zero-thickness edge vertex, 0.28 cm steep micro-bevel at a
+  constant absolute width, convex face, low centre ridge); rows every 10.55 cm, 6 rows for the point.</li>
+<li>Blades are about 4x thicker than real swords: 9.23 x 2.30 cm at y 16, 5.16 x 1.23 at y 79
+  (1:4.2; a real longsword is about 1:12). Real-thickness blades read as paper in game.</li>
+</ul>
+<h2 id="sow-orc-shoulder-armour-measured-2026-10-27">SoW orc shoulder armour (MEASURED 2026-10-27)</h2>
+<p><code>bundles\modelcharacters\npc\tribe_slaughter\orc_buff_slaughter_shoulders_g.embb</code> and
+<code>bundles\modelcharacters\npc\flair\orc_buff_ancient_shoulders_g.embb</code> (AIRE model_open / model_view):
+- a "shoulders" piece is BOTH shoulders in one skinned mesh, about 97-100 cm across, y about
+  26-76 cm in orc model space, cull distance 400; 105 <code>*_shoulders_g.embb</code> pieces exist.
+- <strong>CORRECTED 2026-10-27:</strong> the groups are an LOD CHAIN, not parts. This file first said "6,392 /
+  4,548 tris per pair": those totals summed every LOD. The census (groups share one bbox, IoU
+  0.94-1.00, falling tri counts) gives LOD0 = 2,432 (slaughter: 2,432 / 2,081 / 1,212 / 667) and
+  2,900 (ancient: 2,900 / 1,228 / 420) for BOTH shoulders. The forge pair (6,092) is 2-2.5x over.
+  <strong>CORRECTED again 2026-10-27 (N=59 of 105, body-type balanced):</strong> pairs ship LOD0 2,551-4,158
+  (p25-p75; family-balanced 2,900-3,022); the 2,432-2,900 range was N=2. Forge pair: 2,320.
+- style: layered shards with torn, toothed lower silhouettes and blocky studs, not smooth
+  historical plates. L and R share one mirrored UV set (overlap 100%, mirrored tris 50%).
+- Search tip: <code>model_find</code> patterns containing backslashes returned nothing; plain substrings work
+  (<code>_shoulders_g.embb</code>, <code>orc_buff_rogue</code>).</p>
+<h2 id="bake-laws-measured-2026-10-27">Bake laws (MEASURED 2026-10-27)</h2>
+<p>Each cost one failed bake; full evidence in <code>FORGE_GUIDE.md</code> section 6.
+1. Per-pair bakes into one atlas: margin 0, then one dilation from the exact coverage. The
+   operator's margin paints over neighbouring parts' islands.
+2. Nothing narrower than a texel may exist only in the sculpt source (a 0.3 mm edge land caught
+   edge-pixel rays at 65 deg; dilation smeared them into dashes).
+3. Fit the cage from the measured source-to-carrier deviation (BVH); a fixed 0.6 cm cage under a
+   0.70 cm deviation gave black holes (inner-surface hits). 319 -&gt; 48 suspect pixels.
+4. An island border is not an edge: no curvature wear within 2 px of a UV border.
+5. Brushes on thin shells need backface masking.
+6. Wear masks need broad curvature (blur r=4 + threshold) or hammer cells become rings.
+7. Silhouette damage (edge nicks) must be in the carrier; a normal map cannot move an outline.
+8. Procedural detail must be band-limited to the texel grid: point-sampled damascus put ~5.5
+   stripe cycles per 0.5 mm texel (noise); use the box-filtered square wave and game-scale
+   layer counts (about 26, not a real 140).
+9. AO is local (6 cm) and blind to studio props: the 10 m default reached the 20 m floor and gave
+   an AO median of 0.094 (0.859 after the fix).
+10. No hard rims in the sculpt: a wall ray runs parallel to a thin plate and grazes or misses a
+    90 deg rim. Sculpt plates get a half-round edge (<code>armor.shell(rim=6)</code>); carriers keep flat walls.
+11. Averaged-normal cages (the Substance / Marmoset default) are wrong for thin shells: rays near a
+    rim arrive at 45 deg and land on the wall (shoulder pair 433 -&gt; 19,989 suspects). Default stays
+    the operator's split-normal extrusion (<code>--cage averaged</code> kept for thick parts).
+12. Ignore back faces: a tangent normal with z &lt;= 0 is impossible; <code>bake_pairs</code> drops those texels
+    and refills them from the island (curvature + position passes share the mask). The real gate is
+    <code>impossible_px_z_lt_0</code> in report.json; tilt 75-90 deg on rim borders is the rim seen edge-on.
+    Pair: z &lt; 0 texels 490 -&gt; 10 (1,231 refilled); pauldron 0; sword 0.</p>
+<p>Also measured: Blender stores BYTE-image <code>pixels</code> exactly as written whatever the colour-space
+tag, so sRGB must be encoded once by hand.</p>
+<p>Handling probe: centre of percussion survives SoW-style blade thickening (about 55 cm in front of
+the cross on a construction-built sword; Albion's real XIIIa: 59 cm), the balance point does not
+(22 cm vs a real 10-15).</p>
+<h2 id="route-into-the-game-in-game-confirmed-2026-10-28">Route into the game (IN-GAME CONFIRMED 2026-10-28)</h2>
+<p>User screenshot, a spawned grunt holding the Ithil Warden: "looks like its native to the game".
+Scripts: <code>scripts/forge_import/package.py</code> (offline pack), <code>arm.py</code> (live: <code>--scan / --load / --arm /
+--show N / --give CHAR / --status / --revert</code>), <code>target_audit.py</code>, <code>holder_probe.py</code>. The chain:
+- <strong>Carrier = the target:</strong> <code>Wep_Orc_1HS_Falchion</code> (mesh 16 of <code>bundles\modelweapons\default_weapons.embb</code>,
+  3 LOD groups 2,000 / 1,000 / 250, one group per arena, palette [0]). Each group is REPLACED by the
+  Forge carrier (<code>aire.model.build.graft</code>, keep_carrier=False, re-decoded between grafts); <code>.skel</code>,
+  <code>.anix</code>, <code>_ps.cres</code> byte-copied under the new stem. Blast radius: 2 weapon records
+  (<code>Orc_1HS_Falchion</code>, <code>Orc_Misc_Falchion</code>); material set 0 shared with no other Model.
+- <strong>Retarget:</strong> the Forge glb is SoW / 100 exactly -&gt; <code>retarget.plan(space="identity", scale=100,
+  align_feet=False, snap_to_bone=False)</code>. <code>model_import</code> cannot do this (its "gltf" space negates Z
+  and it always stands the donor on the rig's floor; the 3-bone weapon SKEL decodes to garbage names,
+  so its auto-scale read x147.5).
+- <strong>Vertex colour (MEASURED on the falchion):</strong> A 255 everywhere; G 255 = the blade (386 / 1,210
+  vertices, Y 19-93 cm, thin edge), 0 on the hilt; R = B = 0. uv1 (LOD0 only) = 5 discrete u values,
+  a per-part strip, left at the encoder's median.
+- <strong>Tangent frame (MEASURED, CORRECTS the "DX V flip" LEAD):</strong> SoW stores T along +dP/du and B along
+  +dP/dv (median 0.996 / 0.997 of vertices over 16 shipped weapon + armour meshes). AIRE's glTF frame
+  <code>cross(n, t) * w</code> points B image-UP (0.000 on this import); package.py negates B for glTF donors.
+  AIRE's importer is unchanged (earlier confirmed imports used it) - fix there separately.
+- <strong>Textures:</strong> the archive name index is SHIFTED for tier files (the blob indexed as
+  <code>orc_falchion_n.texuhd</code> is <code>orc_finesword_d.tex</code>; 3 of 10 read were mislabelled): pick templates by
+  header content. Used the Ranger T1 sword's in-bundle tiers (_d 1024x2048 DXT1 x12, _n 1024x2048
+  DXT5 x12, _s 512x1024 DXT1 x11): the master resolution ships in the bundle, no .tex0 needed.
+  <code>_s</code> R for metals = 255 (MEASURED on the falchion; was a 0.95 GUESS). Round trip 39 / 47 / 36 dB.
+- <strong>Materials:</strong> the falchion's two (gear_lod0 / gear_lod1) with tDiffuse / tNormal / tSpecular
+  repointed; detail, blood and frost maps stay shipped. Bundle type <code>Flair_2MB</code>, 9 sections, 4.78 MB,
+  every new path under one content-hashed folder (a rebuild never meets a cached resource).
+- <strong>Live:</strong> Live VFS mount + <code>live_bundle_load</code> (0.77 s, all 7 key resources resident with data) -&gt;
+  WriteLedger repoint of <code>ModelFile</code> + <code>MaterialSets[0].SolidMaterial[0..1]</code> (strings allocated in the
+  game, read back) -&gt; holder rebuild 0x3FD21C / 0x3FD204 / 0x40000C. Evidence the built weapon uses
+  our mesh: its refs rose by exactly 1 per rebuilt orc (3 -&gt; 4) and fell as they despawned (4 -&gt; 2).
+  A non-falchion grunt: his held item's look (+0x40) set to <code>Orc_1HS_Falchion</code> (attacks at +0x38 kept).
+- Not yet seen: the sheathed position, blood on the blade, the distance LODs (all 632 tris).
+Open: armour skinning onto an orc rig (<code>kb/captain-looks.md</code> gear route: <code>_g</code> + <code>_m</code> bundles).</p>
+<h2 id="professional-standard-measured-2026-10-27">Professional standard, measured (2026-10-27)</h2>
+<p><code>&lt;local path&gt;</code> over 12 shipped SoW meshes (LOD0): split ratio 1.05-1.40,
+hard-edge positions mostly 0-4%, UV utilisation 55-88% on own atlases, L/R pieces 100% overlap /
+50% mirrored, weapons 30-70% overlap. The Numenorean sword splits its blade into two full-height
+UV islands with front/back faces stacked (UV layout drawn by <code>probes/uv_layout.py</code>). Player
+weapons ship 1 LOD; orc weapons and armour 3-4 (ratios ~1 : 0.45 : 0.12; <strong>CORRECTED 2026-10-27</strong>
+over 445 chains: two fixed presets, 1 : 0.50 : 0.125 and 1 : 0.7 : 0.4 : 0.2 - see below). Cycles writes no bake
+texel for UVs outside [0, 1] (MEASURED). Full table and laws: FORGE_GUIDE section 11.</p>
+<h2 id="geometry-measures-measured-2026-10-27">Geometry measures (MEASURED 2026-10-27)</h2>
+<p><code>forge/ddg.py</code> (cotan mean curvature, angle-defect Gaussian, UV Jacobian distortion; tests 8/8).
+In pixel space shipped SoW weapons unwrap at conformal p50 1.05-1.10 and orc armour 1.18-1.29;
+the inferred texture aspects (weapons 1:2, ancient chest 2:1, shoulders 1:1) were a LEAD and are
+CONFIRMED by TEXR headers (tex_preview: chest mip 2 = 512x256, shoulders mip 1 = 512x512).
+Forge plates now unwrap with LSCM (conformal p50 1.04); wear comes from baked true curvature. Formability (sum |K| dA / 4 pi, outer sheet): pauldron cop 0.875,
+lames ~0 (developable). Guide section 12.</p>
+<h2 id="slot-standards-and-an-aire-export-caveat-measured-2026-10-27-n-55-clean-of-81">Slot standards and an AIRE export caveat (MEASURED 2026-10-27, N=55 clean of 81)</h2>
+<p>Per-slot LOD0 budgets, LOD ratios, UV use, mirroring and texture aspect: FORGE_GUIDE section 14
+(e.g. chests 1,540-2,146 tris, 3-5 LODs, 6% mirrored; shoulders 1,800-2,489, 100% mirrored).
+<strong>CORRECTED 2026-10-27:</strong> those rows were N = 6-11 through the name index; the full / balanced
+populations are in the section below and FORGE_GUIDE section 16.
+<strong>CORRECTED / FIXED 2026-10-27 - AIRE decoded UVs wrongly on stride-68/72 vertex formats</strong>: uv0 is a float32 pair there (fix in aire/model/decode.py, aire/documents/MODEL_LAYER.md; failures 24 -&gt; 1 of 81). Original finding: (17/18 and 2/2;
+stride 64: 2/42): Rhovanion weapons, Scavenger tribe, flint/tinderhair, elven, beastmaster pieces.
+<code>model_open</code> note "uv0 at stream B +0 (score X)": failures median 0.410 vs clean 0.647. Mechanism
+(extra stream-B attribute) is a LEAD; belongs in kb/aire-api.md once confirmed and fixed.
+SoM meshes live inside BNDL v4 containers; no current reader.</p>
+<h2 id="som-vs-sow-and-within-plate-mirroring-measured-2026-10-27">SoM vs SoW and within-plate mirroring (MEASURED 2026-10-27)</h2>
+<p>SoM orc weapons LOD0 494-1,488 tris (N=60) vs SoW 1,994-4,466; mirrored overlap 24% vs 71%; Talion's
+weapons barely changed (1,500-1,824 vs 1,758-1,945). <strong>CORRECTED 2026-10-27:</strong> the SoW side was a
+name-index sample (mostly shield kits); the full population is 1,334-1,996 (N=62 orc), overlap 64%,
+so SoW orc weapons carry ~1.3-2.7x SoM's geometry, not ~3x; player 1,500-2,348 (N=93).
+Forge plates now mirror left/right halves (armor.shell mirror_half): pair outer density 20.3 px/cm
+vs shipped 15.3. FORGE_GUIDE section 15.</p>
+<h2 id="full-weapon-population-and-lod-presets-measured-2026-10-27">Full weapon population and LOD presets (MEASURED 2026-10-27)</h2>
+<ul>
+<li><code>model_find</code> reads the archive NAME index, which drops intermediate folders and lists some
+  containers only by their <code>.bndl</code>: it saw 54 orc weapon containers and none of
+  <code>bundles\modelweapons\default_weapons</code> (54 meshes). AIRE's mesh index
+  (<code>aire/capture/mesh_index.py</code> <code>MeshContainerIndex.extract</code>) serves all 245 weapon meshes, 0 failed
+  (<code>&lt;local path&gt;</code>). Use it for any population question.</li>
+<li>Orc + olog weapons (77 clean of 79): LOD0 1,334-1,996 (p50 1,934), LOD1/0 0.500, LOD2/0 0.124,
+  1:1 textures (56 of 77), 14.1 px/cm at 1024. Player weapons (93 of 94): LOD0 1,500-2,348, 57 with
+  one LOD, 1:2 textures (81 of 93), 27.3 px/cm.</li>
+<li>LOD chains follow two presets: 1 : 0.50 : 0.125 (falchion 2,000 / 1,000 / 250) and
+  1 : 0.7 : 0.4 : 0.2 (a chest 7,786 / 5,449 / 3,114 / 1,557). Orc weapons pile up under 2,000: 27
+  chains in 1,900-2,000, 5 in 2,001-2,100 (a tool-enforced target is a LEAD).</li>
+<li>Armour LOD0 (name index, complete or body-type balanced): helmets 1,661-2,857 (31 of 35), chests
+  3,741-6,275 (57 of 174), shoulder pairs 2,551-4,158 (59 of 105), legs 1,996-2,573 (48 of 48).</li>
+</ul>
+<h2 id="how-a-weapon-streams-measured-2026-10-27-per-record-decode-of-1-742-equippedweap">How a weapon streams (MEASURED 2026-10-27, per-record decode of 1,742 EquippedWeaponData)</h2>
+<ul>
+<li>Chain (bone axe): <code>Inventory/ItemBuilder IB_Orc_1HA_BoneAxeX2.WeaponData</code> -&gt;
+  <code>Inventory/EquippedWeaponData Orc_1HA_BoneAxeX2</code> -&gt; +0xA8 <code>DynamicResource/BundleDefinition
+  Orc_1HA_BoneAxe</code> {Bundle = the EXACT path <code>bundles\modelweapons\orcs\1h_axe\orc_1ha_boneaxe.bndl</code>,
+  BundleType <code>Bundles/Types Flair_1MB</code>}; +0x70 OutOfMemoryBackups -&gt; <code>Orc_1HA_StuddedAxeX2</code>;
+  +0xB0 Model[2] -&gt; <code>_StructuresInventoryModel</code> -&gt; <code>Model Wep_Orc_1HA_BoneAxe</code> {ModelFile .skel,
+  MaterialSets[3], Scale, EnableCloth, WeaponFXContext, audio names, SeverIndex, RayHitDims}.
+  AIRE's name table calls +0xA8 "BaseWeight" (name LEAD; the BundleDefinition value is MEASURED).</li>
+<li>1,623 of 1,742 stream from a BundleDefinition (priority 5000 on 1,310). OutOfMemoryBackups exist
+  for orc weapons only (61 of 83 streamed orc weapons; 0 of 1,391 player); 7 of the 9 distinct
+  backups have no bundle - their meshes are in the always-loaded <code>default_weapons</code>. Substitution
+  under memory pressure is a LEAD from the field name.</li>
+<li><code>Bundles/Types</code> (181) carry MaxMemoryPC / Durango / Orbis (MB) and a BudgetPolicy: <code>Flair_NMB</code> =
+  N MB on consoles, 10N on PC; <code>Player_Armor</code> 13 / 6; <code>Faction_Armor</code> 200 / 20; <code>Default_Weapons</code>
+  800 / 80. Measured bundle sizes: orc weapons <code>Flair_1MB</code> p50 0.90 MB (n 38), player swords 4.8 MB,
+  daggers 4.6, bows 6.0 (<code>probes/bundle_class_census.py</code>).</li>
+<li>Packaging rule for a forge orc weapon: LOD0 &lt;= 2,000 / ~1,000 / ~250, 1:1, a <code>Flair_1MB</code>-sized
+  bundle, and a resident OutOfMemoryBackups of the same WeaponType. Full write-up: FORGE_GUIDE 16.</li>
+</ul>
+<h2 id="aire-decode-category-fix-fixed-2026-10-27">AIRE decode_category fix (FIXED 2026-10-27)</h2>
+<p><code>decode_category</code> decoded every record through the first record's descriptor run (BaseWeight and
+Model both at +0xA0 of Orc_1HA_BoneAxeX2, Model = None). <code>aire/gamedb/analyzer.py</code> now cracks each
+record's own <code>rec+0x08</code> run (batch == per-record on 1,742 weapon-data, 1,349 armour-data and
+2,715 Model records); original in <code>Archive/aire_decode_category_fix_20261027/</code>.</p>
+<h2 id="orc-armour-rig-chain-fit-and-skin-measured-2026-10-28-live-route-not-run">Orc armour: rig, chain, fit and skin (MEASURED 2026-10-28; live route NOT RUN)</h2>
+<ul>
+<li><strong>Samples</strong> (<code>&lt;local path&gt;</code>, <code>armor_refsheet.py</code>; Buff Slaughter + Ancient,
+  SoM Buff def / leather / beheader / berserker / infantry shoulders): every SoW piece ships 3-4 LODs.
+  Bones by RUNTIME name (palette = SKEL name-table order; <code>model_open</code>'s <code>group_bones</code> reads the bind
+  order and names shoulders "L_Hand"): shoulders L/R_Shoulder + L/R_Bicep + L/R_ArmuX (8-10 bones,
+  1-3 influences); chest Spine4_joint + Upper_Torso + shoulders; helmet Head (86% rigid); pants Pelvis</li>
+<li>thighs; legs lower legs + feet; arms (gauntlets) 38 bones incl. fingers.</li>
+<li><strong>Buff rig</strong> (bind, <code>reference/armor/orc_buff_rig_bind.json</code>): <code>R_Shoulder</code> (5.7, 54.1, 0.4) is the
+  CLAVICLE root; the shoulder joint is <code>R_Armu</code> (23.3, 56.1, -5.7); <code>R_ShoulderPad</code> (12.5, 61.4, -5.0);
+  elbow <code>R_Arml</code> (46.3, 31.2, -8.0) -&gt; the A-pose arm runs 47 deg below horizontal. Body LOD0 =
+  <code>orc_buff_body001.mesh</code> group 2 (1,708 tris; groups 2-5 halve; 0-1 are partial meshes).</li>
+<li><strong>Chain:</strong> <code>Inventory/ArmorData AD_Slaughter_Shoulders</code> {DynamicBundle -&gt; <code>Slaughter_Base</code>
+  (<code>slaughter_base_m.bndl</code>, Flair_2MB), OutOfMemoryBackups -&gt; <code>AD_Sauron_Shoulders</code>, ArmorSlot 1} -&gt;
+  ModelPicker by RequiredBodyType (2 Slim, 3 Buff, 4 Stocky, 5 Olog) -&gt; <code>Model/SimpleModelPieces
+  Orc_Buff_Slaughter_Shoulders</code> {Model <code>Smp_Orc_Buff_Slaughter_Shoulders</code>, MeshIndexPairs[6], Tint
+  <code>FactionCloth_Cloth_Leather_Metal</code>, ArmorDataDynamicBundle (<code>_g</code>, Flair_1MB: .mesh/.skel/.anix)}.
+  The Smp Model's material set 0 is its own primary (shared with no other Model) although its paths
+  (<code>orc_slaughter.mat</code> / <code>lods.mat</code>, the tribe atlas) are tribe-wide.</li>
+<li><strong>Vertex colour (MEASURED, 1,727 vertices):</strong> alpha 16 on X &lt; 0, 64 on X &gt; 0; R 255 on the plates
+  (Y &gt;= 44.7), 0 on the lower fringe. <strong>CORRECTED 2026-10-28:</strong> alpha is NOT the MeshIndexPairs part
+  index - over ~30 shipped shoulder pieces it is always 16 left / 64 right whether the side pairs read
+  1 / 2 (Ancient, Serpent), 2 / 3 (Torturer, Mystic) or 1-2 / 3-4 (Bling); uv1 is identical on both sides.
+  Engine: selector <code>0x1B37F0</code> picks a pair (normal or flair range by its 3rd arg), <code>0x1BD724</code> stores
+  (min, max) at render model +0x56 (min 1 -&gt; 0) and calls vf 0x130; what the range indexes is a LEAD
+  (<code>scripts/forge_import/mesh_index_census.py</code>, <code>uv1_parts.py</code>). An import keeps alpha 16 / 64 by side.</li>
+<li><strong>Fit (forge/conform.py):</strong> a spine through R_ShoulderPad -&gt; R_Armu -&gt; R_Bicep -&gt; 55% to the elbow,
+  rays to the body, smoothed radius + clearance, rays capped at 16 cm (uncapped, the cop climbed over
+  the head). Fit vs shipped Slaughter: clearance p5/p50/p95 1.8 / 3.9 / 5.9 vs 1.6 / 5.4 / 12.0 cm, inside
+  3.4 vs 4.3%, shoulder coverage 77 vs 82%. The first, unfitted pair: inside 8.8%, coverage 20%.</li>
+<li><strong>Skin by weight transfer</strong> (<code>scripts/forge_import/package_armor.py</code>): closest carrier surface point,
+  barycentric per-bone weights, top 4, sum 255; palette = the carrier's. Offline LBS pose (R_Armu +35 /
+  +70 deg, helper bones NOT driven, so absolute stretch is overstated): triangle stretch p90 23.9 /
+  39.6% vs the carrier's own 28.4 / 47.2%, i.e. it deforms like the shipped piece.</li>
+<li>Pack (BUILT, NOT RUN): <code>mods/forge-armor/files/bundles/sowce/forge/us_&lt;hash&gt;.bndl</code>, 3.83 MB; LODs
+  2,776 / 1,212 / 384 / 384; tint mask -&gt; flat black (no tribe colours yet).</li>
+</ul>
+<h2 id="custom-armour-sets-on-cut-records-built-not-run-2026-10-28">Custom armour sets on cut records (BUILT, NOT RUN 2026-10-28)</h2>
+<p>User rule 2026-10-28: custom armour gets its OWN set ("Full set: Custom (Test)"), never a repoint of a
+shipped set. Carrier = the cut Buff <strong>Defender</strong> set (<code>scripts/forge_import/carrier_set_audit.py</code>:
+AD_Defender_{Shoulders,Chest,Arms,Pants,Legs}, Buff pieces + <code>Smp_Orc_Buff_Defender_*</code> Models, each design
+referenced only by its own cut <code>IB_Defender_*</code> builder, nothing shared, no mesh shipped). Real record ids,
+so a save keeps the (empty) original. Quirks: <code>AD_Defender_Shoulders.ArmorSlot</code> ships 2 (chest) -&gt; set 1;
+its material set has 4 entries (ours fills all 4). Its MeshIndexPairs number the pads 1 / 2 (Slaughter 2 / 3).
+- Live data: <code>scripts/forge_import/arm_custom_set.py --load / --arm / --status / --revert</code> (ArmorSlot, both
+  BundleDefinition <code>Bundle</code> strings -&gt; our bundle, ModelFile, SolidMaterial[0..3]; WriteLedger + state file,
+  still-ours revert) and the manifest <code>&lt;sowframework&gt;\live\forge\custom_sets.txt</code> (<code>set|label</code>,
+  <code>slot|ArmorSlot|design</code>).
+- Framework (cl /Zs clean): <code>sdk/sow_gear_catalog.hpp</code> "CUSTOM SETS" (<code>RefreshCustomSets</code>, re-read every
+  3 s, listed first, <code>CustomPieceRefusal</code> = SetPieceRefusal without the cut rule) + the Full set row filter
+  offers a custom set with one slot (<code>ui/sow_ui_army_grid.cpp</code>). GearResidency resolves the piece's bundle
+  from the LIVE Bundle string (no map entry needed); its <code>NeedOf</code> cache is per record, so a new pack path
+  needs a menu re-open or restart.</p><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
