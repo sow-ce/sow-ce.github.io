@@ -766,11 +766,18 @@ Full layout: "OBJR closed" below.</p>
 world_lights.py): in the player's region (desert, 222 parts, 66 live world contexts) <strong>2,875 /
 2,879</strong> objects sit at the decoded position and rotation; LightCube (vt 0x1FE1148) LightColor
 1,002 / 1,002 and SpecularColor 1,002 / 1,002 equal (control 0), LightRadius 936 / 957,
-IntensityScale 988 / 1,002; Sound (vt 0x1DBBE78) OuterRadius 1,329 / 1,329; LightSpot
+IntensityScale 988 / 1,002 (re-run 2026-10-28, 130 contexts: LightColor / SpecularColor / IntensityScale
+950 / 950, LightRadius 903 / 903, OuterRadius 1,326 / 1,326, every control 0); Sound (vt 0x1DBBE78) OuterRadius 1,329 / 1,329; LightSpot
 (0x1FE0998), LightDirectional (0x1FE0E98), DecalLightDirectional (0x1FE0D40) likewise. <strong>Live
 offsets on every light: LightColor +0x138, SpecularColor +0x13C, LightRadius +0x140,
 IntensityScale +0x144; Sound OuterRadius +0x130.</strong> The mismatches are a LEAD for runtime-animated
-lights (<code>.txanm</code> flicker textures, time of day). A live check run in the WRONG region finds only
+lights (<code>.txanm</code> flicker textures, time of day). <strong>Position mismatches settled (MEASURED 2026-10-28,
+desert, 2,810 matched, 45 name matches off by &gt; 1 cm; <code>position_mismatches</code> in the result):</strong> 3 / 45
+sit exactly where the SERVED patch <code>.objres</code> puts them (BEHAVIOR law 17); the other 42 are lantern
+lights (<code>LightHangOrc*_l.LC_Out01</code>, <code>light_NN.LC_Out01</code>, <code>DOGli_NN.T.LC_Out01</code>) offset 2-22 cm
+HORIZONTALLY (vertical offset median 0.4 cm; a "settled under gravity" reading is killed: 0 / 26
+downward). 16 / 42 moved between two runs a minute apart (up to 20 cm: swinging / wind-driven), 26
+did not. LEAD: the live light follows its lamp's animated or simulated socket, not the authored point. A live check run in the WRONG region finds only
 name collisions (228 / 228 "position differs" in minasithil while the player stood in desert): the
 action defaults to the current region (FactionSystem +0x1B0).</p>
 <p><strong>ONLS and SCRB decoded (MEASURED 2026-10-27, 400 layers; aire/formats/objr_names.py).</strong> Both key
