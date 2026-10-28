@@ -1,0 +1,550 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VFX runtime: ClientFX managers, effect instances, node classes, the FX thread and particles - Shadow of War engine reference</title><meta name="description" content="the ClientFX RUNTIME: five effect managers per time domain, live effect instances (`fx_live`), the 36 node types and their classes, tick, FX thread, budgets, GPU particles"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" class="cur" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="vfx-runtime-clientfx-managers-effect-instances-node-classes-the-fx-thread-and-pa">VFX runtime: ClientFX managers, effect instances, node classes, the FX thread and particles</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Created 2026-10-28 from a
+read-only session (desert, in game, pid 35940: offline disassembly + live reads; no write, no hook).
+The load side (<code>.fxp</code> gate, property schema, donors, delivery) stays in kb/render-fx.md "ClientFX
+System"; this file is what happens after an effect is resident.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Sections:</strong>
+- The map in one picture (MEASURED 2026-10-28)
+- The managers: five time domains in CGameClientShell (MEASURED 2026-10-28, live + offline)
+- Effect instances and how to enumerate them (MEASURED 2026-10-28, live)
+- The FxResource and its keys (MEASURED 2026-10-28, live + offline)
+- Node types: registry, families and runtime classes (MEASURED 2026-10-28)
+- The tick: main thread, then the FXBackgroundThread (MEASURED 2026-10-28, offline + live)
+- Request path: from a gameplay event to an instance (MEASURED 2026-10-28, offline)
+- Particles: CPU vs GPU, compute and draw (MEASURED / LEAD 2026-10-28)
+- Budgets and caps (MEASURED 2026-10-28)
+- Corrections to other files (2026-10-28)
+- Open leads</p>
+<p>Reader: <code>call("fx_live")</code>, <code>call("fx_live", mgr="Simulation", rows=40)</code>, <code>call("fx_node_classes")</code>
+(<code>aire/pipeline/vfx_runtime.py</code>, class <code>VfxRuntimeActions</code>; tests <code>tests/test_vfx_runtime.py</code>: 50 code
+anchors + offsets, registry and class-rule checks, 53 pass offline). Every heap address below is session-only (pid 35940).</p>
+<hr />
+<h2 id="the-map-in-one-picture-measured-2026-10-28">The map in one picture (MEASURED 2026-10-28)</h2>
+<pre><code>CGameClientShell [base+0x26FFA98]
+  +0xA98 Simulation  +0xAA0 RealTime  +0xAA8 PlayerTime  +0xAB0 CompanionTime  +0xAB8 WorldUI
+     |  (unique_ptr -&gt; ClientFXMgr WRAPPER 0x18358 B, vt 0x22F3178; global list [base+0x26C6A98])
+     +-- +0x28 inner ClientFXMgr (vt 0x1F67400, 0x18330 B)
+           +0xB8 vector&lt;0x28 entry&gt;  -- entry +0x18 --&gt; FX INSTANCE (vt 0x1DAB360, pool 0x2A3E9A8)
+                                                      +0x230 FxResource (0x60) -&gt; keys -&gt; node types
+                                                      +0x220 KeyData block -&gt; one object per node
+           +0x128 background work (instance keydata containers) --&gt; FXBackgroundThread
+GameManager +0x6DB0 = ClientFXThreadMgr = the FXBackgroundThread object (routine 0x116B11C)
+GameManager +0x6DB8 = the FX perf / budget manager (ClientFxPerfMgr.cpp)
+</code></pre>
+<p>Per frame (main thread): CGameClientShell vf1 <code>0x1A864C</code> updates the five managers in slot order
+-&gt; each <code>ClientFXMgr::Update 0x1AAAFC</code> walks its instances (cull, budget, keydata timing) and queues
+keydata work -&gt; CGameClientShell vf2 <code>0x1F6928</code> dispatches the FXBackgroundThread -&gt; it runs every
+queued manager's work list -&gt; the next Update joins it first.</p>
+<h2 id="the-managers-five-time-domains-in-cgameclientshell-measured-2026-10-28-live-offl">The managers: five time domains in CGameClientShell (MEASURED 2026-10-28, live + offline)</h2>
+<p><code>CGameClientShell::InitializeSubsystems 0x1772E1C</code> creates five managers, one per time domain, with
+the strings "Could not init SimulationClientFXMgr!", "RealTime...", "PlayerTime...",
+"CompanionTime...", "WorldUIClientFXMgr". Factories <code>0x176DC70</code> (Simulation, arena 0x100000 =
+1 MB) and <code>0x176DBF4</code> (the rest, arena 0x80000 = 512 KB): <code>alloc 0x18358</code> -&gt; wrapper ctor
+<code>0x1779A64</code> -&gt; inner ctor <code>0x1779B20</code>; init <code>0x177BB44(mgr, time source, flag)</code>.</p>
+<p><strong>Wrapper (vt 0x22F3178, 0x18358 B):</strong> +0x08 link <code>{next, prev}</code> in the global intrusive list headed
+at <code>[base+0x26C6A98]</code> (<code>0x1BBC24</code> returns <code>0x26C6A90</code>), +0x18 an embedded <code>{vt 0x1DAA870, time
+source}</code> pair, +0x28 the inner manager. vf1 <code>0x482DE0</code> / vf2 <code>0x482EB4</code> take a resource (its +0x20
+id): the wrapper is a resource listener, so an effect resource that unloads kills its instances in
+every manager (<code>0x482EC0</code> -&gt; <code>0x177C824</code> under the manager's lock). Live: <strong>8 / 8</strong> managers in
+the list, both vtables checked; a heap census found exactly 8 inner + 8 wrapper vtables (3.51 GB,
+untruncated).</p>
+<p><strong>Inner ClientFXMgr (vt 0x1F67400, 32 small slots, 0x18330 B):</strong> +0x08 the ClientFXThreadMgr,
++0x10 / +0x11 flags (+0x11 = threaded: queue work to the FX thread, else run it inline), +0x68..+0xD8
+six empty-by-default lists, +0xB8 the INSTANCE vector, +0x108 work-pending byte, +0x110 / +0x128
+work lists (+0x128 = background), +0x148 <code>{vt 0x1DAA870, time source}</code> (+0x150 = the time source,
+a LEAD: per-domain objects in one heap run 0x17497050..0x17497640), +0x158..+0x170 helper objects,
++0x178 arena bytes, +0x180 current-thread slot, +0x19C / +0x1A0 cost per key (128 / 64),
++0x1A4 budget left this frame, +0x1B0 the per-frame arena, +0x18238 / +0x18250 two lists,
++0x18268..+0x18320 six deferred queues, +0x18328 the work-done event. vf2 <code>0x3E9E30</code> =
+CreateClientFX(cs, link).</p>
+<table>
+<thead>
+<tr>
+<th>manager</th>
+<th>slot</th>
+<th>arena</th>
+<th>live 1 (instances)</th>
+<th>live 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simulation</td>
+<td>CGCS+0xA98</td>
+<td>1 MB</td>
+<td>569</td>
+<td>541</td>
+</tr>
+<tr>
+<td>RealTime</td>
+<td>CGCS+0xAA0</td>
+<td>512 KB</td>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>PlayerTime</td>
+<td>CGCS+0xAA8</td>
+<td>512 KB</td>
+<td>2</td>
+<td>1</td>
+</tr>
+<tr>
+<td>CompanionTime</td>
+<td>CGCS+0xAB0</td>
+<td>512 KB</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>WorldUI</td>
+<td>CGCS+0xAB8</td>
+<td>512 KB</td>
+<td>4</td>
+<td>85</td>
+</tr>
+<tr>
+<td>3 others (not in CGCS)</td>
+<td>global list only</td>
+<td>1 MB / 512 KB / 128 KB</td>
+<td>10 / 0 / 0</td>
+<td>34 / 0 / 0</td>
+</tr>
+</tbody>
+</table>
+<p>WorldUI jumped from 4 to 83-85 instances when the world map was open: its rows were
+<code>fx\ui\worldmap\volcano\volcanoforestfires.fxp</code> / <code>volcanosmoke.fxp</code> (2 / 2 sampled), i.e. the map
+screen's effects run in the WorldUI time domain (the Army-screen stage uses it too,
+kb/captain-colorizer.md). The three other managers are updated by <code>0x1AA1F8</code> from <code>0x224430</code> (<code>[obj+0x18]</code>),
+<code>vt_0x1FFAFF0::vf18 0x1C815B4</code> (a static), <code>0x179AF98</code> (<code>obj+0x50</code>) and <code>0x335E9C</code> ("UI.Portrait");
+which owner is which is a LEAD. The one with 10 / 34 instances is not threaded (+0x11 = 0) and
+showed 0 visible instances in both snapshots.</p>
+<h2 id="effect-instances-and-how-to-enumerate-them-measured-2026-10-28-live">Effect instances and how to enumerate them (MEASURED 2026-10-28, live)</h2>
+<p><strong>Walk the manager's container, never the heap.</strong> <code>inner+0xB8</code> is a <code>std::vector</code> of 0x28-byte
+entries; entry +0x18 is the instance. Two snapshots: <strong>587 / 587</strong> and <strong>663 / 663</strong> entries carried
+the instance vtable <code>0x1DAB360</code>. A heap census in the same session counted <strong>927</strong> objects with that
+vtable: the 340 extra are freed slots of the instance pool <code>0x2A3E9A8</code> that keep a stale vtable
+(BEHAVIOR.md law 7 again).</p>
+<p><strong>The entry (0x28):</strong> +0x00 byte, +0x01 visible-this-frame, +0x02 budget-admitted, +0x04
+cull position (3 floats, cm, world), +0x10 / +0x14 squared radii (a 40 m radius = 1.6e7 seen), +0x18
+instance, +0x20 parent instance (child effects live in the PARENT's +0x18 vector, not in the
+manager's: <code>0x1BAD70</code> picks the container, stores it at instance +0x260 and the index at +0x25C).</p>
+<p><strong>The FX instance (vt 0x1DAB360 + second vt 0x1DAB350 at +0x08; ctor <code>0x1BB368</code>, dtor <code>0x1BB79C</code>
+"Failed to remove an effect correctly before destruction"):</strong></p>
+<table>
+<thead>
+<tr>
+<th>offset</th>
+<th>field</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x18</td>
+<td>vector of child-effect entries (0x28 each)</td>
+</tr>
+<tr>
+<td>+0x40</td>
+<td>intrusive list head (self-linked when empty)</td>
+</tr>
+<tr>
+<td>+0x58</td>
+<td>flag word (bits 1, 2, 3, 4, 6, 7, 8, 11, 13 set / cleared by ctor and init)</td>
+</tr>
+<tr>
+<td>+0x5C</td>
+<td>transform copied from the create struct (+0x38)</td>
+</tr>
+<tr>
+<td>+0xB8</td>
+<td>the KeyData container (+0xBC time, flags tested by <code>0x24EBB8</code>: 4 active, 1 looping)</td>
+</tr>
+<tr>
+<td>+0xD0</td>
+<td>the owning inner manager (also KeyData container +0x18)</td>
+</tr>
+<tr>
+<td>+0x150 / +0x1A8</td>
+<td>handle objects (vt 0x1DABE28) to the parent object (LEAD: which object kinds)</td>
+</tr>
+<tr>
+<td>+0x180 / +0x188</td>
+<td>create struct +0x20 / socket index (+0x28)</td>
+</tr>
+<tr>
+<td>+0x220</td>
+<td>KeyData block (one malloc, 64-aligned: +0x00 raw, +0x08 size, then the node objects)</td>
+</tr>
+<tr>
+<td>+0x228</td>
+<td>resource hash (handle +0x20)</td>
+</tr>
+<tr>
+<td>+0x230</td>
+<td>the FxResource</td>
+</tr>
+<tr>
+<td>+0x25C / +0x260</td>
+<td>index in / pointer to the container it is listed in</td>
+</tr>
+</tbody>
+</table>
+<p><code>fx_live</code> reads all of this in ~0.05 s for 663 instances; a torn read (the main thread edits the
+vector) shows as <code>non_instance_entries</code> (0 in both snapshots).</p>
+<p>Top effects in the desert (snapshot 1, 61 distinct; snapshot 2, 80): <code>clothtorch_caponly</code> 89,
+<code>arrow_collectible_multi_dt</code> 76, <code>fliesattach</code> 69, <code>com_fireforge</code> 51, <code>morgaiflynest_idle01</code> 43,
+<code>torchorcnight01b</code> 34, <code>ds_atmodust_lrg01</code> 26, <code>thermalvents</code> 20.</p>
+<h2 id="the-fxresource-and-its-keys-measured-2026-10-28-live-offline">The FxResource and its keys (MEASURED 2026-10-28, live + offline)</h2>
+<p>Built once per loaded <code>.fxp</code> by the resource handler vf4 <code>0x3E4540</code> (vt 0x2312410) from the
+effect's GADB (<code>FxGlobalProps</code>):</p>
+<table>
+<thead>
+<tr>
+<th>offset</th>
+<th>field</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>length, s (ResourceLenMS / 1000)</td>
+</tr>
+<tr>
+<td>+0x04</td>
+<td>MaxUpdateDistance (1e34 = unlimited seen)</td>
+</tr>
+<tr>
+<td>+0x08 / +0x10</td>
+<td>key slot array / count (slot 0x18: +0x00 type entry, +0x08 KEY object, +0x10 KeyName)</td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td>FxName (<code>fx\...\x.fxp</code>), +0x20 its StringHash, +0x28 the short name</td>
+</tr>
+<tr>
+<td>+0x38 / +0x40</td>
+<td>the aligned buffer holding the slots and the key objects / its size</td>
+</tr>
+<tr>
+<td>+0x45</td>
+<td>PauseWhenNotVisible</td>
+</tr>
+<tr>
+<td>+0x48</td>
+<td>the effect's GADB, FREED after processing (<code>0x3E4765</code>): the GameDB is load-time only</td>
+</tr>
+<tr>
+<td>+0x50</td>
+<td>data kept from the GADB (LEAD: the string / curve pool VFX Studio found as a heap copy)</td>
+</tr>
+</tbody>
+</table>
+<p>Per key, <code>0x3E477C</code>: type hash from the record -&gt; FindFxType <code>0x3E451C</code> (linear search of the 36
+entries by entry +0x08) -&gt; entry +0x20 builds the KEY object in the buffer -&gt; key vf1 parses the
+record -&gt; on failure entry +0x30 destroys it. A resource handle (create struct +0x00) is a type-48
+resource: handle +0x52 == 0x30, <code>[[handle+8]+8]</code> = the FxResource (<code>0x1BBBD4</code>).</p>
+<p>Heap census of KEY objects (one per node of every RESIDENT effect, not per play): ParticleSystem
+9,100, MaterialController 3,746, StandardGPUParticleSystem 1,874, Sound 1,246, Model 1,235.</p>
+<h2 id="node-types-registry-families-and-runtime-classes-measured-2026-10-28">Node types: registry, families and runtime classes (MEASURED 2026-10-28)</h2>
+<p>The registry is the static array <strong><code>0x21DB460</code>, 36 pointers</strong> (ParticleSystem first,
+VolumetricCloud last) to 36 separate 0x50-byte type entries in .idata (0x2681DD0..0x26829F0),
+interleaved with ClientFX cvars (DebugPrintOverlays, EnableMTParticleFX,
+ParentedModel.AlwaysVisible). Entry layout:</p>
+<table>
+<thead>
+<tr>
+<th>slot</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td><code>"ClientFX.&lt;Type&gt;"</code></td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>type hash (u32, filled at start-up)</td>
+</tr>
+<tr>
+<td>+0x10 / +0x18</td>
+<td>pooled RUNTIME object create / destroy (16 types; per-type pools 0x277CA08 + 0x10*i, Tracer 0x2A3EA10)</td>
+</tr>
+<tr>
+<td>+0x20 / +0x28</td>
+<td>KEY object create (bump alloc from the resource buffer; size = <code>mov edx, imm</code>) / delete</td>
+</tr>
+<tr>
+<td>+0x30</td>
+<td>KEY destroy in place</td>
+</tr>
+<tr>
+<td>+0x38 / +0x40</td>
+<td>KeyData measure / construct (20 types; <code>0x1BC8A0</code> calls both per new instance)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Two families.</strong> <code>keydata</code> (20): ParticleSystem, GPUParticleSystem, StandardGPUParticleSystem,
+AnimatedModel, AnimatedPhysicsModel, AnimatedSkeleton, Beam, GPUCloth, MaterialController, Model,
+ParentedModel, PhysicsModel, PhysicsImpulseRadial, PolyTrail, DynaLight, DecalLight, Sprite,
+FlareSprite, LensFlare, VolumetricCloud: one object per node inside the instance's KeyData block.
+<code>pooled</code> (16): Sound, CameraShake, Create, CreateRay, Lightning, Tracer, DebrisSystem, Overlay,
+Rumble, Volumetric, SceneRender, ImpactDecal, Wind, VegetationDisp, PolyString, PolyCurve: runtime
+objects from per-type pools (base class vt 0x1DAA9D0). Key objects derive from vt 0x1DB46A8
+(sprites 0x1DCB558, GPU 0x1DB46C8); KeyData objects from vt 0x1DAB2F0 (12 slots: vf0 dtor
+0x1D4AB88, vf1 / vf2 empty, vf6 / vf7 / vf8 / vf10 pure = the per-type overrides).</p>
+<p><strong>KeyData classes, confirmed live by exact count equality</strong> (node-type count in the live instances'
+FxResources == count of the vtable inside their KeyData blocks), two snapshots:</p>
+<table>
+<thead>
+<tr>
+<th>type</th>
+<th>key class</th>
+<th>key size</th>
+<th>KeyData class</th>
+<th>snapshot 1</th>
+<th>snapshot 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>StandardGPUParticleSystem</td>
+<td>0x1DCD848</td>
+<td>0x330</td>
+<td>0x1DAB290</td>
+<td>969 / 969</td>
+<td>976 / 976</td>
+</tr>
+<tr>
+<td>ParticleSystem</td>
+<td>0x1DCDA20</td>
+<td>0x2A0</td>
+<td>0x1DAB3B0</td>
+<td>481 / 481</td>
+<td>562 / 562</td>
+</tr>
+<tr>
+<td>MaterialController</td>
+<td>0x1DCC0A0</td>
+<td>0x5B8</td>
+<td>0x1DC37A0</td>
+<td>257 / 257</td>
+<td>307 / 307</td>
+</tr>
+<tr>
+<td>Sprite</td>
+<td>0x1DCB538</td>
+<td>-</td>
+<td>0x1DC3CD8</td>
+<td>159 / 159</td>
+<td>283 / 283</td>
+</tr>
+<tr>
+<td>Model</td>
+<td>0x1DC8910</td>
+<td>0x140</td>
+<td>0x1DB4810 (+0x1DB47F8)</td>
+<td>170 / 170</td>
+<td>171 / 171</td>
+</tr>
+<tr>
+<td>DynaLight</td>
+<td>0x1DCD358</td>
+<td>0x150</td>
+<td>0x1DC6070</td>
+<td>154 / 154</td>
+<td>157 / 157</td>
+</tr>
+<tr>
+<td>GPUParticleSystem</td>
+<td>0x1DB4680</td>
+<td>0x280</td>
+<td>0x1DC5D40 (+0x1DC5D28)</td>
+<td>5 / 5</td>
+<td>103 / 103</td>
+</tr>
+<tr>
+<td>Beam</td>
+<td>0x200B328</td>
+<td>0x138</td>
+<td>0x1DCB9A0</td>
+<td>80 / 80</td>
+<td>80 / 80</td>
+</tr>
+<tr>
+<td>DecalLight</td>
+<td>0x1DCD1A8</td>
+<td>0x100</td>
+<td>0x1DC37C0</td>
+<td>23 / 23</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p>The static rule that <code>fx_node_classes</code> uses (the LAST <code>[obj+0]</code> vtable store in execution order,
+following direct calls two deep) agrees with all 9. The other 11 keydata classes and the pooled
+runtime classes are static LEADs; two pooled ones match a heap census exactly (CreateRay 0x1DCB5E0
+17 = 17, VegetationDisp 0x1DAA1C8 5 = 5), the rest are over-counted by stale pool slots (Sound
+0x1DAA360 614 vs 347 live nodes). MaterialController's KEY class 0x1DCC0A0 is the "parsed property
+object" of the army-stage rim tuning (memory army-stage-render-glow): what was tuned there is the
+loaded effect's key, shared by every instance of it.</p>
+<h2 id="the-tick-main-thread-then-the-fxbackgroundthread-measured-2026-10-28-offline-liv">The tick: main thread, then the FXBackgroundThread (MEASURED 2026-10-28, offline + live)</h2>
+<ol>
+<li><strong>Main thread, CGameClientShell vf1 <code>0x1A864C</code></strong> (after the perf manager <code>[GM+0x6DB8]</code> call
+   <code>0x69909C</code>) calls <code>0x1AA1F8(wrapper)</code> for +0xA98, +0xAA0, +0xAA8, +0xAB0, then +0xAB8. <code>0x1AA1F8</code>
+   gets dt from the wrapper's time source (0 when paused or below an epsilon) and calls
+   <code>ClientFXMgr::Update 0x1AAAFC(inner, dt)</code>.</li>
+<li><strong>Update <code>0x1AAAFC</code></strong>: finishes last frame's work first when +0x108 is set (<code>0x1A9F20</code>,
+   <code>0x1AC584</code>, <code>0x1AA000</code>), drains the deferred queues (+0x18268..), resets the frame arena (+0x1B0),
+   reserves the work list at 2x the instance count, sets budget left = arena / 4, runs the instance
+   loop <code>0x24E040(inner, &amp;vector, dt, camera)</code>, queues itself to the FX thread (+0x11 set) or runs
+   <code>0x1AC638</code> inline, sets +0x108; a synchronous join (<code>0x70417C</code>, then the three finishers) follows
+   only when cvar byte <code>0x266D500</code> is set or +0x10 is clear.</li>
+<li><strong>Instance loop <code>0x24E040</code></strong>, per entry: squared distance from the camera vs entry +0x10 / +0x14
+   -&gt; visible flag; budget: <code>FxResource.count x cost</code> taken from +0x1A4, cost +0x19C (128) the first
+   time (then entry +0x02 = 1) and +0x1A0 (64) for an already admitted instance; an instance over
+   budget goes to <code>0x177BFE8</code> (budget handler, by resource hash);
+   KeyData timing (<code>0x24F2F0</code> "Attempting to loop a keydata illegally"); then the container is pushed
+   to up to three lists: 0 -&gt; <code>0x1779850</code>, <strong>1 -&gt; inner+0x128 (background)</strong>, 2 -&gt; inner+0x110.</li>
+<li><strong>Dispatch, CGameClientShell vf2 <code>0x1F6928</code> / vf3 <code>0x177473C</code></strong> -&gt; <code>0x1F6258([GM+0x6DB0])</code>:
+   swap the front / back manager vectors, mark dispatched, <code>SetEvent(work)</code> (or run inline when
+   there is no thread).</li>
+<li><strong>FXBackgroundThread, routine <code>0x116B11C</code></strong> (arg = the ClientFXThreadMgr itself): wait on +0xA8,
+   for each queued manager <code>0x1AC638(inner)</code>: under the manager's lock, every work item
+   <code>0x188CA4(keydata container, 1, [inner+0x168])</code> (it reads container +0x168 = instance +0x220,
+   the KeyData block), clear, <code>SetEvent(inner+0x18328)</code>; then <code>SetEvent(+0xB0)</code>.</li>
+</ol>
+<p><strong>ClientFXThreadMgr = the thread object</strong> (vt 0x22F3120, vf8 "FXBackgroundThread"): +0x08 handle,
++0x18 routine 0x116B11C, +0x20 arg (itself), +0x28 name, +0x5C owner thread id (the main thread),
++0x90 / +0x98 front / back vectors of managers, +0xA0 dispatched, +0xA1 quit, +0xA8 work event,
++0xB0 done event. Live: routine 0x116B11C confirmed, owner = the main thread, Simulation's
+background list held 110 / 38 items in the two snapshots (3 / 3 sampled items had +0x18 = the
+Simulation inner manager, i.e. they are instance +0xB8 containers). CPU: 47-78 ms per second in
+combat (kb/live-runtime.md "Threads and the frame").</p>
+<p><strong>What runs where:</strong> creation, culling, budgets, timing and the instance list are main-thread;
+the KeyData update of queued instances (particle simulation, LEAD for exactly which vfuncs) is the
+FX thread. A mod that touches an instance must do it on the main thread between the join and the
+next dispatch, or not at all.</p>
+<h2 id="request-path-from-a-gameplay-event-to-an-instance-measured-2026-10-28-offline">Request path: from a gameplay event to an instance (MEASURED 2026-10-28, offline)</h2>
+<pre><code>StartEffectSequenceOnCharacter 0x19B7850 -&gt; 0x19E16CC(_, target, sequence, [CGCS+0xA98])
+  -&gt; pooled sequence player (vt 0x1DB7540, +0x10 = that manager WRAPPER)
+  -&gt; state change ... 0x15B408 -&gt; 0x15AF18 (builds a CLIENTFX_CREATESTRUCT on the stack)
+  -&gt; 0x1BB950(wrapper, link, cs)             72 functions / 87 call sites: the general entry
+  -&gt; 0x1BB980(inner, link, cs, 1)            = ClientFXMgr vf2 0x3E9E30
+       resource check (type 0x30), distance refusal against the camera (cvar 0x266D490)
+  -&gt; 0x1BD0D0                                 enable byte 0x266D499, perf manager [GM+0x6DB8]
+       alloc 0x1D283A0 (pool 0x2A3E9A8) -&gt; ctor 0x1BB368 -&gt; container 0x1BAD70
+       -&gt; fields from cs 0x1AA5EC -&gt; KeyData 0x1BC8A0 + add 0x1BB2E8 -&gt; register 0x1BB5E0
+</code></pre>
+<p>Create struct (as read by <code>0x1AA5EC</code> / <code>0x1BD0D0</code>): +0x00 resource handle, +0x08 flags (bit 0 =
+no distance refusal, bit 2), +0x10 / +0x18 / +0x20 three parent kinds (the manager's vf24..vf28
+build the attach target from whichever is set), +0x28 socket, +0x30 / +0x38 transform, +0x54..+0x5C,
++0x60 / +0x68, +0x70..+0x78, +0x7C / +0x7D strings tested non-empty, +0x80, +0x98 keydata overrides,
++0xB0, +0xB8 parent-instance link, +0xC0 / +0xC2 a small array (offsets MEASURED from the code that
+reads them; meanings beyond those named are LEADs). Other callers of <code>0x1BB950</code> include ranged-weapon hit FX
+(<code>0x158308</code> TargetedWeaponHitFX), projectile models (<code>0x10F52C</code>), the player class
+(<code>vt_0x1F96818::vf19 0x4CD070</code>) and the combat AOE (<code>0x4EA0A4</code> -&gt; <code>0x15AF18</code>).</p>
+<h2 id="particles-cpu-vs-gpu-compute-and-draw-measured-lead-2026-10-28">Particles: CPU vs GPU, compute and draw (MEASURED / LEAD 2026-10-28)</h2>
+<ul>
+<li><strong>Three particle node types.</strong> <code>ParticleSystem</code> = CPU particles (KeyData 0x1DAB3B0).
+  <code>GPUParticleSystem</code> = the "CustomGPUParticle" path (KeyData 0x1DC5D40). <code>StandardGPUParticleSystem</code>
+  (KeyData 0x1DAB290) = the newer GPU path. In the desert the GPU nodes outnumber the CPU ones
+  (976 + 103 vs 562, snapshot 2).</li>
+<li><strong>Per-manager GPU context (MEASURED, offline):</strong> the inner ctor <code>0x1779B20</code> calls <code>0x1D2E440</code>, which
+  loads <code>StandardGPUParticle_SimEmit.mat</code>, <code>_SimEmit_Weather.mat</code>, <code>_Sort.mat</code>, <code>_ClearIndirectBuf.mat</code>
+  and <code>TextureCopyTo2DArray.mat</code>, and <code>0x1D2F1A0</code>, which loads <code>Client/GroupedGPUParticleFX</code> (one record,
+  <code>Fire</code>: RenderMaterial <code>fx\fire\groundfire\groundfire_mega.mat</code>, MaxParticlesInGroup 16384).</li>
+<li><strong>Render-side classes (MEASURED from strings, offline):</strong> <code>vt_0x1DBC638::vf4 0x1B572C</code>
+  (CustomGPUParticle.Compute, _ParticleSource, _ParticleDest, _DrawIndirect), warm-up <code>0x1D2DB08</code>
+  (CustomGPUParticle.Warmup), sort <code>0x587AE0</code> (<code>CustomGPUParticle_Sort.mat</code> / <code>_Sort48.mat</code>);
+  <code>vt_0x2009DA8::vf4 0x1F18D0</code> -&gt; <code>0x103A960</code> (StandardGPUParticle_ParticleBuffer0 / 1); curves
+  texture array <code>0x1B722C</code>; grouped: <code>vt_0x1DBC718::vf4</code> (GroupedGPUParticle_Counts <code>0x67F970</code>,
+  _SourceParticle <code>0x1EFE3C</code>) and <code>vt_0x23125F0::vf4 0x1EFF0C</code> (Source / Dest DrawIndirect). So GPU
+  particles are emitted and simulated by COMPUTE and drawn with DrawIndirect from GPU-written
+  argument buffers.</li>
+<li><strong>They are not in the main-to-render command ring (MEASURED):</strong> 0 of 246 commands per frame over 9
+  frames (<code>render_commands</code>) used any of those methods, while the ring's usual methods were there
+  (control). LEAD: they run inside the render passes as renderables' vf4.</li>
+</ul>
+<h2 id="budgets-and-caps-measured-2026-10-28">Budgets and caps (MEASURED 2026-10-28)</h2>
+<ul>
+<li><strong>Per manager:</strong> arena 1 MB (Simulation) / 512 KB; every frame the budget is reset to arena / 4 and
+  each instance costs <code>keys x 128</code> when first admitted, <code>keys x 64</code> after; over budget -&gt; <code>0x177BFE8</code>. Live snapshot 2:
+  Simulation 211,648 left of 262,144. Cvar <code>ClientFXMgr.FXInstanceBudget</code> (struct 0x266D4A0) feeds
+  +0x19C / +0x1A0 from 0x266D4B8 / 0x266D4BC.</li>
+<li><strong>Per effect group (GameDB <code>Client/ClientFXBudget</code>, 7 records):</strong> MaxSimultaneousFX / MaxNewFX:
+  OnFire 30 / 10, Blinded 25 / 10, BloodDecals 30 / 4, Poisoned 30 / 10, Footsteps 100 / 10,
+  Easterling_SmokeScreen 2 / 2, OnFire_Balefire 30 / 10, plus FXList, BudgetExceededBehavior
+  (EClientFXBudgetBehavior) and PoolingRules. LEAD: enforced at creation by the perf manager
+  <code>[GM+0x6DB8]</code> (<code>0x1BD23A</code> check, <code>0x1BB5E0</code> register).</li>
+<li><strong>Distance:</strong> FxResource +0x04 MaxUpdateDistance; creation refused beyond the cull radius
+  (<code>0x1BB980</code>); per-frame visibility from entry +0x10 / +0x14.</li>
+<li><strong>Particle caps</strong> are node properties (MaxParticleCapacity, MaxParticleLifeSpan,
+  MaxParticleMethod, MaxParticleVelocity, <code>SurfaceFireFXMaxParticlesFactor</code>), not a global pool.</li>
+</ul>
+<h2 id="corrections-to-other-files-2026-10-28">Corrections to other files (2026-10-28)</h2>
+<ul>
+<li><strong>kb/render-fx.md "The node factory", table B</strong> (<code>0x2681DD0 / 0x50</code>: +0x10 create, +0x18 destroy,
+  +0x20 / +0x28 update / render, +0x30 deleting-dtor thunk): there is no single table and no update /
+  render slot. The entries are 36 separate globals reached through the registry <code>0x21DB460</code>; the slots
+  are as in "Node types" above (+0x20 / +0x28 = KEY create / delete, +0x30 = KEY destroy in place).
+  Marked CORRECTED in kb/render-fx.md on 2026-10-28.</li>
+<li><strong>"Timer" in kb/captain-colorizer.md</strong> (applied there 2026-10-28; kb/studio-tools.md and FLASH_STEP.md carry no
+  such wording) (<code>[CGCS+0xA98]</code> world
+  timer, <code>[CGCS+0xAB8]</code> UI timer): those slots hold ClientFXMgr WRAPPERS (Simulation / WorldUI); the
+  4th argument of <code>0x19E16CC</code> picks the effect manager, i.e. the time domain.</li>
+<li><strong>The brief's render candidates "BeginParticleSystemRendering" / "EndParticleSystemRendering" /
+  "GROUP_BEGIN=ParticleSystemRendering"</strong> are property-schema GROUP markers in the schema builders of
+  ParticleSystem / GPUParticleSystem / StandardGPUParticleSystem (<code>0x81FA6C</code>, <code>0x820DF0</code>, <code>0x821130</code>;
+  End <code>0x15E8368</code>), not render-pass markers (3 / 3 code references are builders).</li>
+</ul>
+<h2 id="open-leads">Open leads</h2>
+<ul>
+<li>Which owner holds the three managers outside CGameClientShell (the non-threaded one with 10-34
+  instances, never visible): <code>0x224430</code>, <code>vt_0x1FFAFF0::vf18</code>, <code>0x179AF98</code>, <code>0x335E9C</code> UI.Portrait.</li>
+<li>KeyData interface slots 6 / 7 / 8 / 10: which is the background update and which submits to the
+  renderer (decode <code>0x188CA4</code> -&gt; the per-node calls).</li>
+<li>How a pooled-family runtime object (+0x10) attaches to its instance (the +0x40 list?).</li>
+<li>The instance's parent handles at +0x150 / +0x1A8 (vt 0x1DABE28): object kinds, to list effects by
+  owner (character, item, world object).</li>
+<li><code>0x1DAA9D0</code> (the pooled base vtable) appears 264-313 times inside KeyData blocks: embedded
+  sub-objects of a keydata type, not yet attributed.</li>
+<li>The GPU particle draw: where the renderables' vf4 are called (a ThreadCommandBuffer pass, see
+  kb/render-fx.md "Render thread and the command ring" next steps).</li>
+</ul><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
