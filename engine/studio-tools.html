@@ -1,0 +1,295 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Studio tools: MCP + Studio Hub, Animation Studio, VFX Studio, Flash step - Shadow of War engine reference</title><meta name="description" content="MCP + Hub, Animation Studio, VFX Studio, Flash step"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" class="cur" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="studio-tools-mcp-studio-hub-animation-studio-vfx-studio-flash-step">Studio tools: MCP + Studio Hub, Animation Studio, VFX Studio, Flash step</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Moved verbatim from
+CLAUDE.md on 2026-10-27 (original lines 825-1066); heading levels normalised, text unchanged.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Sections:</strong>
+- MCP tools + Studio Hub (BUILT 2026-10-20) - use these instead of <code>python -c</code>
+- Animation Studio - custom moves and finishers (BUILT 2026-10-20; live push IN-GAME CONFIRMED 2026-10-20 - t...
+- VFX Studio - custom effects composed from any shipped nodes (BUILT 2026-10-20; IN-GAME CONFIRMED 2026-10-20...
+- Flash step (Minato) - the player's own instant teleport + a gold streak (USER-CONFIRMED 2026-10-20 in two r...</p>
+<hr />
+<h2 id="mcp-tools-studio-hub-built-2026-10-20-use-these-instead-of-python-c">MCP tools + Studio Hub (BUILT 2026-10-20) - use these instead of <code>python -c</code></h2>
+<p><code>.mcp.json</code> registers the native MCP server <code>sowce</code> (<code>aire/mcp</code>, stdlib JSON-RPC over stdio, never
+imports AIRE). Every tool goes to the <strong>SoW:CE Studio Hub</strong> (<code>aire/hub</code>; started on demand, one per
+user, stops after 90 idle min): ONE warm AIRE worker process (crash-isolated; it reloads by itself
+before the next call when <code>aire/</code> or <code>tools/</code> .py files changed), background jobs, a result store,
+the Blender peer, and the link server it starts / stops. Full reference: <code>aire/documents/STUDIO_HUB.md</code>.</p>
+<ul>
+<li><strong><code>mcp__sowce__aire(action, args)</code></strong> replaces <code>python -c "from aire.headless import call..."</code>: no
+  shell quoting, warm caches (MEASURED: concept <code>explain</code> 13.4 s cold vs 2.0 s warm; RVA <code>explain</code>
+  3.0 s vs 0.04 s), every result stored as <code>r&lt;N&gt;</code> and paged with <code>aire_result</code> (path / grep /
+  save_to) instead of cut at 30 KB. <code>aire_help(query | action)</code> = the searchable catalog with
+  file:line. A call past <code>timeout_s</code> becomes a ticket (never killed); <code>background=true</code> = its own
+  job; <code>aire_job</code> follows both.</li>
+<li>World: <code>world_link</code> starts the link server (THE main-thread bridge owner); <code>world_objects</code>,
+  <code>world_move</code> (sow | blender space, delta / yaw, <code>dry_run</code>; keep flags = untouched components keep
+  the game's bytes), <code>world_clone</code>, <code>world_revert</code> share the link's journal with Blender.</li>
+<li>Blender: <code>blender_status / scene / python / op</code> drive the SoW Live add-on 1.4.0 (installed as a
+  Blender 5.2 extension; sidebar N &gt; SoW Live &gt; AI Hub &gt; Connect). Each AI Python run = one undo step.</li>
+<li>Mods: <code>mods op=list|validate|probe|apply|keep|stop|revert|from_link</code> (World Studio). Studio writes
+  are refused while that mod's keeper runs (one journal writer per mod).</li>
+<li><strong>The main-thread bridge is locked across processes</strong>: <code>exec_main</code> / <code>cancel_main</code> hold the named
+  mutex <code>Local\SoWCE.MainThreadBridge</code> for the whole round trip (MEASURED with a fake poller: without
+  it, a second command REPLACED the first, which reported "queued" and never ran). A caller that cannot
+  get it within <code>timeout</code> gets <code>busy</code> and nothing is sent.</li>
+<li>New World Studio kinds (open world, any region; <code>aire/studio/kinds_world.py</code>): <code>object_xform</code> (a
+  named object at a world transform; link Bridge route with the mod's own <code>objects_journal.json</code>),
+  <code>object_clone</code> (world-anchored <code>live_clone</code>), <code>gadb_field</code> (any named record's field; RecordLinks
+  checked against the declared target). New actions: <code>studio_mods</code>, <code>studio_save_edits(mod, items)</code>,
+  <code>studio_from_link(mod)</code>, <code>blender_link_install</code>.</li>
+<li>Hub state: <code>%LOCALAPPDATA%\SoWCE\hub\</code> (hub.json = port 47910 + token; hub / worker / link / mcp
+  logs; jobs/; results/). Hub code changes need <code>hub op=restart</code> (keeps link, jobs, Blender); MCP adapter changes need <code>/mcp</code>.</li>
+<li>LIVE DEMO 2026-10-20 (MEASURED by read-back; IN-GAME CONFIRMED by the user: "Yes that worked nice"): hub
+  <code>world_move</code> + <code>world_clone</code>; a 9-crate ring laid out by <code>blender_python</code> on the captured ground and
+  pushed by the add-on (9/9, read-back 0.000 cm); <code>mods from_link</code> -&gt; probe OK -&gt; <code>world_revert</code> -&gt;
+  probe FAIL -&gt; <code>mods apply</code> (9 byte-exact) -&gt; probe OK; the keeper put back a crate lifted 3 m.
+  NOT RUN: a keeper re-apply after a real re-stream (fast travel / cell reload). Demo drivers saved:
+  <code>scripts/studio/hub_demo.py</code> / <code>hub_demo_ring.py</code>, <code>scripts/blender/live_demo_start.py</code> (all of today's tools:
+  <code>scripts/studio/README.md</code>).</li>
+<li><strong>End of a session - turning every live mod off:</strong> <code>aire/documents/STUDIO_HUB.md</code> "Turning everything off"
+  (keepers, watchers AND any supervisor loop around a watcher - another session's <code>while true; do python
+  &lt;watcher&gt;; sleep 10; done</code> restarted the dismember / Shrine watcher within seconds until the loop's own shell
+  was stopped; then disarm, <code>live_bundle_unload(path=...)</code>, <code>live_vfs_unmount</code>, <code>anim_live_revert</code>).</li>
+</ul>
+<h2 id="animation-studio-custom-moves-and-finishers-built-2026-10-20-live-push-in-game-c">Animation Studio - custom moves and finishers (BUILT 2026-10-20; live push IN-GAME CONFIRMED 2026-10-20 - the Naruto run applied, v2 pushed)</h2>
+<p>Full reference: <code>aire/documents/ANIM_STUDIO.md</code>. <code>aire/anim/</code> + add-on 1.4.0 (<code>anim_core/tools/ui.py</code>).
+Shipped clip -&gt; <code>anim_export</code> (.sowanim.json: local rot/pos per bone per frame + events) -&gt; Blender
+(SoW armature, Rigify control rig, ragdoll, events as pose markers, sync pairs aligned on the
+attacker's <code>attach</code> bone) -&gt; <code>anim_encode</code> -&gt; the ENGINE's evaluators (Unicorn) check every stored
+key -&gt; deliver. Two routes:
+- <code>inplace</code>: the clip's own layout + key times, same size; <code>anim_live_push</code> patches the running
+  game's buffers (data object +0x00 block / +0x08 anim chunk, cached by anim object vt 0x1E6F528
+  +0x68 / +0x38; the sampler re-reads them every sample) under STOP-THE-WORLD (<code>aire/anim/quiesce.py</code>:
+  all threads suspended, no RIP / return address inside 32 sampler bodies). Journaled, still-ours revert.
+- <code>rebuild</code>: a key on every frame, any length, record + blockset appended (other clips untouched),
+  delivered to the NEXT load by <code>anim_stage</code> + Live VFS.
+MEASURED (BellyStab): in-place nod 0.016 deg at keys; a ragdolled finisher is 0.025 deg at the keys
+but 13.07 deg BETWEEN them in place (shipped AQ03 keys skip frames) and 0.026 deg rebuilt -&gt;
+<code>anim_encode</code> returns <code>route_advice</code>. Laws: one .anix path ships as DIFFERENT files (loose 466,997 B,
+bundle 464,227 B) - a build per copy, the push picks by live bytes; unused SQ03 slots must hold a
+valid quaternion (zero = engine assert at 0x819113 = crash); the clip root sits ~1 m above the feet.
+<strong>CORRECTED 2026-10-20: AIRE's rotation error metric was HALF the angle</strong> (<code>rig.quat_angle</code>,
+<code>anix_oracle.quat_err</code> = 2 asin(|a-b|/2); add-on <code>sync.quat_angle</code> = 2 atan2): now 4 atan2(|a-b|, |a+b|).
+<strong>LIVE PUSH RUN 2026-10-20 (Gorgoroth, PID 37228)</strong> - the "Naruto run": spine leaned to ~50-52 deg
+(Pelvis-&gt;Head; shipped 38 / 45), both arms straight back behind the hips, head kept level, legs untouched,
+on PL_Sprint85 / PL_Sprint_Super / PL_Combat_Sprint85 / PL_Sprint_Boost_City / PL_Sprint_Boost_Cmbt:
+228 patches written + read back, quiesce 1 attempt each (94-95 threads, 59-67 ms frozen), the game kept
+running; <code>anim_live_status</code> = the shipped Patch_DLC5 copy + exactly our journaled patches. User: "The
+naruto run did apply but I think its to weak". <strong>v2 pushed the same session</strong> (<code>scripts/studio/anim_naruto_run_v2.py</code>; encode / push:
+<code>anim_naruto_encode.py</code> / <code>anim_naruto_push.py</code> beside it,
+authored <code>*_naruto2.sowanim.json</code>): Pelvis-&gt;Head lean 71.8-71.9 deg on all five (iterated to the target -
+the lean pivots at Torso_Base), face 60 deg below the horizon (neck + head share the correction), arms dead
+straight (elbow 0.0) and spread 46-51 cm out, hands 29-34 cm above the pelvis, shoulder pads following
+(below), feet 0.0 cm; engine verify 0.017-0.019 deg at keys, 0.014-0.015 between. <strong><code>anim_live_revert</code> RAN</strong>
+(PL_Combat_Sprint85 v1: 69/69 restored + read back, 94 threads frozen 59.5 ms, the file back to Steam's
+bytes at those sites) and <strong>a push now REPLACES this process's previous build of the same clip in ONE
+stop-the-world</strong> (<code>live.plan_push</code>: our old sites back to the source, then the new build; read back over every
+range; journal <code>replaced</code> until confirmed) - the other four went v1 -&gt; v2 that way. NOT RUN: a rebuilt clip's
+Live VFS delivery. Laws found doing it:
+- <strong>The shoulder-pad helpers (L/R_SPadX) are keyed at HALF the arm's swing</strong> (shoulder frame, measured on the
+  5 sprints: corr 0.99-1.00, best t 0.47-0.50, mean error 1.2-5.6 deg) - an arm edit must carry them or the
+  armour pad stays where the old arm was (v2 adds half of the swing CHANGE on top of the shipped motion).
+- <strong>Live location (CORRECTED):</strong> resource +0x08 is a 0x28-byte TABLE ENTRY {+0x00 handle vt 0x1DB4508,
+  +0x08 anim object vt 0x1E6F528}; anim object +0x30 = data object {+0x00 block, +0x08 anim chunk,
+  +0x18 / +0x1C sizes, +0x20 tracks}. The game holds pl_movaction.anix from Patch_DLC5 entry 94 section 123
+  (block 1,099,616 B, 155 tracks), not the loose Patch_DLC4_LC file.
+- <strong>An untouched UATR track keeps its bytes:</strong> re-fitting the unchanged root polyline moved it 1.25 / 2.25 cm
+  and failed the verify of an edit that only turned bones (<code>inplace._do_uatr</code>, report <code>uatr_kept</code>).
+- <strong>A move set shares one .anix:</strong> after one clip is pushed the file matches no shipped copy; the push
+  identifies the copy with this process's journaled patches undone (<code>live.match_copy_under_ours</code>).
+- <strong>A region change undoes a live push (MEASURED 2026-10-20):</strong> after a fast travel Gorgoroth -&gt; Seregost in
+  the same process, the live pl_movaction.anix matched the shipped Patch_DLC5 copy exactly - none of our
+  patches left. Re-pushing the five v2 builds landed 251/251, read back (92 threads, 59-90 ms frozen each).
+  Re-push after every region change; a travel inside one region: not measured.
+Authored clips: <code>aire/data/anim/authored/*_naruto.sowanim.json</code>.
+- <strong>Clip routing + long clips (MEASURED 2026-10-25, ANIM_STUDIO.md laws 9-10):</strong> a character plays a clip BY NAME
+  from its skeleton family's clip table (<code>0x302540</code> -&gt; <code>[[skelobj+0x1C0]+0x50]+0xB0</code>, vt <code>0x1E6F3F8</code>; CORRECTED
+  2026-10-28, kb/anim-runtime.md: <code>skelobj</code> = <code>[char+0x110]</code>, and <code>+0xB0</code> holds a POINTER to the clip-table
+  object, so the table is <code>[[[[char+0x110]+0x1C0]+0x50]+0xB0]</code> (vt 0x1E6F3F8), member list at table +0x78), and a family
+  takes clips only from files its MEMBER LIST names (+0x78, 0x38-byte entries, +0x20 path): a NEW path registers
+  nowhere; a listed path no archive ships is a free slot (orcs: 2,107 of 3,363). <code>rebuild</code> now writes multi-blockset
+  clips (u16 offsets cap a blockset at 64 KB). First use: the Olog sword snap retargeted onto orcs
+  (<code>scripts/studio/sword_snap_retarget.py</code>, memory sword-breaker-steal) - engine-verified, NOT yet seen in game.</p>
+<h3 id="anix-corpus-coverage-every-shipped-clip-decoded-measured-2026-10-27">ANIX corpus coverage - every shipped clip decoded (MEASURED 2026-10-27)</h3>
+<p><code>aire/formats/anix_census.py</code> (cache <code>aire/data/anim/anix_census.json</code>, 246 s, 4 processes; run
+it from a script FILE - Windows multiprocessing cannot re-import a stdin script): <strong>26,115 distinct
+ANIX files</strong> (1,820 loose + 24,295 bundle sections, by content), <strong>130,595 clips</strong>, 157,927
+blocksets (a multi-blockset clip is time segments; up to 45), <strong>400,732 / 400,732 codec groups and
+17,090,646 / 17,090,646 tracks decoded</strong> over 16 codecs - CAF4 5.94 M tracks, USFT 5.34 M, AQ03
+1.74 M, UATR 1.68 M, SQ03 1.02 M, UAVT 631 K, UAFT 407 K, SV01 262 K, STRI 39 K, UAQT 18 K, USBT
+5.8 K, AV01, USVO, UABT, USCO, UACO. 5,426 clips have no groups.
+- <strong>CORRECTED 2026-10-27 - empty clips were dropped as "too short".</strong> <code>anix.py</code> required a clip
+  record of &gt;= 0x80 bytes; a clip with no groups is a bare 0x7C header (the group table starts at
+  0x7C). All 2,354 rejected records in the corpus were exactly 124 bytes, named, 0 groups / 0
+  tracks (dialogue clips such as <code>dx_D3RB_030c_020_cv1</code>, whose data is events only). Minimum is
+  now 0x7C: clips 128,241 -&gt; 130,595, no group / track count changed.
+- Open: 121 files whose section offsets do not close on EOF (parsed, flagged).</p>
+<h2 id="vfx-studio-custom-effects-composed-from-any-shipped-nodes-built-2026-10-20-in-ga">VFX Studio - custom effects composed from any shipped nodes (BUILT 2026-10-20; IN-GAME CONFIRMED 2026-10-20 after one crash - meshes seen, lava glow not)</h2>
+<p>Full reference: <code>aire/documents/VFX_STUDIO.md</code>. <code>aire/vfx/</code> + add-on 1.4.0 (<code>vfx_ui.py</code>, panel N &gt; SoW Live &gt; VFX).
+A spec of NODES (presets: mesh / flash / shake / sound / sprite / flame / fire_light / trail /
+gpu_particles / dust / debris / rumble / wind / grass_push / look, or ANY node of ANY shipped effect)
+-&gt; <code>vfx_compose</code> clones each node (complete runs, <code>aire/vfx/fxp.py</code>), retunes fields by name, emits ONE
+<code>.fxp</code> the way shipped effects are laid out (<code>aire/vfx/compose.py</code>: categories sorted by StringHash(path),
+trailing u32, node records named by KeyList position) -&gt; <strong>the game's own loader must accept it</strong>
+(engine check) -&gt; one Live VFS bundle per mod (<code>mods/&lt;mod&gt;/files/bundles/sowce/vfx/</code>, <code>vfx.json</code>) -&gt;
+<code>vfx_deploy</code> (mount + load + resident) -&gt; <code>vfx_play</code> / <code>vfx_stop</code> = StartEffectSequenceOnCharacter
+<code>0x19B7850</code> / Stop <code>0x19B79E0</code> on 'player', 'nearest' hostile or an address (main thread).
+- <strong>Slots: 115 storefront sequences in four families</strong> - <code>Client/ClientFXSequence::Col_Artifact_01..42</code>,
+  <code>Lore_Vision_00..10</code>, <code>Col_Nature_00..29</code>, <code>Col_People_00..31</code> - each name <code>_in</code> / <code>_loop</code> / <code>_out</code>
+  effect paths that ship nowhere (<code>fx\inventory\artifacts\&lt;artifact|vision|nature|people&gt;\...</code>, measured
+  mapping <code>aire/data/vfx/slot_sequences.json</code>; the Shrine's domain-art mod serves Col_Artifact 01..41).
+  An effect owns a sequence (enter once, loop until stopped, exit at the stop). Paths stay resident per
+  process: a changed effect moves to a fresh sequence when the attached process holds the old bytes
+  (ledger <code>aire/data/vfx/loaded_session_only.json</code>).
+- <strong>THE FIRST PLAY CRASHED THE GAME (2026-10-20 20:18, MEASURED).</strong> FXDB types 7 (Vector2) and 8 (Vector3)
+  are POOL OFFSETS of f32[2] / f32[3] and type 14 is an int curve (27,080 / 22 / 11,480 shipped cells); only
+  types 1 / 2 / 3 live in the cell. The composer copied them raw into a rebuilt pool, so the eruption's
+  DebrisSystem carried EmissionDir (7e22, 1.8e22, 7.7e31) and angular velocities up to 1.8e28; Havok's
+  rigid-body create <code>0x1CD8F4</code> (from <code>vt_0x1E6ABA8::vf34</code> 0x3EE680, per frame) asserted "Encountered NaN for
+  transform" (0x1CD9A9). <strong>The game's loader accepted the file: load-time acceptance is not play-time
+  safety.</strong> Fixed: every pool type decoded / re-added (<code>fxp.VECTOR_TYPES</code>, curve 14), and
+  <code>FxDoc.value_problems()</code> (finite; vectors and vec3 curves |x| &lt;= 1e6, float curves &lt;= 1e7, key times in
+  [0, 1] - the envelope of 2,953 shipped effects: max 1e5 / 1.33e5 / 1e6, 0 non-finite) refuses at compose,
+  pack and <code>live_bundle_load</code> (no override). Debris piece counts were not the cause (shipped MaxPieces up to
+  60). The two crash effects moved to <code>fx_structures_proven.json</code> "withdrawn".
+- <strong>PLAYED 2026-10-20 20:43 (Gorgoroth, PID 37228):</strong> 6 effect files resident; suzanne_crown (a Blender
+  mesh), blade_crown (enter -&gt; loop -&gt; stop -&gt; exit), enemy_pillar on the nearest hostile (debris), eruption
+  x2 (debris) - every start accepted, the game kept running. User: "I seen many objects and a pillar and
+  stuff come out and circle above my head which was cool" - but the screenshot shows the blade crown's
+  blades as SOLID BLACK crescents: the lava material's emissive glow does not render (the Shrine's domain art
+  showed the same). LEAD, not chased yet: the custom <code>.mat</code> (glow LUT / emissive map) - effects built from
+  SHIPPED particle / trail / light nodes keep their own resident materials and are not affected.
+  Specs saved in <code>aire/data/vfx/specs/</code> (<code>scripts/studio/vfx_demo_specs.py</code> / <code>vfx_flash_specs.py</code>); the demo
+  player is <code>scripts/studio/vfx_show_director.py</code>.
+- <strong>Meshes:</strong> a Blender export (selected objects joined, modifiers applied) or a procedural shape (ring,
+  pillar, sphere, disc, cone, blade) -&gt; the rock donor's carrier mesh at NATURAL size with our own
+  <code>ModelScale</code> / <code>ModelColor</code> curves; lava material knobs (emissive, pan, tile, glow LUT) or texture repoints.
+  Axes measured: Blender +Y = the character's forward (game +Z), +Z up; origin = his feet.
+- MEASURED: recomposing 1,669 shipped effects from their own nodes = every field value identical
+  (CORRECTED 2026-10-20: that check compared type-7 / 8 / 14 cells as raw integers, so vectors were never
+  compared; the test now compares decoded values), 118/118 engine-accepted; a 7-node composite from five donors accepted clean; a spec with 2 procedural
+  meshes + light + shake + sound + screen look accepted 6/6. Curve key times = fractions of the node's
+  life (the Malevolent Shrine's timed walls, IN-GAME CONFIRMED). Deploy / play / stop: RUN (above).</p>
+<h2 id="flash-step-minato-the-player-s-own-instant-teleport-a-gold-streak-user-confirmed">Flash step (Minato) - the player's own instant teleport + a gold streak (USER-CONFIRMED 2026-10-20 in two rounds: the loading-screen fix, then the path check + effects on every press - "Nice that worked better")</h2>
+<p>Full reference: <code>aire/documents/FLASH_STEP.md</code>. Run: <code>python scripts/studio/flash_step_autostart.py</code> (waits for
+the game, checks the Lua, arms, watches H / Mouse 5; log <code>aire/data/live_objects/flash_watch_log.jsonl</code>).</p>
+<p><code>aire/pipeline/live_flash.py</code> (<code>live_flash_arm / _step / _watch / _status / _disarm / _release</code>), effects =
+VFX Studio mod <code>sowce-flash</code> (flash_out on <code>Lore_Vision_07</code>, flash_in on <code>Lore_Vision_06</code>). A key (H / Mouse 5;
+the shipped PC bindings leave H N J K L U and Mouse 5 free, Mouse 4 = Photo Mode) -&gt; 12 m along his
+movement (else the camera) -&gt; he arrives facing that way. MEASURED: the character jumps to the target in one
+frame (11 user flashes: 34-64 ms after the key, 0.0 cm off target).
+- <strong>The move = <code>0x19C04D4(player, &amp;transform{pos, rot})</code></strong> (since 2026-10-20 evening), a 2-argument player
+  wrapper with no caller in the shipped exe: spectating? (<code>0x171A78</code>: <code>+0x2F0C</code> or a state query) - no -&gt;
+  the player's IMMEDIATE teleport, slot 111 <code>0x7BA55C(player, &amp;pos, &amp;rot, r9b = 1 GROUND SNAP, a5 = 0 KEEP
+  VELOCITY, a6 = 1 reset the combat component 0x7BA7E4)</code>. Snap = a vertical ray from target +
+  <code>[char+0x2BC0]</code> * scale down 10000 cm (<code>[0x202E9EC]</code>); a hit puts his feet on it (<code>al</code> = 1), a miss keeps
+  the target height. a5 = 1 zeroes his velocity (<code>0x41BB78</code> -&gt; <code>0x17347C</code>). It touches NOTHING else.
+  MEASURED (test flash 22:22): 4 m in 48 ms, snapped 76.5 cm onto the ground, fade reasons 0, no busy / UI
+  flag; then 134 user flashes (22:24-22:30, all arrived), no loading screen (user: "loading screen is gone"). Mounted: refused - the
+  wrapper is player code and an AI character's slot 111 is another function (<code>0x41B6B4</code>).
+- <strong>The path (user: "im clipping through walls and going under ground").</strong> The snap only looks DOWN from its
+  start, so a plain target 12 m ahead (lifted 60 cm) put that start inside a wall (he landed beyond it) or
+  inside a hill. MEASURED in the watcher log: an uphill flash's snap MISSED (it started under the slope), he
+  stayed at the target height inside the terrain, and every later flash (57 of them) stayed ~37 m under the
+  surface. Each step now checks the way with the engine's own world ray test - the query the snap casts:
+  <code>0x124B6C</code> = <code>vt_0x1E6ABA8::vf67(q = [base+0x26FEFD0] + 8, &amp;query 0x40, &amp;result 0x50)</code>, <code>cmp eax,1;
+  sete al</code> = hit. Query: +0x00 from xyz cm, +0x0C to, +0x18 u32 0x10, +0x1C u8 1, +0x20 u32 0x3C. Result
+  (MEASURED, 0xCD-filled before): +0x0C/+0x18 the ray (written on EVERY cast), +0x00 hit point, +0x24 normal
+  (wall y 0, ground y 0.98), +0x30 plane d, +0x38 body (zeroed on a miss), +0x40 u32 key (0xFFFF kept on a
+  miss), +0x48 zeroed. It hits terrain, walls, overhangs and <strong>passes through characters</strong> (5/5 orcs at
+  1.4-13 m not hit). Python writes 8 landing spots, farthest first (12, 10.5 ... 1.5 m), each with two rays
+  from his chest (position + 40 cm = 144 cm above his feet): LEVEL to d + 60 cm, and RISING (slope 0.5) only
+  when the level ray hit a FLOOR-like face (normal.y &gt;= 0.5, compared as IEEE bits: positive floats order
+  like their bits) - a slope or a step, never a wall. Each landing transform sits <code>hs</code> = <code>[char+0x2BC0]</code> *
+  scale (104 cm) below its ray, so the snap starts in free air ON the clear ray and lands on the first
+  surface under it. The machine casts them when it picks the command up (16 rays at most) and takes the
+  first clear spot; none clear (a wall within ~2 m) = no flash, no effect (<code>F.blocked</code>). Spots for even
+  and odd counters live in separate halves of the block, so a new press never overwrites the spot in use.
+  The step replays the choice from the results the engine left in our block (<code>pick</code>, <code>landing_m</code>, the walls
+  hit). LuaJIT harness <code>tests/test_live_flash_lua.py</code> (simulated engine): lands 3 m out before a wall 5 m ahead,
+  steps over a 1 m fence, lands ON a 30% slope 12 m up (the old target lands 2.6 m under it), 20 m cliff,
+  roof over the landing spot.
+- <strong>RUN 2026-10-20 23:30-23:39 (game pid 32), user: "Nice that worked better":</strong> 40 presses -&gt; 32 flashes, each
+  with both effects started (machine <code>done</code> 32), 8 refused with a wall 0.84-1.71 m ahead (<code>blocked</code> 8), 0 errors /
+  ray faults / mount refusals. Walls stopped 6 flashes short (wall 8.8 m -&gt; landed 7.5 m, 5.4-5.8 -&gt; 4.5,
+  4.6 -&gt; 3.0, 10.8 -&gt; 9.0); 3 rising picks climbed slopes (normal y 0.96-0.99, +14 to +146 cm); height change
+  -193 to +146 cm (none under ground); arrival median 79 ms after the command write (max 153), 0.0 cm off target.
+  Turned off at the end of the day: <code>live_flash_disarm</code> (slot back to its previous holder), the <code>sowce-flash</code>
+  bundle unloaded ("unregistered (no holder left)"), <code>live_vfs_unmount(mod="sowce-flash")</code>.
+- <strong>NOT <code>0x658828</code> (the first build: user, 2026-10-20: every flash "puts me in a loading screen")</strong>, the
+  player half of the queued-teleport push <code>0x659884</code>. It does the same move (r9b = 0, a5 = 1, a6 = 1) and
+  OPENS A TELEPORT: UIManager <code>+0x17C..+0x194</code> = target, <code>+0x198</code> = 1 (read by <code>0x16D438</code>); world owner
+  <code>[base+0x26FFAB0]</code> <code>+0xF60</code> = 0, <code>+0xF64..</code> target, <code>+0xF70</code> = 2, <code>+0xF74</code> = 0; <code>[player+0x24A0]+0x283</code> = 1
+  (teleport in progress - he is held where he landed); and <strong>FadeMgr <code>[[GCS+0xE38]+0x160]</code> LOCK, reason 7</strong>
+  (<code>0x6589E4</code>: bit 7 of <code>+0xD0</code>, reasons &gt;= 11 in <code>+0xD4</code>; the first lock also starts the fade, <code>+0x08</code> = 2 /
+  UIManager <code>+0x2F8</code> = 2) = THE LOADING SCREEN. CORRECTED: this section called reason 7 "render cut ... a
+  history reset, not a fade" - callers of that setter include <code>cmd:FadeMgr.Lock</code> (via <code>0x6589D8</code>) and
+  <code>cmd:FadeMgr.SetCustomParams</code> (via <code>0x6588E8</code>) (names re-read 2026-10-23 after the <code>cmd:</code> label fix), the clear is <code>0x657974</code>
+  -&gt; <code>0x657980</code>. Only the queue finisher <code>0x658650</code> closes it, run by the queue consumer <code>0x4C4B70</code> - never
+  for a direct call: UI flag off, then once the world owner's state is past 1 and the ground ray under the
+  request target hits (or 5 s <code>[0x26736E4]</code> after request <code>+0x50</code>): <code>+0x283</code> = 0, <code>+0xF74</code> = 1, FadeMgr
+  unlock 7. MEASURED: lock bit 7 + <code>+0x283</code> held 2.5 min after one flash; <code>live_flash_release</code> (one finisher
+  call on our stand-in request, start time 0) returned 1 and the game went on. <strong>NOT <code>TeleportToPoint</code></strong>
+  (MEASURED): for the player its push sets CChar+0x2C21, calls 0x658828 AND leaves the request queued until
+  streaming reports ready (240+ frames), when the consumer <code>0x4C4B70</code> runs slot 111 again with r9b = 1 - a
+  player who keeps running is pulled back. <strong>NOT the controller's <code>SetPosition</code> (0x41E088)</strong>: it moved the
+  proxy 402 cm and the character did not follow.
+- <strong>Frame-accurate driver:</strong> a Lua state machine in the pump's per-frame slot <code>_G.__SOWCE2_FRAME</code> (chained:
+  it calls the previous holder first; the pump runs the slot inside <code>pcall</code>, so a Lua error only skips that
+  frame) reads a command block we allocated, every frame, with the native <code>read</code> op: GetMount check
+  (<code>0x2F9AF0</code>) -&gt; pick a landing spot -&gt; start flash_out -&gt; 2 frames (the ribbon samples the departure) -&gt;
+  GetMount again -&gt; the move -&gt; flash_in. The command-file route costs 250-500 ms per call (pump <code>kPollMs</code> /
+  <code>kIdlePostMs</code>). MEASURED: the slot runs while the game is paused for focus. Numbers are float32 in
+  HavokScript, so addresses stay hex strings (<code>hadd</code> adds a small offset digit by digit; fixed-width
+  uppercase hex compares like the number). <strong>Effects on every press (user: "the effect only happens every
+  two presses"):</strong> a sequence stays in the engine's active list <code>[[base+0x26FFB70]+0xF38 .. +0xF40]</code> (0x30
+  per entry: +0x20 character, +0x28 instance, instance +0xD0 its sequence) until STOPPED - ours only have an
+  enter phase, so after it plays the sequence sits there invisible - and Start (<code>0x19E16CC</code>) returns
+  without starting a listed one. Stop (<code>0x19E5928</code>) only calls the instance's vf1(2); the entry leaves 0-1
+  frames later (MEASURED). The first build stopped and started in the same frame, so every second press was
+  refused. The machine now stops the last flash's sequences when it picks a command up and starts each one
+  only once it reads the list without it (8 frames at most). <strong>Never act on a block the machine has not adopted</strong>: a
+  re-arm onto a new (zeroed) block once read counter 0 as a command and called the teleport with a NULL
+  player (SEH-caught, but the first build's move had already written a zero target into the UI and
+  streaming fields) - the machine now adopts the counter on arm and refuses a zero player.
+- <strong>The streak:</strong> Talion's own Game Changer dash ribbon (<code>gamechanger_stealthdash.fxp</code> PolyTrail,
+  Spine4_joint -&gt; Pelvis, <code>cele_lighttrail.mat</code>) recoloured gold with <strong><code>EnableTeleportDetection</code> OFF</strong> -
+  the shipped dash cuts its ribbon at a teleport; off, the ribbon spans the jump.
+- <strong>Survives a region change (MEASURED 2026-10-20, Gorgoroth -&gt; Seregost, same process):</strong> the frame slot still
+  held the driver, the command block was intact and both effects were resident (held bundle) - unlike the
+  animation push above. Only the watcher process has a time limit (re-run <code>scripts/studio/flash_step_autostart.py</code>).</p><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
