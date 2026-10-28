@@ -1,0 +1,434 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Archives and disk formats: Anvil, packet converter, LTAR / BNDL / SKDB / EMBB - Shadow of War engine reference</title><meta name="description" content="Anvil (record of the retired write route), packet converter, LTAR / BNDL / SKDB / EMBB"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" class="cur" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="archives-and-disk-formats-anvil-packet-converter-ltar-bndl-skdb-embb">Archives and disk formats: Anvil, packet converter, LTAR / BNDL / SKDB / EMBB</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Moved verbatim from
+CLAUDE.md on 2026-10-27 (original lines 1076-1185, 3360-3431, 9453-9610); heading levels normalised, emoji markers replaced with plain text.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Read with care:</strong>
+- Anvil's write route is RETIRED (2026-10-19): nothing writes game files. Its write examples stay as the record of that route only.</p>
+<p><strong>Sections:</strong>
+- Anvil — Offline Persistent Mod Engine (<code>tools/anvil/</code>)
+- Packet -&gt; Archive Mod Converter (PROVEN IN-GAME 2026-08-15)
+- Archive &amp; Format Knowledge (backs Anvil + <code>aire.formats</code>)
+- Behaviour graphs (<code>.bvr</code>) - animation state machines, decoded node by node (MEASURED 2026-10-27)
+- Havok tagfiles - navmeshes and physics shapes (<code>aire/havok/</code>, VERIFIED 2026-10-27)
+  - Archive Layout (DECODED 2026-04-23)
+  - BNDL v6 Format (CORRECTED 2026-08-06 — byte-identical emit 1,276/1,276)
+  - SKDB v9 Format (CRACKED 2026-04-23)
+  - EMBB v5 Format (RE-CRACKED 2026-08-06 — THERE IS NO PADDING)</p>
+<hr />
+<h2 id="anvil-offline-persistent-mod-engine-tools-anvil">Anvil — Offline Persistent Mod Engine (<code>tools/anvil/</code>)</h2>
+<blockquote>
+<p><strong>2026-10-19 — ANVIL NO LONGER WRITES THE INSTALL.</strong> <code>apply=True</code> / <code>install</code> / <code>asset_replace</code> and
+every other write into a game archive is REFUSED (<code>refused</code> + <code>why</code> in the result; the edited GADB blob
+is still saved to <code>tools/anvil/data/extracts/</code>), <code>modkit.install</code> / <code>set_mounted(on=True)</code> refuse, and
+<code>call("restore")</code> goes through the Vanilla Guard. <strong><code>.vanilla</code> IS NOT PROOF</strong>: MEASURED 2026-10-19,
+<code>Patch_02.arch06.vanilla</code> and <code>Patch_02_LC.arch06.vanilla</code> are NOT Steam's bytes while the live
+Patch_02 files are, so the old restore (copy every <code>.vanilla</code> over its archive) would have installed two
+modified archives. The text below describes the retired disk route and stays as its record.</p>
+</blockquote>
+<p>Anvil is the disk-side counterpart to AIRE: it modifies on-disk <code>.arch06</code> archives so changes persist
+across game restarts. No game running required for bake/apply. Vanilla <code>.arch06</code> backups are created
+automatically (one-time, never overwritten).</p>
+<p><strong>Architecture</strong>: <code>engine.py</code> (orchestrator), <code>archive_router.py</code> (71-archive index), <code>delta.py</code> (plans),
+<code>headless.py</code> (AI-native JSON API), <code>packager.py</code> (.sowmod ZIP), <code>snapshot.py</code> (live capture), <code>randomizer.py</code>.</p>
+<p><strong>AI Integration</strong>: ALL operations go through <code>tools.anvil.headless.call(action, **kwargs)</code>.
+Returns <code>{"ok": bool, "action": str, "data": {...}}</code>. No argparse, no printing.</p>
+<pre><code class="language-python">from tools.anvil.headless import call
+
+# ── Discovery (uses cached index, instant after first scan) ──
+call(&quot;info&quot;)                          # game dir, archive count, records owned
+call(&quot;list_archives&quot;)                 # all 71 .arch06 files
+call(&quot;categories&quot;, filter=&quot;Combat&quot;)   # search 2,742 GADB categories
+call(&quot;list_records&quot;, category=&quot;AI/SpawnAmbient/AITypes&quot;, filter=&quot;caragor&quot;)
+call(&quot;show_record&quot;, category=&quot;AI/SpawnAmbient/AITypes&quot;, record=&quot;Enemy_DifficultyAny&quot;)
+call(&quot;show_category&quot;, category=&quot;Faction/Events/SimEventChance&quot;)
+call(&quot;find_spawns&quot;, match_template=&quot;Caragor&quot;)  # find all slots using a template
+
+# ── Offline Bake (NO game running needed) ──
+call(&quot;bake&quot;, preset={
+    &quot;aitypes&quot;: {
+        &quot;Enemy_DifficultyAny&quot;: &quot;Werewyrm_talion&quot;,  # slot -&gt; template
+        &quot;Enemy_Caragor&quot;: &quot;Fellbeast&quot;,
+    },
+    &quot;lists&quot;: {
+        &quot;World_Desert_Day&quot;: [&quot;Goblin&quot;, &quot;Werewyrm_talion&quot;],  # bundle slot1, slot2
+    },
+    &quot;fields&quot;: {  # raw u32 writes to any record field
+        &quot;Client/PlayerMovement&quot;: {
+            &quot;PlayerMovement&quot;: {&quot;16&quot;: 46}  # field[16] = 46 (speed)
+        }
+    }
+}, apply=True)  # apply=True writes to archives immediately
+
+# ── Swap Spawn (targeted creature swap) ──
+call(&quot;swap_spawn&quot;,
+     match_template=&quot;Caragor&quot;,
+     new_template=&quot;Werewyrm_talion&quot;,
+     force_load_bundle=&quot;Werewyrm_talion&quot;,
+     apply=True)
+
+# ── War Mode (multi-creature chaos) ──
+call(&quot;war&quot;, name=&quot;mythic_war&quot;, apply=True)   # built-in preset
+call(&quot;war&quot;, name=&quot;boss_chaos&quot;, apply=True)   # Nazgul+Drakes+Trolls+Shelob everywhere
+call(&quot;war&quot;, bundles=[&quot;Nazgul_base&quot;, &quot;Fellbeast&quot;, &quot;Troll_base&quot;],
+     bundle_slot=&quot;both&quot;, apply=True)          # custom mix
+
+# ── Omnispawn (broadcast one creature/bundle globally) ──
+call(&quot;omnispawn&quot;, bundle=&quot;Nazgul_base&quot;, bundle_slot=2, apply=True)
+call(&quot;omnispawn&quot;, template=&quot;Werewyrm_talion&quot;, apply=True)
+
+# ── Mount Swap / Field Edit / PRFB redirect ──
+call(&quot;swap_mount&quot;, old_creature=&quot;Caragor&quot;, new_creature=&quot;Werewyrm&quot;, apply=True)
+call(&quot;field_edit&quot;, category=&quot;Faction/Events/SimEventChance&quot;,
+     record=&quot;Arena&quot;, field_idx=0, value=0x3F000000, apply=True)  # StartChance=0.5
+call(&quot;find_prefab_refs&quot;, pattern=&quot;caragor&quot;)
+call(&quot;redirect_prefab&quot;, source_pattern=&quot;caragor&quot;, target_pattern=&quot;werewyrm&quot;, apply=True)
+
+# ── Packaging &amp; Restore ──
+call(&quot;bake&quot;, preset={...}, package=&quot;my-chaos-mod&quot;)  # creates .sowmod ZIP
+call(&quot;install&quot;, sowmod=&quot;path/to/mod.sowmod&quot;)
+call(&quot;restore&quot;)  # back to Steam's bytes via the Vanilla Guard (SHA-1-checked sources, quarantine)
+</code></pre>
+<p><strong>Read-only GADB index actions (ADDED 2026-08-02, feed AIRE's correlation spine)</strong>:</p>
+<pre><code class="language-python">call(&quot;gadb_category_index&quot;)                    # ORDERED category array = the RecordLink index
+                                               # space. `categories()` sorts by NAME and destroys
+                                               # the ordinal RL is built from — use this instead
+call(&quot;gadb_record_values&quot;, category=&quot;AI/Perception&quot;)   # raw shipped value cells per record
+call(&quot;gadb_strings&quot;, offsets=[12345, 67890])   # decode string-block offsets
+</code></pre>
+<p>These are reads. They exist so AIRE can diff shipped-vs-live and key records by RecordLink;
+they never touch a write path, per the standing Anvil read-only rule.</p>
+<p><strong>Built-in War Presets</strong>: <code>mythic_war</code>, <code>boss_chaos</code>, <code>beasts_unleashed</code>, <code>ringwraith_siege</code>,
+<code>troll_army</code>, <code>spider_invasion</code>. Use <code>call("war_presets")</code> to list.</p>
+<p><strong>Archive Priority</strong> — WARNING: <strong>CORRECTED 2026-08-03 from the shipped <code>x64/default.archcfg</code></strong>, which
+ends with "file search order is from the bottom up" and lists <code>Global.Arch06</code> and
+<code>HotChunk.Arch06</code> <strong>after</strong> every <code>Patch_*</code>. Bottom-up therefore makes <strong>hotchunk the HIGHEST
+priority GADB</strong>, not the lowest — the reverse of the long-documented
+<code>Patch_04_LC &gt; ... &gt; hotchunk</code>. Confirmed by content: merging all 25 GADB-bearing archives in
+archcfg order changed <strong>0</strong> existing values and only ADDED 1,996 that hotchunk leaves unset.
+Read the archcfg; do not hardcode an order. (<code>tools/anvil/modkit.py</code> still states the old order,
+premised on "the shipped order puts the patch archives last" — that premise is false for this
+file. Anvil is read-only by standing rule, so nothing is at risk today, but its routing
+assumption is wrong.)</p>
+<p><strong>RecordLink helper</strong>: <code>RL = (category_index * 16) &lt;&lt; 16 | record_index</code> — Anvil's substrate exposes
+<code>make_recordlink(cat_path, record_name)</code>. GADB parse/rebuild/expand/repack (Oodle Kraken) is handled
+internally by Anvil's substrate — drive it via <code>call("bake"/"field_edit"/...)</code>; touch the substrate
+only when extending Anvil itself.</p>
+<h2 id="packet-archive-mod-converter-proven-in-game-2026-08-15">Packet -&gt; Archive Mod Converter (PROVEN IN-GAME 2026-08-15)</h2>
+<blockquote>
+<p><strong>2026-10-19 — THE ARCHIVE LANE IS OFF</strong> (game files stay vanilla). <code>Ltar::SetMounted(on=true)</code> and the
+menu's archive mount refuse (<code>kArchiveMountingOff</code>), and <code>sow_packet_convert.cpp</code> builds no archive
+(<code>kArchiveLane = false</code>): every asset goes to the live <code>.hotswap</code> sidecar, which writes nothing into
+the game. Taking a mount line OUT still works. The measurements below stay as the route's record.</p>
+</blockquote>
+<p>The community's Find/Replace packet mods convert into archive mods — <strong>natively, in the DLL,
+no Python</strong> — so anyone with the shipped drop has the capability. Proven in-game: faceless
+Talion renders in full from the converter's two outputs with the original packet disabled;
+menu background + loading icon likewise.</p>
+<p><strong>A packet splits PER ASSET, and the split is provable, not a preference:</strong></p>
+<table>
+<thead>
+<tr>
+<th>asset class</th>
+<th>route</th>
+<th>measured</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>has a LOOSE archive entry</td>
+<td>minimal <code>.Arch06</code> (permanent, zero runtime cost)</td>
+<td>Faceless: 10 assets -&gt; 839,177 B</td>
+</tr>
+<tr>
+<td>container-only</td>
+<td><code>.hotswap</code> live sidecar (instant toggle, slice revert)</td>
+<td>archive equivalent = 2,636 MB for ONE 1,941 B material</td>
+</tr>
+<tr>
+<td>no stored form (decoded <code>DDS</code>)</td>
+<td>sidecar only</td>
+<td>branding: not TEXR-76, not a mip — measured 0/16</td>
+</tr>
+</tbody>
+</table>
+<p>The sidecar is a STANDARD packet folder in <code>Mods\&lt;mod&gt;.hotswap</code>; <code>Mods\</code> is a packet root in
+<code>sow_hotswap.cpp</code>, so the proven intercept engine serves it with no new format. Which side is
+cheaper is per packet — <code>convert_packet</code> reports both prices. Alternates (a Find that lost its
+path contest to a higher-priority copy) are an OUTCOME, not a failure.</p>
+<p><strong>Native modules</strong> (<code>framework/sowframework/packets/</code>): <code>sow_ltar.{hpp,cpp}</code> — TOC read,
+structural full paths, minimal authoring, <code>SetMounted</code> (BOM refusal, one-time backup,
+main-block insert, &gt;512-file refusal); <code>sow_packet_convert.{hpp,cpp}</code> — Convert button,
+auto-mounts by default (a built-but-unmounted archive is correct, verified and INERT);
+<code>sow_mod_shrink.{hpp,cpp}</code> — Shrink button on clone cards. Needs nothing bundled: Oodle is the
+game's own already-loaded <code>oo2core_5_win64.dll</code> (one-arg <code>GetCompressedBufferSizeNeeded</code> —
+probe, don't assume) and the P=919 LUT is read from <code>base+0x1DB50D0</code> with a sanity check.
+Python twins: <code>tools/anvil/minimal_archive.py</code>, <code>aire/formats/packet.py</code> (THE one packet
+reader). <strong>Cross-check law: native and Python must produce identical output</strong> (Faceless:
+839,177 B / 15 files / 10+7+1, byte-identical both routes).</p>
+<p><strong>Clone shrink</strong> (<code>call("mod_shrink", clone=...)</code> / Shrink button): a clone mod is GB of
+ballast — measured, a 293.4 MB clone changes 3 files and rebuilds to 2.6 MB (112.5x),
+content-diffed (size diff scores ZERO on same-size swaps) and re-verified against the clone's
+bytes. <strong>Mount-slot law</strong>: no global mount cap observed (89 active archcfg entries run fine),
+but a clone SUBSTITUTES for its original's single line — N clones of one archive = N-1
+silently inert — while a minimal archive INSERTS and coexists. Shrinking is the bypass.</p>
+<p><strong>Archive-writer law (IN-GAME 2026-08-15)</strong>: chunk headers are 4-byte aligned relative to the
+blob start; the engine walks by that alignment and never scans, and OUR readers scan forward
+so read-back verify is BLIND to the one defect that hangs the loading screen. Every writer
+pads and gates on the strict engine-model walk (<code>_strict_walk_failures</code> /
+<code>Ltar::Author</code>) — first multi-chunk authored entry (19 chunks) launched clean.</p>
+<p><strong>Archive-writer law 2 — files inside a folder sorted by lower-case leaf (IN-GAME CONFIRMED
+2026-10-07)</strong>: the engine finds a file by BINARY SEARCH over its folder's file list, and every
+shipped archive keeps each folder sorted (ui_assets 278/278 folders, Patch_DLC3 773/773,
+highmip 1,168/1,168). All three writers (<code>aire/armory/ltar.py</code>, <code>tools/anvil/minimal_archive.py</code>,
+native <code>Ltar::Author</code>) sorted folders but kept files in INSERTION order, so an archive mounted,
+read back byte-perfect, and still hid files from the game: the Armory archive hid 56 of 97 (its
+blade's mesh / skel / material / colour texture) = the "invisible blade"; the 2026-09-02 build hid
+its 4 textures = the blade that "rendered black" (wrongly blamed on TEXR header naming). A by-name
+binary-search simulation predicted 12/13 live resource states (the 13th a streaming tier). Fix:
+sort (manifest first), refuse any archive where <code>lookup_misses()</code> is non-empty. User screenshot:
+the blade renders after the rebuild. Other writers' outputs passed only because their callers
+happened to pass sorted lists. Audit any archive with <code>ltar.Archive(p).lookup_misses()</code>.</p>
+<p>Conflict pre-flight (Python-side): <code>call("mod_conflicts")</code> — four checks (slot / path /
+shadowed / live-signature), all presenting in-game as "nothing happened";
+<code>call("mod_can_enable", mod=...)</code>. Not yet native. The Python container lane
+(<code>containers=True</code>) is also Python-only — the 71 MB section index matters ONLY there;
+default-config output is byte-identical without it.</p>
+<p><strong>Index-space trap</strong>: <code>aire</code> EntryIndex row <code>i</code> = <code>minimal_archive.ArchiveToc</code> entry <code>i+1</code>
+(the substrate APPENDS the recovered file #0). Join only via size-verified
+<code>toc_index_for()</code> — a raw join priced a 2,636 MB container at 84 KB.</p>
+<h2 id="archive-format-knowledge-backs-anvil-aire-formats">Archive &amp; Format Knowledge (backs Anvil + <code>aire.formats</code>)</h2>
+<h3 id="archive-layout-decoded-2026-04-23">Archive Layout (DECODED 2026-04-23)</h3>
+<p>71 <code>.arch06</code> archives total. Priority order: <code>Patch_DLC &gt; Patch_XX &gt; base</code>.</p>
+<p><strong>hotchunk.arch06</strong> (62.2 MB, LTAR v4, 47 entries):</p>
+<ul>
+<li>Entry[0]: <code>archivepatchloosefiles.txt</code> = <strong>THE GADB</strong> (56,759,100 bytes, raw GADB, no Firebird container)</li>
+<li>Entries[1-28]: <code>database</code> + <code>database\string</code> pairs (14 pairs, SKDB v9 format, per-region string overrides)</li>
+<li>Entry[29]: <code>database\string\zhcn</code> (88 bytes)</li>
+<li>Entries[30-46]: <code>database\string\globalresources_*.bndl</code> (17 per-language string bundles, 136 bytes each)</li>
+</ul>
+<p><strong>global.arch06</strong> (7.9 MB, 243 entries): rendering materials, shaders, FX only — NO GADB.
+<strong>corecharacter.arch06</strong> (208.7 MB, 77 entries): character <code>.bndl</code> manifests + <code>.embb</code> data bundles.
+Oodle DLL: <code>x64/oo2core_5_win64.dll</code> (Kraken codec, ships with game).</p>
+<h3 id="bndl-v6-format-corrected-2026-08-06-byte-identical-emit-1-276-1-276">BNDL v6 Format (CORRECTED 2026-08-06 — byte-identical emit 1,276/1,276)</h3>
+<p><code>.bndl</code> is the manifest for the paired <code>.embb</code>, and it MIRRORS it: same path table,
+same path offsets, and the <strong>same payload-size array the EMBB carries as size prefixes</strong>.</p>
+<pre><code>[0x00] &quot;BNDL&quot; magic
+[0x04] u32  version (6)
+[0x08] u32  path_table_size                     == the paired EMBB's
+[0x0C] u32  path_table_size + align4(len(type_string)+1)
+[0x10] u32  asset_count                         == the paired EMBB's
+[0x14] asset_count × u32  PAYLOAD SIZES  ← identical to the EMBB's size prefixes
+[0x14 + ac*4] path table (path_table_size bytes) — identical BYTES to the EMBB's
+[after path table] &quot;Bundles/Types:XXX&quot; null-terminated, then 4-aligned
+[then] asset_count × u32 path offsets — identical to the EMBB's
+</code></pre>
+<blockquote>
+<p><strong><code>[0x0C]</code> is NOT <code>[0x08] + 28</code>.</strong> That held on 995 of 1,276 sampled manifests and
+failed on 281 (deltas 20/24/32/36/40). The rule is
+<code>[0x0C] = path_table_size + align4(len(bundle_type)+1)</code> — i.e. the combined length of
+the path table plus the type string region — which holds <strong>1,276/1,276</strong>. Emitting the
+constant 28 produces a corrupt manifest for ~22% of bundles.</p>
+</blockquote>
+<p>Bundle types are open-ended, not a fixed three: <code>Presentation</code> (208,575), <code>WorldQuest</code>,
+<code>Sound_1</code>, <code>FlairWorld</code>, <code>Flair_1MB</code>, <code>WorldLighting</code>, <code>ThroneRoomBarrows</code>, <code>UI_Tutorial</code>,
+<code>QuestCinBundle</code>, … — read it, do not assume it.</p>
+<blockquote>
+<p><strong>RESOLVE THE MANIFEST FROM THE EMBB'S OWN ARCHIVE.</strong> Looking up the <code>.bndl</code> path
+independently crosses a patch boundary: a bundle updated by a patch ships its EMBB in
+<code>Patch_*</code> while the base archive still holds the ORIGINAL manifest. Measured on 40
+shipped character bundles, 3 paired that way and disagreed —
+<code>player_rhovaniont2_cloak</code> matched on all 11 paths but declared asset 2 as 87,657 bytes
+against the patched EMBB's 43,961; <code>orc_buff_leather_pants_g</code> paired a 4-asset EMBB to
+a 3-asset manifest from a different archive. <code>Cortex._embb_manifest</code> takes the
+neighbouring entry in the EMBB's own archive and confirms it by CONTENT (identical path
+list) before trusting it — 60/60 after the fix, and the one bundle with no confirmable
+manifest is reported as such rather than silently paired to the wrong one.</p>
+<p><strong>A PATCH CAN UPDATE ONE ASSET OF A BUNDLE BY MANIFEST + LOOSE FILE (MEASURED 2026-10-09).</strong>
+Patch_DLC4_LC re-ships the <code>defender_weaponpairs\*.bndl</code> manifests WITHOUT their EMBBs (those win
+from ui_assets). Paths identical; one size differs: <code>orc_metalshield.skel</code> is declared 147,990
+while the ui_assets EMBB carries 128,871, and 147,990 is exactly the LOOSE
+<code>orc_metalshield.skel</code> in Patch_DLC4/_LC. So the vanilla pair the engine loads is cross-archive
+by design (that the loose skel is what gets used is a LEAD, not observed at runtime). Reading a
+pair for ANALYSIS: own archive (above). SHIPPING an override: start from the WINNING manifest
+and change only your own slots; rebuilding it from the EMBB would undo the patch's declaration.</p>
+</blockquote>
+<h3 id="skdb-v9-format-cracked-2026-04-23">SKDB v9 Format (CRACKED 2026-04-23)</h3>
+<p>Serialized Key Database — per-region/per-language string override tables.</p>
+<pre><code>[0x00] u32 magic &quot;SKDB&quot;
+[0x04] u32 version (9)
+[0x08] u32 header_size (28)
+[0x0C] u32 key_count (total hash entries across all language sections)
+[0x10] u32 reserved (0)
+[0x14] u32 string_pool_size (byte size of the UTF-16LE string pool at EOF)
+[0x18] u32 reserved (0)
+[0x1C] u32 lang_count (19)
+[0x20] lang_count × (u32 section_data_offset, u32 cumulative_metric)
+[after section table] Initial key lookup table: 8-byte entries
+[at each section_data_offset] Per-language key lookup tables: 8-byte entries
+[EOF - string_pool_size] String pool: flat, null-terminated UTF-16LE strings
+</code></pre>
+<p>Each 8-byte key entry: <code>u16 hash_lo, u16 hash_hi, u16 secondary_hash, u16 string_index</code>
+(<code>string_index</code> = 0-based index into the flat string pool). Access via <code>aire.formats.StringEditor</code>.</p>
+<h3 id="embb-v5-format-re-cracked-2026-08-06-there-is-no-padding">EMBB v5 Format (RE-CRACKED 2026-08-06 — THERE IS NO PADDING)</h3>
+<p><code>aire/formats/embb.py</code>; <code>call("embb_probe" / "embb_verify" / "embb_replace")</code>. Offline.
+Full write-up: <strong><code>aire/documents/EMBB_BNDL_CONTAINER.md</code></strong>.
+Byte-identical rebuild from parsed parts <strong>400/400</strong> — the only standard that counts.</p>
+<p>Population verified COMPLETE (not sampled): <strong>190,407 EMBB blobs, 100% version 5</strong> and
+<strong>225,311 BNDL blobs, 100% version 6</strong> — no version variants exist. Header + path-table
+invariants pass on <strong>190,407/190,407 = 100.0000%</strong>.</p>
+<pre><code>[0x00] u32 magic &quot;EMBB&quot;
+[0x04] u32 version (5)
+[0x08] u32 path_table_size
+[0x0C] u32 asset_count
+[0x10] path table: asset_count NUL-terminated ASCII paths, each NUL-padded to
+       a 4-byte boundary.  path_table_size == end of the last aligned path, EXACTLY.
+[0x10 + pts] asset_count × u32 — byte offset of each PATH, relative to 0x10.
+       This is a path index, NOT a section table.
+[then]  asset_count × [ u32 payload_size ; payload ]
+       payload begins with its own 4-char tag, chosen by the path's EXTENSION.
+</code></pre>
+<p><strong>Measured over 964 containers / 35 archives / 8,218 sections (all version 5):</strong></p>
+<table>
+<thead>
+<tr>
+<th>invariant</th>
+<th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>chain terminates exactly on EOF</td>
+<td><strong>964/964</strong>, slack 0</td>
+</tr>
+<tr>
+<td><code>path_table_size</code> == end of last aligned path</td>
+<td>964/964</td>
+</tr>
+<tr>
+<td>path offsets 4-aligned and chained by aligned length</td>
+<td>964/964</td>
+</tr>
+<tr>
+<td>zero-size / oversize sections</td>
+<td>0 / 0</td>
+</tr>
+<tr>
+<td>byte-identical rebuild</td>
+<td>400/400</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>THERE IS NO PADDING AND NO ALIGNMENT IN THE SECTION CHAIN.</strong> A payload is followed
+IMMEDIATELY by the next section's u32 size prefix. Section start offsets mod 16 are
+~uniform (0: 8.9%, 7: 4.9%, 15: 5.7%) and only <strong>531 of 964</strong> containers have every
+section 4-aligned — <code>player_celebrimbor_armor_pc.embb</code> itself has sections at mod-16 of
+7, 13, 5 and 1. So a payload may be ANY size; nothing is rounded up, and there is no
+slack to preserve. Do not pad a resized payload — padding is what would be wrong.</p>
+<p><strong>THE OLD READER'S TWO ERRORS.</strong> It read <code>asset_count + 1</code> offsets, but the
+(count+1)-th u32 is <strong>the size prefix of section 0</strong>, not a table entry — so
+<code>section_data_start</code> was 4 bytes past the truth and the last "offset" (27,928 on that
+bundle) was misread as "total size of dependency data". Sections were then located by
+<strong>scanning for known tags</strong>, which cannot work: a 4-byte tag occurs by chance inside
+texture and mesh payloads (18 tag hits for 17 real sections on one 12 MB character
+bundle, several deep inside TEXR data), and sizes came out as "distance to the next
+hit". Those sizes are fiction, and they are why the container appeared to have padding.
+<strong>The substrate parser was repaired 2026-08-06</strong> — it now walks the chain, so
+<code>asset_probe</code>/<code>asset_decode</code>/<code>export_obj</code> and every other caller are correct too. It
+falls back to the old scan ONLY when the chain is broken, and then reports
+<code>chain_valid: false</code> and refuses to rebuild rather than writing guessed sizes.</p>
+</blockquote>
+<p>Extension → tag (8,218 sections, none contradicted): <code>mesh</code>→MMSH, <code>skel</code>→SKEL,
+<code>anix</code>→ANIX, <code>tex</code>→TEXR <em>or</em> SLVT, <code>texa</code>→TEXA, <code>texcpu</code>→CPUT, <code>mat</code>→LTMI, <code>fxo</code>→SRHR,
+<code>fxp</code>→LTFX, <code>inst</code>→PRFB, <code>bnk</code>→BKHD, <code>cres</code>→CRES, <code>vid</code>→VIDO, <code>subb</code>→SUBB, <code>wldmsh</code>→MESH,
+<code>objres</code>→OBJR, <code>uis</code>→UISH, <code>uiwd</code>→UIWD, <code>scripts</code>→SCRI, <code>wldclnt</code>→WDSC, <code>hkai</code>→HKAI,
+<code>veggrid</code>→VEGG, <code>terrain</code>→TERR. (<code>CDEF</code> is not a tag — see the phantom-tag note.)</p>
+<p><strong>WHAT ACTUALLY BREAKS A RESIZE — three things must move together:</strong></p>
+<ol>
+<li>the resized section's <strong>u32 size prefix</strong> inside the EMBB;</li>
+<li>the matching entry in the <strong>paired BNDL's size array</strong>;</li>
+<li>the <strong>archive entry's uncompressed size</strong> (Anvil/modkit).</li>
+</ol>
+<p>Splicing a bigger payload in place without (1) leaves the loader reading the next
+section's size from inside the new payload. Reproduced exactly on
+<code>player_celebrimbor_armor_pc.embb</code>: a +1,500,000-byte MMSH splice makes section 9's size
+read as <code>0xAAAAAAAA</code> = <strong>2.86 GB</strong>, which the streaming loader then tries to consume —
+<strong>that is a hang on load</strong>, and it is indistinguishable from a geometry failure unless you
+walk the chain. <code>EmbbContainer.parse</code> refuses such a file with the offending section named.</p>
+<h2 id="behaviour-graphs-bvr-animation-state-machines-decoded-node-by-node-measured-2026">Behaviour graphs (<code>.bvr</code>) - animation state machines, decoded node by node (MEASURED 2026-10-27)</h2>
+<p>A <code>.bvr</code> is a GADB v17 database (root <code>BlendDB</code>): categories = node types, records = nodes,
+mostly NAMED SECONDARY records (CORRECTED 2026-10-27: not anonymous primaries as the 2026-08-05
+<code>behavior.py</code> read). 29 graphs, <strong>10,702 blend states, 73,448 transition links</strong>; player graphs
+(player_elf / el2 / elt / bar) ~2,050 states + ~1,700 camera states each, orcs ~132, warg 431,
+troll 218.</p>
+<ul>
+<li>Links: 73,017 resolve to a decoded state, 431 have no target, <strong>0</strong> name a missing state.</li>
+<li>5,300 states (49.5%) are reachable by transitions from the start state; the rest are entered BY
+  CODE (grabs <code>Grab_HOG_*</code> / <code>GrabFlurry_*</code>, warg riding, ladder climbing, mount deaths) - the
+  states sync actions and presentations force.</li>
+<li>Clips: <strong>17,606 / 17,606</strong> state clip references resolve to an ANIX carrier (archive, entry,
+  clip index, P919 hash); invented names resolve to nothing (control). The <code>.skel</code> set paths the
+  nodes name ship nowhere: the join goes through the ANIX clip directories.</li>
+<li>Field readers are thin (17 fields) because a BlendDB record is a NATIVE STRUCT (header +0x01 =
+  0x1A on 318,372 / 318,372 live records): fields at <code>instance + SlotOffset</code>, read as plain members.
+  Live offsets checked 10,697 / 10,697 (<code>behavior_field_offsets</code>, <code>behavior_live_node</code>;
+  kb/gamedb-schema.md slot-law exception).</li>
+</ul>
+<p>Actions: <code>behavior_graphs</code>, <code>behavior_graph</code>, <code>behavior_state</code>, <code>behavior_moveset</code>,
+<code>behavior_clip</code>, <code>behavior_field_readers</code> (aire/formats/behavior_actions.py); full reference
+aire/documents/BEHAVIOR_GRAPHS.md. Edits are LIVE record writes, never the file.</p>
+<h2 id="havok-tagfiles-navmeshes-and-physics-shapes-aire-havok-verified-2026-10-27">Havok tagfiles - navmeshes and physics shapes (<code>aire/havok/</code>, VERIFIED 2026-10-27)</h2>
+<p>Built 2026-10-18 by a background agent, wired as <code>HavokActions</code> (aire/havok/actions.py), measured
+2026-10-27. A Havok tagfile (root <code>hkRootLevelContainer</code>) is read with its OWN type table
+(tagfile.py / types.py), so every class layout comes from the file.</p>
+<ul>
+<li><strong>Census</strong> (<code>havok_tag_census</code>, cached): every carrier parses EXACTLY, 0 parse failures, all
+  types consistent across files - standalone <code>.hkai</code> 923 files (185 types), EMBB <code>HKAI</code> sections
+  1,176 files, OBJR-entry physics 5,148 files (196 types), EMBB OBJR physics 4,808 files.</li>
+<li><strong>Navmeshes</strong> (<code>havok_navmesh</code>, navmesh.py): <code>hkaiNavMesh</code> v16 (208 B) faces / edges / vertices
+  -&gt; world-space geometry (cm) + .glb / .obj. Oracles on <code>worlds\retail\mtnpass\mtnpass.hkai</code>
+  (Patch_DLC5_LC, 37.5 MB): 713 navmeshes, <strong>713 structurally exact</strong>; main mesh 205,467 vertices,
+  273,917 edges, 49,774 faces (3-14 edges each), edge closure 210,057 / 210,057, opposite edges
+  symmetric 227,694 / 227,694 and collinear within 2.5e-15 m. The pieces are the dynamic navmesh
+  pieces of props (<code>Resou_09.W.dnmp</code>, <code>Store_34.NMPtop</code>).</li>
+<li><strong>Physics</strong> (<code>havok_collision</code>, physics.py): hknpCompoundShape roots; hknpCompressedMeshShape,
+  hknpConvexPolytopeShape (Box / Capsule), hknpSphereShape, hknpHeightFieldShape, hknpConvexShape
+  -&gt; triangle meshes in the shape frame (metres); instance transform <code>p' = R (p * scale) + t</code>.</li>
+<li>Other actions: <code>havok_tagfile</code>, <code>havok_type</code> (a class layout from the file), <code>havok_object</code> (an
+  object as JSON), <code>havok_sources</code>. Exports go to a scratch or project folder, never the install.</li>
+</ul><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
