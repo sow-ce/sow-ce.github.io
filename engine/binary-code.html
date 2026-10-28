@@ -1,0 +1,779 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Binary and heap: PE sections, function identity, vtables, type flow, the live heap - Shadow of War engine reference</title><meta name="description" content="sections, function identity, vtables, type flow, library identification, the live heap, the engine atlas (modules, dossiers, doc / wrapper label tiers)"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" class="cur" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="binary-and-heap-pe-sections-function-identity-vtables-type-flow-the-live-heap">Binary and heap: PE sections, function identity, vtables, type flow, the live heap</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Moved verbatim from
+CLAUDE.md on 2026-10-27 (original lines 3554-4041); heading levels normalised, text unchanged.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Covers:</strong>
+- section table and <code>is_code</code> (code in <code>.arch</code> AND executable <code>.bss a</code>; <code>.text</code> is a decoy)
+- <code>.pdata</code> is not the function universe: leaves, fragments, tails, protector junk, jump tables
+- startup pointer tables; RTTI-less classes (4,097 found from constructors)
+- THE LIVE HEAP: dlmalloc mspaces, Havok's heap, Windows heaps, address space outside every allocator, GPU content, ownership closure, ETW heap trace, runtime-evidence labels, the ImGui font atlas
+- script-API hub labels; type-flow clobber sets (GPR + xmm); library identification (OpenSSL, Havok, ...)
+- 2026-08-03 audit: xref window, is_static / is_heap, <code>.bss a</code> reached only by vtables, stale slot_count
+- the engine atlas (modules), class identity from GameDB reads, module dossiers, doc / wrapper label tiers</p>
+<p><strong>Sections:</strong>
+- PE Section Layout — the binary is PROTECTOR-PACKED (CRACKED 2026-08-03)
+- Engine atlas, module dossier and the label tiers (BUILT 2026-10-27)</p>
+<hr />
+<h2 id="pe-section-layout-the-binary-is-protector-packed-cracked-2026-08-03">PE Section Layout — the binary is PROTECTOR-PACKED (CRACKED 2026-08-03)</h2>
+<p>The textbook assumption "code lives in <code>.text</code>, below ~32 MB" is FALSE for this binary and it was
+baked into <code>AireMemory.is_code</code> as the magic bound <code>0 &lt; rva &lt; 0x2000000</code>.</p>
+<p>Real section table (<code>IMAGE_SCN_MEM_EXECUTE</code> from the header, not inferred):</p>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>RVA range</th>
+<th>Exec</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.arch</code></td>
+<td>0x0001000 - 0x1D87C00</td>
+<td>YES</td>
+<td>the original ~30 MB of code</td>
+</tr>
+<tr>
+<td><code>.sdata</code></td>
+<td>0x1D88000 - 0x1D91400</td>
+<td>YES</td>
+<td>(also carries the static manager cluster)</td>
+</tr>
+<tr>
+<td><code>.xtext</code></td>
+<td>0x1D92000 - 0x25AC000</td>
+<td>no</td>
+<td>the DB Explorer schema metadata string pool</td>
+</tr>
+<tr>
+<td><code>.pdata</code></td>
+<td>0x2AA5000 - 0x2C85000</td>
+<td>no</td>
+<td>159,018 function entries</td>
+</tr>
+<tr>
+<td><strong><code>.bss a</code></strong></td>
+<td><strong>0x2C89000 - 0x729714D</strong></td>
+<td><strong>YES</strong></td>
+<td><strong>70 MB of executable, CNT_CODE (0xE0000020)</strong></td>
+</tr>
+<tr>
+<td><code>.rsrc</code> / <code>.sbss</code> / <code>.text1</code> / <code>.bind</code></td>
+<td>0x7298000+</td>
+<td>YES</td>
+<td>small executable tails</td>
+</tr>
+<tr>
+<td><code>.text</code></td>
+<td>0x7299000 - 0x7299014</td>
+<td>no</td>
+<td><strong>20 bytes, NOT executable</strong> — a decoy</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>is_code</code> therefore declared every function in a 70 MB executable region "not code"</strong>, which
+silently under-detects vtables: the <code>&gt;=4 of 6 slots are code</code> test fails for any class whose methods
+live there. Measured — 880 RTTI-confirmed vtables scored <strong>ZERO</strong> code slots under the old bound and
+<strong>1-24</strong> under section-derived executability. <code>is_code</code> now derives its ranges from the section
+table (cached, offline, with the old bound only as a last-resort fallback).</p>
+<p>Consequence for earlier results: any heuristic gated on <code>is_code</code> was a FLOOR, not a measurement —
+including the world-object owner walk's 84-88%. Re-running <code>vtable_method_sweep</code> after the fix:
+<strong>dead vtables 880 -&gt; 0, slots 12,527 -&gt; 32,934, unique engine methods 5,480 -&gt; 15,540</strong> (2.8x).</p>
+<p><strong><code>.pdata</code> IS NOT THE FUNCTION UNIVERSE — the leaf-function law (MEASURED 2026-08-03).</strong>
+x64 Windows requires a <code>.pdata</code> RUNTIME_FUNCTION only for a function that needs UNWIND data. A
+<strong>leaf</strong> — allocates no stack frame, touches no non-volatile registers, and calls nothing — is
+legally allowed to omit its record. So "absent from <code>.pdata</code>" means "never needs unwinding",
+NOT "not a function".</p>
+<p>Measured: <strong>61,244 call targets have no <code>.pdata</code> entry</strong>, and the classification is unambiguous:
+- <strong>0 of them appear as a call SOURCE</strong> — every one is a leaf, exactly as the ABI predicts;
+- <strong>0 land inside another function's <code>[begin,end)</code> range</strong> — so these are not stray mid-function
+  targets, and the call graph is not manufacturing them;
+- <strong>0 are int3 padding</strong> — essentially no false positives;
+- 75.3% start with a textbook prologue, 22.9% with other real leaf code, 1.7% are <code>e9</code> tail-jmp
+  stubs, 0.2% are <code>ff 25</code> import thunks.
+- <strong>171 are called 50+ times.</strong> <code>StringHash</code> (<code>0x423E70</code>, in-degree <strong>2,060</strong>) is one of them.</p>
+<p>Treating <code>.pdata</code> as the universe therefore silently excluded 61,244 real, heavily-called
+functions. The true universe is <code>.pdata</code> UNION every call target = <strong>224,819</strong> — which is what
+the engine graph had been using all along; only the labeller had not. <code>label_enrich</code> now covers
+all of it, and the summary reports <code>pdata_starts</code> and <code>leaf_functions_outside_pdata</code> separately
+so the two denominators can never be confused again.</p>
+<p><strong>FUNCTION IDENTITY — fragments, leaves, tails, and the obfuscated half of <code>.bss a</code> (MEASURED
+2026-10-05; <code>aire/analysis/unwind.py</code>, <code>xref_index.py</code>, <code>xref_decode.py</code>).</strong> The 224,819 above was
+still wrong in kind:</p>
+<ul>
+<li><strong>26,293 of 163,575 <code>.pdata</code> entries (16.1%) are FRAGMENTS</strong>: <code>UNW_FLAG_CHAININFO</code>, their unwind
+  record ending with the parent's RUNTIME_FUNCTION (8,140 flush after the parent's end, 11,001
+  within 64 KB, 7,152 far = cold blocks; 12,232 functions own fragments; all unwind v1, 0
+  unparsed). Counted as functions, each had 0 callers (entered by fallthrough/jmp), 26,742 call
+  edges were credited to them instead of their function, and their strings were missing from it.
+  <code>UnwindMap</code> folds them; <code>function_info</code> / <code>callers_of</code> answer for the function.</li>
+<li><strong>The function list is 243,845</strong>: 137,282 <code>.pdata</code> functions + 106,563 leaves, 36,907 of them
+  absent from the old list (24,057 <code>.arch</code> callbacks only ever <code>lea</code>'d, 8,794 data-pointer
+  targets, 3,275 data-referenced <code>.bss a</code> methods). Only 11 old entries dropped, all outside code
+  sections. Start profile of the new ones: 99.1% (control <code>.pdata</code> starts 97.0%).</li>
+<li><strong>Jump targets never create functions</strong> (IDA's model: a jump destination is a tail). <code>.bss a</code>
+  holds the protector's OBFUSCATED code too: 5,219 <code>.pdata</code> bodies of stack juggling (<code>popfq;
+  jmp</code>, <code>mov [rsp],rbp; lea rbp,[rip+..]; xchg [rsp],rbp</code>) chained by jumps across 70 MB. Trusting
+  jumps made 29,170 junk "functions" passing the start profile 21%. Only data references (vtable
+  slots, pointer tables) create functions there.</li>
+<li><strong>Start profile</strong> = 16-aligned, or <code>CC</code>/<code>90</code> before it, or flush after a known body. A bare
+  <code>ret</code> (C3) before an unaligned start is NOT enough: real functions after a ret are flush after a
+  known body 17,962/17,964, junk 14%.</li>
+<li><strong>Decode by recursive descent, never linearly past a terminator.</strong> The protector put junk after
+  the <code>ret</code> of the methods it moved into <code>.bss a</code> (branch targets beyond it): a linear leaf decode
+  dropped 54 real vtable methods. Parents enter fragments MID-body (0xF7427E at 0xF742A6), so
+  inbound jump targets are extra roots and gap fill repeats until coverage stops growing.</li>
+<li><strong>Jump tables sit INLINE in <code>.arch</code></strong> after their function (MSVC <code>lea rB,[__ImageBase]; mov
+  eJ,[rB+rI*4+T]; add rJ,rB; jmp rJ</code>, the bound found through register copies like <code>movsxd rax,
+  edx</code>). A linear decoder turned their bytes into ~2.8M fake instructions. 175/181 resolved.</li>
+<li><strong>Tails</strong>: 4,822 call-free blocks outside every <code>.pdata</code> body that a function jumps to and back
+  from (no unwind needed), 1,977 in <code>.arch</code>, 2,845 in <code>.bss a</code>; owned by the jumping function.</li>
+<li>Undecodable bytes inside <code>.pdata</code> bodies: 6.94 MB in <code>.bss a</code> (protector), 29 KB in <code>.arch</code>.</li>
+<li><strong>Startup pointer tables (live snapshot, <code>aire/pipeline/live_image.py</code>):</strong> 33,354 <code>.idata</code> slots
+  are zero on disk and hold code pointers live (21,343 targets). CORRECTED the same day: they are
+  NOT invisible statically - 20,824 of the 21,222 targets that are functions are already found by
+  their <code>lea</code> in the registration call that fills the table (<code>lea rdx,[func]</code> -&gt; register(...);
+  only 1,044 slots are stored by a direct <code>mov</code>). ~~the snapshot added 26 functions~~ <strong>CORRECTED
+  in the next launch: it added NONE that were real.</strong> 25 functions had a runtime pointer as their
+  only evidence - 24 in <code>.bss a</code> (17 of them 64 KB-aligned page bases; the rest mid-stream protector
+  junk such as <code>xchg [rsp],r13; ret</code>) and one on int3 padding (<code>0x14FDE92</code>). The index now rejects a
+  runtime-pointer-only candidate outside <code>.arch</code> and any weak candidate starting on <code>CC</code>: function
+  list <strong>243,871 -&gt; 243,839</strong>. The snapshot's value is the SLOT: <code>callers_of</code> / <code>xrefs_to</code> report
+  <code>runtime_pointer_slots</code>, i.e. which startup table makes a callback reachable. <strong>Measured across
+  launches</strong> (PID 37456 -&gt; 32240, 2026-10-05): <strong>Jaccard 0.9997</strong> over 33,347 slots (8 pairs only in
+  the previous, 1 only now). The differing values are runtime state, not tables: <code>0x27250F0</code> (a
+  return-address variable) and a 7-slot record at <code>0x29E0D60..0x29E0E30</code> that held odd, mid-function
+  RETURN ADDRESSES in one session (beside "Invalid heap type!" code) and nothing in the other - a
+  captured call stack, now classed <code>dynamic_slots</code>. Neither ever became a function.</li>
+<li>Control Flow Guard is off (load config size 148, 0 GuardCF functions): no compiler-made list
+  of address-taken functions exists to shortcut any of this.</li>
+</ul>
+<p><strong>RTTI-LESS CLASSES — ~4,100 vtables no RTTI method can see (MEASURED 2026-10-05;
+<code>aire/analysis/vtable_discovery.py</code>).</strong> 5,007 runs of &gt;=2 function pointers in <code>.xtext</code> are loaded
+by a <code>lea</code> and absent from resolver.db. Only 9 carry an RTTI CompleteObjectLocator at [-1]
+(control: 1,546/1,546 RTTI-verified vtables do); the constructor pattern - the address stored at
+[obj+0] - holds for 4,097 (81.8%), against 1,399/1,746 (80.1%) of known vtables. Those 4,097 are
+CONFIRMED and used: known vtables 2,134 -&gt; 6,231, vtable-slot method labels 18,366 -&gt; 32,261,
+direct-evidence labels 25.6% -&gt; 30.4%. <code>CResourceBundle</code> (0x1E6E678, 18 slots) is one; its
+constructors are 0x3DB434 / 0x3DB6EC. Discovery is cached (<code>xref_index/vtables.json</code>) keyed on the
+index build + resolver.db's vtable rows. resolver.db itself is NOT written (that would move the
+engine graph's fingerprint).</p>
+<p><strong>PHANTOM VTABLE STARTS - 248 resolver.db rows sit inside another table (MEASURED 2026-10-28;
+<code>phantom_starts</code> in <code>aire/analysis/vtable_discovery.py</code>, also applied by <code>callers_of</code>'s slot
+index in <code>aire/analysis/code.py</code>).</strong> In an RTTI-less stretch tables are adjacent with no
+separator, so a row is only a start if something points at it. 248 / 2,134 rows have NO code
+ref, data pointer or runtime pointer AND the qword before them is still a code pointer. Control:
+180 code-preceded rows ARE referenced (real adjacent tables) and kept. All 248 are
+<code>named_vtable_export</code> / <code>unverified_string</code> (0 / 1,546 RTTI rows), i.e. string guesses. They used
+to bound the previous table and steal its tail: <code>vt_0x1FB39E8 "RigidBody"</code> cut the NPC class
+vt_0x1FB3640 at slot 117, so the NPC's per-frame AI update <code>vt_0x1FB3640::vf119</code> (0x2F79A4) read
+as "RigidBody::vf2" with class confidence "certain" (kb/ai-planner.md "The plan tree"). The rows
+are now skipped as starts. Relabel after the fix (label_sweep refresh 7.3 s + label_enrich 9.8 s +
+engine_atlas_relabel 5.5 s): 6,174 functions changed vtable class. 2,180 moved to the class whose
+run really holds them, and 3,994 lost a class that nothing could confirm (vtable tier 32,243 -&gt;
+28,248; they fall back to named_global / string / wrapper evidence). The previous label file is
+in <code>Archive/function_labels_phantom_vtables_20261028/</code> (MANIFEST.md); resolver.db is unchanged.</p>
+<p><strong>THE CRT INITIALIZER TABLES ARE NOT VTABLES (MEASURED 2026-10-28; <code>crt_init_tables</code> in
+<code>aire/analysis/vtable_discovery.py</code>).</strong> CRT main 0x8C3E5C runs <code>_initterm_e(0x1DA8778, 0x1DA8798)</code>
+(C initializers) and <code>_initterm(0x1D93950, 0x1DA8760)</code>: <strong>10,690 C++ global constructors</strong>, read
+from the two <code>lea</code>s before each call to the <code>_initterm</code> import thunks (0x8C4F76 / 0x8C4F7C), so no
+address is hard-coded. 35 string-guessed resolver rows sat inside that table
+("hknp.internal.streamcontactsolver", "MainThread", "SinglePlayer", "common.geoproc.mesh", ...),
+and every constructor read as one of their <code>::vfN</code>. Discovery and the <code>callers_of</code> slot index now
+skip rows inside the tables. The labeller has a <code>static_init</code> tier: 10,692 functions flagged,
+9,316 labelled <code>static_init[:subject]</code> (subject = source file / string / single global / import;
+a schema builder keeps <code>builds_schema:</code>, the flag stays). The 649 console registrars and their
+atexit unregistrars are <code>console_init:&lt;Entry&gt;</code> / <code>console_fini:&lt;Entry&gt;</code> from ConsoleSurface. Each
+registrar is the same 0x7C-byte body: thread-safe init of the registry 0x2A58BC0 (guard
+0x2A58BB0), <code>Register(entry)</code> (slot 12), <code>atexit(unregistrar)</code>. That is the whole of atlas module 1
+("slot:Program", 734 functions, 0.3% -&gt; 100% direct). Totals against the session start: vtable
+tier 32,243 -&gt; 27,736, direct evidence 54.1% -&gt; 56.0%, named 81.8% -&gt; 82.0%.</p>
+<p><strong>THE LIVE HEAP, MEASURED (2026-10-05, Minas Ithil, <code>heap_map</code> / <code>live_vtable_discovery</code>).</strong>
+- <strong>Two thirds of the vtable objects were invisible to every census.</strong> resolver.db's 2,134 vtables:
+  539 live classes / 783,341 objects. Adding the 4,096 RTTI-less ones: +1,703 classes / +1,578,478
+  objects - 2.36M in one 1.75 s pass. The most instantiated class in the game is RTTI-less
+  <code>0x1DBC010</code> (176,706, stride 0x38). Live discovery then adds 231 more vtables (51 split out of
+  another's run, 180 new; 95,968 objects): <strong>2.51M objects, 2,518 classes</strong>.
+- <strong>Counts are object starts, and STRIDE IS SIZE:</strong> consecutive instances repeat at a fixed stride
+  (<code>0x1DBC010</code> 0x38 in 100% of gaps) and the controls reproduce documented sizes - item 0x118,
+  CResourceBundle 0x178 -&gt; 0x180, AI CCharacter 0x3188. (16-byte alignment does not discriminate:
+  controls sit at ~0.5 too.)
+- <strong>RTTI-less vtables pack back to back and static runs absorb them.</strong> The item instance is
+  multiple-inheritance: primary vptr <code>0x1FDABF8</code> = ONE slot (<code>0x4F2688</code>, string bytes after it),
+  secondary vptr at +0x18 = <code>0x1FDABD0</code> (5 slots) - recorded as one 6-slot run, so 0x1FDABF8 (11,519
+  live) had no entry anywhere; VisualComponent <code>0x1FD63F0</code> is one <code>.bss a</code> method then a null. Only
+  heap evidence separates them; one-slot vtables need &gt;= 4 occurrences.
+- <strong><code>res+0x38</code> is the engine's byte ACCOUNTING, not a block at <code>res+0x08</code>.</strong> For most resource types
+  <code>[data, data+size)</code> runs past its memory region (type 0: 2,205 / 3,142) and holds millions of
+  known objects: the payload lives elsewhere (GPU). 28,968 resources declare 2,405 MB; only 8 types
+  have contiguous CPU data (2 MB). <code>heap_map</code> decides this per type from the data.
+- <strong>The engine allocates through DOUG LEA MALLOC 2.8.x (mspace build), two copies linked in</strong>:
+  family A <code>mparams 0x277CDD8</code> (global state <code>gm</code> 0x277CE10, static), family B <code>mparams 0x277D1E8</code>
+  (<code>create_mspace 0x1176058</code>, <code>sys_alloc 0x11744F8</code>: VirtualAlloc'd segments; malloc_state +0x358
+  footprint, +0x370 mflags, +0x3A0 segment list {base,size,next,sflags}; chunk head = size|PINUSE 1
+  |CINUSE 2, user memory at chunk+16, segments end in a 0xB fencepost). ONE family-B state owns
+  <strong>123 segments summing exactly to its 2,695 MB footprint</strong> - 78% of the heap. Walked in 5 s:
+  1,086,315 chunks, 2,663 MB used / 32-50 MB free, 0 free-chunk footer mismatches (the top segment
+  ends at its end, without a fencepost). The magic scan also finds ~10 STALE copies of states; a
+  state is accepted only when its segment sizes sum to its footprint.
+- <strong>WINDOWS HEAPS ~650 MB, NOT ~51 (CORRECTED 2026-10-06).</strong> A heap SEGMENT's committed memory
+  is split into several regions by uncommitted / guard ranges (seen: 0.25 MB / guard / 3.16 MB /
+  guard / 12.39 MB under one AllocationBase) and only the first carries the <code>_HEAP_SEGMENT</code> header
+  (0xFFEEFFEE at +0x10, owning heap at <strong>+0x28</strong> - +0x18 is SegmentListEntry; the old check read
+  +0x18). Judged per RESERVATION: 10 heaps, 969 segment regions + 1 big block
+  (<code>_HEAP_VIRTUAL_ALLOC_ENTRY</code>: ReserveSize +0x28 == the reservation); the process heap 0x400000
+  alone holds 422 MB. Plus 19 BIG BLOCKS (205.8 MB) that only the heap's own <code>VirtualAllocdBlocks</code>
+  list (+0x110) finds - the reservation heuristic saw 1. Committed private memory = dlmalloc 2,713 +
+  NT segments 446 + NT big blocks 206 + <strong>~133 MB outside every allocator AIRE decodes</strong> (Lithlad) -
+  classified since (see "OUTSIDE EVERY ALLOCATOR" below).
+- <strong>WINDOWS HEAPS DECODED ENTRY BY ENTRY (2026-10-06, <code>nt_heaps</code>).</strong> <code>_HEAP</code> (x64 Win10): +0x7C
+  EncodeFlagMask (0x100000), +0x88 the encoding qword, +0x98 0xEEFFEEFF, +0x110 big blocks, +0x120
+  SegmentList, +0x198 FrontEndHeap (type 2 = LFH at +0x1A2). Entry header qword XOR encoding = {u16
+  size/16, u8 flags, u8 checksum = XOR of the 3 before, ...}. Segment runs (between UCR descriptors,
+  list at segment +0x60) are read GUARD-PAGE TOLERANT (an LFH user-blocks entry can end in a
+  committed PAGE_NOACCESS page - a bulk read stopped 27 of 55 runs early) and walked EXACTLY: 55/55
+  runs, ~17K entries, 0 checksum failures. <strong>A block of S bytes owns [entry+8, entry+S+8)</strong>: an
+  entry's first 8 bytes (PreviousBlockPrivateData) are the PREVIOUS block's user data (a 16-byte LFH
+  block's 8 usable bytes live in the next block's first qword - caught by a test). LFH:
+  <code>_HEAP_USERDATA_HEADER</code> (+0x00 subsegment, +0x14 0xF0E0D0C0, +0x18 EncodedOffsets, +0x20 bitmap
+  {bits, ptr}); <code>_HEAP_SUBSEGMENT</code> +0x08 UserBlocks, +0x24 BlockSize/16, +0x28 BlockCount (==
+  bitmap bits 6,130/6,130). <strong>EncodedOffsets = (FirstAllocationOffset | BlockStride &lt;&lt; 16) ^
+  (UserBlocks &amp; 0xFFFFFFFF) ^ K, K one per heap</strong> (low half 0x92AB in all six LFH heaps) - learned as
+  the dominant value, every header decoded with it: 0 rejected; the bitmap's free count equals the
+  subsegment's own (<code>AggregateExchg</code> +0x20) on 99.8%. Result: ~669K allocations / 611 MB (backend
+  114, LFH 291, big blocks 206), 37 MB free, 8 MB bookkeeping; allocations + bookkeeping tile every
+  run (live test). The heap map MERGES them as arena <code>nt</code>.
+- <strong>Foreign objects + roots everywhere (2026-10-06, <code>aire/pipeline/modules.py</code>).</strong> Most CRT-heap
+  objects belong to other DLLs; Microsoft's ship NO RTTI. A pointer into ANY module's non-writable
+  data whose first slot is code of that module is a vtable: <code>module:Class</code> (RTTI) or
+  <code>module:vt_0xRVA</code>. 66K NT objects named, 63,601 of one D3D11 runtime class (<code>d3d11.dll:vt_0x1CFBA0</code>,
+  33 MB). The ownership closure now also roots at every module's writable data (<code>static:module+0xRVA</code>,
+  4,300) and thread stacks (<code>stack:&lt;thread start&gt;</code>, TEB StackBase/Limit, 96 threads), applied after
+  named heap owners at depth 1 and PROPAGATED - before, statics were applied after propagation and
+  named nothing below them. New owners: <code>static:sowframework.dll+0x952380</code> 22.6 MB (our framework
+  DLL; <code>+0x953360</code> in the next build = the ImGui FONT ATLAS, see below), D3D11 class +0xE0 13.7 MB. Format sniff also behind a small header (+0x10/+0x20): 7 TEXR
+  texture UPLOAD buffers (31 MB, header {0,0,0,self} then TEXR + <code>interface\textures\...</code>). An
+  unknown 4-char "tag" followed by text is not a format: PYTH/JAVA/CHOC/ONED were environment
+  strings (PYTHONPATH=...) in the CRT heap. ~~LEAD: worker threads hold interior pointers into
+  self-referenced 2-8 MB NT pools~~ <strong>RESOLVED 2026-10-06: noise.</strong> Those pools (0x3E5AF040 ..
+  0x41489040 = floats 0.21..12.6) are all-zero past a pointer to themselves, and their 300K "holders"
+  are float fields. The SMALL self-referencing NT allocations (8-16 KB) carry an AMDGPU PAL ELF at +8
+  - the driver's pipeline binaries (see "GPU content").
+- <strong>A REVERSE-POINTER COUNT INTO LOW MEMORY NEEDS A NOISE FLOOR.</strong> Spans below 4 GB collide with
+  non-pointer data: ASCII (<code>0x6D6F646E</code> = "ndom") and floats (<code>0x41830000..</code> = 16.4..6,700) read as
+  "pointers" - 14.1M "refs" into outside spans were unproven. The one span with a same-size UNMAPPED
+  control (128 MB at 0x122DDC000) drew FEWER 16-aligned refs than the control (1,472 vs 4,063:
+  {u32, 1} pairs land above 4 GB). ~~Exact AllocationBase holders are the trustworthy owner
+  signal~~ <strong>CORRECTED 2026-10-06: they are not, below 4 GB.</strong> A reservation base is a round number:
+  <code>vt_0x1DA9B50+0x80</code> "owned" the 97.7 MB GPU code heap because that field holds FLOATS (157.0 /
+  250.0) across thousands of instances, a consensus test cannot catch one float field, and the heap
+  handle 0x10000 is "held" by six unrelated modules (the integer 65536). Above 4 GB a {u32 hash,
+  u32 1} pair still lands in range (a P919 hash at +0x20 beside a count of 1: <code>vt_0x1DB4FA8</code>, whose
+  +0x20 type flow says is a u32). Name memory by STRUCTURE and CONTENT; holders are leads.
+  <code>HeapSweep.range_refs</code> = the one-pass primitive.
+- <strong>The allocator is nearly FULL - "mostly-zero arenas" are ALLOCATED.</strong> The 512 MB "Havok arena"
+  is ONE engine chunk holding Havok's whole heap.
+- <strong>HAVOK'S HEAP, DECODED FROM ITS OWN ALLOCATORS (2026-10-06, <code>havok_heap</code>).</strong> Root
+  <code>[base+0x2A86808]</code> = hkFreeListMemorySystem (23 code reads; the engine also keeps {LBA, FLA,
+  system} at 0x2A555E8..F8, written by sub_11863CC). <code>+0x18</code> hkFreeListAllocator -&gt; <code>+0x48</code>
+  hkLargeBlockAllocator (dlmalloc-shaped: +0x28 top, +0x30 topsize) with an embedded
+  <code>hkLargeBlockAllocator::FixedMemoryBlockServer</code> at +0x138 = {start, end, limit, <strong>break</strong>, ...,
+  page list +0x40}: an sbrk over the fixed 512 MB buffer. The page (header 0x30: next, prev, u32,
+  u32 size, first chunk, end) is walked EXACTLY, then a SENTINEL chunk (CINUSE, no PINUSE) covers
+  everything past the break and a 16-byte end fencepost (head 2) closes the buffer. Freelists: 16
+  <code>hkFreeList</code> (0x70 each, inline in the allocator; size classes 8..640, 64 KB blocks = one LBA chunk
+  each; block HEADERS are 32-byte elements of a separate hkFixedSizeAllocator whose first block
+  hosts its own header; counters +0x60 total, +0x68 free incl. never-carved). Thread caches:
+  <code>hkThreadMemory</code> (parent +0x08), 16 rows {head, u32 count} from +0x28, row sizes u32[16] at
+  +0x12C (16..8192) - an element parked there is FREE though its freelist counts it live.
+  MEASURED (Lithlad): Havok used <strong>121.5 MB of the 512</strong> - 1,864 large allocations (107.2 MB) +
+  106,677 freelist elements (12.8 MB), 8,995 free (2.1 MB, 604 thread-cached), 0.12 MB bookkeeping,
+  and <strong>389.7 MB past the break never handed out</strong>. Every freelist's walk equals Havok's own
+  counters (17/17; a churning list is re-read ON ITS OWN - its few 64 KB payload blocks, ~1 ms -
+  and re-walked over the snapshot until chain and counters agree, <code>list_rereads</code>: whole-decode
+  retries never caught a hot 612-element list in play, which was off by 39-40 in 2 of 3 decodes),
+  free chunks' footers
+  293/293, PINUSE violations 0, and allocations + bookkeeping + reserve tile the buffer with no gap
+  or overlap (live test). The heap map splices these in place of the engine chunk.
+  <strong>dlmalloc never writes a footer for TOP</strong> (MEASURED 2026-10-06: a new process's one "footer
+  mismatch" was exactly the LBA top, its next prev_foot 0, and failed the whole decode) - the check
+  skips it. <strong>A thread-cache chain is followed only inside Havok's buffer</strong>: an element handed out
+  between reads holds user data where its link was (one link read above 2^63 and crashed the int64
+  conversion); the walk stops there (<code>chain_left_buffer</code>, always &lt;= the rows that miscount).
+- <strong>Allocations name their formats</strong>: 70 Wwise SoundBanks (<code>BKHD</code>, 216 MB), 27 BlendDB behaviour
+  graphs (15 MB), 18 Scaleform movies (10 MB), the raw GADB blob (<code>GameDatabase</code>, 10 MB), 2,474 DXBC
+  shaders, 2,024 FXDB effect databases, 9 AKPK Wwise packages. An unknown 4-char tag counts only when</p>
+<blockquote>
+<p>= 3 allocations start with it (lone uppercase tags were random bytes).
+- <strong>OUTSIDE EVERY ALLOCATOR, CLASSIFIED (2026-10-06, <code>address_space</code>, Minas Ithil).</strong> 139.7 MB of
+  committed private memory sits in no dlmalloc chunk, Havok allocation or Windows heap. By evidence:
+  thread stacks 4.1 MB (96 threads, from their TEBs), the PEB/TEB reservation 0.75 MB, 7 LFH front
+  ends 0.26 MB (<code>_HEAP+0x198</code>, 0.76 MB reservations, outside every entry), <strong>Steam tier0 block arenas
+  50.0 MB of which 11.5 MB handed out</strong> (reservation base {u64 size, next, flags (low 32 =
+  0x0E80AFFF), cursor, left}; accepted only because tier0_s64.dll's code holds <code>or rax, 0xE80AFFF</code>
+  = 3 sites; [cursor, end) is allocator level), <strong>AMD GFX11 shader ISA 41.0 MB</strong> (per 16 KB window:
+= 8 s_delay_alu 0xBF87xxxx with immediate &lt; 0x800 - its encoding allows no more - &gt;= 2 s_waitcnt
+  0xBF89xxxx, few out-of-range 0xBF87 words: 177,012 / 46,959 / 2,387 s_endpgm in 2,627 windows,
+  1,822 s_delay_alu in the 2,612 other windows), the rest of that GPU code heap 28.2 MB (same
+  reservation, mostly empty: median 1.2% non-zero). Residue 15.3 MB in 751 reservations, 12.4 MB
+  of it zero bytes. <strong>THIS CONTRADICTS the earlier "65.9 MB of shader code"</strong>: that was the
+  reservation's whole committed part, not code.
+- <strong>GPU content in the Windows heaps (2026-10-06).</strong> 1,807 NT allocations hold GFX11 shader ISA
+  (46.8 MB, same marker test over the first 4 MB) and 1,178 hold an <strong>AMDGPU ELF</strong> at +8 behind a
+  pointer to themselves (12.9 MB; ELF64, e_machine 0xE0, OS/ABI 0x41 = AMDGPU PAL: pipeline
+  binaries). Control: the same tests over 241K unidentified ENGINE allocations and Havok's read <strong>0</strong>.
+  Verdict <code>content</code> in <code>by_arena</code>, lane <code>gpu_content</code>.
+- <strong>The LFH's own bookkeeping lives in heap entries (2026-10-06).</strong> All 5,841 <code>_HEAP_SUBSEGMENT</code>s
+  sit inside 514 busy backend entries of 1,024 B (up to 15 each) - they were counted as unidentified
+  allocations; now kind 4, merged as <code>nt_bookkeeping</code>.
+- <strong>Windows heaps by owner (2026-10-06, <code>nt_by_heap</code>).</strong> The module keeping a heap's handle in its
+  writable data is its user: amdxx64.dll 29.6 MB (16.4 unidentified), bink2w64, xaudio2_9, msvcrt,
+  uxtheme, sowframework, mdnsNSP; one heap (0x1C880000, 3.5 MB) has no holder. ntdll keeps every
+  handle and is ignored; an owner is named only when exactly ONE other module keeps it. The PROCESS
+  heap (PEB+0x30, everyone's CRT malloc) holds 571.6 MB in use, <strong>416.4 MB of it unidentified</strong>
+  (355,715 allocations) - including one 128 MB big block (0x1F6831040) that starts with a pointer
+  to itself, holds no interior pointer, is 84% zero with float-like data, and has no credible holder.
+- <strong>The framework's 22.6 MB is the ImGui FONT ATLAS (2026-10-06).</strong> <code>static:sowframework.dll+0x953360</code>
+  owns a 2048x2048 RGBA32 copy (16 MB, ffffff00 texels) + the Alpha8 copy (4 MB) + the TTF fonts
+  (933 / 461 / 258 KB, DSIG tables) + a 124 KB glyph table. Both CPU copies are dead once the atlas
+  is uploaded: <code>render/sow_d3d11.cpp</code> calls <code>ImGui_ImplDX11_CreateDeviceObjects()</code> right after
+  <code>ImGui_ImplDX11_Init</code> and then <code>io.Fonts-&gt;ClearTexData()</code>, and the same after the ResizeBuffers
+  re-create (the backend rebuilds from the TTF data on demand). <strong>The upload must come first: this
+  build's backend (ImGui 1.89.9, <code>external/imgui</code>) uploads the atlas LAZILY in the first <code>NewFrame</code>
+  (<code>if (!bd-&gt;pFontSampler) CreateDeviceObjects()</code>), so a free right after Init only makes ImGui
+  rebuild the atlas and keep both copies</strong> (the first version of the fix had exactly that bug).
+  <strong>IN-GAME CONFIRMED 2026-10-06</strong> (rebuilt DLL, PID 43500; user checked the menu fonts after the
+  rebuild: "All looks good to me"): log <code>ImGui initialized</code> with no CreateDeviceObjects warning, and
+  the atlas static (<code>+0x957480</code> in that build) owns <strong>2.83 MB, was 22.6 MB</strong> - the rest is the TTF
+  data + glyph tables a resize rebuilds from.
+- <strong>The "framework's other 7.4 MB" is ENGINE memory - the runtime LOCALIZATION DB (2026-10-06).</strong>
+  <code>static:sowframework.dll+0x8FA880</code> is <code>SoW::LiveStrings::Db</code> (<code>sdk/sow_live_strings.hpp</code>, the
+  live text patcher behind the Army Randomizer's custom titles and the Market text), which only
+  CACHES pointers: <code>m_tableStart</code> / <code>m_textBase</code> (= start + 8 x rows) / <code>m_rows</code> 68,559 /
+  <code>m_probeTextAddr</code> ("the Beheader") / <code>m_orig</code>. The block is one 7.44 MB allocation in the
+  ENGINE's dlmalloc - the SKDB tables merged at load into ascending (u32 P919(key), u32 char
+  offset) rows + 64,175 UTF-16 strings - also held by two engine objects. The ownership closure
+  had credited it to the first named holder (exclusive 0% was the tell). Freeing the cache would
+  save 0 bytes. The heap map now names it by CONTENT (<code>engine localization DB</code>: ascending key
+  table, probe key <code>Orc_Title_Beheader</code> must resolve to "the Beheader"), and that exact identity
+  also re-classifies the block when a typed-struct interval made it <code>contains_known</code>
+  (intermittent: an engine object points INTO it at the text base).
+- LEAD: three engine pairs, ~58 MB - a 5.7-5.9 MB index starting with the 8 bytes
+  <code>1f6e31e4a8778d21</code> (not in the exe as data or immediate) pointing into a 13.6-13.7 MB data blob
+  of floats with 4-character name stubs ("Duel", "Kill", "Sync", "Shad", "Moun", "Dom_", "PreD",
+  "Came"); their holders carry arrays of <code>vt_0x1DB7120</code> at stride 0x390. Unnamed.
+- <strong>WHO ALLOCATED IT - an OS heap trace (2026-10-06, <code>heap_trace_*</code>, Minas Ithil with one fast
+  travel inside the 150 s window).</strong> 15.1M events, <strong>0 lost</strong>; 4,862,860 allocations + 68
+  reallocations met exactly 4,862,928 StackWalk events (every allocation has its stack, joined on
+  thread + RAW timestamp). Classic Heap Trace layouts confirmed on the data: Alloc (33) {heap, size,
+  address, source}, ReAlloc (34) {heap, new, old, new size, old size, source}, Free (36) {heap,
+  address, source}; heap 0x510000 = the process heap. 252,957 allocations of the window were still
+  live at its end; <strong>245,991 (97.2%) joined a live NT block by address with the size fitting</strong> (the
+  rest were freed before the decode). Attributed 145.4 MB: <strong>amdxx64.dll 122.4 MB</strong> (one site
+  <code>+0xFC0844</code>, 123,960 allocations, 119.3 MB), d3d11.dll 20.4 MB, the game exe 2.3 MB, sowframework
+  0.3 MB. <strong>CORRECTED the same day: <code>+0xFC0844</code> is the driver's allocator WRAPPER, not a driver
+  thread.</strong> The report kept ONE sample stack per site (the first allocation's) and that sample was a
+  7-frame driver-thread stack. Full-stack audit of all 126,568 live allocations at that site (window
+  ETL, requested sizes): <strong>111,975 (88.5%, 64.6 MB) reach a game-exe frame</strong> - the engine called
+  d3d11 (90,639) or the framework's D3D11 hooks (21,336) and the driver allocated underneath; only
+  14,593 (~52 MB, larger blocks) are true driver-thread stacks ending at <code>ntdll+0x4CC91</code>
+  (thread start), across 35 threads in all. The report now gives each site <code>with_exe_frame</code> /
+  <code>with_exe_frame_mb</code> and an <code>exe_chain</code> (a sample that reaches the exe). 87.6 MB has a
+  game frame on its stack - the engine function a runtime / driver allocation ran FOR:
+  <code>0x1B9D10</code> 28.6 MB = the texture-surface creator (ID3D11Device slot 5 CreateTexture2D, "Surface
+  size mismatch!"), <strong><code>0x39F930</code> 25.9 MB / 89,080 allocations = CreateBuffer (slot 3) with BindFlags
+  4 - constant buffers</strong>, <code>0x1E71F0</code> 8.8 MB = texture creation, <code>0x39F814</code> = the DYNAMIC constant
+  buffer factory (Usage 2, CPU write, "Failed to create constant buffer!"; its stack carried the
+  d3d11 site's 16.7 MB), <code>0x1025020</code> = <code>agsDriverExtensionsDX11_CreateBuffer</code> users. AIRE had labelled
+  <code>0x39F814</code> / <code>0x39F930</code> <code>domain:physics</code> by propagation - wrong; the trace and the code name them.
+  Three <code>.bss a</code> frames (<code>0x65B076B</code>, <code>0x5217746</code>, <code>0x452F39D</code>, 5,481 allocations each) end their
+  stacks - protector code, no function. <strong>Only allocations made INSIDE the window are covered</strong> (a
+  load-time block is not); an address counts only while its block keeps the traced size (1 stale of
+  214,969 after 94 s).
+- <strong>OWNERSHIP IS EXCLUSIVITY-AWARE (2026-10-06, <code>heap_alloc._exclusivity</code>).</strong> The closure used to
+  hand a buffer to the FIRST named holder; the localization DB (above) was credited to our framework
+  that way. Now a subtree is <code>co-held: &lt;label&gt;</code> when its holders come from <strong>two or more distinct
+  ROOTS</strong> (holders inside the same tree - the root, its other buffers, descendants - do not count),
+  and a static / stack root with heap holders beside it is a CACHE, not the owner. Measured (Minas
+  Ithil): <strong>exclusive 1,086.5 MB, co-held 138.8 MB (42,444 allocations), static caches 1,921
+  allocations / 8.5 MB</strong>. The animation objects <code>vt_0x1E6F528+0x68</code> stay exclusive (783.6 MB) -
+  the validated owner survives the stricter rule. Co-held examples: <code>vt_0x22C21B8+0x10</code> 21 MB (that
+  vtable is CArchiveTree, the kind-0 mount source), <code>hkaiNavMeshClearanceCache</code> 20 + 10 MB,
+  <code>vt_0x1E6F3F8+0x8</code> 11.4 MB, <code>static:data_26FF080</code> 6.5 MB. Holders the map cannot attribute are
+  only counted (<code>tops_with_unattributed_holders</code>), never used to split. Test:
+  <code>test_ownership_is_exclusivity_aware</code>.
+- <strong>RUNTIME EVIDENCE IN THE FUNCTION LABELS (2026-10-06, labeler tier 1e <code>runtime_trace</code>).</strong> A
+  function the trace SAW allocate is labelled by the call it made: <code>alloc:d3d11 vslot3</code>,
+  <code>alloc:&lt;import&gt;</code>, <code>alloc:heap</code>; the domain comes from the callee module (d3d11 / dxgi / AMD /
+  AGS -&gt; render, WinHttp -&gt; net). Weak labels (empty, <code>domain:</code>, propagated, topology) are
+  replaced; identity labels keep their name with the evidence attached. One run: <strong>50 functions
+  (73 call sites, 69 inside known functions), 23 relabelled, 27 attached</strong>, e.g. <code>0x39F930</code> / <code>0x39E7B0</code> /
+  <code>0x39F814</code> constant-buffer creators (were <code>domain:physics</code>), <code>0x1E71F0</code> / <code>0x1B9D10</code> textures,
+  <code>0x6A0C30</code> / <code>0x1E7C14</code> slot 7, <code>0x17E650</code> slot 48, <code>0x4D33C4</code> slot 15. <strong>10 library domains
+  overridden</strong>, each checked: 2 WinHttp telemetry functions (<code>avWinHttp*</code>) bracketed into MSVC STL
+  -&gt; net; 5 AMD AGS wrappers filed under STEAM -&gt; render; 3 tiny functions in a Havok region that
+  call d3d11 directly -&gt; render (label <code>lib:Havok</code> kept: Havok graphics glue does call D3D11).
+  Totals unchanged (named 81.3%, direct 54.0%) - the gain is correctness, not count.
+- <strong>The call before a return address is decoded FORWARD from its code body's start</strong>
+  (<code>idx.body_containing</code>) - exact. A backward guess over candidate instruction lengths misread
+  <code>0x39E82A</code>'s <code>call [rax+0x18]</code> as a coincidental 5-byte <code>call rel32</code> to an address outside the
+  image (MEASURED). The guess is kept only as a fallback, marked <code>decode: guessed</code>.
+- <strong>Our D3D11 hooks sit in the engine's creation path (MEASURED: stacks + source).</strong> <code>ID3D11Device</code>
+  slot 5 CreateTexture2D is hooked by <code>render/sow_menu_brand_tex.hpp:85</code> (MinHook, <code>vtable[5]</code>) and
+  slot 15 CreatePixelShader by <code>render/sow_shader_replacement.hpp:172</code>: every engine texture /
+  pixel-shader creation passes through the framework (21,336 driver allocations of the window ran
+  under it). The trace credits such allocations to d3d11 with <code>via: sowframework.dll</code>
+  (<code>heap_trace.INTERPOSERS</code>) instead of to the framework. The two hooked slots prove the slots
+  are on the DEVICE. LEAD: slot 48 is not a base <code>ID3D11Device</code> method (that ends at 42), so
+  <code>0x17E650</code> most likely calls <code>ID3D11DeviceContext::UpdateSubresource</code> (context slot 48).
+- LEAD - <code>lib_ident</code> over-attributes on a single import vote: 5 functions (<code>0x1022AD0</code>..<code>0x1025E60</code>)
+  that create D3D11 buffers / textures through AMD AGS are filed under <strong>Steam</strong> because each also
+  calls <code>SteamInternal_ContextInit</code>. Not yet fixed in <code>lib_ident</code> (tier 1e corrects their domain).
+- The xref index's IAT naming is sound (checked live: bound pointer -&gt; module export). The second
+  name table near <code>0x259xxxx-0x25Axxxx</code> is the import NAME table (hint / name), never called
+  through - not a second IAT.
+- <strong>Attribution, current (2026-10-06, Minas Ithil, after the traced fast travel): 74.74% of 3,809 MB
+  explained, in use 68.01% of 3,007 MB.</strong> Unidentified: engine 146.6 MB, Havok 28.5 MB, NT 360.5 MB
+  (process heap 340.4). NT verdicts: traced 123.4 MB, GPU content 64.2, foreign objects 38.8, owned
+  34.5.
+- <strong>Attribution (2026-10-06, Minas Ithil, before the trace): 71.67% of 3,498 MB explained, in use
+  66.58% of 2,964 MB.</strong> Unidentified: engine 173.6 MB, Havok 29.0 MB, NT 436.3 MB (process heap 416.4).
+- <strong>Attribution (2026-10-06, Lithlad, superseded): 68.2% of 3,503 MB explained; of the 3,015 MB
+  actually allocated (free, headers, Havok + NT bookkeeping, Havok reserve left out of both sides)
+  <code>explained_in_use_pct</code> = 63.0%</strong> (58.7% before the NT heaps, foreign objects and module/stack roots).
+  Unidentified after everything: engine 141 MB, Havok 6 MB, NT 502 MB (mostly big pools). The OWNERSHIP CLOSURE did most of it: an unidentified allocation
+  pointed to by a NAMED one (known class at its user memory, file format, GameDB / resource /
+  typed-struct start, image static slot) takes that owner's class + field, and the name propagates
+  down buffer chains (6 levels) keeping the ROOT: 426,128 allocations / 1,187 MB owned, 90.8%
+  exclusive (exactly one pointer reaches them). Biggest owner: the RTTI-less animation object
+  <code>vt_0x1E6F528</code> (resource <code>[[obj+8]]+0x28</code> = an <code>.anix</code> path; ctor 0x57E4F4, dtor 0xC3A5A0) owns
+  <strong>790 MB at +0x68</strong>. VALIDATED against the engine's own accounting: each object's owned subtree
+  matches its resource's <code>u32 res+0x38</code> within 1 KB for <strong>88.8%</strong> (control, shifted resource:
+  4.6%), median ratio 1.004, 839 MB owned vs 865 MB accounted (live test). (An earlier "65.9%"
+  counted the 390 MB Havok reserve as Havok data.) Unidentified after ownership: ~180 MB.
+- <strong>Attribution (2026-10-06, before ownership): 33.2% of 3,461 MB explained, 18.7% without the Havok pool.</strong> In-use
+  allocations: 372,541 identified (771 MB: a known object/record/resource starts them - 350,726
+  objects now sized EXACTLY by their allocation), 95,354 contain known content (342 MB), 5,030
+  identified by format (255 MB), 607,432 unidentified (1,296 MB - 563K of them under 1 KB = 62 MB;
+  the bytes are in ~2,900 buffers &gt;= 64 KB). Owners of the largest, by reverse pointer scan (+1
+  hop): IRenderNode <code>vt_0x1DAAFF0</code> +0xE8 -&gt; 4 MB blocks; RTTI-less <code>vt_0x1E6F528</code> +0x68 -&gt; a family
+  of 4-8 MB buffers; <code>vt_0x1DCC370</code> +0x128 -&gt; 7-10 MB blocks; the manager object labelled
+  "TimeManager" (<code>vt_0x1F68920</code>) +0x778 -&gt; 4.6 MB (static slot 0x26FFC48 too). Class hints come from
+  the strongest evidence among a class's own methods (1,350 classes; a method's <code>vtable</code> label
+  hides its strings, so strings are read too).</p>
+</blockquote>
+<p><strong>SCRIPT-API LABELS ON HUBS ARE NOT IDENTITIES.</strong> A binding's "implementation" can be a function
+the linker folded with many identical ones or a generic helper: the engine assert 0x819104 (3,226
+call sites, claimed by 11 members) read <code>System::ForceAISpawnWithName</code>, a 5-byte <code>jmp</code> thunk
+0x8C4370 (4,839) <code>System::BenchmarkEnd</code>, the record-name getter 0x18BDB0 (2,203)
+<code>FortAssaultMgr::ActivateJobGroup</code>. 42 such labels (&gt;=1,000 call sites or &gt;=5 claiming members)
+are now <code>shared_impl:&lt;name&gt;</code>; <code>CCharacter::IsDead</code> (226) and <code>GameBase::GetName</code> (202) keep theirs.
+<strong>CORRECTED 2026-10-27 - two decode faults under the script-API labels (MEASURED):</strong>
+1. Binding stubs are packed BACK TO BACK (<code>ret</code> at 0x1B75A4B, next stub <code>mov r11, rsp</code> at
+   0x1B75A4C, no int3). <code>_leaf_start</code> fell back to the last 0xC3 byte, the decode began in the
+   previous stub, and its class / member strings (at +0x20 / +0x28, higher than the next stub's
+   r11-relative slots) won the "highest adjacent pair" rule. 37 implementations were credited to
+   the stub before them: <code>0x19B333C</code> read <code>CPlayerObj::AtmosphereTransitionOverride</code> but is
+   <code>CCharacter::AttachCharacter</code> (its only callers: the AttachCharacter stub 0x1B75A4C and the AI
+   attachment spawner 0x1AED2AC); <code>0x1A8D5A8</code> (PatrolClear -&gt; <strong>NPC::PatrolForced</strong>) and <code>0x19B6600</code>
+   (HideHealthBar -&gt; <strong>CCharacter::HideHealthBarObjective</strong>) checked by their single caller. Fix:
+   the decode restarts after any <code>ret</code> before the registrar site, and stops at a tail <code>jmp</code> out
+   of the stub or an int3 (<a href="../aire/analysis/script_api.py">script_api.py</a> <code>_decode_stub</code>).
+2. First-claimant-wins naming put ONE member's name on helpers several stubs call after the
+   registrar (argument fetch, return push, <code>self</code> cast): <code>0x407B80</code> (52 members) read
+   <code>AINodeAttract::SetMovementSpeed</code>. Now <code>impl_index</code> holds only single-member implementations
+   (1,133) and <code>shared_index</code> the rest (157); the labeler files a helper claimed by &gt;= 2 members as
+   <code>shared_impl:&lt;first&gt;(+n)</code>. Labels: script_api 1,181 -&gt; 1,069, shared 42 -&gt; 154.
+   Independent check: script-class purity of the engine atlas (built without script labels) rose
+   0.677 -&gt; 0.702 with the control flat (0.454 -&gt; 0.457).</p>
+<p><strong>Type-flow limit - FIXED 2026-10-05 (<code>aire/analysis/clobbers.py</code>).</strong> Every call used to clear
+the volatile registers, but this engine was built with whole-program optimisation and keeps values
+in volatile registers across callees it proved preserve them. Clobber sets are now computed as a
+fixed point over the call graph (a function's own volatile writes united with its callees'; ALL
+for any indirect/virtual/IAT call, import thunk, body &gt; 0x600 bytes, or code outside <code>.arch</code>):
+133,050 callees in 23 s, <strong>61,578 provably preserve at least one volatile register</strong>. Type flow
+forgets only what a proven callee clobbers (12,931 calls kept a typed register) and follows
+resolved jump tables (645 cases). Typed accesses <strong>135,076 -&gt; 140,926</strong>, types 12,366 -&gt; 12,770,
+devirtualized calls 5,952 -&gt; 6,037. <strong>Checked against an independent observation:</strong> of the 5,581
+NEW accesses, 58.1% land on a (type, offset) the old pass observed on its own, vs 4.8% for the
+same types at random offsets (control). The documented case reproduces: <code>0x2545E4</code> clobbers only
+{rax, r8}, so Release 0x3DEA38's <code>cmp word [rdx+0x28], 0</code> after the call is now typed as
+CResourceBundle +0x28 - the u16 prefetch count, as documented from live work.
+<strong>Clobber sets cover xmm0-5 too (2026-10-05)</strong>: the same LTCG keeps FLOATS in xmm across leaf
+callees (0x1C0B634 holds ScreenWidth in xmm1 over the ScreenHeight accessor). Bits 0-6 stay the
+GPRs, so type flow is unaffected; 83,894 callees preserve some volatile register, 74,179-83,251 of
+them a given xmm register.</p>
+<p><strong>Library identification (BUILT 2026-10-05; <code>aire/analysis/lib_ident.py</code>).</strong> Four lanes:
+<strong>evidence</strong> (library strings - OpenSSL <code>.\crypto\</code> source paths, zlib inflate messages, Wwise /
+Havok / HavokScript names; RTTI namespaces of vtable methods - <code>hk*</code>, <code>AK::</code>, <code>hydra::</code>,
+<code>std::</code>; imports - steam_api, Bink, Oodle): 5,280 anchors, 3 conflicts left unassigned;
+<strong>region</strong> (libraries link as contiguous object files: a gap of &lt;= 48 functions / 0x30000 bytes
+bracketed by ONE library is that library): +8,606, <strong>precision measured 99.36% (622/626 held-out
+anchors)</strong>; <strong>constants</strong> (CRC32/FNV/Murmur/xxHash/SHA/MD5/SipHash immediates + AES S-box, CRC32,
+SHA-256 K, base64 tables): 158 + 14 users; <strong>behaviour</strong> (all 6,000 small looping leaves in
+<code>.arch</code> RUN in the emulator against fixed buffers vs Python references, named only when every
+expectation holds): strcpy 37, memcpy 13, strlen 5, wcslen 4, memmove 3, strcmp 2, <code>_stricmp</code> 2,
+crc32, FNV-1a, the engine StringHash - 0 faults. Behaviour names ROUTINES, never a library (37
+functions behave as strcpy: the engine's own buffer copies, not 37 CRTs). Result: <strong>13,886
+functions in 11 libraries</strong> - Havok 8,090, MSVC STL 2,793, <strong>OpenSSL 1,897</strong>, Hydra 619, Steam
+327, HavokScript 61, Bink 45, Wwise 34, zlib 17. Labels <code>crt:</code> / <code>algo:</code> / <code>lib:</code> and the library's
+DOMAIN (OpenSSL's <code>evp_enc.c</code> code had been voted <code>domain:render</code> by propagation).
+<strong>StringHash <code>0x423E70</code> takes a SEED in <code>r8</code></strong>: the loop never clears its accumulator, so callers
+chain hashes and an emulation with a stray third argument gets a "wrong" hash.</p>
+<p><strong>AUDIT 2026-08-03 — the fix's blast radius, measured, and what it did NOT reach.</strong>
+The <code>is_code</code> repair was real but its headline was conflated: <code>vtable_method_sweep</code> slots went
+12,527 -&gt; 32,934 because vtable <em>count</em> also went 1,253 -&gt; 2,134 in the same session. Isolating the
+<code>is_code</code> effect alone (same 2,134 vtables, old bound vs section-derived): <strong>58,625 -&gt; 71,422 code
+slots, +21.8%</strong>. 1,847 of 2,134 vtables have &gt;=1 method in <code>.bss a</code>; 12,832 of 71,422 slot targets
+(17.9%) live there.</p>
+<p>Three sibling classifiers carried the SAME magic-bound style and were NOT fixed by that session
+(all three repaired + verified 2026-08-03):</p>
+<ul>
+<li><code>aire/analysis/xrefs.py</code> <code>_DEFAULT_CODE_RANGES = [(0x1000, 0x1CFF000)]</code> — the default window for
+  <strong>every reverse xref scan</strong>. It covered <strong>30.4 MB of 104.7 MB executable = 29.0%</strong> and truncated
+  even <code>.arch</code> (which ends at 0x1D87C00). Measured miss: GameManager 2,781 -&gt; <strong>2,842</strong> refs
+  (2.1%), StringHash 4,065 -&gt; <strong>4,393</strong> (7.5%), 0% on most targets. Now derived from the section
+  table. Note the honest size: the window was 29% of BYTES but ~97% of FUNCTIONS, so this is a
+  real correction, not a wholesale invalidation of past xref work.</li>
+<li><code>AireMemory.is_static</code> (<code>0x2000000 &lt; rva &lt; 0x3000000</code>) — <strong>excluded <code>.xtext</code> entirely</strong>, so
+  every vtable pointer answered False. Now: initialised non-executable sections.</li>
+<li><code>AireMemory.is_heap</code> (<code>rva &gt; 0x3000000</code>) — called the top <strong>66 MB of the module image</strong> "heap",
+  including all of executable <code>.bss a</code>. Anything using it to detect live object instances
+  (<code>vtables.py</code>, <code>identity_hunt</code>) could accept a module pointer as an object. Now: outside
+  <code>module_size</code>.</li>
+</ul>
+<p><strong><code>.bss a</code> IS REACHED ONLY BY VIRTUAL DISPATCH — <code>callers_of == 0</code> proves nothing there.</strong>
+Measured with a control: <code>.bss a</code> holds <strong>2,993 distinct functions that are real vtable methods of
+RTTI-verified classes</strong>, and <strong>0 of 400 sampled are ever the target of a direct CALL</strong>; only 6 of
+400 are even listed in <code>.pdata</code> (density 71 funcs/MB vs <code>.arch</code>'s 5,115/MB). The static call graph
+has <strong>4,371 call SOURCES in <code>.bss a</code> and ZERO call TARGETS</strong>. Control: <code>.arch</code> functions return
+12 / 2,060 / 6 callers. So the <code>[string-derived-rva-crash]</code> rejection heuristic
+("<code>str:</code> label + <code>callers_of==0</code> = wrong address") has a 73.5 MB blind spot covering real Havok /
+engine methods. <code>callers_of</code> now returns <code>vtable_refs</code> + <code>reachable</code> (offline, from the PE) —
+<code>0x2D72600</code> resolves to <code>hknp::internal::streamcontactsolver</code> slot 6. Bogus RVAs still report
+<code>reachable: False</code>, so the signal stays discriminating.</p>
+<p><strong>resolver.db <code>slot_count</code> is STALE for 701 of 2,134 vtables</strong> (undercount; 73 overcount). It was
+computed under the old bound — <code>hknp::internal::streamcontactsolver</code> is stored as 6 while its
+slots 6 and 7 hold real methods. <strong>Never use <code>slot_count</code> as a scan bound</strong>; walk to the first
+non-code pointer, bounded by the NEXT known vtable start (tables are packed contiguously, so the
+non-code terminator alone lets one class absorb its neighbour's methods). Run
+<code>vtable_slot_counts_refresh</code> to repair — but note it WRITES resolver.db, which changes the engine
+graph's compatibility fingerprint, so do it BEFORE <code>engine_graph_build</code>, never after.</p>
+<p><code>.xtext</code> (0x1D92000-0x25AC000, non-executable) is NOT merely the DB Explorer metadata string pool —
+it is where <strong>the vtables themselves live</strong> (a vtable is read-only DATA, so it is correctly in a
+non-executable section). All 588 string-derived rows sit there, including ones with 94,554 live
+instances and 75 code slots. Being in <code>.xtext</code> proves nothing about a row being bogus.</p>
+<p><strong>Live census 2026-08-03</strong> (<code>vtable_live_census</code>, control 0x1FDABF8 = 8,016 instances, so zeros are
+meaningful): 524 of 2,134 vtables have live objects, <strong>482,846 instances</strong> total. The split is the
+interesting part — the 1,546 RTTI-verified rows account for 354 live classes / 77,480 objects, while
+<strong>170 of the 588 string-derived rows account for 405,366 objects</strong>. The unnamed rows describe the
+most heavily instantiated classes in the engine. The other 418 showed no instances in one region in
+one session, which is a LEAD, not proof of absence.</p>
+<p><strong>The biggest remaining prize: the engine's most common classes have no name.</strong>
+<code>0x1DB7120</code> (94,554 live, 75 slots), <code>0x1DAAA20</code> (29,122), <code>0x1DAA9E0</code> (26,467),
+<code>0x1DAA9D0</code> (24,242 — ctor chain yields the source path
+<code>&lt;local path&gt;</code>), <code>0x1DB4508</code> (23,516).
+CAUTION: <code>identity_hunt</code> ctor-chain strings POOL across neighbouring vtables (<code>MountAlive</code>/<code>Rider</code>
+appear under two different RVAs), and its <code>~kin</code> verdicts mean "shares N method implementations
+with X", not "is X". Naming these needs a rule stronger than one string.</p>
+<h2 id="engine-atlas-module-dossier-and-the-label-tiers-built-2026-10-27">Engine atlas, module dossier and the label tiers (BUILT 2026-10-27)</h2>
+<p><strong>Why a graph, not the layout (MEASURED).</strong> The CRT initializer table <code>__xc_a..__xc_z</code>
+(0x1D93950..0x1DA8760, <code>_initterm</code> from CRT main 0x8C3E5C) holds 10,690 dynamic initializers in
+LINK ORDER, and the first global each one writes increases along the table in 8,043 / 9,483 steps
+(84.8%): DATA is laid out per object file. CODE is not (LTCG/PGO): over 18,206 <code>.arch</code> functions,
+function RVA vs the address of its private globals has Spearman 0.105; only local contiguity
+survives (source-file anchors bracketed by one file are that file 451 / 454).</p>
+<p><strong>Atlas</strong> (<a href="../aire/analysis/engine_atlas.py">engine_atlas.py</a>, <code>engine_atlas_build</code>, 134 s):
+Louvain communities (resolution 60, chosen by sweep: .cpp purity 0.35 / 0.44 / 0.61 / 0.73 at
+1 / 5 / 20 / 60) over calls and tail jumps (weight min(n,3)), callback registration (0.5), methods
+of one vtable (2.0) and data shared by 2-12 functions (1.0). Functions with &gt; 120 distinct callers
+(210) are shared utilities, in no module. <strong>11,353 modules</strong>; each is named from its own evidence by
+TF-IDF (source files, script classes, libraries, log tags, GameDB categories, vtable classes,
+strings), with the kind of evidence kept (<code>name_source</code>). Validation against anchors the graph
+never sees as edges, vs a shuffled control: source file <strong>389 / 536 = 0.726 (control 0.458)</strong>, log
+tag 0.939 (0.651), script class 0.702 (0.457). Address-neighbour edges (W_ADJ) are OFF: they made
+Louvain run &gt; 13 min and were never measured. <code>engine_atlas_relabel</code> (3.7 s) re-names and
+re-validates the saved modules after a label change; membership never reads names.</p>
+<p><strong>Class identity from GameDB reads</strong> (<code>class_categories_build</code>, <code>class_category</code>): a vtable class
+whose methods read fields of ONE category (directly, or through one-field accessors; &gt;= 3 reads,</p>
+<blockquote>
+<p>= 60% share) is that record type's runtime implementation. 6,122 classes scored, <strong>195 named, 184
+of them RTTI-less</strong>, e.g. the AI planner steps: GiveUpOnPlayer vt_0x1DB0D38, Investigating
+vt_0x1DB55F0, Idle vt_0x1DB57B0, Investigate vt_0x1DC4ED0, Flee vt_0x1DC5010, FleeAmbush
+vt_0x1FBCCC8, DespawnOffscreen vt_0x1FBCE78, Cower vt_0x1FBCF08. Module names show them as
+<code>impl:&lt;Category&gt;</code>. The five most-instantiated unnamed classes (0x1DB7120 ...) read no GameDB field,
+so this rule does not name them.</p>
+</blockquote>
+<p><strong>Module dossier</strong> (<code>module_dossier(module=</code> or <code>rva=)</code>, <a href="../aire/analysis/atlas_dossier.py">atlas_dossier.py</a>,
+1.7 s cold / 0.1 s warm): one module as an INTERFACE - entry functions called from outside and the
+modules that call them, vtable classes with their slots (<code>implements</code> from class identity),
+functions whose address is taken elsewhere (callbacks, natives, factories), the modules it calls
+and the shared utilities it uses, mutable globals (0x25AC000..0x2AA5000) it OWNS (no outside user)
+vs shares with read / write counts, GameDB fields, script natives, console commands, log tags,
+strings, and the doc citations inside it. Start any "what is this subsystem" question here.
+LEAD from the first dossier (module 25, AI planner): six step classes fill the same slots
+vf0, vf1, vf5, vf8, vf9, vf10 (+vf16); vf1 and vf8 sit in tight address runs (0x780680-0x780710,
+0x7F7CC0-0x7F7E90), consistent with per-class type / definition getters.</p>
+<p><strong>Knowledge coverage</strong> (<code>engine_atlas_coverage</code>): every code RVA written in CLAUDE.md, kb/,
+aire/documents and memory (floor 0x20000: below it a "citation" is a struct offset landing on
+zlib) mapped to its module. 1,856 cited functions; <strong>584 modules studied = 29.3% of functions</strong>;
+2,367 never-cited modules of &gt;= 5 functions hold 161,132 functions, listed largest first.</p>
+<p><strong>Label tiers added 2026-10-27</strong> (<a href="../aire/analysis/labeler.py">labeler.py</a> <code>enrich</code>, 12 s):
+- <strong>1f <code>doc</code></strong> (<a href="../aire/analysis/doc_names.py">doc_names.py</a>): names the project decoded by hand,
+  harvested from the knowledge (<code>Name 0xRVA</code>, <code>Name (0xRVA)</code>, <code>0xRVA (Name)</code>, Lua <code>Class.Member</code>
+  -&gt; <code>Class::Member</code>; CamelCase / <code>Class::Member</code> / C-API names only; exact function starts &gt;=
+  0x20000; script-class names and non-verb GameDB field names dropped as DATA names). Becomes the
+  label only where the label was weak (empty, <code>str:</code>, <code>domain:</code>, <code>uses:</code>, anonymous <code>vt_0x..::vfN</code>);
+  beside a binary identity it is kept as <code>doc_name</code>. 131 labels + 69 attached. PropRegister
+  0xC6DA00 (18,963 callers, the most-called function) read <code>domain:ui</code> before this tier. To name a
+  function for every later session, write <code>Name 0xRVA</code> into the matching kb file and re-run
+  <code>label_enrich</code>.
+- <strong>1g <code>wrapper</code></strong>: a body &lt;= 0x40 bytes with exactly ONE callee carries <code>wraps:&lt;callee name&gt;</code>,
+  to a fixpoint (chains): <strong>5,051 functions</strong>, e.g. 0x3DE238 (1,799 callers) = 5-byte jump to
+  malloc, 0x114C09C = StringHash wrapper. Only unlabelled functions; derived, not direct evidence.
+- Unnamed share of the hottest functions after both tiers: &gt;= 1,000 callers 19 / 35, 100-999
+  callers 118 / 214, 20-99 callers 826 / 1,287. These are the highest-value names left.</p>
+<p>Tests: <code>tests/test_engine_atlas.py</code>, <code>tests/test_label_plane.py</code>.</p>
+<h3 id="open-areas-by-subsystem-measured-2026-10-28">Open areas by subsystem (MEASURED 2026-10-28)</h3>
+<p>Every function votes an area from its label (library, GameDB namespace it binds / builds,
+static_init, Havok class, source file); a module takes its majority; studied = a kb / doc
+citation lands in the module (<code>engine_atlas_coverage</code>; script <code>area_map.py</code>, session scratchpad).
+<strong>170,038 functions in open modules vs 73,591 in studied ones (30.2%).</strong> The open bulk is library
+code (Havok 17,133, MSVC 4,700, OpenSSL 2,213, Steam 1,176, Wwise 668, HavokScript 786), CRT static
+init (18,149) and schema registration. Game-logic areas with NO citation before this date:
+Combat/FightCircle 1,548 (now kb/combat-systems.md), Interface/Tutorial 810, Interface/ElementSetup
+802, Modifier / context actions 749, Faction/HierarchyTutorial 737, Combat/AOE 731 (data mapped),
+Ragdoll 600 (data mapped), AI/Constants 570 (kb/ai-planner.md), AI/Simulation 475 (kb/ai-planner.md),
+Combat/Category 421, Surfaces 418, Combat/AttackPredicates 409, AI/LeadPlayer 386 (data mapped);
+nearly untouched: Avian 921 (8%), Profile 648 (6%), Combat/Struggle 393 (10%), ClientFX runtime
+4,465 (0 cited functions, data covered in kb/render-fx.md). Atlas module 32 (<code>av*</code>) is the Apache
+Avro C library (<code>avro_record_set</code>, <code>src\Core\avFloatType.cpp</code>) used by the online layer.</p>
+<h3 id="core-runtime-primitives-the-hottest-unnamed-functions-decoded-2026-10-27">Core runtime primitives - the hottest unnamed functions, decoded (2026-10-27)</h3>
+<p>Read from code (and, for the heap globals, one live read in Minas Ithil); callers = distinct
+functions. Written <code>Name 0xRVA</code> so the doc tier labels them. The GameDB getter family (the other
+half of this list) is in kb/gamedb-bindings.md "The typed getter family".</p>
+<table>
+<thead>
+<tr>
+<th>function</th>
+<th>callers</th>
+<th>what it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CRT::atexit <code>0x8C4608</code></td>
+<td>3,580</td>
+<td><code>_onexit(f)</code> (0x8C45B8) == NULL ? -1 : 0 - every static's destructor registration</td>
+</tr>
+<tr>
+<td>CRT::__chkstk <code>0xB39470</code></td>
+<td>1,983</td>
+<td>stack probe: touches each 4 KB page down to the request, limit <code>gs:[0x10]</code></td>
+</tr>
+<tr>
+<td>CRT::__security_check_cookie <code>0x8C3D50</code></td>
+<td>1,520</td>
+<td>/GS cookie compare, failure -&gt; 0x8C4690</td>
+</tr>
+<tr>
+<td>GetDefaultHeap <code>0x602D20</code></td>
+<td>690 (+3,033 through the 5-byte thunk 0x114CC98)</td>
+<td>returns <code>[0x26FEF88]</code>; first use builds "the default memory heap" in the STATIC object at 0x277CB40 (0x817E9C, init 0x817F94, string "Failed to create default memory heap!"), next to dlmalloc family A's state 0x277CE10. Its 30-byte callers hand (heap, p) to 0x1B08C4 ("Invalid heap type!"), a heap-type dispatch</td>
+</tr>
+<tr>
+<td>ArenaAlloc <code>0x22A040</code> / ArenaFree <code>0x22A4E4</code></td>
+<td>406 / 514</td>
+<td>arena table <code>[0x2A86798]</code>, 0x78-byte entries: CRITICAL_SECTION +0x30, base +0x58, kind +0x60, used +0x64, size +0x68, linked arena +0x6C, owner thread +0x70 (a call from the owner thread is redirected to the linked arena). Live 2026-10-27: 16 entries in use - two 20 MB (16.9 / 3.1 MB used), one 1 MB (kind 512), twelve small kind-1 pools. +0x2C looks like a name hash; none of the 18 values is in the P919 dictionary (LEAD)</td>
+</tr>
+<tr>
+<td>BumpAlloc <code>0x24A4BC</code></td>
+<td>363</td>
+<td>linear arena: align up, assert (null write) on overflow, advance +0x08</td>
+</tr>
+<tr>
+<td>RefCountRelease <code>0xC51540</code> / RefCountReleaseB <code>0x2158A4</code></td>
+<td>546 / 370</td>
+<td><code>lock xadd [obj+8], -1</code>; the last reference calls vtable slot 0 (deleting destructor, flag 1)</td>
+</tr>
+<tr>
+<td>ScriptArgsBegin <code>0x500930</code></td>
+<td>1,574</td>
+<td>the script-binding REGISTRAR every stub calls: <code>{+0 argc = (L.top - L.base) / 16, +4 argc - expected + returns, +8 lua_State}</code>, "Incorrect number of arguments to function '%s.%s'"</td>
+</tr>
+<tr>
+<td>ScriptArgsEnd <code>0x407F68</code></td>
+<td>1,862</td>
+<td>the call after every binding body: sets <code>L.top</code> (+0x48) to <code>base (+0x50) + n*16</code>, nil-filling; skipped while <code>L+0xBC == -500</code></td>
+</tr>
+<tr>
+<td>lua_remove <code>0x565800</code></td>
+<td>490</td>
+<td>HavokScript lua_remove: shift the 16-byte TValues down one, <code>top -= 16</code></td>
+</tr>
+<tr>
+<td>CompiledOutLog <code>0x19C83AC</code></td>
+<td>630</td>
+<td>spills r8 / r9 and returns: a varargs logger compiled out of the shipping build (BEHAVIOR law 14: emulate, do not wait for a log)</td>
+</tr>
+<tr>
+<td>NullSub <code>0x120405C</code></td>
+<td>670</td>
+<td><code>ret 0</code></td>
+</tr>
+<tr>
+<td>OperatorDeleteSized <code>0x8C4370</code></td>
+<td>4,839</td>
+<td>5-byte <code>jmp</code> thunk; every scalar deleting destructor calls it as <code>(this, sizeof)</code> (Flee step: <code>(this, 0x5F0)</code>). It read <code>shared_impl:System::BenchmarkEnd</code></td>
+</tr>
+<tr>
+<td>IsNullOrEmptyStr <code>0x188C80</code> / StrNotEmpty <code>0x185FE0</code></td>
+<td>767 / 873</td>
+<td>C-string tests</td>
+</tr>
+<tr>
+<td>ConsoleRegistryInit <code>0x816CF4</code></td>
+<td>1,344</td>
+<td>builds the developer-console REGISTRY, the static object 0x2A58BC0 (vt 0x1EC6488, 0x78 B: CRITICAL_SECTION + sorted entry list), behind the static guard 0x2A58BB0; its callers are the static initializers of the console entries. Registry slots: Execute 0x15D0338, Find 0x7CBBA4, Register 0x77F54C (aire/analysis/console_surface.py, aire/documents/DEBUG_MENU.md). CORRECTED 2026-10-27 from the LEAD "which static"</td>
+</tr>
+</tbody>
+</table>
+<p>LEAD, not named: <code>hkArrayUtil::_reserve</code>-shaped 0x13F79C (903: capacity <code>&amp; 0x3FFFFFFF</code>, sign bit =
+not owned, allocator vtable +0x28 realloc / +0x18 alloc + memcpy); 0x816D68 (355, a lock-guarded
+static getter using TLS <code>gs:[0x58]</code>).</p><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
