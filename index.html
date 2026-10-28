@@ -270,6 +270,7 @@ section[id]{scroll-margin-top:72px}
       <a href="#changelog">Patch notes</a>
       <a href="#install">Install</a>
       <a href="#faq">FAQ</a>
+      <a href="engine/">Engine reference</a>
     </nav>
     <span data-slot="head-cta"></span>
   </div>
@@ -635,7 +636,7 @@ section[id]{scroll-margin-top:72px}
     var cu = safeUrl(l.communityUrl), su = safeUrl(l.supportUrl);
     if (cu) links.push('<a href="' + esc(cu) + '" target="_blank" rel="noopener">' + esc(l.communityLabel || "Community") + "</a>");
     if (su) links.push('<a href="' + esc(su) + '" target="_blank" rel="noopener">' + esc(l.supportLabel || "Support the project") + "</a>");
-    links.push('<a href="#top">Download</a>', '<a href="#changelog">Patch notes</a>', '<a href="#install">Install</a>', '<a href="#faq">FAQ</a>');
+    links.push('<a href="#top">Download</a>', '<a href="#changelog">Patch notes</a>', '<a href="#install">Install</a>', '<a href="#faq">FAQ</a>', '<a href="engine/">Engine reference</a>');
     fill("foot-links", links.join(""));
     var label = esc(l.communityLabel || "Community");
     var link = cu ? '<a href="' + esc(cu) + '" target="_blank" rel="noopener">' + label + "</a>" : "";
