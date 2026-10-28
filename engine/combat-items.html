@@ -1,0 +1,325 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Inventory, affixes, gems, skills, weapon records, gear effects - Shadow of War engine reference</title><meta name="description" content="inventory, affixes, gems, skills screen, weapon records, gear effects"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" class="cur" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="inventory-affixes-gems-skills-weapon-records-gear-effects">Inventory, affixes, gems, skills, weapon records, gear effects</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Moved verbatim from
+CLAUDE.md on 2026-10-27 (original lines 4882-5109, 6840-6902); heading levels normalised, emoji markers replaced with plain text.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Covers:</strong>
+- affix value law, item instance layout, equip deltas, player stat table, gems, stacked gems
+- combat item lists (a new item must be NAMED to be usable)
+- skill rows, the Skills screen, which move a button press runs, Multishoot, HUD prompts
+- weapon record system (broom, dual wield, bone attachment); gear effects (AoE on hit, TickDelay trap)</p>
+<p><strong>Sections:</strong>
+- Inventory, Affixes &amp; Gear Stats (DECODED 2026-10-03, live + static + save)
+  - Skill rows and the Skills screen (IN-GAME CONFIRMED 2026-10-13)
+- Weapon Record System (PROVEN, Broom Mod)
+- Gear Effect System — AoE on every sword hit (IN-GAME PROVEN 2026-08-15)</p>
+<hr />
+<h2 id="inventory-affixes-gear-stats-decoded-2026-10-03-live-static-save">Inventory, Affixes &amp; Gear Stats (DECODED 2026-10-03, live + static + save)</h2>
+<p>Full reference: <code>aire/documents/INVENTORY_SYSTEM_DECODE.md</code>; read-only actions in
+<code>aire/pipeline/inventory.py</code>. <strong>A weapon has no stats of its own</strong> - <code>Inventory/WeaponData</code>
+holds sheath/FX/predicate only. Every number is an AFFIX.</p>
+<ul>
+<li><strong>Value law (10/10 live):</strong> affix value = <code>FloatIndex.IndexedValues[ItemLevel - 1]</code> of the
+  affix's <code>VariableMin</code> table (<code>Int_LevelValue</code> is the ITEM's level). Sword "Melee Attack" =
+  affix <code>1Sword_Base_Prop_&lt;rarity|5Lgnd_Set&gt;</code> -&gt; <code>Float_DmgMod_M_FLAT</code> (L80: Common 160,
+  Epic 166, Legendary 169). The player's <code>Float_DmgBase_M_BASE</code> is <strong>0</strong>: the sword's roll is
+  the whole flat input to <code>DmgForm_Plyr_Melee</code>.</li>
+<li><strong>Chain:</strong> <code>vc = [[base+0x2797808]+0x2348]</code> (VisualComponent, vt 0x1FD63F0); inventory
+  embedded at <code>vc+0x3D8</code> (373/373 VCs); 25 slot vectors at <code>vc+0x4D0 + i*0x18</code>
+  (0 Melee, 1 MeleeAux, 2 Ranged, 3 RangedAux, 6 Utility, 7 Tribe, 9 MeleeOffHand =
+  <code>Combat/Predicates/InventorySlot</code>; 11 cloak, 12 armor, 22 ring by contents).</li>
+<li><strong>Item instance</strong> (vt 0x1FDABF8): +0x20 u32 id, <strong>+0x24 u32 level</strong>, +0x38 Items record,
+  +0x40 EWD, +0x60 socket objects, <strong>+0x78 affix instances {+0 Affix/Definition, +8 f32
+  value, +0xC f32 ModifyOtherAffix bonus}</strong>, +0xA8 u8 new, <strong>+0xA9 u8 equipped</strong> (+ node
+  +0x08 linked), +0xB0 nemesis origin, +0xB8 upgrade challenge (vt 0x1DC0F70; +0x78 u32 progress / u32 target = the
+  card's "5 / 10"; the card's LOCKED line is the gear's NemesisAffix, not in the affix vector), +0xC8 GUID.
+  Slot index 0 is NOT the equipped item. Ability list = owned-byte vector (+0x88 cap, +0x8C owned):
+  the item dtor (0x1C7DB4 -&gt; 0x114D828) frees ability OBJECTS always, the BUFFER only when owned - an
+  external tool may grow the list in its own memory (owned 0) but must reuse engine-allocated objects.</li>
+<li><strong>Equip = deltas:</strong> <code>0x40136C(rcx=item, dl=apply, r8=owner combat obj)</code> -&gt; per affix
+  <code>0xFE68F0</code> -&gt; <code>0x1A105D8(store, var, +/-(value+bonus))</code>. Unequip subtracts the CURRENT
+  float, so <strong>never write <code>affix+8</code> on an equipped item</strong> without remove/apply around it -
+  the engine's own upgrade (<code>sub_FBAAC0</code> @ 0xFBB2EC: strip, <code>level = min([owner+0x568]+1, 80)</code>,
+  recompute) is the template.</li>
+<li><strong>Player stats:</strong> <code>[[[player+0x26A8]+0x318]+0x60]</code> + <code>recordIndex*0x50</code> = {var record,
+  +8 f32 value}; 622 entries = <code>Combat/Stat/Variable/Float</code>; lookup 0x1E53B8.</li>
+<li><strong>Save keeps identity, not numbers:</strong> id, level, item/EWD/affix hashes, GUID, nemesis origin;
+  float 157.0/169.0 occur 0 times in the decrypted save. Level, affix list and item record
+  persist; an <code>affix+8</code> edit does not.</li>
+<li><strong>Gems:</strong> <code>GemData.SocketAffixes</code> = one affix per socket type (Red sword = <code>Float_DmgMod_M_PCT</code>
+  0.10-0.30, Green lifesteal 0.04-0.20, White Mirian 0.05-0.15, Blade crit dmg 0.20-1.00).
+  <strong>Sockets are per SLOT</strong> (6 live objects, vt 0x1FDAED0): <code>[vc+0x3D8+0x80]</code> = {entries, 8},
+  entry {GemSocketType, socket<em>}; socket {+0x18 gem, +0x20 type, +0x28 affix vector}.
+  Ctor <code>0x1BFB8AC(mem, type, gem)</code>, SocketGem <code>0x1BFBCB8</code>, apply <code>0x1BFBC50(sock, 0/1, owner,
+  GemItemLevel)</code> loops the vector. Item +0x60 sockets are a dormant per-item path (0 ship).
+  </em><em>Owned counts: <code>vc+0x740/+0x748</code></em>* records {+0 item, +0x20 u32 count} (engine count
+  <code>0x509074</code>, consume <code>0x4F163C(vc, item, n)</code>, give <code>0x1BCE0C0(vc, item)</code>). <code>vc+0x3D8+0xF0</code> is an
+  append-only CHANGE LOG (+0x24 count after, +0x28 amount) - not the counts.</li>
+<li><strong>Stacked gems (RUN 2026-10-03):</strong> <code>gem_stack_add</code> builds extra slot sockets with the engine's
+  ctor + apply and pays real gems: 2x Red Wondrous on the sword = <code>Float_DmgMod_M_PCT</code> +0.60,
+  owned 20 -&gt; 18 (Gems screen x18 IN-GAME CONFIRMED; damage IN-GAME CONFIRMED 2026-10-03, user: "two shot caragors now"). Live only (no container holds them); <code>gem_stack_reapply</code> after a load,
+  <code>gem_stack_clear</code> returns the gems.
+  <strong>C++ port (2026-10-03, cl /Zs clean, NOT YET RUN IN GAME):</strong> Talion &gt; Gear tab
+  (<code>ui/tabs/sow_gear_gems.hpp</code>) over <code>sdk/sow_gem_stack.hpp</code>; native ops <code>gemstack</code> /
+  <code>gemunstack</code> in <code>sdk/sow_main_native.cpp</code> (identity-checked, SEH, refund on any failure after
+  paying). Journal <code>config\gem_stack.txt</code> (campaign = glaive item GUID, proof = count after
+  paying); liveness by a CANARY in <code>Float_DmgPCT_DmgTroopsVsPoisoned</code> (0 GADB refs), never by
+  addresses - the stat table can be re-initialised in place. <code>dev=1</code> unlocks free sockets.</li>
+</ul>
+<pre><code class="language-python">call(&quot;inventory_player&quot;) / call(&quot;inventory_stacks&quot;, filter=&quot;Runegem&quot;)
+call(&quot;player_stat_variables&quot;, filter=&quot;DmgMod&quot;) / call(&quot;inventory_affix&quot;, affix=..., level=80)
+</code></pre>
+<p><strong>Combat item lists - a NEW item must be NAMED to be usable (IN-GAME CONFIRMED 2026-10-07).</strong>
+Talion's combat accepts the held item only if <code>Combat/Predicates/Item</code> lists name it: <code>PC_Sword</code>
+(73), <code>PC_SwordOrDagger</code>, <code>PC_ActivateEquip</code> (378), <code>PC_Sword_Or_GroundGlaive</code>,
+<code>PC_SwordOrDaggerOrGroundGlaive</code>, <code>Trait_ItemBreaker_IgnoreSwordList</code> (<code>PC_LegendaryGear</code> only
+feeds a tutorial hint). An Armory blade on none of them rendered and equipped but no attack,
+combo or <code>PC_Dash</code> (dodge) ever started; a live graft (<code>scripts/item_list_graft.py</code>, one orc /
+Eltariel cell per list) made all of them fire (watcher log + user). <code>Items.WeaponType</code> is NULL on
+every Talion sword - it is not the gate. Permanent: the Armory forge appends each new item to
+every list its template is on (<code>Gadb.extend_list</code>: count+1 + one tail cell; a shared descriptor
+run is copied to the table's end), gated append-only in <code>Forge.finish</code>. The installed build was
+IN-GAME CONFIRMED after a restart (2026-10-08): the Devouring Blade attacks, combos and dodges.</p>
+<h3 id="skill-rows-and-the-skills-screen-in-game-confirmed-2026-10-13">Skill rows and the Skills screen (IN-GAME CONFIRMED 2026-10-13)</h3>
+<p>A skill row = <code>Inventory/ActiveItemGroup</code> record (89 live): <code>Entries[]</code> -&gt; <code>_StructuresInventoryActiveItemGroupEntry</code>
+{<code>RequiredItem</code> = the variant's UNLOCK item (held = bought), <code>ActiveItem[]</code> = the <code>*_SKILL</code> / <code>*_DUMMY</code> item whose
+possession makes it active}. An unlock item finds its row through <code>Inventory/Items.ActiveItemGroup</code> (P919
+<code>0x234F317E</code>). These four fields have exactly TWO readers in the binary (field bindings + callers, 2026-10-13):
+- <strong>Skills-screen active test <code>0x1BCD6DC(inv, unlock)</code></strong>: unlock held -&gt; <code>unlock.ActiveItemGroup</code> -&gt; first entry with
+  <code>RequiredItem == unlock</code> -&gt; its <code>ActiveItem[0]</code> held (the loop re-reads element 0 only). <code>inv = [UIManager+0xB0]</code>
+  = the player's VisualComponent (live). Node state <code>0x18A1770</code>: 3 active (drawn white) / 2 owned / 1 available / 0
+  locked; the FX pickers <code>0x19453D0</code> (SkillChild vt <code>0x1F8DE98</code> slot 21) and <code>0x19480D4</code> ask the same test.
+- <strong>Click swap <code>0x1BC8C94(vc, unlock)</code></strong> (wrapper <code>0x1BC8C6C(vc, Skills record)</code>): unlock held -&gt; entries with another
+  RequiredItem have their ActiveItems removed (count <code>0x509074</code>, consume <code>0x4F163C</code>, event <code>GM+0x6D18</code> type 8),
+  entries with this RequiredItem have theirs given when not held (<code>0x1C01E0</code>, event 7). Other callers of the
+  wrapper: ItemLoadouts apply <code>0x1BCC1C4</code> (from inventory re-init <code>0x4F0938</code>), <code>0x17D9E4C</code>, <code>0x1B56FA4</code>.
+- <strong>Held test <code>0x24DF7C(vc, item)</code></strong>: bit <code>recordIndex(item)</code> (<code>0x1898E8</code>) of the held BITSET <code>[vc+0x490]</code>
+  {u32* begin, end} (<code>0x24EB74</code>); without one, a walk of the stacks <code>vc+0x740/+0x748</code> (<code>0x36A17C</code>). 102 callers:
+  faking a bit fakes possession for combat, quests and the swap alike.</p>
+<p><strong>Showing a choice without changing it</strong> (<code>sdk/sow_skill_variants.hpp</code>, All Skill Variants Active): while the top
+menu layer <code>[UIManager+0xF0]</code> is <code>Interface/Menu/MenuLayer/Upgrades::UpgradesLayer</code> (= <code>MenuManager.UpgradesLayer</code>,
+hash <code>0x8B0D31A2</code>; MenuManager = <code>[[UIManager+0x50]+0x518]</code>), each bought-but-unselected unlock's <code>ActiveItemGroup</code>
+cell names a PRIVATE row: an arena copy of its row whose every <code>Entries</code> cell names an arena copy of its entry whose
+every <code>ActiveItem</code> cell names the unlock itself (shipped descriptor runs kept, only instances copied). The test
+answers active; the swap finds no other entry and gives nothing (unlock held) = a click is a no-op, so the saved
+selection cannot move. Restored the frame the screen leaves the top (the swap's other callers never run with it
+open), before the save clean-up's swap, and on a GameDB rebuild (guarded: the cell must still name our arena row).
+Emulated first against the live game (<code>emulate_live</code> with the private rows mapped into emulator memory only):
+4/4 rows test 0 -&gt; 1, swap with no inventory call. In game: 127 bought, 37 drawn selected before, 90/90 after.
+The earlier relink of the Owned FX looks to the Active ones changed nothing: the FX are not the white tint, the
+node state is. Any "show X as owned/selected" UI request: find the state function, list the readers of every
+field it reads, and redirect the field whose other readers can be kept away from the change.</p>
+<p><strong>Which move a button press runs (MEASURED 2026-10-13, code + live tree).</strong> Node runner <code>0x30FD80</code> (called by the
+combat tick <code>0x162560</code>): the current node's <code>Links</code> first, then the ROOT list <code>Combat/Tree.Nodes</code> of the tree at
+<code>comp+0xEF0</code> (<code>Player_Character_DarkTalion</code> live) IN ORDER - each root resolved to its <code>KBMNode</code> (<code>0x310C00</code>),
+validated (<code>0x310C5C</code>: node type, cancel condition, transition type; <code>0x310F10</code>: the input), then <code>PickAttack
+0x275730</code>; the FIRST root that yields an attack wins. Priority (<code>[attack cache entry+0xC]</code>) only ranks attacks
+INSIDE one node. State nodes (<code>0x2C2288</code>, <code>Tree.StateNodes</code>) are first-match too. So a skill variant whose moves
+sit in their own root node earlier in the tree hides every later node on the same input once both are allowed.
+Scan of 49 multi-variant rows x 552 ordered node lists: only Quick Throw (foot + warg) does this - Rapid Throw
+(Child2, <code>PC_Ranged_QuickThrow_Upgrade_Attack1 -&gt; 2 -&gt; 3</code>, root 107) before the shared node (<code>PC_Ranged_QuickThrow</code>:
+base / Serrated Edge / Rain of Blades, root 108).
+<strong>A multi-projectile volley is one data link:</strong> <code>AttackData.Multishoot</code> (<code>Combat/Multishoot</code>, one projectile per
+<code>Entries</code> wedge; <code>FanOfKnives</code> = 5) read LIVE at every shot by <code>0x2E8994</code> (<code>0x6F6510</code> at <code>0x2E8A84</code>;
+<code>ProjectileCluster</code> wins when set, then <code>0x1BFB4B4</code>). Rain of Blades (Child3, <code>PC_QckThr_FoK_*</code>, <code>CSP_Quick_Throw_3</code>)
+differs from the base throw only in it (+ 70-degree damage cone, own target selector, formula, FX); Rapid Throw's
+moves fire the same projectile (<code>RangedWeaponOverride = PC_QuickThrow</code>) with an empty cell. Stack Skill Variants
+copies the row's volley into those cells (<code>sdk/sow_variant_stack.hpp</code> MULTISHOT). <strong>IN-GAME CONFIRMED 2026-10-13</strong>
+(user: "Working perfect"; log <code>SkillRow4_Quickthrow: 47 moves fire FanOfKnives</code> - every Rapid Throw dagger a fan).
+<strong>HUD button prompts:</strong> <code>Combat/PromptOverride/Setup -&gt; Override</code> (one per button, <code>CommandID</code>) <code>-&gt; Prompts[]</code>
+entries; evaluator <code>0x277650</code> (from <code>0x2F4FA0 [COMBAT|PROMPTCAT]</code>) reads the compiled entry: <code>+0xE8</code> IncludedItem
+(any-of <code>0x276E1C</code>), <strong><code>+0xF0</code> IncludedItemAll (ALL-OF <code>0x6E42A4</code>: every item held)</strong>, <code>+0xF8</code> ExcludedItem. The
+link is copied at load (<code>0x1C0DAE8</code>), the LIST is walked live. Shadow Dominate = <code>PS_ShadowStrike_Kill_Child3_
+ShadowBrand_SKILL</code> (UI <code>PSN_Krak_ShadowStrike_C2_ShadowStrikeBrand</code>), prompt <code>Combat/Prompt/Wraith_Dash_Brand</code> via
+<code>Ranged_ButtonB_ShadowBrand</code> -&gt; all-of <code>CSP_Skill_Shadow_Brand</code>. An unlock APPENDED to that list makes it need the
+skill item AND the unlock, so All Skill Variants Active now REPLACES the skill item with its unlock in the lists a
+prompt walks all-of. <strong>IN-GAME CONFIRMED 2026-10-13</strong> (Shadow Dominate prompt on an aimed grunt; log <code>6 all-of
+prompt lists</code> - Shadow Brand x2, Precision Fall C2, Drain, Shadow Mount Fellbeast, Stealth Chain Monsters; the 7th
+candidate <code>Skill_ShadowStrike_Kill</code> names a skill item no row lists as active, so it stays shipped). Quest gates (<code>_StructuresQuestPredicates.RequiredInventoryItemAll</code>) are
+the only other all-of item field - progression, left alone.</p>
+<h2 id="weapon-record-system-proven-broom-mod">Weapon Record System (PROVEN, Broom Mod)</h2>
+<p><strong>Record Tags:</strong></p>
+<ul>
+<li><code>0x0A4B</code> = Inventory/Items (weapon item records)</li>
+<li><code>0x0A1B</code> = Inventory/EquippedWeaponData (EWD records)</li>
+<li><code>0x0A08</code> = Model/SimpleModelPieces</li>
+<li><code>0x0A0C</code> = Inventory/ArmorData (AD overlays)</li>
+<li><code>0x0A07</code> = Model/SimpleModelHeads</li>
+</ul>
+<p><strong>Weapon Slots (via Inventory pointer at FM+0x050, CONFIRMED 2026-04-24: 72.5% INV fill, 100% weapon when INV present):</strong></p>
+<ul>
+<li><code>INV+0x38</code> = Primary melee weapon item (tag 0x0A4B) — 58/58 confirmed</li>
+<li><code>INV+0x40</code> = Primary melee weapon EWD (tag 0x0A1B) — 58/58 confirmed</li>
+</ul>
+<p><strong>FM Internal Weapon Records (deep offsets, per-orc variable):</strong></p>
+<ul>
+<li>FM+0x0CA8/0x0CB0 = Primary melee (Item + EWD) — ALIASES INV+0x38/0x40</li>
+<li>FM+0x10A0/0x10A8 = Ranged/throwing weapon (Item + EWD)</li>
+<li>These deep offsets are in the trait object area and may shift between orcs</li>
+</ul>
+<p><strong>Pool Walking Technique:</strong> Records in the same category are packed in 0x28-stride pools.
+Use any valid record as anchor → walk backward to pool start → walk forward checking names.
+<code>live_record_map.json</code> addresses are session-specific (ASLR). Always validate tag before use.</p>
+<p><strong>Broom Weapon Records:</strong></p>
+<ul>
+<li><code>Broom</code> (Inventory/Items, tag 0x0A4B) — item definition</li>
+<li><code>Orc_Misc_Broom</code> (Inventory/EquippedWeaponData, tag 0x0A1B) — equipped data</li>
+<li><code>Wep_Orc_Misc_Broom</code> (Model) — 3D mesh</li>
+<li><code>IB_Broom</code> (Inventory/ItemBuilder) — build template</li>
+<li>Animations: <code>Prisoner_Broom_Entry/Loop/Exit</code>, <code>AI_Prisoner_Broom_Loop/Entry/Fidget</code></li>
+</ul>
+<p><strong>Proof script:</strong> <code>scripts/proven/mods/broom_weapon_crack.py</code> — CDLULI protocol, pool-walk record finder, revert support.</p>
+<p><strong>Confirmed Working Weapon Swaps (2026-04-23, Lûga the Iron Willed L78):</strong></p>
+<ul>
+<li>WORKS: <code>Broom</code> + <code>Orc_Misc_Broom</code> — hand-held, visible in weapon hand</li>
+<li>WORKS: <code>Orc_Misc_WarBanner</code> — hand-held war banner with cloth physics</li>
+<li>WORKS: <code>Nazgul_1HS_BlackBlade</code> — Nazgul sword renders on orc, single hand</li>
+<li>WORKS: <code>Nazgul_Melee_DualWield</code> — DUAL NAZGUL BLADES, both hands! Insane looking</li>
+<li>WORKS: <code>Orc_Misc_CarryChest</code> — attaches to back/carry bone (backpack style)</li>
+<li>WORKS: <code>Orc_Misc_CarryMeat</code> — attaches to back/carry bone</li>
+<li>FAILS: <code>Balrog_1H_Whip</code> — no visual (Balrog has unique skeleton, incompatible bones)</li>
+</ul>
+<p><strong>TRIBE-SLOT LAW (MEASURED 2026-10-09, offline + live census):</strong> <code>Inventory/EquippedWeaponData.ItemSlot</code>
+(P919 0x765EFA31) is the inventory slot a LOOK belongs to: 0 Melee 581, 1 MeleeAux 407, 2 Ranged 697,
+3 RangedAux 8 (olog Arquebus / Flamethrower / Harpoon), 6 Utility 34 (every <code>Orc_Misc_*</code> prop, the broom
+included - renders in the hand), 7 Tribe 15 (exactly the <code>Orc_Trb_*</code> / <code>Orc_TrbVis_*</code> looks), of 1,763.
+The item instance keeps its own slot at <code>+0x2C</code> (copied from the EWD by <code>0x1BF3750</code> / <code>0x1BF3474</code> /
+<code>0x649790</code>). Live, 813 orc weapon items: the game's pairs always match (hand 303 slot 0, crossbow/spear
+448 slot 2, tribe 56 slot 7); all 11 mismatches were randomizer picks. A slot-7 look dealt into the held
+or crossbow slot renders NOTHING (Nakra: item <code>Orc_2HR_DeadeyeCrossbow</code>, look
+<code>Orc_TrbVis_Regal_HandCrossbowX2</code>, empty hands, user screenshot) - the tribe weapon shows only while a
+tribal attack draws slot 7. Framework (built, NOT run): tribe looks left out of every hand/crossbow pool,
+one-weapon classes take ranged-slot looks only, the end-of-roll class weapon repair fixes old ones.</p>
+<p><strong>ATTACH LAW (MEASURED 2026-10-17, live: all 1,748 looks + the class kits):</strong> a look names the bone it is
+DRAWN on and the socket it RESTS in - <code>EquippedWeaponData.Model</code> (0xAD179959) -&gt; <code>_StructuresInventoryItemModel</code>
+<code>ActiveNode</code> (0xE4F0CA80) / <code>InactiveNode</code> (0x23BADCED), both live <code>char*</code>. Every weapon a class HOLDS is
+<code>RightHand</code> + a sheath: Spearman <code>Orc_1HR_ThrowingSpear_Range</code> / <code>RegalThrowingSpear</code> -&gt; <code>Socket_Sheath_Spr</code>,
+Archer crossbows -&gt; <code>Sheath_Archer</code>, Defender -&gt; <code>Socket_Sheath_Def01</code>, Berserker -&gt; <code>Ber_R_sheath</code>, Infantry /
+Olog -&gt; <code>L_sheath</code>. Throwables are <code>LeftHand</code> with no rest socket (<code>Orc_1HR_Javelin</code> = item
+<code>Orc_1HR_Javelin_Defender</code>, the Defender's; <code>Orc_1HR_ThrowingAxe</code>; <code>Olog_1HR_ThrowingHammer</code> rests in
+<code>Olog_Sheath</code>): they exist only during the throw. Also not holdable (RightHand, no rest): <code>Orc_1HB_ShamanStaff</code>
+(builder, no item - cut), <code>Orc_2HR_Crossbow_Melee</code>, <code>Orc_Misc_PoisonVial</code>, <code>Orc_Misc_Torch_Unlit</code> (items no
+<code>Combat/InventorySetup</code> gives). <strong>Spearmen natively carry ONE weapon</strong> (<code>Combat/InventorySetup::Orc_Spearman</code>
+= <code>Orc_1HR_ThrowingSpear</code>, ranged slot 2; 30/30 live spearmen have an empty hand slot) - the spear is both
+the throw and the melee weapon, so an Army card with only a Ranged row is native. A Safe roll dealt the
+Javelin as a Spearman's only weapon (16 of 134 looks that session): nothing at rest, wrong hand when drawn
+(Luga, user screenshot). Framework (built, cl /Zs clean, NOT run): <code>LookHoldable</code> in <code>LookFitsLane</code> for every
+non-utility look; Spearman class rule = "Spear" only. <code>chain_back</code> sees NO EWD referrers (control
+<code>Orc_1HR_ThrowingSpear_Range</code> also 0): walk <code>Inventory/ItemBuilder.WeaponData</code> live instead.
+2026-10-27: every Sauron / Nazgul hand weapon rests nowhere too (empty InactiveNode). The Army Grid now puts
+those on an orc's <code>L_sheath</code> through a carrier look (BUILT, NOT RUN) - <code>kb/captain-looks.md</code> "Weapon looks:
+the name can lie".</p>
+<p><strong>Dual-Wield Discovery:</strong></p>
+<ul>
+<li>Berserker dual-wield is baked into the WEAPON RECORD, not a second slot</li>
+<li>Records with <code>X2</code> suffix (e.g. <code>Orc_1HA_StuddedAxeX2</code>) auto-duplicate to both hands</li>
+<li><code>Nazgul_Melee_DualWield</code> EWD also triggers dual rendering</li>
+<li>All berserkers use INV+0x38/0x40 for primary weapon; no separate secondary slot</li>
+<li>INV+0x150/0x158 = ranged weapon (ThrowingAxe) on some berserkers</li>
+</ul>
+<p><strong>Weapon Bone Attachment Rules:</strong></p>
+<ul>
+<li>Hand-held weapons (Broom, Sword, Banner, etc.) → weapon hand bone</li>
+<li><code>Carry</code> prefix items (CarryChest, CarryBoulder, CarryMeat) → carry bone on back/shoulder</li>
+<li>Non-orc skeleton weapons (Balrog) → invisible (missing bone targets)</li>
+</ul>
+<p><strong>All Known Misc/Prop Weapon Records (Inventory/EquippedWeaponData):</strong></p>
+<ul>
+<li><code>Orc_Misc_Broom</code>, <code>Orc_Misc_CarryBoulder</code>, <code>Orc_Misc_CarryChest</code>, <code>Orc_Misc_CarryLog</code></li>
+<li><code>Orc_Misc_CarryMeat</code>, <code>Orc_Misc_CarryOre</code>, <code>Orc_Misc_Cleaver</code>, <code>Orc_Misc_Dagger</code></li>
+<li><code>Orc_Misc_Drumstick</code>, <code>Orc_Misc_Falchion</code>, <code>Orc_Misc_FirePoker</code>, <code>Orc_Misc_Grenade</code></li>
+<li><code>Orc_Misc_Hammer</code>, <code>Orc_Misc_Hoe</code>, <code>Orc_Misc_Pick</code>, <code>Orc_Misc_PoisonVial</code></li>
+<li><code>Orc_Misc_Shovel</code>, <code>Orc_Misc_Snare</code>, <code>Orc_Misc_Torch</code>, <code>Orc_Misc_WarBanner</code></li>
+<li><code>Orc_Misc_WoodcutterAxe</code>, <code>Orc_Misc_ConqueringBanner</code>, <code>Orc_Misc_SapperPack</code></li>
+</ul>
+<h2 id="gear-effect-system-aoe-on-every-sword-hit-in-game-proven-2026-08-15">Gear Effect System — AoE on every sword hit (IN-GAME PROVEN 2026-08-15)</h2>
+<p>Legendary gear effects ("Enemies explode", "Resurrect on melee kill") are pure
+RecordLink wiring. The affix is a <strong>wrapper carrying no behaviour</strong>:</p>
+<pre><code>Inventory/Affix/Definition  (2,961)
+  .Buff        -&gt; Combat/Buffs (1,126)                    a HELD effect
+  .Proc        -&gt; Combat/Buffs/Procs/Definitions (223)    an ON-EVENT effect
+  .Chance      -&gt; Combat/Buffs/ChanceTypes (78)           bare tag, fc=0 = the KEY
+  .ChanceValue -&gt; Combat/Stat/Variable/FloatIndex         &quot;1&quot; = 100%
+
+Combat/Buffs/Procs/Definitions   slot 3 ResourceGain  slot 4 TargetBuff
+                                 slot 5 chanceKey     slot 6 Buff  slot 8 Predicate
+  Predicate  -&gt; Quest/AutoObjectives      the engine reuses its QUEST event vocabulary
+  TargetBuff -&gt; Combat/Buffs
+                 .OneTimeAOE / .LoopingAOE / .OneTimeAOE_Player / .DeathAOE
+                   -&gt; Combat/AOE -&gt; .Tick -&gt; Combat/AOE/Tick
+                        Radius / Angle / MaxAIToHit / Attack / AOEFX
+</code></pre>
+<blockquote>
+<p><strong><code>affix.Proc</code> IS LIVE-EDITABLE. <code>affix.Buff</code> IS NOT.</strong> Proved by one experiment
+with both wired at once: freeze (via <code>Proc</code>) fired, resurrect (via
+<code>Buff -&gt; Buff.Procs -&gt; ProcDef</code>) did not. A held Buff is aggregated onto the player
+at EQUIP time. <strong>Slot 5 empty = the proc fires unconditionally</strong>; a populated
+chance key needs an affix registering it.</p>
+</blockquote>
+<p><strong>Working recipe</strong> — <code>_Base_Prop_</code> affixes are always-on (<code>_SetProp_</code> wants set
+pieces) and ship <code>Buff</code>/<code>Proc</code>/<code>Chance</code>/<code>ChanceValue</code> NULL but DECLARED:
+<code>1Sword_Base_Prop_5Lgnd_Ringwraith.Proc = ProcDef_TargetExplode_HeadshotKill</code>
+(<code>Predicate = PlayerHit_Sword</code>, <code>TargetBuff = AoEFreeze | PC_CurseAoE_OnHoGKill |
+Buff_5LgndMachine_ExplodeOnDeath</code>). Predicates: <code>PlayerHit_Sword</code>/<code>PlayerHit_Melee</code>
+(unconditioned hit), <code>PlayerKill_AnyKill</code> (2 non-null cells, ZERO attack categories
+— an AoE kill counts). <code>PlayerKill_AllMeleeKills</code> carries FIVE attack categories and
+only matches a MELEE-attributed kill, which a big AoE steals.</p>
+<blockquote>
+<p><strong>TICKDELAY &gt; TIMER = THE AoE CAN NEVER TICK.</strong> Silent, no error. Killed three
+effects before it was found: <code>PLBoG_OnFire_FlameAoE</code> (2.0/1), <code>AOE_MoraleBombSmall</code>
+(2.0/1), <code>RingwraithGear_ResurrectGrunt</code> (3.0/1). Working shapes are <strong>0.0/1</strong> and
+<strong>0.5/1</strong>. <code>MaxAIToHit</code> on the tick caps victims (-1 = uncapped; the resurrect ships
+<strong>1</strong>, which is why it looked "hit or miss"). Radius envelope over all 752 tick
+records: min 0, <strong>median 550, max 1,000,000</strong>; 20,000 is the shipped "whole arena"
+value. <code>Combat/AOE.Alignment</code> decides who is damaged — <code>*_DamageAll</code> includes your
+own followers.</p>
+</blockquote>
+<p><strong>Live GADB instance writes are reverted by a LOADING SCREEN</strong> (the engine
+re-deserialises on load). Control: a written cell polled uncached for 45 s in free
+roam showed zero drift, so nothing restores them continuously. Make apply scripts
+idempotent and re-apply after travel. <strong>Not every load (CORRECTED 2026-10-03):</strong> the
+Mercenary Camp's 15 cells survived two region-change fast travels with 0 re-arms - which
+loads re-deserialise is not yet measured, so keep re-arming on detection, not by schedule.</p>
+<p><strong>The post-data route is INERT for gear-driven AoE — do not re-attempt.</strong>
+<code>_StructuresCombatAttackPostData.AOEOnHit</code> + <code>AOEOnHitChance</code> is what the Machine
+set's 57 vanilla glaive entries use, but writing the same pair into all 463 Talion
+sword attacks (926 cells, 100% verified written) produced nothing.</p>
+<p>Drivers: <code>scripts/urfael_explosive_proc.py</code> (<code>--buff</code> swaps the element),
+<code>urfael_blast_tune.py</code> (radius/angle/tickdelay/timer/maxai/alignment),
+<code>urfael_resurrect_test.py</code>, <code>urfael_resurrect_timing.py</code>, <code>urfael_explosive_hitfx.py</code>.
+UI: <code>framework/sowframework/ui/tabs/sow_melee_effects.hpp</code> —
+<strong>Combat (Player Melee Effects)</strong>, dropdown + Roll per slot.</p><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
