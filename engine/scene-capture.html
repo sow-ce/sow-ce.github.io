@@ -1,0 +1,417 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Scene capture, live pose, world geometry, Mega-Mordor (Unreal), vegetation - Shadow of War engine reference</title><meta name="description" content="scene capture, live pose, world geometry, Mega-Mordor (Unreal), vegetation"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">SoW:CE home</a>
+<h2>Topics</h2>
+<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
+<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
+<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
+<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
+<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
+<a href="army-menu.html" data-p="army-menu">Army menu</a>
+<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
+<a href="audio-video.html" data-p="audio-video">Audio and video</a>
+<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
+<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
+<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
+<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
+<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
+<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
+<a href="factionmember.html" data-p="factionmember">FactionMember</a>
+<a href="forge.html" data-p="forge">Forge</a>
+<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
+<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
+<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
+<a href="identity-graph.html" data-p="identity-graph">Identity</a>
+<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
+<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
+<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
+<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
+<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
+<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
+<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
+<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
+<a href="scene-capture.html" class="cur" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
+<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
+<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="scene-capture-live-pose-world-geometry-mega-mordor-unreal-vegetation">Scene capture, live pose, world geometry, Mega-Mordor (Unreal), vegetation</h1>
+<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Moved verbatim from
+CLAUDE.md on 2026-10-27 (original lines 2158-2223, 2584-2893); heading levels normalised, text unchanged.
+Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
+<p><strong>Sections:</strong>
+- Scene Capture — the live world as a 3D file (BUILT 2026-10-06, read-only, hookless)
+  - Live skeletal pose — every character in its in-game stance (MEASURED 2026-10-06)
+- Weapons, corpses, crows — everything posed in the world (MEASURED 2026-10-06)
+- World geometry — the static world the engine streamed in (MEASURED 2026-10-06, Cirith Ungol)
+- Mega-Mordor COMPACT map + playable Talion (BUILT 2026-10-07, headless-verified, NOT yet seen by the user)
+- SoW VEGETATION - CRACKED + IN THE MAP (2026-10-08, offscreen-verified, NOT yet seen by the user)</p>
+<hr />
+<h2 id="scene-capture-the-live-world-as-a-3d-file-built-2026-10-06-read-only-hookless">Scene Capture — the live world as a 3D file (BUILT 2026-10-06, read-only, hookless)</h2>
+<p><code>aire/capture/</code> (scene / mesh_index / geometry / textures / tint / pose / world / arrays /
+compose / gltf / actions). User opened the textured capture in Blender (screenshot). Nothing is
+written to the game.</p>
+<pre><code class="language-python">call(&quot;scene_index_build&quot;)                      # once, offline ~30 s: every EMBB path table -&gt;
+                                               # (archive, entry, section), 190,407 containers
+call(&quot;scene_capture&quot;)                          # game in world: characters (exact pieces, live
+                                               # pos/rot, LIVE POSE as glTF skins = armatures in
+                                               # Blender, engine tint) + named world objects as
+                                               # markers -&gt; aire/data/capture/scenes/&lt;stamp&gt;_&lt;region&gt;/
+                                               # scene.glb, manifest.json, preview.png, scene.html
+call(&quot;scene_capture&quot;, radius=3000, tint=True, pose=True, weapons=True, off_array=True,
+     tex_size=1024, normal_size=512, spec_size=512, detail_radius=2000)
+call(&quot;scene_captures&quot;)
+</code></pre>
+<ul>
+<li><strong>Characters:</strong> SpawnManager entries (+0x20) + player <code>[[base+0x26FFA98]+0x888]</code>; CChar +0xAC
+  position (= mesh origin), +0xB8 quat (x,y,z,w), <strong>+0xC8 f32 uniform SCALE</strong> (0.88-1.25 on
+  orcs / humans, crows 1.09-1.50; the pose is unscaled model space, the engine draws
+  <code>pos + scale * R * t</code> - proven through the weapons below), <strong>+0xE2 flags, bit 0 = visible</strong>
+  (every spawned character 0x2f / 0xf / 0x3, corpses 0x27, the 255 pooled stand-ins 0x0);
+  names via FS pools (FM+0x48 -&gt; CChar). Captures before 2026-10-06 17:40 drew everyone at 1.0.</li>
+<li><strong>Pieces:</strong> heap census of vt <code>0x1FE19E8</code>: +0x28 material-slot object (vt <code>0x1FFE3E8</code>), +0x70
+  skeleton object (vt <code>0x1F6F950</code>, = CChar+0x110, or <code>[CChar+0x22E0]+0x60</code> for heads), +0x80
+  <code>Model</code> record, +0x90 inline <code>.mesh</code> path. Slot table <code>matobj+0x1E8</code>, stride 0x18, +0 = the
+  <code>.mat</code> resource (resource+0x28 = path), in GADB <code>MaterialSet</code> order. <strong>No count field</strong>
+  (<code>+0x170</code> read 12 on an orc head by coincidence, 0 on 5-slot armour): read a 32-entry window.</li>
+<li><strong>MMSH object table</strong> (inside the descriptor block): N1 16-byte records {flags, objectId, arena
+  (== B[i]), material slot}; an object's consecutive records are its LOD chain, arena -1 = not
+  drawn further, LOD0 = the object's first record. Grouping on -1 instead of object id dropped
+  Talion's face and the armour belts.</li>
+<li><strong>Textures:</strong> <code>tDiffuseMap</code> (hair shader: <code>tBodyDiffuseMap</code> + coverage <code>tHairAlphaMap</code>), BC1/BC3,
+  largest mip &lt;= <code>tex_size</code>. glTF: SoW -&gt; (x, y, -z)/100, winding reversed, quat (-x,-y,z,w).</li>
+</ul>
+<h3 id="live-skeletal-pose-every-character-in-its-in-game-stance-measured-2026-10-06">Live skeletal pose — every character in its in-game stance (MEASURED 2026-10-06)</h3>
+<pre><code>CChar+0xA0 -&gt; transform node (vt 0x1DA9778, 21,276 live: a generic class)
+  +0x10 {f32 t[4], f32 q[4]} x N, MODEL space (root at origin), quat (x,y,z,w)
+  +0x18 u32 bytes (= N*32)   +0x1C u32 N (= the rig's bone count)
+CChar+0xF90 -&gt; a second node of the class, same pose (+-0.08 cm on finger tips)
+</code></pre>
+<ul>
+<li>Bone order = the rig SKEL's NAME-TABLE order (the vertex-palette space). Rig =
+  <code>Model/SimpleModel.Base</code> -&gt; <code>Model.ModelFile</code> (SimpleModel = <code>[[CChar+0x2340]+0xC0]+8</code>;
+  orc_anim_base -&gt; <code>orcs\base\orc_base.skel</code> 100 bones, player 128, Gondorian 95, olog 89).</li>
+<li>Found WITHOUT names by a bone-length oracle (rigid rig: |T_i - T_parent| = bind length in any
+  pose): 292 heap arrays passed at ~1e-7 against 11,645 quaternion runs of the same length that
+  do not; 290 hang at +0x10 of a vt 0x1DA9778 node. Convention: child = parent + R_p inv(Rb_p)
+  (bind offset) holds at 0.000 cm median only with (x,y,z,w) for both live and SKEL bind quats.
+  Live time-diffing was useless: the game PAUSES simulation without window focus.</li>
+<li>Skinning: piece joints = piece SKEL name-table indices (palette[palette_idx]); per piece a glTF
+  skin = rig nodes by NAME + the piece's own inverse binds (23 of 124 pieces bind differently
+  from the rig, 43 carry bones the rig lacks - those ride their nearest rig ancestor rigidly).
+  <strong>Vertex weights are stored BGRA against RGBA indices</strong> - see the MODEL LAYER entry.</li>
+<li><strong>Face:</strong> <code>[[[CChar+0x22E0]+0x60]+0x60]+0xA0</code> = a node of the same class with the HEAD rig's
+  pose (Talion 241 = his head skel, orc 134, Gondorian 136; head-piece name-table order), in a
+  canonical head space (its Head bone reads (0, 72.8, 0.7) on all three), so face bones are
+  re-rooted on the body's live Head: <code>Body[Head] inv(Head[Head]) Head[b]</code>. Oracle 3.6e-4..9.4e-3,
+  not 1e-7, because face bones TRANSLATE. 42/44 characters, 49 head/hair pieces.</li>
+<li><strong>The body pose's root is the character position <code>CChar+0xAC</code>, ~1 m above the feet</strong> (Pelvis
+  y -3..-9 live, +95 in bind). A bind-pose SKEL (origin at the feet) placed at +0xAC floats by
+  that much; skins stand on the ground, unskinnable pieces ride the live Pelvis.</li>
+<li>44/44 posed in the last capture (55/57 the one before: 2 had no node); no cloth.</li>
+</ul>
+<h2 id="weapons-corpses-crows-everything-posed-in-the-world-measured-2026-10-06">Weapons, corpses, crows — everything posed in the world (MEASURED 2026-10-06)</h2>
+<ul>
+<li><strong>Held / sheathed weapons are not pieces.</strong> Objects of vt <code>0x1DAA9D0</code> (a generic class:
+  52,483 live, 311 with a mesh) name their mesh INLINE and carry their own WORLD transform:
+  <code>-0x30</code> f32[3] position, <code>-0x24</code> f32 scale, <code>-0x20</code> quat (x,y,z,w); <code>+0x20</code> the wielder
+  (CCharacter), <code>+0x60</code> material slots (vt <code>0x1FFE3E8</code>, same as a piece's +0x28), <code>+0xB0</code> the
+  <code>.mesh</code> path. 216 of 311 name a spawned wielder; the transform sits on the wielder's live
+  attach bone (L_Sheath_1, Sheath_Def01/02, Sheath_Bow, R_Weapon, Shield_L, L_Weapon) at
+  0.1-4.8 cm and 0.0-0.9 degrees, and its scale equals the wielder's CChar+0xC8 exactly - the
+  scale that also fits the bones (<code>pos - P = s R t</code>, best fit within 0.002). Render check:
+  spear upright in the Defender's hand with the shield on his arm, torches in the Sappers'
+  hands, Talion's sword in hand and dagger at the hip. The <code>Weapon_Invisible</code> pieces
+  (1x1square.mesh, owners vt <code>0x1DBFFA0</code> / <code>0x1DBD850</code>) are unrelated proxies.</li>
+<li><strong>Every skeleton object's owner shares the character's base layout</strong> (skel+0x60 = owner):
+  +0xA0 pose node, +0xAC / +0xB8 / +0xC8 transform and scale, +0xE2 visible bit; the node's bone
+  order is the skeleton object's own base .skel (<code>skel+0x10</code> resource, +0x28 path) - oracle
+  1e-7 on crows (<code>crow.skel</code> 28), rats (19), corpses, alarm bells. So the rig needs no GADB
+  chain off a CCharacter (<code>PoseReader.read(owner, rig_path=...)</code>).</li>
+<li><strong>Corpses leave the spawn array</strong> (measured in the Clone Army work, 2026-10-01) but keep their CCharacter, skeleton and pose:
+  23 dead (combat+0x4A0 set, flags 0x27) within 80 m in one Minas Ithil sample. <code>off_array</code>
+  adds them and the other visible owners: crows (vt <code>0x1DBBD30</code>), rats (<code>0x1FA4600</code>), signal
+  alarms / doors (<code>0x1FADFC0</code>), thrown spears (<code>0x1DAA4B0</code>), orcs of vt <code>0x1FA2A38</code> (flags
+  0x21, captain-sized; class unidentified), bats, raptors, keep doors. Skipped: hidden owners
+  (pooled stand-ins vt <code>0x1FABD08</code>), the 1x1square proxies, skeletons a captured character
+  claims, HEAD owners (<code>[[CChar+0x22E0]+0x60]+0x60</code>, vt <code>0x1DB7018</code> - a head skeleton's owner is
+  never the character; taking them put Talion's head beside him), and owners sitting exactly
+  on a character's origin (render doubles: the Dark Talion wraith double vt <code>0x1DBD198</code>). A rig of &lt;= 4 bones with no bone longer than 2 cm
+  (landmine 1, spear 3) cannot be oracle-tested; the bone COUNT agreeing is the evidence.</li>
+</ul>
+<h2 id="world-geometry-the-static-world-the-engine-streamed-in-measured-2026-10-06-cirit">World geometry — the static world the engine streamed in (MEASURED 2026-10-06, Cirith Ungol)</h2>
+<p><code>aire/capture/world.py</code> + <code>aire/formats/{prfb,wdsc,wldmsh,texa}.py</code> + <code>aire/capture/arrays.py</code>.
+<code>call("scene_capture", world=True, world_radius=15000, array_size=2048, array_draw_size=2048)</code>
+adds a "World geometry" node. Headless Blender render: cliffs with the rust layers, the ruined
+watchtower with its stone courses and arches, duckboards over the mud river.</p>
+<ul>
+<li><strong>What is loaded</strong> = every resident <code>.wldclnt</code> in the live resource table (<code>[base+0x2A86758]</code>,
+  0x800 buckets x 0x18; res +0x28 name; skip <code>prefabs\ui\</code> = the army-menu world). 12-13 parts.</li>
+<li><strong>WDSC v9 (<code>.wldclnt</code>) = a part's placements:</strong> header [4] instances, [6] has-wldmsh, [7]
+  materials, [10] string bytes, strings at 0x2C; a material block {nmat, 0, offsets[1+nmat]} only
+  when [6] or [7]; then 76-byte UNALIGNED records {bmin, bmax, pos, quat (x,y,z,w), scale, flags,
+  kind, hash, f32 cull, u32 prefab path offset (from 0x2C)}. Same world space as CChar+0xAC.
+  ~9,880 placements of 334 prefabs; 828 within 150 m.</li>
+<li><strong>PRFB v8 (<code>.inst</code>) = a prefab's baked geometry</strong> (static world is NOT <code>.mesh</code>; prefab <code>.mesh</code>
+  files are the destructible / animated pieces). Size triple {draws, vb bytes, ib bytes} before
+  the vb; per draw ONE vertex block ENDING at vend, stride-aligned, stream 0 then stream 1; u16
+  indices idx_min..idx_max rebased by idx_min; tail = format table {stream, type, usage, index}
+  (types 2 float3, 12 half4, 10 half2, 4 ubyte4; usages 0 pos 1 normal 2 tangent 3 binormal
+  4 uv 5 colour), 52-byte draw records {0, n, n, istart, base, tris, material, 0, 0, fmt, vend,
+  f, f}, then the material paths. Positions prefab-local, pivot at the base centre.</li>
+<li><strong>LOD records</strong> from 0x38, 44 bytes, -1.0 at +28, grouped by a per-group TAG (0xD238B9DD keep
+  wall, 0xD238B9DE human buildings, 0x3249 lanterns, 0x159a the extra leading group of fort
+  pieces): root {tag, -1, 0, 0, next = first unit, CULL distance}, unit {tag, hash, first draw,
+  count (0 = draws nothing at that range), next (-1 finest), switch distance, f, -1.0, 0, 0,
+  distinct}. Engine rule per instance: walk coarse -&gt; fine, take the first unit with next -1 or
+  distance &gt;= its switch distance (keep wall 320/150/80 m). Matching 0xD238B9DD alone chained
+  251 of 433 resident prefabs and drew every other prefab's LODs superimposed; by tag: 431/433.
+  Header [7] is NOT the unit count (88 disagree). Units can list a draw twice (identical records)
+  or a PREFIX of another draw (orc tent: 646 of 1,177 tris) - <code>unique_draws</code> drops covered ones.</li>
+<li><strong>MESH v5 (<code>.wldmsh</code>)</strong> = a part's own world-space mesh, the PRFB tables with the vb at 0x2C
+  (header [3] draws, [4] formats, [9] vb bytes, [10] ib bytes); materials index the part's WDSC.
+  Draws wider than 20 km are sky domes / vista cards (night01 504 km, mt_v01 960 km): skipped.</li>
+<li><strong>TEXTURE ARRAYS carry ~90% of the world's triangles</strong> (36 of ~126 materials; terrain shells,
+  cliffs, ruins, orc furnishings). TEXA v1: header + own path + slice source paths, then a DX10
+  DDS (arraySize = slices, slice-major full mip chains, the tier below the header's; slack 0 on
+  every array read). Six shader trees, one algorithm (pass-0 PS disassembled): w = (MASK + bias)</li>
+<li>tHeightMap(uv0 * k_fMapTileRate); top two channels -&gt; k_vSliceIndices; t = saturate((w1 -
+  w2) / k_fBlendSmoothness); albedo = lerp((A+B)/2, B, t) [* vertex colour]. MASK = tMaskMap(uv0)
+  on <code>spec_*_tmask</code>, tMaskMap(uv1) on <code>spec2uv_*</code>, the vertex colour on <code>*_vmask</code> (which then
+  does not multiply). Parameters by NAME (cbuffer order differs between trees).
+  Bakes: uv0 masks per MATERIAL over [0,1] (tile rates are integers); uv1 / vertex masks per
+  DRAW on a generated atlas of uv0 islands (&lt;= 512 texels per uv0 unit, power-of-two square
+  sized to the draw). Baking in uv1 itself fails: 15-20% of a building's triangles have zero uv1
+  area and 42% of texels were claimed twice (atlas: 0.09%). A draw no atlas holds (100 m zipline
+  rope = one uv0 strip) gets its dominant layer, tiling. Normal / spec arrays not baked.</li>
+<li><strong>Measured capture (Cirith Ungol, radius 150 m):</strong> 13 resident parts, 828 placements, 826
+  instances drawn at their engine LOD = 1.08M triangles from 408K unique (1.62M before the tag /
+  empty-unit / contained-draw fixes); 49 array materials (11 per-material, 37 per-draw atlases,
+  1 dominant layer); all 173 world primitives / 100 materials textured; 75 MB GLB,
+  ~280 s with warm caches (<code>aire/data/capture/world_cache</code>, <code>tex_cache/arrays</code>). The ground
+  below the walkways is open chasm: the region's floor is a 960 km vista card 324 m down.</li>
+<li>Not covered: vegetation (<code>.veggrid</code>), decals, water, the lighting layers, destructible /
+  animated prefab <code>.mesh</code> pieces (live objects, still markers), array normal / spec maps.</li>
+<li><strong>TERRAIN HEIGHTFIELD - CRACKED + MESHED 2026-10-07 (offline; <code>aire/formats/terr.py</code>,
+  <code>aire/capture/terrain.py</code>, <code>call("megaworld_terrain")</code> -&gt; <code>&lt;region&gt;_terrain.glb</code>).</strong> Every
+  region's MAIN part ships a <code>TERR</code> v9 (<code>&lt;region&gt;.terrain</code>; layer parts carry empty 12-byte ones;
+  Barad-dur has none). Read exactly as the engine's only reader <code>sub_7AC0F4</code> does: per terrain
+  u32[2] root grid (4x4 / 8x8), pos f32[3], quat, extent f32[2], height range, f32 f3c (400;
+  desert 500, Black Gate 1000), 4 u32, f32, 4 u32 (NODE COUNT third), u16-length material +
+  global texture (32x32 flag map, one cell per depth-3 node, meaning open), u32, then NODE COUNT x
+  {u32 flags; if !(flags &amp; 0x20): f32 min, f32 max, u32 tile}, then TILE COUNT x {3 u16-length
+  texture paths, u32}. Ends exactly at EOF in every region.</li>
+<li><strong>Nodes are grid x grid quadtrees in PRE-ORDER</strong>: flags bits 0-3 = children present, 0x40
+    root, 0x20 no data. min/max are NORMALIZED (tile L16 / 65535 equals them, 99.8%+ of tiles).</li>
+<li><strong>Every ROOT names tile 0 = the region OVERVIEW</strong> (heights grid x 64 + 4, maps grid x 128 + 4):
+    a root reads its own block. Deeper nodes: own 68 x 68 L16 tile, two 132 x 132 BGRA maps.
+    Sample grid border 1 (sample i at 1 + i), maps border 2; child bit b -&gt; quadrant
+    (b &amp; 1, b &gt;&gt; 1); parent/child samples agree exactly (97.9% bit-exact, worst 0.17%).</li>
+<li><strong>World placement, measured by the placements standing on it</strong> (128 mappings per region):
+    <code>U = (x - pos.x)/size + 0.5</code>, <code>V = (z - pos.z)/size + 0.5</code> (pos = CENTRE),
+    <code>y = pos.y + h * range</code>, root r at (r % grid, r // grid), tile column = U, row = V. Share in the
+    best 1 m window: Cirith Ungol 27% @ -1.6 cm, Seregost 37% @ -0.1, Lithlad 30% @ -0.9,
+    Gorgoroth 33%, Nurnen 50%, Minas Ithil 42%, Black Gate 28% (rivals 3-14%).</li>
+<li><strong>Tile NAMES lie by a folder</strong>: TERR asks <code>worlds\retail\volcano\volcano.hm_00_1ter.tex</code>, the
+    entry is <code>...\volcano\sectionsandlayers\volcano.hm_00_1ter.tex</code> (mtnpass the reverse: a
+    folder DROPPED). <code>mesh_index.loose()</code> rule <code>variant_inserted</code> takes a unique basename whose
+    folders are a superset. Gorgoroth 563/564 and Nurnen 815/846 tiles resolve only so.</li>
+<li><strong>Material = <code>disp_terrain.fxo</code>, PS + DS disassembled</strong>: map 1 = 4 texture-ARRAY SLICE
+    INDICES (BGRA bytes), map 2 = their weights (sum 255). The PS accumulates weight x bilinear
+    factor of the 4 neighbouring texels into a 24-slot per-slice table, keeps the 4 heaviest
+    (renormalised), samples diffuse / normal (X in G, Y in A) / spec / detail-height (G) arrays at
+    world (x, z) / tile (DS <code>o1.xy = world.xz / cb0[30].w</code>), height-blends
+    <code>b = saturate((w(h+0.01) - max(max_j m_j - s, 0)) / s)</code>, s = k_fBlendSmoothness, x vertex
+    colour. <strong>Index 255 = outside the 24-slot table = no layer</strong>: it traces the outside of the
+    play area and interior pockets (fort, caves) - 91% of placements stand on valid cells - so the
+    mesh drops those cells as HOLES. LEADS: tile repeat = f3c; the PS also discards on an
+    unidentified t0; vertex colour white; desert macro tint not applied.</li>
+<li>Output: one node per root cell, native density (drawn ground is all depth 3 = 0.63 m cells,
+    coarse quadrants are all hole), T-junction edges snapped to the coarser neighbour (85,516
+    shared vertices, 0.000 cm disagreement), normals from the padded field, per-root albedo bake
+    (2048^2, 14 s/root, cached in <code>aire/data/capture/terrain_cache</code>). Cirith Ungol: 2.35M tris,
+    85 MB, 199 s; imported into UE level <code>Regions/mtnpass_terrain</code>, mapping 0.005 cm.</li>
+</ul>
+<h2 id="mega-mordor-compact-map-playable-talion-built-2026-10-07-headless-verified-not-y">Mega-Mordor COMPACT map + playable Talion (BUILT 2026-10-07, headless-verified, NOT yet seen by the user)</h2>
+<p>User asked for "it all very close, not spread apart, one full single region traversable", a C++
+project and Talion with his move set. Unreal project <code>&lt;local path&gt;</code> (UE 5.8, C++ module
+<code>MegaMordor</code>, built with <code>Build.bat MegaMordorEditor Win64 Development</code> - allowed for THIS project).</p>
+<ul>
+<li><strong>Compact layout</strong> (<code>aire/capture/megaworld_compact.py</code>, <code>build_compact</code>): footprints at 0.18 x the
+  geo layout, slid apart along the axis of least overlap until every pair is 150 m apart
+  (4.75 x 2.3 km, bearings kept, median change 3 deg); each region's ground levelled to 0.
+  Built from the SPREAD GLBs without re-decoding: <code>retarget_glb</code> moves the root node and cuts what
+  lies outside footprint + 55 m or in a neighbour's half (prefab instances by pivot, world meshes
+  and terrain by triangle centroid, 1-2 s per GLB). Backdrops rebuilt, kept only outside the
+  cluster's convex hull + 250 m (Mount Doom's peak, 839 m, survives 1.6 km north). Barad-dur is a
+  STRUCTURE: its placements are the arena on TOP of the tower and the tower body down to -529 m,
+  so its ground = the tower foot (stands ~600 m tall) and the connector land runs on under it.</li>
+<li><strong>Region edges are not walkable rims</strong> (MEASURED on rings outside every footprint): surface
+  heights 10 m out span -196..+294 m around the region's ground; only 24-86% fall in
+  [-40, +80] m. The connector seeds on terrain / world mesh, else the LOWEST surface, clamped to
+  [-40, +80] m - cliffs and chasms stay the regions' own.</li>
+<li><strong>UE</strong>: <code>/Game/MegaMordorCompact/...</code>, map <code>/Game/MegaMordorCompact/Maps/MegaMordorCompact</code>
+  (EditorStartupMap + GameDefaultMap), <code>Scripts/import_compact.sh</code> (terrain levels reuse the spread
+  map's real-time material instances: mode "assign"). The spread map stays as built.</li>
+<li><strong>ANIX tracks are LOCAL transforms</strong> (<code>aire/formats/anix_sample.py</code>): a <code>rotation</code> track is the
+  bone's rotation relative to its parent, (w, x, y, z); a <code>pos</code> track its translation in the
+  parent's frame (SoW cm). The player rig's <code>bind</code> clip equals the SKEL's local binds 77/77 +
+  77/77. Frame times are LITH milliseconds (30 fps); AQ03/AV01 keys sit at base + cumsum(segment
+  table) and may skip frames. Root motion travels on <code>Null</code> (PL_Jog 6.77 m per 1.47 s).</li>
+<li><strong>The player's locomotion ships only inside bundles</strong> (<code>mesh_index</code> now indexes <code>.anix</code>,
+  VERSION 9): <code>characters\animationcharacters\player\pl_movement\</code> (pl_movbase idle/walk,
+  pl_movaction jog/hustle/sprint/wall-run/scramble, pl_ledge climbs/mantles, pl_jumpmovment ...).
+  The loose <code>pl_movbase.anix</code> entry holds the TURN set - a name is not an address.</li>
+<li><strong>Talion asset</strong> (<code>aire/capture/character_export.py</code>): pieces from a scene capture's manifest,
+  every vertex rebound from its piece's bind to the rig's (one reference pose), piece-only bones as
+  joints under their rig ancestor (363 joints), weapons as static meshes with the joint they ride
+  in the live pose (dagger on <code>Dagger_Sheath</code> at 0.08 cm). 57 clips. Interchange imports one
+  SkeletalMesh PER PIECE sharing ONE skeleton (root <code>Null</code>; the mesh faces -Y, root at the pelvis,
+  boots 106.4 cm below).</li>
+<li><strong>C++ Talion</strong> (<code>Source/MegaMordor/</code>): <code>ATalionCharacter</code> owns ground / air / action / climb;
+  <code>UTalionAnimInstance</code> has no graph - its proxy's <code>Evaluate</code> samples and blends the clips the
+  character hands it (<code>GetAnimationPose</code> + <code>BlendTwoPosesTogetherInPlace</code>); actions move the
+  capsule by the clip's root motion read with <code>UAnimSequence::GetBoneTransform</code> (vertical
+  unswept, horizontal swept). Mantle by measured ledge height (Mantle50/100/200/300, vertical
+  scaled), free climb on any wall (E / Space at a wall), wall run (Shift + Space), pull-up at the
+  top, 6-hit combo, heavy, kick, roll, shadow dash. Enhanced Input built in code (no assets).
+  <code>TalionData.h</code> is GENERATED from the export. <code>-game -nullrhi -TalionSmokeTest</code> scripts input and
+  logs state (MEASURED: idle / run 639 / sprint 882 cm/s, combo queued, jump, heavy, grab a wall
+  mid-fall); <code>-TalionSmokeClimb=x,y,z,yaw</code> climbs a wall. Commandlet traces read false zeros,
+  -game runs do not.</li>
+<li><strong>Combat sandbox + caragors (BUILT 2026-10-07, headless + offscreen verified, NOT yet user-seen).</strong>
+  Uruks from the shipped wardrobe (<code>AOrcCharacter</code>), paired syncs from the game's own clips
+  (<code>SyncData.h</code>, generated by <code>Scripts/export_sandbox_chars.py</code> + <code>gen_combat_headers.py</code>: <strong>the victim
+  starts on the attacker's <code>attach</code> bone at frame 0</strong>), nemesis captains (<code>AOrcDirector</code>), sandbox F2-F12.
+  <code>ACaragorCharacter</code> derives from the orc: its clips are exported under the ORC's names so the orc
+  state machine drives it; team <code>Wild</code> (<code>AreFoes</code>) hunts orcs and Talion. <strong>Riding, MEASURED: the
+  ride clips are authored in SADDLE space</strong> - rider root = warg bone <code>Saddle</code> (quick mount 0.5 cm);
+  <code>PL_Warg_Sync_JumpMount_*</code> under the attach rule lands Talion's root on the Saddle at <strong>0.0 cm</strong> in all
+  four directions. AIRE export root mode <code>origin</code>: the warg's loops carry Null 90 cm ahead of the bind,
+  which a root-motion action snaps back to. Laws found on the way: an import report's <code>bounds</code> are the
+  FIRST piece's (a helmet put every orc 52 cm into the ground - measure per mesh, <code>measure_characters.py</code>);
+  the 386 MB / 4,646-joint wardrobe froze the first spawn ~31 s (now preloaded async by the director).
+  Tests: <code>-CombatSmokeTest</code>, <code>-RideSmokeTest</code>, <code>-CombatShots</code>/<code>-RideShots</code> (offscreen screenshots).
+  <strong>Graugs</strong> (<code>AGraugCharacter</code>, beasts data-driven via <code>BeastData.h</code> + generated <code>TrollData.h</code>): the game's
+  four breeds on troll_base.skel (own <code>Saddle</code> bone), <code>PL_TR_Sync_JumpMount_*</code> lands the root on the Saddle at
+  0.1 cm; grab-and-eat = <code>Troll_Grab_Eat</code> + <code>ETR_GrabAttack_Eat</code> (orc carried on <code>R_Hand</code>). Orcs target the
+  ridden beast (Talion is 6 m up). <code>-GraugSmokeTest</code> / <code>-GraugShots</code>.</li>
+<li><strong>World map + Pelican (BUILT 2026-10-07, headless + offscreen-screenshot verified, NOT yet seen by the user).</strong>
+  <code>call("megaworld_map")</code> (<code>aire/capture/megaworld_map.py</code>, ~3 min) rasterises every compact GLB top-down
+  (highest surface wins, coloured from its own textures at the point's UV, hillshaded) -&gt; <code>map/map.png</code>
+  (2048 x 1735, 2.66 m/px, Mount Doom included), <code>map_labeled.png</code>, <code>map.json</code> (UE rect, region boxes, a flat
+  travel spot per region; Barad-dur's = the tower top). UE: <code>Scripts/import_extras.py</code> (texture + Pelican),
+  <code>Scripts/gen_data_header.py</code> -&gt; <code>Source/MegaMordor/MegaMordorData.h</code> (GENERATED). <code>AMegaMordorHUD</code>: minimap,
+  full map (M; click = travel, 1-8 = region), entering banner, coordinates, controls panel (F1);
+  <code>DisableAllScreenMessages</code> hides the engine's VSM / Lumen budget warnings that printed over it.
+  <code>APelicanVehicle</code> (H): the Halo CE Pelican (<code>Scripts/make_pelican_glb.py</code>, nose +X MEASURED from the imported
+  bounds), kinematic swept box, cruise 32 m/s, boost 110 m/s, G ghost, B roof / troop bay, Talion attached on
+  the roof (ray-measured roof 725 cm over the bay at x 600). <code>AMegaMordorPlayerController</code> owns the possession
+  swap; Talion's input mapping is now made ONCE (re-possession re-binds only). <code>-MegaSmokeTest</code> (nullrhi) and
+  <code>-MegaShots</code> (<code>-RenderOffscreen</code>, screenshots to Saved/Screenshots/mega_*.png) verify it.
+  Traps: a rider dropped INSIDE the hull box is pushed out by it and pushes it down (exit = behind the tail);
+  Talion's own capsule made the summon dodge 44 m up (capsule off before the spawn).
+  LEAD on misplaced props: the Overlord dressing layers (<code>ol_*</code>, <code>ol_share01</code>) place <code>fillerbuildingNNw</code> on the
+  main part's <code>fillerbuildingNN</code> at the same spot (Cirith Ungol 50, Nurnen 17, Seregost 15) - which one the
+  engine shows is not known offline.</li>
+<li><strong>HQ world + ground closure (BUILT 2026-10-08, offscreen-render verified, NOT yet seen by the user).</strong> User:
+  low quality, regions "not connected". Causes MEASURED: ~90% of world triangles use texture-array shaders that
+  <code>arrays.py</code> BAKED (&lt;= 512 texels / uv0 unit, no normal / spec); footprints 23-32% uncovered (Nurnen, Black
+  Gate, Cirith Ungol) = sky through the ground; the "floating shards" are authored BACK-SKIRTS of embedded rock
+  prefabs (rockwallcurveda5: 253 stretched triangles 14-29 m below the base pivot, 16-43 m behind the wall) that
+  the game's terrain buries; the floating sky mountain = Minas Ithil's 4.8 km vista wall; the red Mount Doom base
+  = the old bake (its vertex colours are white).</li>
+<li><code>aire/capture/array_live.py</code>: arrays stay LIVE (widest tier, <code>.texa</code> / <code>.texa0</code> / <code>.texauhd</code>), slices +
+    mask/height written once, <code>materials_&lt;region&gt;.json</code>; glTF placeholders <code>ARR_&lt;leaf&gt;_&lt;hash&gt;</code> keep uv0 / uv1 /
+    COLOR_0. UE <code>Scripts/world_array_material.py</code>: master <code>M_WorldArray</code> (the pass-0 blend in HLSL, normal + spec
+    picked the same way), the imported ARR_* MICs re-parented (34/34 Black Gate, 380/380 Minas Ithil).</li>
+<li><strong>UE stores glTF COLOR_0 sRGB-ENCODED</strong> (<code>StaticMeshBuilder.cpp</code> <code>ToFColor(true)</code>; <code>LocalVertexFactory.ush</code>
+    fetches UNORM, no decode): a material reading a vertex-colour MASK / weight must decode it.</li>
+<li><code>aire/capture/megaworld_ground.py</code> <code>build_ground</code>: ground under EVERY uncovered cell - known = terrain/world
+    mesh top, EMBEDDED prefab pivots (geometry &gt; 1 m below the pivot: buries the skirts), deep holes (rim lowest
+    40 m below the region's ground) at their floor (Cirith Ungol: its <code>mt_v01</code> card, world y 0, which the sky rule
+    drops); one harmonic membrane for the rest; Nurnen's sea at the docks' pivots (51, median -1.8 m) - 0.5 m,
+    flooded 1.5 km out, never into another footprint; six biome weights (each region's dominant terrain layer)
+    in COLOR_0 + UV1, 70 m falloff (350 m averaged every layer into one brown). <code>settle_backdrops</code> drops vistas
+    &gt; 2 km tall and puts the rest on the ground (Osgiliath / Minas Tirith had been ~1 km under it).</li>
+<li>Pipeline: <code>scripts/megaworld_hq_build.py</code> -&gt; <code>scripts/megaworld_hq_compact.py</code> -&gt; <code>megaworld_compact_hq/</code> -&gt;
+    UE <code>Scripts/import_compact_hq.sh</code> (content <code>/Game/MegaMordorCompact/hq/</code>, <code>ground_water_material.py</code>:
+    <code>M_GroundBiome</code> + Single Layer Water <code>M_SoWWater</code> with a Phillips-spectrum normal from
+    <code>make_water_normal.py</code>; <code>assemble_world.py</code> job <code>drop_levels</code> / <code>extra_levels</code>; the connector level is
+    removed from streaming, kept on disk). <code>Config/DefaultEngine.ini</code> <code>[SystemSettings]</code> streaming pool 8000 MB.</li>
+<li>Instrument: game <code>-ViewShots=&lt;file&gt; -ViewRes=WxH -ViewTrace=N -ViewHide=a,b</code> (<code>MegaMordorViewShots.cpp</code>,
+    offscreen): one camera per line <code>name x y z pitch yaw</code>, HighResShot, and per view a ray grid saying which
+    actor in which level each pixel shows - how the shards, the sky mountain and the red were attributed.</li>
+<li>The <code>.tex0</code> / <code>.texuhd</code> of <code>materials\seaofnurnen\choppy_waves_b_v02</code> decode as <code>dxgi 0</code> (header variant
+    not handled) - LEAD.</li>
+<li>Second round, each attributed by the ray-trace grid: (1) Cirith Ungol's <code>exttopshell*</code> / <code>extbaseshell*</code>,
+    Minas Ithil's <code>peri*</code>, Gorgoroth's lava ribbons are kept by pivot but reach 150-1,800 m outside the core
+    -&gt; <code>retarget_glb(trim_partial=True)</code> trims any own-mesh node whose bounds leave the kept area; (2) the
+    trimmed shell TOPS still floated 162-389 m over nothing -&gt; <code>drop_floaters</code> (vista families only: by
+    height alone Minas Ithil's KEEP read as floating, it stands on prefab cliffs); (3) <code>drop_skirts</code>: stretched
+    triangles (&gt; 8x median edge, thin, &gt; 3 m) centroid &gt; 1 m BELOW the pivot - Black Gate 311, Minas Ithil
+    5,747, Gorgoroth 3,528, planks untouched; (4) 192 DECAL primitives (<code>*decal*</code>, <code>*_multiply</code>, <code>dcl_*</code>,
+    <code>*drip*</code>, <code>*puddle*</code>) drew their channel masks as opaque red/white cards -&gt; UE <code>fix_materials.py</code>
+    re-parents them onto <code>M_Invisible</code> (real deferred decals: not built); (5) Lithlad mesa tops use
+    <code>spec_2layer_terrain_decal_tint</code> (world-UV terrain arrays, not handled) -&gt; the grey fallback is tinted with
+    the region's dominant terrain colour; (6) ridged relief is +-55 m: its pits sat below sea level all around
+    -&gt; hills only; deep floors no longer SEED the membrane (they sank the whole map into one sea) but dip the
+    land near their own opening (sea 200 m, chasm 60 m), faded within 80-280 m of any other region; (7) thin
+    sky cracks where ground meets terrain -&gt; a 4 m skirt under every open ground edge; (8) cracks INSIDE a
+    region's terrain (between terrain cells) showed sky -&gt; a BACKING drawn 1.5 m under the terrain's lowest
+    point in every terrain cell (112,071 cells; world-mesh cells left out: a plate there sticks out of cliffs).</li>
+<li>UE laws from the water: Nanite does NOT support the Single Layer Water shading model (the import turns
+    Nanite on for every mesh; <code>ground_water_material.py</code> turns it off for water meshes); and
+    <code>delete_all_material_expressions</code> leaves the SLW output node behind, so rebuilding a water material in
+    place makes two and it stops compiling - masters are built once (<code>M_SoWWater_v2</code>; v1 is the broken copy).</li>
+<li>NOT fixed: Black Gate's gorge still shows pieces of the walls' BURIED halves (ordinary 0.5-1.5 m
+    triangles 10-23 m below the pivot; its compact footprint cut away the terrain that buries them). A
+    "rock family, &gt; 6 m below pivot" cut was measured and rejected: 10-36% of all rock geometry, canyon
+    faces included.</li>
+<li>Third round (2026-10-08, offscreen-verified, NOT yet seen by the user): the sea is chosen BEFORE the ground
+    is drawn (step 3b). Its box clip had left 1,251 water-edge cells hanging over ground a median 48 m below
+    the water (Gorgoroth's chasm margin + the floor dip) and thin strips down the 60 m bands between
+    footprints -&gt; channels &lt; ~60 m are not sea (binary opening), the limits are box distances jittered by
+    noise (organic shore), and every non-terrain cell near the water becomes a BANK (+0.05 m/m for 150 m,
+    then falling 0.35 m/m to the old ground): 51 exposed cells left, all real terrain shoreline.
+    <code>drop_floating_pieces</code>: connected pieces (position-welded) of LANDSCAPE backdrop nodes whose every vertex
+    stands &gt; 60 m above the ground - Lithlad's <code>vista03</code> peak fragments 480-715 m up were the dark rock
+    floating over the sea in the user's Gorgoroth screenshot (ray-picked offline from the view's pixel).
+    Architecture is excluded by name: Minas Tirith's upper tiers share no vertices with the tiers they
+    stand on and read as "floating" by this test.</li>
+</ul>
+<h2 id="sow-vegetation-cracked-in-the-map-2026-10-08-offscreen-verified-not-yet-seen-by-">SoW VEGETATION - CRACKED + IN THE MAP (2026-10-08, offscreen-verified, NOT yet seen by the user)</h2>
+<p>The static-world builder never saw plants: they live in their own VEGT tiles. <code>aire/formats/vegt.py</code>,
+<code>aire/capture/vegetation.py</code>, <code>scripts/megaworld_vegetation.py</code> -&gt; <code>megaworld_compact_hq/vegetation/</code>.</p>
+<ul>
+<li><strong>Reader <code>sub_503A0C</code></strong> (the only use of the 'VEGT' constant; tail-called from <code>vt_0x22C01E8::vf3</code>):
+  <code>'VEGT' | u32 ver (1..3) | f32[3] CENTRE | f32[3] HALF | u32 species</code> then per species <code>u16 len | name |
+  u32 n | n x 16 B</code>; ends exactly at EOF. <code>sub_76BB10</code>: min = c - h, max = c + h, step = max(h) * 2 / 65535.
+  Instance: u16 qx qy qz, position = <strong>(c - h) + q * step</strong> (MEASURED on 117,561 Nurnen instances against the
+  ground: median |dy| 0.29 m, 91% within 2 m; the centre origin reads 8.8 m), u8 scale (s = b / 127.5),
+  u8 (v3), u32 rotation, u8 x3 bounding-sphere offset, u8 flags (bit 0 hidden).</li>
+<li><strong>Rotation from the GPU</strong> (<code>shaders\shadertrees\compute\vegetation_sort_nomotion.fxo</code>, cs_5_0): bytes
+  b0..b3 -&gt; cos yaw = 2 b0/255 - 1, sin yaw = 2 b1/255 - 1, a2 = b2 2pi/255 - pi, a1 = b3 2pi/255 - pi;
+  world = s Rz(a2) Ry(yaw) Rx(a1) local + position (SoW axes, Y up).</li>
+<li>Tiles: <code>worlds\retail\&lt;region&gt;_&lt;n&gt;v.vegtile</code> (Nurnen, Lithlad, Cirith Ungol, Minas Ithil) but INSIDE the
+  region folder for Gorgoroth / Seregost (<code>worlds\retail\volcano\volcano_&lt;n&gt;v</code>); layer tiles
+  (<code>sectionsandlayers\treesbeech_*</code>...) - base-state layers kept, story / fort / flair / pre-fall skipped.</li>
+<li>Species = <code>Vegetation/Type</code> (ModelRecord -&gt; <code>Model.ModelFile</code> .skel, the .mesh shares the stem) or a
+  <code>Model</code> of the same name (VoRainRcks); <strong><code>_StructuresMaterialSet.SolidMaterial</code> is the per-SLOT array</strong>
+  (BeechAdult: bark, top, billboard side, billboard top, bark displacement). Far IMPOSTERS (<code>*bboard*</code>,
+  <code>*bb.mat</code>, <code>*_vbb</code>, <code>*sidecards</code> / <code>*topcards</code>) are their own part-table objects and are dropped (drawn up
+  close they are cards through the tree). WillowAlive / bedStraw02 ship no mesh.</li>
+<li>Census: 108 species / 1,291,234 instances; kept after the compact cut <strong>1,287,218</strong> (Nurnen 395K, Lithlad
+  349K, Cirith Ungol 252K, Seregost 128K, Gorgoroth 85K, Minas Ithil 78K, Black Gate 722). Grass tufts are
+  25-48 triangles.</li>
+<li>UE: <code>Scripts/import_vegetation.py</code> (species.glb -&gt; 114 static meshes, Nanite off; data files into
+  <code>Content/MegaMordorData/Vegetation/</code>; level <code>.../Regions/vegetation</code> streamed by the compact map) + C++
+  <code>AVegetationField</code> (one per region: reads <code>&lt;region&gt;.json/.bin</code>, one HISM per species, cull by size: grass
+  60-90 m, shrubs 200 m, rocks / ivy 500 m, trees 2.5 km; collision for the &gt;= 500 m ones; transient, built at
+  OnConstruction / BeginPlay - all 7 fields in 0.3 s). <code>Scripts/vegetation_material.py</code>: masters
+  <code>M_VegFoliage</code> (masked, two-sided foliage) / <code>M_VegOpaque</code>.</li>
+<li><strong>UE law: an instanced mesh needs a master flagged "Used with Instanced Static Meshes".</strong> The Interchange
+  glTF masters (<code>/InterchangeAssets/gltf/...</code>) are not; the editor adds a usage on demand, a <code>-game</code> run cannot,
+  and every species drew as flat grey unmasked cards (the default material). Plugin content is not ours to
+  edit - our own masters carry the flag.</li>
+<li><strong>Save Interchange imports at once</strong>: a later failure in the same script left the meshes on disk and their
+  materials / textures only in memory (gone in the next process).</li>
+</ul><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
