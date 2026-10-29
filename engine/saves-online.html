@@ -33,17 +33,15 @@
 file-name prefix is the Steam account number in hexadecimal.</p>
 <pre><code>header  'SOM3' | u32 salt | u32 padded length (= file size - 16, a multiple of 16) | u32 real length
 body    AES-256-CBC, PKCS#7 padding
-key     a 32-byte constant (RVA 0x1E6CB08) with the salt's bytes 0-3 written to key positions
-        26, 11, 18, 17 and the account number's bytes 0-3 to positions 10, 30, 22, 2
-        (SOM2 files skip the account step)
-iv      the first 16 bytes of a constant at RVA 0x1E6CAF0
+key     256 bits, derived per file from a constant built into the executable, the header's salt
+        and the owning account's number (SOM2 files leave the account out)
+iv      a constant built into the executable
 </code></pre>
 <p>The reader 0x119A2C8 accepts <code>SOM2</code> and <code>SOM3</code> (<code>sub eax,'SOM2'; test eax,0xFEFFFFFF</code>); the writer is
-0x52B4BC, entered from 0x52B1CC. Both use OpenSSL's EVP layer linked into the executable
-(<code>EVP_CIPHER_CTX_new</code> 0x8C5350, <code>EVP_aes_256_cbc</code> 0x8C7D10, <code>EVP_DecryptInit_ex</code> 0x8C59C0,
-<code>set_padding</code> 0x8C5460, <code>EVP_DecryptUpdate</code> 0x8C59F0, <code>EVP_DecryptFinal_ex</code> 0x8C5810); the account
-value is read from <code>obj+0x868</code>. The padding byte equals padded length minus real length, and the
-plaintext's entropy drops from 8.00 to 5.01 bits per byte.</p>
+0x52B4BC. Both use OpenSSL's EVP layer linked into the executable (<code>EVP_aes_256_cbc</code>, the decrypt
+init / update / final calls and the padding switch). The padding byte equals padded length minus real
+length, and the plaintext's entropy drops from 8.00 to 5.01 bits per byte. This reference describes the
+format; it does not publish the key material.</p>
 <h3 id="the-typed-grammar">The typed grammar</h3>
 <p>The plaintext opens with <code>SAVE</code> version 2: a header (a u32 profile-section count at <code>+0x18</code>, 5),
 the profile sections, a u32 slot count (3), then per slot <code>{u32 6, u32 length, u32 0, payload}</code>. A
