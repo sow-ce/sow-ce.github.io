@@ -34,7 +34,8 @@ ring works, the order of one frame's commands, where the render thread's time go
 is presented are in <strong>Threads and the frame</strong>; this chapter covers what the renderer does with the
 GPU.</p>
 <h2 id="the-direct3d-objects">The Direct3D objects</h2>
-<p>The engine keeps its Direct3D objects in one static block at 0x272D1C0:</p>
+<p>The engine keeps its Direct3D objects in one static block at 0x272D1C0, filled by the device setup
+function 0x1C8A068:</p>
 <table>
 <thead>
 <tr>
@@ -47,40 +48,84 @@ GPU.</p>
 <tr>
 <td>+0x00</td>
 <td>0x272D1C0</td>
-<td>the <code>ID3D11Device</code> (138 code references; stored once per interface version)</td>
+<td><code>ID3D11Device1</code> (138 code references)</td>
+</tr>
+<tr>
+<td>+0x08 / +0x10 / +0x18</td>
+<td></td>
+<td><code>ID3D11Device2</code> / <code>3</code> / <code>4</code>, queried only when the runtime supports 11.2 / 11.3 / 11.4</td>
 </tr>
 <tr>
 <td>+0x20</td>
 <td>0x272D1E0</td>
-<td>a render-device object (vt_0x1FFC508) whose <code>+0x08</code> is the next row</td>
+<td>a small engine object (vt_0x1FFC508) whose <code>+0x08</code> is the next row</td>
 </tr>
 <tr>
 <td>+0x28</td>
 <td>0x272D1E8</td>
-<td><strong>the device context the world renderer calls</strong>: 450 reads in 96 functions</td>
+<td><strong>the immediate context as <code>ID3D11DeviceContext1</code></strong>, the handle the world renderer calls: 450 reads in 96 functions</td>
+</tr>
+<tr>
+<td>+0x30 / +0x38</td>
+<td></td>
+<td>the same context as <code>ID3D11DeviceContext2</code> / <code>3</code></td>
+</tr>
+<tr>
+<td>+0x50</td>
+<td>0x272D210</td>
+<td><code>ID3D11Multithread</code></td>
 </tr>
 <tr>
 <td>+0x58</td>
 <td>0x272D218</td>
-<td>the immediate context created with the device (one reader, at shutdown)</td>
+<td><code>IDXGIDevice2</code></td>
 </tr>
 <tr>
-<td>+0x60 .. +0x98</td>
+<td>+0x60</td>
 <td></td>
-<td>DXGI objects; <code>+0x88</code> the swap chain</td>
+<td>the adapter; <code>+0x68</code> its <code>IDXGIAdapter3</code></td>
+</tr>
+<tr>
+<td>+0x70</td>
+<td></td>
+<td>the DXGI factory (<code>CreateDXGIFactory2</code>)</td>
+</tr>
+<tr>
+<td>+0x78</td>
+<td></td>
+<td>the output</td>
+</tr>
+<tr>
+<td>+0x88 .. +0x98</td>
+<td></td>
+<td>the swap chain</td>
 </tr>
 <tr>
 <td>+0xA8</td>
 <td>0x272D268</td>
 <td>the presented-frame counter</td>
 </tr>
+<tr>
+<td>+0xB0</td>
+<td></td>
+<td>the feature level reached</td>
+</tr>
 </tbody>
 </table>
-<p>The object at <code>+0x28</code> answers the <code>ID3D11DeviceContext</code> interface: after <code>mov rcx, [0x272D1E8]</code> the
-code calls slots <code>+0x40, +0xC8, +0xF8, +0x1D8, +0x1F8, +0x218</code> with the same <code>(0, count, views)</code>
-arguments, which are the six shader stages' <code>SetShaderResources</code>. Three engine objects keep their
-own copy of the device pointer (vt_0x22C5F50 <code>+0xB0</code>, vt_0x230CBE0 <code>+0xA8</code>, vt_0x230CBA0 <code>+0x28</code>);
-none keeps a copy of the context, so every world draw goes through the static handle.</p>
+<p><strong>Device creation.</strong> 0x1C8A068 calls <code>D3D11CreateDevice</code> with no immediate-context output, the debug
+layer flag when the byte 0x2A37030 is set, <code>D3D11_CREATE_DEVICE_DISABLE_GPU_TIMEOUT</code> when 0x2A37034 is
+set and the WARP driver when 0x2A37032 is set. It tries feature levels one at a time, highest first,
+from a list chosen by the Direct3D runtime version (12.1 / 12.0 / 11.1 / 11.0 on a 12.1 runtime, down to
+11.0 alone). It then queries the device for the interfaces above, fetches the context with
+<code>GetImmediateContext1</code> / <code>2</code> / <code>3</code> (device slots 43, 50 and 61), sets the DXGI maximum frame latency
+to 3 (or to <code>[base+0x267DFF4]</code> when that is non-zero), and reads the threading and <code>D3D11_OPTIONS</code> to
+<code>OPTIONS3</code> feature data into the block (<code>+0x180</code>, <code>+0x1B8</code>, <code>+0x1C8</code>, <code>+0x1E8</code>). On an AMD adapter it
+loads <code>amd_ags_x64.dll</code>, initialises the AGS driver extensions and reads the CrossFire GPU count; on
+an NVIDIA adapter it reads the SLI state; the count of alternate-frame GPUs is kept at <code>+0x16F4</code>. No
+deferred context is created: in a running game <code>+0x28</code>, <code>+0x30</code> and <code>+0x38</code> hold one object whose
+<code>GetType</code> returns 0 (immediate). Every world draw is therefore serialised on the render thread
+through that one context. Three engine objects keep their own copy of the device pointer
+(vt_0x22C5F50 <code>+0xB0</code>, vt_0x230CBE0 <code>+0xA8</code>, vt_0x230CBA0 <code>+0x28</code>); none keeps a copy of the context.</p>
 <p>The user interface does not use this path. Flash menus and the HUD draw through <strong>Scaleform GFx</strong>'s
 own renderer, <code>Render::HAL</code> (vt_0x2002498, 166 slots; 18 of them open a profiler scope named
 <code>HAL::...</code>: vf4 PushRenderTarget, vf11 BeginFrame, vf15 BeginScene, vf50 DrawProcessedPrimitive,
@@ -227,9 +272,9 @@ and the strings that module uses:</p>
 <td></td>
 </tr>
 <tr>
-<td>the shadow atlas</td>
+<td>shared target and dispatch helpers (the module also holds the shadow-atlas settings)</td>
 <td>5</td>
-<td>targets 0x33B644; dispatches 0x337964, 0x33DA28, 0x337EB8, 0x1CAA73C</td>
+<td>targets 0x33B644 (runs inside the post-processing chain); dispatches 0x337964, 0x33DA28 and 0x337EB8 (the last two inside the GPU particles), 0x1CAA73C</td>
 </tr>
 <tr>
 <td>point lights (<code>CRenderNodeLightPoint::GetCBCachedData()</code>)</td>
@@ -253,15 +298,141 @@ and the strings that module uses:</p>
 </tr>
 </tbody>
 </table>
-<p>Where they run in the frame, from sampling the render thread (Threads and the frame): inside the
-scene command, the main pass list 0x33CD60 runs mesh pass A (0x66E93C, the largest), then 0x255920
-and 0x185410, the GPU particles (0x33783C), the light accumulation (0x384640, which contains the
-point-light compute 0x4D951C) and finally mesh pass B (0x1F02E8). After the main pass list come the
-vegetation displacement and grouped GPU particles (0x1021250), the post-processing chain (0x33740C:
-motion blur, depth of field, blur, vignette), the colour-grading pass (0x339D6C) and, last, the
-object-colour compute (0x1EDE58).</p>
+<h3 id="render-target-sets">Render-target sets</h3>
+<p>Passes do not bind targets one by one. They select a <strong>target set</strong> by number through 0x17C56C
+(state, clear colour, clear mask, set id, ...): 0x17B9A4 turns the set id into up to five target ids
+and a viewport size, 0x17C940 turns each target id into its render-target object, and the function
+then clears what the mask asks for and calls <code>OMSetRenderTargetsAndUnorderedAccessViews</code>. The state
+object is <code>[base+0x273C628]</code> (vt_0x2002320; it exists only while a world is loaded): <code>+0x0C / +0x10</code>
+the render size, <code>+0xC20</code> the current set id (written only by 0x17C56C), <code>+0xC28</code> the bound views
+(count at <code>+0xC78</code>), <code>+0xC50</code> the depth view and <code>+0xC60</code> the bound formats, which are also copied to
+the statics 0x273C208 (five formats) and 0x273C21C (the depth format). A render-target object holds
+its width at <code>+0x00</code>, its height at <code>+0x04</code>, its typeless and view formats at <code>+0x08 / +0x0C</code>, and
+buffers of 0x68 bytes from <code>+0x50</code> (the view first), the current one selected by <code>+0xB0</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Set</th>
+<th>Targets</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>the scene colour</td>
+<td>lighting</td>
+</tr>
+<tr>
+<td>2</td>
+<td>depth only</td>
+<td>point-light work</td>
+</tr>
+<tr>
+<td>3 / 4</td>
+<td>scene colour, (RGBA8,) motion</td>
+<td>the forward pass after the main list</td>
+</tr>
+<tr>
+<td>7</td>
+<td>the five deferred targets</td>
+<td>the G-buffer</td>
+</tr>
+<tr>
+<td>13</td>
+<td>depth only, a square three times <code>+0x20</code> on each side</td>
+<td>the shadow atlas</td>
+</tr>
+<tr>
+<td>27</td>
+<td>a second depth buffer, one pixel per 16 x 16 screen tile</td>
+<td>point-light tiles</td>
+</tr>
+<tr>
+<td>9</td>
+<td>one target, 2048 x 2048</td>
+<td></td>
+</tr>
+<tr>
+<td>20, 21, 22</td>
+<td>quarter-size targets</td>
+<td>post-processing</td>
+</tr>
+<tr>
+<td>29, 30</td>
+<td>half-size targets</td>
+<td>post-processing</td>
+</tr>
+</tbody>
+</table>
+<p>At a 4096 x 2160 render size the targets are: the G-buffer (below), two R16G16B16A16_FLOAT scene
+colour targets that swap every frame (the current frame and the last one), a full-size R32_FLOAT
+target, a 256 x 135 R32G32_FLOAT target (one texel per 16 x 16 tile), and half- and quarter-size
+R8G8, R32_FLOAT, R16G16_FLOAT and R16G16B16A16_FLOAT chains. The main depth buffer is
+D32_FLOAT_S8X24_UINT. <code>RemapDeferredRenderTargets()</code> 0x66E9C4 (named by its own assert) checks that
+set 7 is bound and rebinds a subset of its five targets by a bit mask, keeping the depth buffer.</p>
+<h3 id="the-passes-of-one-frame">The passes of one frame</h3>
+<p>Sampling the render thread (8,369 and 8,370 samples over 2 x 12 s, each one's call stack unwound and
+the bound-target statics read in the same instant) shows what each pass draws into and the order
+they run in. Inside the scene command, the main pass list 0x33CD60 runs, every frame, in this order
+(consecutive samples moved from each pass to the next one hundreds of times and never in the other
+direction):</p>
+<table>
+<thead>
+<tr>
+<th>Order</th>
+<th>Pass</th>
+<th>Bound targets</th>
+<th>Share of render-thread samples (one Lithlad scene)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>0x255920, then 0x185410</td>
+<td>set 7</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>mesh pass A 0x66E93C: the G-buffer pass</strong></td>
+<td>set 7 in 3,538 of 3,538 and 3,477 of 3,477 samples</td>
+<td>41-42%</td>
+</tr>
+<tr>
+<td>3</td>
+<td>the GPU particles 0x33783C</td>
+<td>the five deferred targets</td>
+<td>2%</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>mesh pass B 0x1F02E8: the shadow pass</strong></td>
+<td>its main child 0x1EE3E4 draws with set 13 (depth only, D16) in 502 of 502 samples</td>
+<td>10-11%</td>
+</tr>
+<tr>
+<td>5</td>
+<td>the light accumulation 0x384640</td>
+<td>set 1, the scene colour; its point-light compute 0x4D951C uses sets 2 and 27</td>
+<td>4%</td>
+</tr>
+</tbody>
+</table>
+<p>Mesh pass A remaps the deferred targets to the first four before its draws, so its meshes write the
+four G-buffer targets; the passes that keep all five bound also write the motion target. Mesh pass B
+draws shadow casters into the shadow atlas (0x1EE3E4, the vegetation 0x1021250, 0x185410); the second
+writer of the shadow scale and move constants, 0x1CC8DA0, runs inside it with the atlas bound (8 of
+8 and 7 of 7 samples), so it sets up one cascade at a time for the casters. One child of pass B,
+0x1CC753C, draws with the scene colour and the main depth buffer bound. After the main pass list come
+the vegetation displacement and grouped GPU particles (0x1021250), the post-processing chain (0x33740C:
+motion blur, depth of field, blur, vignette), the colour-grading pass (0x339D6C) and, last, 0x1EDE58,
+which runs with the scene colour and the motion target bound (sets 4 and 3): a forward pass that
+writes colour and motion vectors. The user interface draws into an R8G8B8A8 target.</p>
 <h2 id="the-g-buffer-and-lighting">The G-buffer and lighting</h2>
-<p>The renderer is deferred. The G-buffer pixel shaders write four targets:</p>
+<p>The renderer is deferred. The G-buffer is target set 7: four targets the G-buffer pixel shaders
+write, a fifth for motion vectors, and the main depth buffer (D32_FLOAT_S8X24_UINT); all are the
+render size (4096 x 2160 in the measured game):</p>
 <table>
 <thead>
 <tr>
@@ -291,6 +462,11 @@ object-colour compute (0x1EDE58).</p>
 <td>RGBA8</td>
 <td>material: alpha bits 28-31 = the <strong>lighting class</strong></td>
 </tr>
+<tr>
+<td>4</td>
+<td>R16G16_FLOAT</td>
+<td>screen-space motion</td>
+</tr>
 </tbody>
 </table>
 <p>The lighting is a compute pass (<code>lighting\tiledlighting.fxo</code>) that reads the normal, specular and
@@ -316,9 +492,12 @@ shadow tree</strong> (<code>SparseShadowTree</code>, <code>SSTCoarseLUT</code>, 
 <code>k_vShadowFalloffParams</code>, all written by 0x382484). In one live read the scales relative to the first
 cascade were 1, 0.335, 0.055 and 0.0066, and the squared split distances 864,076, 7,697,105,
 287,907,008 and 12,008,197,120 cm^2: the cascades end at about 9.3 m, 27.7 m, 170 m and 1,096 m.
-A second writer, 0x1CC8DA0, reuses the scale and move objects with another layout (about 2.5% of
-reads); spot and point lights project through <code>k_mSpotProjector_LightTransform</code>
-and <code>k_mCubeProjector_LightTransform</code>.</p>
+The shadow maps live in one <strong>shadow atlas</strong>, a D16_UNORM depth target whose side is three times the
+target-state value <code>+0x20</code> (12,288 x 12,288 in the measured game, where <code>+0x20</code> held 4096), rendered by
+mesh pass B before the lighting. A second writer, 0x1CC8DA0, reuses the scale and move objects with
+another layout (about 2.5% of reads, one cascade's component set at a time); it runs inside the
+shadow pass while the atlas is bound. Spot and point lights project through
+<code>k_mSpotProjector_LightTransform</code> and <code>k_mCubeProjector_LightTransform</code>.</p>
 <p><strong>The per-view constant buffer.</strong> Every G-buffer pixel shader and the lighting share constant buffer
 <code>cb2</code>, the per-view buffer: <code>cb2[4..6]</code> are the camera-to-world rows (the lighting rebuilds a pixel's
 world position as <code>dot(cb2[4..6], (view position, 1))</code>). Column z of those rows is the camera's look
@@ -758,17 +937,11 @@ at <code>+0x00 / +0x08</code>, entries of 0x28 bytes). A controller reads its re
 record at controller <code>+0x128</code>). A fast travel within the same region does not rebuild them.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>What the object at <code>+0x28</code> of the Direct3D block is. It answers the device-context interface and
-  carries every world draw, but it is a different object from the immediate context at <code>+0x58</code>.</li>
-<li>Which mesh pass writes the G-buffer and which draws after lighting (translucent / forward). The
-  order (A before the light accumulation, B after it) suggests A is the G-buffer pass; reading the
-  bound render targets would settle it.</li>
-<li>Where the shadow-atlas passes run in the frame (their entry points were too rarely sampled to
-  place) and how the sparse shadow tree and the screen-tile shadow classes divide the work.</li>
-<li>What the second writer of the shadow scale and move constants projects. 0x1CC8DA0 is called only
-  from mesh pass B (0x1F02E8) and writes values with a single cascade's component set (<code>(0, 0, 1346.9,
-  0)</code>), which would fit pass B rendering shadow casters one cascade at a time rather than translucent
-  objects; reading the render targets it binds would settle this together with the question above.</li>
+<li>How the atlas is divided: whether the four cascades and the light shadows have fixed tiles of the
+  12,288 square, and how the sparse shadow tree and the screen-tile shadow classes divide the work.
+  Reading the viewports the shadow pass sets per cascade would settle the first part.</li>
+<li>What 0x1CC753C, the child of the shadow pass that draws with the scene colour bound, renders before
+  the lighting (emissive or sky geometry are candidates).</li>
 <li>What the "center lit" set is (<code>k_nCenterLitCount</code>, <code>k_nCenterLitID</code>, <code>CenterLitBuffer</code>; the ID
   changed 83 times in a paused sample).</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
