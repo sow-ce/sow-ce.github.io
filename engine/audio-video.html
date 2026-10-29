@@ -230,6 +230,10 @@ line's file name as the external source of a generic event; the file is Vorbis, 
 0xC35060-0xC3BC90 and the engine's integration in 0x11A2000-0x11DC000. The executable exports
 <code>AK::GetWwiseXAudio2Interface</code>; <code>xaudio2_9.dll</code> is loaded at run time, not imported. Banks are
 <code>BKHD</code> version 118 (six of six sampled, <code>init.bnk</code> included).</p>
+<p>The executable exports 286 named symbols, 263 of them Wwise's (the <code>AK::SoundEngine</code>, <code>Query</code>,
+<code>MemoryMgr</code>, <code>StreamMgr</code>, <code>DynamicSequence</code>, <code>MotionEngine</code>, <code>MusicEngine</code> and <code>Monitor</code> APIs with their
+full C++ signatures, and Wwise's globals); the rest are Scaleform system and matrix functions and two
+memory pool ids. The exported names make these globals exact:</p>
 <table>
 <thead>
 <tr>
@@ -243,8 +247,16 @@ line's file name as the external source of a generic event; the file is Vorbis, 
 <td>the audio manager (<code>+0xAC</code> its reservation counter)</td>
 </tr>
 <tr>
-<td><code>[base+0x26FF97C]</code></td>
-<td>the playing-id counter (u32)</td>
+<td>u32 at 0x26FF97C</td>
+<td><code>AK::SoundEngine::g_PlayingID</code>, the playing-id counter (exported)</td>
+</tr>
+<tr>
+<td><code>[base+0x26FF980]</code></td>
+<td><code>g_pRTPCMgr</code>, the <code>CAkRTPCMgr</code> (exported)</td>
+</tr>
+<tr>
+<td><code>[base+0x26FF988]</code></td>
+<td><code>g_pRegistryMgr</code>, the <code>CAkRegistryMgr</code>: Wwise's registry of game objects (exported; <code>CAkRegistryMgr::GetObjAndAddref</code> is 0x3AE3E4)</td>
 </tr>
 <tr>
 <td><code>[base+0x26FF998]</code></td>
@@ -255,82 +267,160 @@ line's file name as the external source of a generic event; the file is Vorbis, 
 <td>the bank manager (vt_0x22D65D8)</td>
 </tr>
 <tr>
+<td><code>[base+0x26FF9C0]</code></td>
+<td><code>g_pSwitchMgr</code>, the <code>CAkSwitchMgr</code> (exported)</td>
+</tr>
+<tr>
+<td><code>[base+0x26FF9C8]</code></td>
+<td><code>g_pAKPluginList</code> (exported)</td>
+</tr>
+<tr>
+<td><code>[base+0x26FFA28]</code></td>
+<td><code>AK::IAkStreamMgr::m_pStreamMgr</code>, the stream manager (exported)</td>
+</tr>
+<tr>
 <td><code>[base+0x270347C]</code></td>
 <td>the current language id</td>
 </tr>
 </tbody>
 </table>
 <p>Every API call reserves a message on Wwise's queue with 0x114BDF8(&amp;message, type, size) (55 call
-sites). The message types, with the API entry points that queue them (names from argument shapes and
-the string / wide-string overload pairs, except type 1, which is traced end to end):</p>
+sites). Reading the type each exported API function passes gives the message types by name:</p>
 <table>
 <thead>
 <tr>
 <th>Type</th>
-<th>Functions</th>
-<th>API</th>
+<th>Exported API</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>1</td>
-<td>0x3AD54C</td>
-<td>PostEvent</td>
+<td><code>PostEvent</code> (through 0x3AD54C; message 0x38 bytes)</td>
 </tr>
 <tr>
-<td>2 / 3</td>
-<td>0x3AEBCC (string 0x12F4774, wide 0x12F479C)</td>
-<td>SetRTPCValue / with transition</td>
+<td>3</td>
+<td><code>SetRTPCValue</code>, <code>SetRTPCValueByPlayingID</code> (through 0x3AEBCC)</td>
 </tr>
 <tr>
-<td>5 / 6</td>
-<td>0x12F3A34 (0x12F3AE4 / 0x12F3B10)</td>
-<td>ResetRTPCValue / with transition</td>
+<td>6</td>
+<td><code>ResetRTPCValue</code></td>
 </tr>
 <tr>
 <td>7</td>
-<td>0x12F4AEC (0x12F4AE4, 0x12F4B68)</td>
-<td>SetState</td>
+<td><code>SetState</code> (0x12F4AEC)</td>
 </tr>
 <tr>
 <td>8</td>
-<td>0x6C27CC (0x6C278C, 0x12F4BE0)</td>
-<td>SetSwitch</td>
+<td><code>SetSwitch</code> (0x6C27CC)</td>
 </tr>
 <tr>
 <td>0xA</td>
-<td>0x12F2440 (0x12F248C / 0x12F24B4)</td>
-<td>PostTrigger</td>
+<td><code>PostTrigger</code></td>
 </tr>
 <tr>
 <td>0xB</td>
-<td>0x686308, 0x12F38C8</td>
-<td>RegisterGameObj</td>
+<td><code>RegisterGameObj</code> (0x686308, 0x12F38C8)</td>
 </tr>
 <tr>
 <td>0xC</td>
-<td>0x6F1FF4, 0x12F56BC</td>
-<td>UnregisterGameObj / UnregisterAll</td>
+<td><code>UnregisterGameObj</code>, <code>UnregisterAllGameObj</code></td>
 </tr>
 <tr>
 <td>0xD</td>
-<td>0x3AE1F4 (via 0x3AE188 from 0x3AE0BC)</td>
-<td>SetPosition</td>
+<td><code>SetPosition</code> (internal 0x3AE1F4)</td>
 </tr>
 <tr>
 <td>0xE</td>
-<td>0x6862AC</td>
-<td>SetActiveListeners</td>
+<td><code>SetActiveListeners</code> (0x6862AC)</td>
+</tr>
+<tr>
+<td>0x10</td>
+<td><code>SetListenerPosition</code></td>
+</tr>
+<tr>
+<td>0x11</td>
+<td><code>SetListenerSpatialization</code></td>
+</tr>
+<tr>
+<td>0x12</td>
+<td><code>SetGameObjectAuxSendValues</code></td>
+</tr>
+<tr>
+<td>0x13</td>
+<td><code>SetGameObjectOutputBusVolume</code></td>
 </tr>
 <tr>
 <td>0x14</td>
-<td>0x190B08</td>
-<td>obstruction and occlusion</td>
+<td><code>SetObjectObstructionAndOcclusion</code> (0x190B08)</td>
+</tr>
+<tr>
+<td>0x15</td>
+<td><code>SetSecondaryOutputVolume</code></td>
+</tr>
+<tr>
+<td>0x16</td>
+<td><code>DynamicSequence::Open</code></td>
+</tr>
+<tr>
+<td>0x19</td>
+<td><code>StopAll</code></td>
+</tr>
+<tr>
+<td>0x1A</td>
+<td><code>SetListenerPipeline</code></td>
+</tr>
+<tr>
+<td>0x1B</td>
+<td><code>RemoveSecondaryOutput</code></td>
+</tr>
+<tr>
+<td>0x1C - 0x1E</td>
+<td><code>MotionEngine</code> player device, listener and volume</td>
+</tr>
+<tr>
+<td>0x1F</td>
+<td><code>StopPlayingID</code></td>
 </tr>
 <tr>
 <td>0x20</td>
-<td>0x54FE08 (0x12F0FD8 / 0x12F0FF8)</td>
-<td>-</td>
+<td><code>ExecuteActionOnEvent</code> (0x54FE08)</td>
+</tr>
+<tr>
+<td>0x23</td>
+<td><code>PinEventInStreamCache</code>, <code>UnpinEventInStreamCache</code></td>
+</tr>
+<tr>
+<td>0x24</td>
+<td><code>SetAttenuationScalingFactor</code></td>
+</tr>
+<tr>
+<td>0x27</td>
+<td><code>SeekOnEvent</code></td>
+</tr>
+<tr>
+<td>0x28</td>
+<td><code>PlaySourcePlugin</code>, <code>StopSourcePlugin</code></td>
+</tr>
+<tr>
+<td>0x29 / 0x2A</td>
+<td><code>StartOutputCapture</code> / <code>StopOutputCapture</code>, <code>AddOutputCaptureMarker</code></td>
+</tr>
+<tr>
+<td>0x2B - 0x2E</td>
+<td><code>SetActorMixerEffect</code> / <code>SetBusEffect</code>, <code>SetMixer</code>, <code>SetBusConfig</code>, <code>SetPanningRule</code></td>
+</tr>
+<tr>
+<td>0x32 / 0x33</td>
+<td><code>SetRandomSeed</code>, <code>MuteBackgroundMusic</code></td>
+</tr>
+<tr>
+<td>0x34</td>
+<td><code>SendPluginCustomGameData</code></td>
+</tr>
+<tr>
+<td>0x37</td>
+<td><code>StopAllLocalized</code></td>
 </tr>
 </tbody>
 </table>
@@ -439,13 +529,10 @@ video render-target path 0x335CF4 and the skip prompt 0x17F0E48. The UI video pl
 <code>Video.GotoFrame</code> is handled by 0x17FE1C8.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>The names of Wwise message types other than PostEvent are inferred from argument shapes;
-  emulating each API with known arguments and reading the queued message would confirm them.</li>
 <li>Whether the pre-check 0x3AD888 is the streaming-bank prefix match, and what it does when the bank
   is absent (wait until loaded, or drop the event).</li>
 <li>The order in which the Wwise file layer searches language folders, packages and loose files.</li>
 <li>The purpose of <code>VideoClipRequestThread</code> (loop 0x11C7274; a request at <code>+0x100</code>, a flag at
   <code>+0x358</code>); a nearby <code>VideoUserContentFile</code> string suggests capture or sharing.</li>
 <li>Which engine objects own the emitters, and where positions are pushed each frame.</li>
-<li>Wwise's own registry of game objects (<code>CAkRegistryMgr</code>) was not located.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
