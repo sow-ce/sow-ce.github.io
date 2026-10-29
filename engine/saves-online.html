@@ -154,7 +154,9 @@ optionally an upgrade tier, art, a <code>Combat/Challenge/Eval</code> challenge 
 00 gem}</code>, and DLC flags.</p>
 <p><strong>The front-screen card.</strong> The card printer 0xDF9370 reads the slot info
 <code>[CGameClientShell+0xEB8] + 0x1C8 + GameModes.SaveSlot * 0x298</code>: it prints <code>ceilf(+0x24 minutes)</code>
-as hours and minutes and <code>floorf(+0x20)</code> as the completion percentage; for a game mode with
+as hours and minutes and <code>floorf(+0x20)</code> as the completion percentage. Both come from the slot's save
+summary: its value 3 is the completion in percent and its value 4 the play time in minutes (a
+summary holding 100.0 and 14,655 showed on the card as "100 %" and "244h 15m"); for a game mode with
 <code>GameModes.UseHighScore</code> (the fourth story DLC's mode) it prints the score from the <code>GMSC</code> entry found
 by 0xFAD1B0(<code>[base+0x2A36278]</code>, mode) (the first entry with <code>+0x80</code> equal to the mode and <code>+0x50</code>
 non-zero, score at <code>+0x68</code>).</p>
@@ -562,8 +564,6 @@ carries name, title, trait level, rarity, appearance piece hashes, inventory, co
 70 keys in all).</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>Which value fills the card's completion percentage (<code>slot info +0x20</code>): the save summary's third
-  value read 100 while the card showed 75 % on the same save.</li>
 <li>What the second and third copies of the game variables in <code>IVGD</code> are (checkpoints, restore states).</li>
 <li>The 1.28 MB of each slot that carries no typed section header.</li>
 <li>Whether the 25 per-slot entries in <code>IVMG</code> are the equipped items per slot.</li>
