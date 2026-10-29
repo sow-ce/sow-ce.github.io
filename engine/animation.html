@@ -326,8 +326,207 @@ on the main thread (2.7% of its samples).</p>
 in its first argument or the player and calls 0x1BDEC34(link = <code>[char+0x1970]</code>, name), which parses
 the name (0x41758C, 0x41A1E0), stores it at <code>link+0xC8</code> / <code>+0xD0</code> and calls 0x41A148. <code>AnimLink.Dump.History</code>
 (0x1BDEE0C) finds a registered character by name through 0x1B32410.</p>
+<h2 id="ragdolls">Ragdolls</h2>
+<p>Ragdolls are a death effect. Every character model carries a physics ragdoll, but the powered
+ragdoll, its brain and the joint tuning from the database are started only by the dead-body step
+0x2F8460: the slot claim (0x65C214), the brain start (0x65C274) and the joint setup (0x64D4A4) each
+have that one caller. Knockdowns and other reactions of living characters are animations.</p>
+<h3 id="the-dead-body-step">The dead-body step</h3>
+<p>The NPC Update runs its dead-body branch, slot 121 (base implementation 0x175020), once the combat
+object's dead byte <code>[char+0x26A8]+0x4A0</code> and the byte <code>char+0x225E</code> are set (see Threads and the frame);
+on the frame of death the AI update itself calls the step once. 0x2F8460(state = <code>char+0x1AF0</code>,
+character):</p>
+<ol>
+<li>Reads <code>Combat/Category.RagdollReaction</code> of the killing attack (0x65E990; 11 of 2,559 categories
+   set one) and, when a ragdoll is pending, its <code>InitalVelocityScale</code> and <code>ForceValue</code>.</li>
+<li>Claims a ring slot, then, when the character's model (<code>[char+0x2B30]</code>) names a
+   <code>Character/Models.RagdollConfig</code>, applies that config's joints, enables the ragdoll and starts its
+   brain; otherwise it starts the controller with no config and no brain.</li>
+<li>Fires <code>Combat/Buffs.DeathProjectiles</code>, switches the character to <code>RigidBody</code>, plays the clip named
+   by <code>Character/Models/Global.RagdollDeathAnimation</code> (<code>base</code>) on the model and posts the audio hook
+   <code>CharacterSwitchesToRagdoll</code>.</li>
+<li>On every later frame: runs the brain (0x30F6D4), then tests for rest. Counting from the state's
+   time stamp and leaving out the brain's running time, a body is at rest after 15 s, or after 3 s
+   once its speed falls below <code>Character/Models/BodyCleanup.AtRestSpeed</code> (15 cm/s without a
+   record). A resting body that is not the player goes to the
+   body cleanup 0x6C00A0 (<code>Lifetime</code>, <code>SinkDistance</code>); otherwise 0x145218 relaxes the hit reaction
+   (<code>RelaxTime</code>, start and end friction and tau factor).</li>
+</ol>
+<p>The thresholds are initialised data (<code>[base+0x26736A4]</code> 15.0, <code>[base+0x26736AC]</code> 15.0,
+<code>[base+0x26736B0]</code> 3.0, enable bytes <code>[base+0x26736A8]</code> and <code>[base+0x26736C0]</code>), each read only by
+this step. The two <code>BodyCleanup</code> records, <code>Troll</code> (15 models) and <code>Fellbeast</code> (2), set
+<code>AtRestSpeed</code> to 1,000,000, so those bodies rest at once; the other 264 models use the default.</p>
+<p>The per-character body settings are copied from <code>Character/Models/Global</code> when the character is
+created (0xFCFB4, from its slot 16), into <code>char+0x1E50</code>: <code>+0x239</code> <code>BodyRagdoll</code>, <code>+0x218</code>
+<code>BodyDeathDirMinY</code>, <code>+0x238</code> <code>BodyDeathForce</code>, <code>+0x21C</code> <code>BodyDeathForceScale</code>, <code>+0x234</code>
+<code>BodyDirDeathForce</code>, <code>+0x220</code> <code>BodyDirDeathForceScale</code>, <code>+0x228</code> <code>BodyStickDist</code>, <code>+0x22C</code>
+<code>BodyStickTime</code>, <code>+0x230</code> <code>BodyDeathScaleVelocity</code> and <code>+0x224</code> <code>BodyDeathClampVelocityMax</code> (shipped:
+true, 0.4, true, 0.5, true, 1.5, 400, 0.3, 1.0, 800). A later edit of the record reaches only
+characters created afterwards.</p>
+<table>
+<thead>
+<tr>
+<th>Offset from the character</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>+0x110</code> -&gt; <code>+0x1C8</code></td>
+<td>the physics ragdoll (below)</td>
+</tr>
+<tr>
+<td><code>+0x1AF0</code></td>
+<td>dead-body state: <code>+0x00</code> phase (0 while alive), <code>+0x308</code> the killing attack, <code>+0x310</code> the <code>BodyCleanup</code> record, <code>+0x320</code> a time stamp (f64), <code>+0x350</code>-<code>+0x35D</code> flags</td>
+</tr>
+<tr>
+<td><code>+0x1AF8</code></td>
+<td>the ragdoll controller</td>
+</tr>
+<tr>
+<td><code>+0x1E50</code></td>
+<td>body settings (above)</td>
+</tr>
+<tr>
+<td><code>+0x2C17</code></td>
+<td>u8, set on a corpse</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-physics-ragdoll">The physics ragdoll</h3>
+<p><code>[model+0x1C8]</code> (26 of 26 characters read):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>+0x00</code></td>
+<td>pointer to the shared definition of the skeleton's ragdoll (one per body family)</td>
+</tr>
+<tr>
+<td><code>+0x30</code></td>
+<td>the character</td>
+</tr>
+<tr>
+<td><code>+0x38</code></td>
+<td>the model</td>
+</tr>
+<tr>
+<td><code>+0x78</code>, <code>+0x88</code></td>
+<td>per-body arrays (count at <code>+0x80</code>, <code>+0x90</code>)</td>
+</tr>
+<tr>
+<td><code>+0x98</code></td>
+<td>joint objects (count at <code>+0xA0</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>Every ragdoll has one body more than joints: orcs, Olog-hai and cave trolls 20 bodies and 19 joints,
+humans and wargs 21 and 20. A joint object (vt_0x1DB4980) keeps the powered-angle limits of its
+pitch, yaw and roll axes in radians at <code>+0x0C</code>-<code>+0x20</code> (slots 10-12 convert from degrees), mirror
+bytes from <code>+0x24</code> (slots 13-15) and a motor-disabled byte at <code>+0x28</code> (slot 8).</p>
+<p>The joint setup (entered at 0x64D4A4, which reaches its body 0x64D4B8(ragdoll, config) by a conditional
+tail jump) walks the config's <code>Ragdoll/Constraints</code>: joint
+<code>[+0x98][Index]</code>, motor disabled unless <code>Powered</code>, then each axis's <code>ConstraintAxisData</code>
+<code>MinPoweredAngle</code> / <code>MaxPoweredAngle</code> (default -180 / 180) and <code>Mirror</code>. On the 11 corpses read whose
+powered ragdoll started, 19 of 19 joints hold exactly the database limits; living characters hold
+unconfigured joints (±565.49, 180 × π). The database tuning therefore reaches the physics only at
+death.</p>
+<p><code>Ragdoll</code> has two configs, <code>Orc_Base</code> and <code>OlogHai_Base</code>, each a brain and 19 joints (indexes 0-18,
+torso to feet). <code>Character/Models.RagdollConfig</code> names <code>Orc_Base</code> on 113 models (humans included,
+whose 20th joint is never tuned), <code>OlogHai_Base</code> on one and nothing on 167; models without a config,
+such as wargs, still take a ring slot but get no brain.</p>
+<h3 id="the-ring-of-eight">The ring of eight</h3>
+<p>The engine runs at most eight powered ragdolls. <code>[base+0x26FFB90]</code> holds eight controller pointers
+and <code>[base+0x26FFB88]</code> a cursor. The claim releases the controller in the cursor's slot if there is
+one (0x65C528), stores the new controller, writes the slot index into <code>controller+0x2EC</code> and advances
+the cursor modulo 8. A released controller keeps <code>+0x2EC</code> at -1 and its joints keep their tuning. In
+one read 15 corpses lay in the world and two held slots.</p>
+<h3 id="the-brain">The brain</h3>
+<p>The controller at <code>char+0x1AF8</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>+0x08</code></td>
+<td>the character</td>
+</tr>
+<tr>
+<td><code>+0x10</code></td>
+<td>the brain (<code>Ragdoll/Brains</code>)</td>
+</tr>
+<tr>
+<td><code>+0x18</code></td>
+<td>the config</td>
+</tr>
+<tr>
+<td><code>+0x20</code>, <code>+0x28</code></td>
+<td>the current and the prior behaviour controller</td>
+</tr>
+<tr>
+<td><code>+0x48</code></td>
+<td>eight 0x50-byte players</td>
+</tr>
+<tr>
+<td><code>+0x2C8</code>, <code>+0x2CC</code>, <code>+0x2D0</code></td>
+<td>height, speed, average body speed</td>
+</tr>
+<tr>
+<td><code>+0x2D4</code>-<code>+0x2E8</code></td>
+<td>time stationary, moving, on ground, in air, in the current behaviour, in total</td>
+</tr>
+<tr>
+<td><code>+0x2EC</code></td>
+<td>ring slot, -1 for none</td>
+</tr>
+</tbody>
+</table>
+<p>The brain step 0x30F6D4 runs only while the controller holds a slot. It updates the samples and the
+timers (the brain's <code>OnGround</code> and <code>Stationary</code> float ranges decide which timers run), then walks
+<code>Brain.BehaviorControllers</code> in order and takes the first controller whose conditions all pass:
+float ranges on height, velocity, average body velocity, time on ground, in air, stationary, moving,
+in the current behaviour and in total, spine upright, head severed, include and exclude hints, the
+current and prior controller, and the combat state. On a change it records the prior controller,
+resets the behaviour timer, picks a <code>BehaviorSet</code> whose <code>RequiredRagdollConfig</code> is the controller's
+config, picks one of its behaviours and starts the behaviour's <code>Sequences</code>.</p>
+<p><code>Orc_Base</code> lists ten controllers (<code>DieHeadSeveredController</code>, <code>DieController</code>,
+<code>FallingBraceImpactController</code>, <code>TuckAndRollController</code>, <code>FallForwardBraceController</code>,
+<code>WritheOnGroundController</code>, <code>PanicLostGroundController</code>, the two leg-kicking controllers and
+<code>FallbackController</code>); <code>OlogHai_Base</code> three. A behaviour (<code>Ragdoll/Behaviors</code>, 18) sets strength and
+stiffness ranges, joint masks and scalar mappings; a sequence (<code>Ragdoll/Sequences</code>, 16) plays timed
+target poses (<code>Clamp</code>, <code>PingPong</code>), and a target pose sets per-joint pitch, yaw and roll. In one
+read of eleven corpses with a brain, three ran <code>DieHeadSeveredController</code>, four <code>DieController</code> and
+four <code>WritheOnGroundController</code> (one entered from <code>FallForwardBraceController</code>).</p>
+<h3 id="clip-keywords">Clip keywords</h3>
+<p>Two keyword tables name the ragdoll controls a clip can carry: at 0x1E658B0 (<code>RAGDOLL</code>, <code>DESTROY</code>,
+<code>RESUMERAGDOLL</code>, <code>DISALLOWRAGDOLL</code>, <code>ALLOWRAGDOLL</code>, <code>DELAYRAGDOLL</code>, <code>COLLISION_CHECK_NONE</code>,
+<code>COLLISION_CHECK_WORLD_ONLY</code>, <code>COLLISION_CHECK_ALL</code>, <code>GROUNDCHECK</code>, <code>RAGDOLL_STIFFNESS</code>,
+<code>NEVER_RAGDOLL</code>, <code>FREEZERAGDOLL</code>, <code>BEHAVIOR_HINT</code>) and at 0x1F9FC40 for sync actions
+(<code>SYNCACTION_ALLOWDEATH</code>, <code>SYNCACTION_DELAYDEATH</code>, <code>RESUMERAGDOLL</code>, <code>ALLOWRAGDOLL</code>, <code>RAGDOLL</code>,
+<code>DELAYRAGDOLL</code>, <code>STOP_ALIGN</code>), each entry a 32-bit hash and the name. In a sample of 40 clip files
+(302 clips, 4,192 events) the ragdoll events are <code>DELAYRAGDOLL</code> 23, <code>RAGDOLL</code> 22 (one with argument
+0.25), <code>ALLOWRAGDOLL</code> 15 and <code>RESUMERAGDOLL</code> 14, spelled in any case. <code>Combat/Sync</code> records can start
+the source or the target with a delayed ragdoll (<code>StartWithDelayRagdollSource</code> 1 of 1,507,
+<code>StartWithDelayRagdollTarget</code> 98).</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
+<li>Which code turns the clip keywords into the dead-body state's flags, and which hash the keyword
+  tables use (not the plain name hash).</li>
+<li>Which Havok objects stand behind a joint object (it points to objects of vt_0x1DABE88 and
+  vt_0x22C2EE0), and whether they own the live <code>hkpRagdollConstraintData</code> instances; the
+  <code>hknpRagdoll</code> and <code>hknpRagdollKeyFrameHierarchyUtility</code> classes ship, with no use traced.</li>
+<li>How the animated pose hands over to the ragdoll at the switch (only the <code>base</code> clip is replayed),
+  and what the byte <code>+0x46</code> of the physics ragdoll means (set on every corpse and on 7 of 11 living
+  characters).</li>
 <li>Which graph node writes the trackers' time, and where the transition in progress and its blend
   time are held (not in the character's state slots or the link).</li>
 <li>The meaning of the state slots <code>+0x1198</code> and <code>+0x11A0</code>.</li>
