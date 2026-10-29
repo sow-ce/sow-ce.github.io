@@ -1,0 +1,337 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Animation: clips, behaviour graphs and the runtime - Shadow of War engine reference</title><meta name="description" content="The engine&#x27;s own animation system (Havok Animation and Behavior are not used): the .anix clip format and its codecs, where a loaded clip lives and how events are pre-parsed, which characters can play a clip, the .bvr behaviour graphs, and the per-frame runtime from the behaviour state through clip trackers to the pose job on the animation worker threads."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" class="cur" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="animation-clips-behaviour-graphs-and-the-runtime">Animation: clips, behaviour graphs and the runtime</h1><p class=\"lede\">The engine&#x27;s own animation system (Havok Animation and Behavior are not used): the .anix clip format and its codecs, where a loaded clip lives and how events are pre-parsed, which characters can play a clip, the .bvr behaviour graphs, and the per-frame runtime from the behaviour state through clip trackers to the pose job on the animation worker threads.</p>
+<h2 id="the-engine-s-own-system">The engine's own system</h2>
+<p>Animation is written by Monolith, not Havok. The executable carries run-time type information for
+exactly one Havok animation class, <code>hkaSkeleton</code> (kept for cloth deformation), and for no Havok
+Behavior class at all; the many <code>hka*</code> and <code>hkb*</code> names elsewhere in the file are Havok's
+serialization name table, which survives without the code. The engine's own animation sources are
+named in its strings: <code>AnimNodeLink.cpp</code>, <code>ThreadAnimNodeLink.cpp</code>, <code>AnimationMgr.cpp</code>,
+<code>BehaviorData.cpp</code>, <code>CharacterBehaviorInterface.cpp</code>, <code>SimpleModel.cpp</code> and
+<code>FacialAnimationMgr.cpp</code>.</p>
+<h2 id="clips-the-anix-format">Clips: the <code>.anix</code> format</h2>
+<pre><code>header   'ANIX' | 0x2C | 0x30 | file size | track count | track table offset | block chunk offset |
+         block chunk size | anim chunk offset | anim chunk size | 1 | 1
+tracks   run-length runs {channel hash, run length, node hashes}: rotation 0x27436396,
+         position 0x00CE66FC, events 0x210C8F5A
+anim     +0x00 directory offset (0x10), +0x04 clip count, +0x0C the EVENT DICTIONARY offset;
+chunk    directory {u32 name hash, u32 relative offset}; records are not in directory order
+record   name[0x30] | +0x30 (flag &lt;&lt; 16) | (0x7C + 16 * blocksets + 8 * named) | +0x34 blocksets |
+         +0x36 named | +0x38 groups | +0x3A tracks | +0x3C root summary: start position, start
+         rotation (x, y, z, w), end position, end rotation | +0x74 u32 | +0x78 duration (ms) |
+         +0x7C codecs (4 characters per group), group of each track (u8), remap (u16 per track),
+         blockset table {offset, size, t0, t1}, named table {hash, offset}, the KeyString blob
+blockset u32 named count, u16 group offsets, u16 named offsets, align 4, u32 LITH 0x2B99DBC1
+LITH     {keys, n2, n3, times[keys], 0}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Codec</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQ03</td>
+<td>constant rotations: 42-bit smallest-three, three per 16 bytes</td>
+</tr>
+<tr>
+<td>AQ03</td>
+<td>animated rotations with their own key times (keys may skip frames where motion is smooth)</td>
+</tr>
+<tr>
+<td>SV01 / AV01</td>
+<td>constant / animated vectors</td>
+</tr>
+<tr>
+<td>UATR</td>
+<td>position polylines: a u8 segment and a u8 weight per key, then a 4-aligned float3 palette</td>
+</tr>
+<tr>
+<td>UAQT / UAVT</td>
+<td>keyed rotations / vectors</td>
+</tr>
+<tr>
+<td>STRI</td>
+<td>event strings (offsets into the KeyString blob)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>A record ends at the next record by position, the event dictionary or the end of the chunk, not
+  at the directory's next entry.</li>
+<li>Group and LITH offsets inside a blockset are u16, so a blockset holds at most 64 KB; long clips use
+  several blocksets that share their boundary key, with absolute LITH times, an AQ03 block header
+  of (start time, end time, keys) and one STRI group per blockset.</li>
+<li>Unused SQ03 slots must hold a valid quaternion: zero bits decode to a negative value under the
+  square root, and the vectorised SQ03 evaluator asserts. Shipped files never leave them zero.</li>
+<li>The clip root is the character's position, about 1 m above the feet (the same reference as the
+  live position at <code>CCharacter+0xAC</code>).</li>
+<li>One path can be several different files: <code>pl_sync_chordkill_front.anix</code> ships as a 466,997-byte
+  loose entry and as a 464,227-byte bundle section; the game uses whichever its region loaded.</li>
+</ul>
+<h2 id="a-loaded-clip">A loaded clip</h2>
+<pre><code>resource table   [base+0x2A86758] + (hash(path) &amp; 0x7FF) * 0x18; resource +0x08 = a 0x28-byte entry
+                 {+0x00 handle vt_0x1DB4508, +0x08 the anim object, +0x18 3, +0x24 index}
+anim object      vt_0x1E6F528 (constructor 0x57E4F4, 0x88 bytes); +0x30 the data object,
+                 cached +0x38 anim chunk and +0x68 block chunk (0x57E5A8)
+data object      0x28 bytes (loader 0x480AEC): +0x00 block chunk (16-aligned) +0x18 size,
+                 +0x08 anim chunk +0x1C size, +0x10 node / track pairs +0x20 count
+anim registry    [base+0x26FEFF8] + 8 + (hash(path) &amp; 0x3FF) * 0x18, node = object + 0x10
+</code></pre>
+<p>The samplers (0x260740, 0x261360) re-read these pointers and the clip record on every sample, so a
+change to a clip's values in memory plays on the next frame. The track-to-bone binding is a vector per
+skeleton indexed by the file's track index and built at load, so a clip with a different track
+layout cannot replace a loaded one in place. A region change reloads the region's animation files.</p>
+<p><strong>Events are pre-parsed.</strong> When an anim object attaches, 0x4B9E58 parses the file's event
+dictionary (the anim chunk's <code>+0x0C</code>: a path, clip names, every event string, then each clip's
+events) into per-clip objects in an arena: anim object <code>+0x40</code> arena / <code>+0x48</code> size, <code>+0x50 .. +0x58</code>
+a vector of <code>{u32 hash(clip), object*}</code>; a clip object holds <code>+0x10</code> frames, <code>+0x14</code> count, <code>+0x18</code>
+duration (ms), <code>+0x20</code> a u32 frame per event (<code>+0x28</code> count), <code>+0x30</code> the events as <code>(string index
+&lt;&lt; 24) | ms</code> with 0xFF meaning no text (<code>+0x38</code> count), and <code>+0x40</code> the strings (<code>+0x48</code> count).
+Playback reads these tables, never the STRI tracks.</p>
+<p><strong>Which characters can play a clip.</strong> A character plays a clip by name from its skeleton family's
+clip table (0x302540): <code>[[[[char+0x110]+0x1C0]+0x50]+0xB0]</code> (vt_0x1E6F3F8). A table takes clips only
+from files its member list names (<code>+0x78</code> / <code>+0x80</code>, 0x38-byte entries: <code>+0x20</code> the path, <code>+0x28</code>
+the anim object while loaded); the orc list names 3,363 paths and the olog's 2,268. A file at a path
+the list does not name registers nowhere, even in a listed folder; a listed path that ships in no
+archive (2,107 of the orc list's) is an unused slot. Loading a bundle registers its clips, unloading
+unregisters them. The orc, Gondorian and Easterling families share many entries (one anim object
+for <code>orc_deathtaunts.anix</code> in all three); the olog's list is separate. Six tables served 47 spawned
+characters in one scene.</p>
+<p>Armour shoulder-pad helper bones (<code>L/R_SPadX</code>) are keyed at half of the arm's swing (correlation 0.99
+- 1.00 on five sprint clips), so they follow the arm by design data, not by a constraint.</p>
+<h2 id="behaviour-graphs-bvr">Behaviour graphs (<code>.bvr</code>)</h2>
+<p>A <code>.bvr</code> is a GameDB database whose root type is <code>BlendDB</code>. Its categories are node types
+(<code>BlendState</code>, <code>StateTransition</code>, <code>Animation.SimpleAnimation</code>, <code>Predicate.And</code>, <code>Modifier.*</code> ...);
+its records are the graph's nodes, mostly named secondary records, with inline structures
+(<code>PotentialFrame</code>, <code>AnimPoint</code>, <code>ValueModifier</code>, <code>AnchorData</code>, <code>TrajectoryPoint</code>) as primaries. The
+player graph has 139,198 records in 270 categories: 46,400 structures, 22,229 state modifiers,
+21,128 predicates, 15,704 transitions, 7,561 logic nodes, 6,454 camera modifiers, 3,750 states,
+3,069 animations and more.</p>
+<table>
+<thead>
+<tr>
+<th>Record</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>BehaviorSource</code></td>
+<td>the root: StartState, DefaultWeightset, ModifierTypes, PreviewModel, TrackingStates, reset-to-default states</td>
+</tr>
+<tr>
+<td><code>BlendState</code></td>
+<td>one animation state: AnimationLink (the animation tree), Links (outgoing transitions) with a normalised-time window each and a minimum character LOD; Modifiers; Rate, DefaultBlendTime, BlendInterpolationMethod, Looping, Mirrored, gravity and foot / hand IK, movement / rotation / collision scale, NativeState, AIPosture, Priority</td>
+</tr>
+<tr>
+<td><code>CameraBlendState</code></td>
+<td>a camera state: CameraModifiers and a predicate</td>
+</tr>
+<tr>
+<td><code>StateTransition</code></td>
+<td>an edge: target node, predicate, blend time, window, sync, mirroring, interpolation</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The 29 graphs</strong> hold 10,702 blend states and 73,448 transition links. The four player graphs
+(player_elf, el2, elt, bar) have about 2,050 states and 1,700 camera states each; the warg 431, the
+troll 218, the five orc class graphs 132-136, and smaller graphs serve the Easterlings, ologs,
+humans, the AI Talion, the fellbeast, Sauron's war form, the Nazgul, the Balrog, Gollum, goblins and
+spiders. 73,017 links resolve to a state, 431 have no target and none names a missing state. 5,300
+states are reachable by transitions from the start state; the rest are entered by code (grabs,
+riding, ladders, mount deaths: the states that synchronised attacks and presentations force).
+All 17,606 clip references of the states resolve to a clip in some <code>.anix</code> (the <code>.skel</code>
+animation-set paths the nodes name ship nowhere, so the join goes through the clips' own names).</p>
+<p><strong>A BlendDB record is a native structure.</strong> Its header byte <code>+0x01</code> is 0x1A (flag 0x10) on all
+318,372 live records, so its fields sit at <code>instance + SlotOffset(type, field)</code> (SlotOffset 0x251C24,
+size step 0x251CAC) instead of the GameDB slot rule, and compiled code reads them as plain members;
+by-name getters divert such records to the reflected path (GetFloatByName 0x115B43C -&gt; 0x5DA0FC).
+<code>BlendState</code> live layout: Mirrored <code>+0x68</code>, Priority <code>+0x80</code>, DefaultBlendTime <code>+0x88</code>, StartPct
+<code>+0x98</code>, Rate <code>+0xA8</code>, Gravity <code>+0x110</code>, Looping <code>+0x118</code>, Links <code>+0x138</code> (<code>{pointer, count}</code>);
+editor-only fields take no bytes. Six fields read live equal the disk decode for 10,697 of 10,697
+records.</p>
+<p>Only two "play as" tiers are authored into the player graph: the tags pool (371 records) holds
+<code>PlayAs_Spider</code> and <code>PlayAs_Gollum</code>, and <code>Client/PlayerMovement</code> has exactly five records
+(PlayerMovement, PlayerMovement_Alt01, SpiderMovement, GollumMovement, DwarfMovement).</p>
+<h2 id="the-runtime">The runtime</h2>
+<h3 id="the-behaviour-state-of-a-character">The behaviour state of a character</h3>
+<table>
+<thead>
+<tr>
+<th>CCharacter offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x120</td>
+<td>the behaviour-interface base subobject (constructor 0x45520C; vt_0x1F96C68 on the player, vt_0x1FB3AA8 on NPCs)</td>
+</tr>
+<tr>
+<td>+0x140</td>
+<td><code>char*</code> the <code>.bvr</code> path (<code>behaviors\player\player_elf.bvr</code>)</td>
+</tr>
+<tr>
+<td>+0x578</td>
+<td>the AnimationMgr (= <code>[GM+0x6CB0]</code>)</td>
+</tr>
+<tr>
+<td>+0x1198 / +0x11A0 / +0x11A8 / +0x11B0</td>
+<td>four <code>BlendState</code> record pointers; <code>+0x11B0</code> is the current state</td>
+</tr>
+<tr>
+<td>+0x1258</td>
+<td>the graph's <code>BehaviorSource</code> record</td>
+</tr>
+<tr>
+<td>+0x1970</td>
+<td>the <code>AnimNodeLink</code> (vt_0x1DCC0C0, constructor 0x456F14, destructor 0x4555B8)</td>
+</tr>
+<tr>
+<td>+0x1980 / +0x1988</td>
+<td>a shared pointer to one manager-wide object (<code>AnimationMgr+0x65A0</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The state slots point into the graph's records, not into per-character copies:</strong> every value is a
+record of one of the loaded <code>BlendState</code> categories (28 loaded graphs, 21,394 records), so all
+characters on one graph share them, and a change to a <code>BlendState</code> record reaches every character
+using that graph. In play the current state changes as characters move (60 kinds of transition in
+20 s on 80 characters: Idle -&gt; IdleToRun, IdleToRun -&gt; RunToIdle, Run -&gt; Stumble -&gt; Run, Idle -&gt;
+Wpn_Sheathe, Idle &lt;-&gt; AutoPicker_Fidget ...). <code>+0x11A8</code> is either null or equal to the current
+state (29,520 of 29,520 samples); <code>+0x11A0</code> is set only on the player (its second machine: button
+and stick states).</p>
+<p>The <code>AnimNodeLink</code>: <code>+0x98</code> the AnimationMgr, <code>+0xC8</code> the parsed name of a forced animation, <code>+0xF0</code>
+/ <code>+0xF8</code> a <code>BlendState</code> pair (<code>+0xF0</code> equals <code>char+0x11A8</code>), <code>+0x230</code> a serial from the counter
+0x2702008, <code>+0x270</code> a shared pointer to the manager object. The AnimationMgr <code>[GM+0x6CB0]</code> has no
+vtable: <code>+0x4158</code> / <code>+0x4160</code> count and 0x28-byte handles of the registered characters (<code>+0x20</code> the
+character; every spawned character is registered), and <code>+0x6720</code> / <code>+0x6728</code> a pool of 256 objects
+(vt_0x1FD99F8, about 0xE0B8 bytes each).</p>
+<h3 id="clip-trackers">Clip trackers</h3>
+<p><code>M = [[char+0x110]+0x1C0]</code> is the character's model animation instance (vt_0x1DA9700; the model
+object is vt_0x1F6F950). <code>M+0x08</code> is a vector of <strong>0xA0-byte trackers, one per active clip</strong>;
+<code>M+0x50</code> the skeleton resource; <code>M+0xC8</code> the pose-job descriptor and <code>M+0xD8</code> its 20-byte blend
+entries (one per tracker); <code>M+0x118</code> the time source; <code>M+0x128</code> job submitted, <code>+0x12A</code> needs
+evaluation.</p>
+<table>
+<thead>
+<tr>
+<th>Tracker offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x02</td>
+<td>flags: bit 0 advanced by the engine clock, bit 1 loop, bit 3 cleared on wrap</td>
+</tr>
+<tr>
+<td>+0x04</td>
+<td>u16 delay counter (0xFFFF = none)</td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>the clip name's hash</td>
+</tr>
+<tr>
+<td>+0x0C</td>
+<td>current key index</td>
+</tr>
+<tr>
+<td>+0x10</td>
+<td>rate (time += (dt + remainder) x rate)</td>
+</tr>
+<tr>
+<td>+0x14</td>
+<td>weight</td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td>sub-millisecond remainder</td>
+</tr>
+<tr>
+<td>+0x1C</td>
+<td>playback position in ms</td>
+</tr>
+<tr>
+<td>+0x24</td>
+<td>weight-set index (-1 = whole body)</td>
+</tr>
+<tr>
+<td>+0x44</td>
+<td>key count</td>
+</tr>
+<tr>
+<td>+0x4C</td>
+<td>duration in ms (equal to the clip record's <code>+0x78</code> in 100 of 100)</td>
+</tr>
+</tbody>
+</table>
+<p>Tracker 0 is always the clip <code>base</code> (the model's base pose). Clips layer per body part rather than
+cross-fade: a player at a fidget state carried <code>base</code> plus <code>PL_Base_Idle_B</code> (<code>pl_fidgets.anix</code>) and
+two pairs of fist idle clips, all at weight 1.0 with different weight sets. Most trackers have rate 0
+and are not engine-advanced: the graph writes their time. In play, tracker time advanced at the world
+clock's rate (median 1.0 ms per world ms over 42,123 consecutive same-clip pairs; 731 loops or
+restarts).</p>
+<h3 id="per-frame">Per frame</h3>
+<pre><code>main thread   CGameClientShell vf1 0x1A864C -&gt; model manager vt_0x2301178 vf1 0x1A83AC -&gt; vf14 0x1A8490
+              -&gt; per model and phase 0x187A38 -&gt; 0x1760A8:
+                1. 0x1760F0 advance: per tracker 0x17620C (skip unless flag bit 0 and rate != 0);
+                   0x17674C wraps a looping clip or holds the last key; dt from M+0x118 or the
+                   world clock
+                2. 0x176348 submit: 0x175F04 copies weight, weight set, time and clip of each tracker
+                   into M+0xD8, then queues the job on ThreadSystem_A [base+0x26FF000] (vf2)
+workers       EngineAnimationJobThread1-3 (routine 0x114CBA8) take jobs from
+              AnimJobThreadSystem [base+0x26FF018]+8 -&gt; 0x1B0E60 -&gt; the pose job 0x1B0EE4;
+              the main thread drains the same queue too (0x7042FC -&gt; 0x1AF430)
+pose job      0x1B0EE4 walks the blend entries: the first non-zero weight -&gt; op 0 SAMPLE
+              0x264E8C -&gt; 0x260740 -&gt; 0x261360; each later one -&gt; op 1 BLEND 0x182980 by its weight;
+              no clip -&gt; op 2 REFERENCE POSE 0x11B517C; end -&gt; op 3 OUTPUT 0x1B12A4
+</code></pre>
+<p>The operations live in a 16 x 0x20 table at 0x2A86C60 filled by 0x1188844; the dispatcher 0x1B1230
+asserts "Animation Operation not registered" for a missing one. In play the pose job also shows up
+on the main thread (2.7% of its samples).</p>
+<h3 id="console-entry-points">Console entry points</h3>
+<p><code>AnimLink.PlayAnim</code> (handler 0x1BCF20C, <code>CharacterBehaviorInterface.cpp</code>) targets the character named
+in its first argument or the player and calls 0x1BDEC34(link = <code>[char+0x1970]</code>, name), which parses
+the name (0x41758C, 0x41A1E0), stores it at <code>link+0xC8</code> / <code>+0xD0</code> and calls 0x41A148. <code>AnimLink.Dump.History</code>
+(0x1BDEE0C) finds a registered character by name through 0x1B32410.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Which graph node writes the trackers' time, and where the transition in progress and its blend
+  time are held (not in the character's state slots or the link).</li>
+<li>The meaning of the state slots <code>+0x1198</code> and <code>+0x11A0</code>.</li>
+<li>The role of the AnimationMgr's 256-object pool.</li>
+<li>The hand-off from the pose output to skinning.</li>
+<li>Which names <code>AnimLink.PlayAnim</code> accepts (state names, clip names or both).</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
