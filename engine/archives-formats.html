@@ -1081,6 +1081,14 @@ index is in range or -1. The descriptor block holds, at <code>+0x2C</code>, the 
 the ladder rising to the arena's triangle count (index bytes / 6: 16-bit indices), found for 4,377 of
 4,377 arenas; and the object records again as 16-byte <code>{flags, object id, arena, material slot}</code> entries,
 where an object's consecutive records are its LOD chain.</p>
+<p>The groups are listed in one table of 40-byte records inside the descriptor block, arena after arena:
+<code>+0x00</code> vertex count, <code>+0x04</code> first index, <code>+0x08</code> index count, <code>+0x10</code> palette length and <code>+0x1C</code> a
+vertex-format id whose stride is fixed per file (<code>+0x0C</code>, <code>+0x14</code> .. <code>+0x1B</code> and <code>+0x20</code> .. <code>+0x27</code>
+are not covered by the sums below). For every arena the vertex counts times their format's stride add
+up to its vertex bytes, the index counts times 2 to its index bytes and the palette lengths to its
+palette bytes, and the index ranges follow on from 0; searching the block for a table that closes
+like this finds it in all 348 distinct loose meshes (the 711 loose entries without copies; 2,124
+arenas, 2,569 groups, and 93 meshes with an arena drawn as more than one group).</p>
 <p>An arena is drawn as one or more groups that share its buffers; a group's vertices are two streams:</p>
 <ul>
 <li>stream A, 16 bytes per vertex: half4 position with w = 1, ubyte4 weights summing to 255, ubyte4
