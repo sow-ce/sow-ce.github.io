@@ -1035,7 +1035,11 @@ hierarchy menu's tutorial manager (<code>HierarchyMenuTutorialMgr.cpp</code>), a
 <ul>
 <li>Is the <code>UIThread</code> object ever started, and under what condition? Nothing in the retail game's named
   threads shows it.</li>
-<li>What class is <code>[UIManager+0x88]</code>, the owner of the debug-menu open byte?</li>
+<li>What class is <code>[UIManager+0x88]</code>, the owner of the debug-menu open byte? The UI manager's
+  constructor 0x1889674 only zeroes the slot. In a running game the object starts with a heap pointer
+  rather than a vtable and holds a run of text-style entries that name the font "Anonymous Pro" with
+  sizes 45 and 100 (the name is not a literal in the executable, so it comes from data); the open
+  byte sits at <code>+0x7AE</code>, near the object's end.</li>
 <li>Which movies the <code>_Structuresuiflash</code> primaries 1 to 4 name (the NavMarkers, Player, PreLoad and
   MessageBox views), what the <code>PreLoad</code> view was for, and which movies hold the UI render list's mode 8
   and 0x10 entries.</li>
