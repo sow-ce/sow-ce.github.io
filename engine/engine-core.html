@@ -1,0 +1,435 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Engine core: managers, globals and key objects - Shadow of War engine reference</title><meta name="description" content="The engine&#x27;s top-level objects and the static slots that reach them: the game manager and its subsystems, the client shell, the main scene and the AI world, the engine interface and its services, the update root and object server, the UI and world-UI owners, time and frame counters, and the tests that say whether a world is loaded."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" class="cur" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="engine-core-managers-globals-and-key-objects">Engine core: managers, globals and key objects</h1><p class=\"lede\">The engine&#x27;s top-level objects and the static slots that reach them: the game manager and its subsystems, the client shell, the main scene and the AI world, the engine interface and its services, the update root and object server, the UI and world-UI owners, time and frame counters, and the tests that say whether a world is loaded.</p>
+<p>The engine reaches its subsystems through a small number of pointers stored in the writable
+globals (the <code>.idata</code> section, 0x25AC000-0x2AA5000). Each is a single slot written once or twice at
+start-up and read from hundreds or thousands of functions. Heap objects behind them move every run;
+the slots do not.</p>
+<h2 id="the-top-level-objects">The top-level objects</h2>
+<p>Reads and writes are counted over the whole executable (every instruction that addresses the slot).</p>
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Object</th>
+<th>Reads / writes</th>
+<th>Identified by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[base+0x26FFAA8]</code></td>
+<td><strong>GameManager</strong> (GM)</td>
+<td>2,851 / 1</td>
+<td>the gameplay subsystems below hang off it</td>
+</tr>
+<tr>
+<td><code>[base+0x26FFA98]</code></td>
+<td><strong>CGameClientShell</strong> (vt_0x1F65D70)</td>
+<td>2,603 / 1</td>
+<td>its slot 21 prints "ERROR in CGameClientShell::InitializeSubsystems"</td>
+</tr>
+<tr>
+<td><code>[base+0x26FFAB0]</code></td>
+<td><strong>MainScene</strong> (vt_0x1F68920)</td>
+<td>313 / 1</td>
+<td>its constructor 0x178608C stores <code>this</code> here; the "MainScene" string; vf10 is the scene tick</td>
+</tr>
+<tr>
+<td><code>[base+0x26FEFD0]</code></td>
+<td><strong>the engine interface</strong> (vt_0x1E6AEC0, 0xD8 bytes)</td>
+<td>1,483 / 1</td>
+<td>built by 0x117F8B0; getters for the engine's services</td>
+</tr>
+<tr>
+<td><code>[base+0x26FEFD8]</code></td>
+<td>the application object (vt_0x1FFE760)</td>
+<td>414 / 2</td>
+<td>the main loop calls its slots 33 and 29 every iteration</td>
+</tr>
+<tr>
+<td><code>[base+0x26FF050]</code></td>
+<td>the update root</td>
+<td>88 / 2</td>
+<td>written by the main-thread routine 0xC24DB0; <code>+0x3E0</code> is the object update manager</td>
+</tr>
+<tr>
+<td><code>[base+0x26FF058]</code></td>
+<td>the object server (vt_0x22C0B28)</td>
+<td>262 / 2</td>
+<td>creates world objects (see World); its vf5 reports "busy"</td>
+</tr>
+<tr>
+<td><code>[base+0x26FFBE8]</code></td>
+<td>the spawn manager</td>
+<td>55 / 1</td>
+<td>null at the main menu; see below</td>
+</tr>
+<tr>
+<td><code>[base+0x26FFB08]</code></td>
+<td>the UI manager (vt_0x1F7A878)</td>
+<td>1,982 / 4</td>
+<td><code>[+0x50]</code> is the menu system, its layer vector at <code>+0x500 .. +0x508</code></td>
+</tr>
+<tr>
+<td><code>[base+0x26FFB60]</code></td>
+<td>the world-UI owner (vt_0x1F97950)</td>
+<td>177 / 1</td>
+<td>owns the Army screen's stage holders (<code>+0x2B8</code>); its Update (vf18) runs every frame</td>
+</tr>
+<tr>
+<td><code>[base+0x26FFB80]</code></td>
+<td>the world-map menu layer (vt_0x1FA0B20)</td>
+<td>42 / 2</td>
+<td>dirty bytes <code>+0x275</code> (re-apply every captain's look) and <code>+0x276</code> (rebuild rows)</td>
+</tr>
+<tr>
+<td><code>[base+0x26FF960]</code></td>
+<td>the audio manager</td>
+<td>124 / 3</td>
+<td>the Wwise integration's globals sit next to it (see Audio and video)</td>
+</tr>
+<tr>
+<td><code>[base+0x2A34C68]</code></td>
+<td>the player list</td>
+<td>13 / 1</td>
+<td>an engine vector of <code>CPlayerObj</code> (below)</td>
+</tr>
+<tr>
+<td><code>[base+0x26FFC48]</code></td>
+<td>the AI sighting matrix</td>
+<td>61 / 1</td>
+<td>equal to the AI world's <code>+0x50</code> (see AI)</td>
+</tr>
+<tr>
+<td><code>[base+0x26FFCC0]</code></td>
+<td>the target-select picker table</td>
+<td>5 / 1</td>
+<td>27 pickers scanned by every NPC's target selection</td>
+</tr>
+<tr>
+<td><code>[base+0x2702598]</code></td>
+<td>the world clock (vt_0x22F2E98)</td>
+<td>358 / 1</td>
+<td>one of the engine's scaled clocks (below)</td>
+</tr>
+<tr>
+<td><code>[base+0x2A86750]</code></td>
+<td>the resource I/O core</td>
+<td>75 / 2</td>
+<td>see Resource streaming</td>
+</tr>
+<tr>
+<td><code>[base+0x2A86760]</code></td>
+<td>the Havok holder</td>
+<td>67 / 1</td>
+<td><code>+0x20</code> is the <code>hknpWorld</code> (see Physics)</td>
+</tr>
+<tr>
+<td><code>[base+0x2A86808]</code></td>
+<td><code>hkFreeListMemorySystem</code></td>
+<td>20 / 3</td>
+<td>type information <code>.?AVhkFreeListMemorySystem@@</code></td>
+</tr>
+<tr>
+<td><code>[base+0x26FEF88]</code></td>
+<td>the default heap (the static object 0x277CB40)</td>
+<td>664 reads</td>
+<td>see The executable</td>
+</tr>
+</tbody>
+</table>
+<p>Some engine objects are static objects in the image rather than pointers: the render thread at
+0x267E338 (its first qword is the thread-class vtable vt_0x1FFD4D0), the file system at 0x2A54600
+(reached by 14 <code>lea</code> instructions; see Resource streaming), the console registry at 0x2A58BC0 and
+the Direct3D block at 0x272D1C0 (see Rendering).</p>
+<h3 id="the-gamemanager">The GameManager</h3>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Subsystem</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x30</td>
+<td>a list on which world-object loaders queue objects for later processing</td>
+</tr>
+<tr>
+<td>+0x6C60</td>
+<td>the quest system (ticked by the scene tick, 0x4A859C)</td>
+</tr>
+<tr>
+<td>+0x6C68</td>
+<td><strong>the faction system</strong> (the Nemesis world: pools of captains, army contexts, the current region; see The Nemesis system)</td>
+</tr>
+<tr>
+<td>+0x6CC8</td>
+<td>fort-assault setup</td>
+</tr>
+<tr>
+<td>+0x6CE8</td>
+<td>the main script VM (<code>CScriptVM</code>; see Scripting)</td>
+</tr>
+<tr>
+<td>+0x6CF0</td>
+<td>the global script agent</td>
+</tr>
+<tr>
+<td>+0x6D08</td>
+<td>the script system</td>
+</tr>
+<tr>
+<td>+0x6D28</td>
+<td>gifts and world items</td>
+</tr>
+<tr>
+<td>+0x6D30</td>
+<td>loading progress (it reports <code>ENTER_WORLD_HANG_DETECTED</code>)</td>
+</tr>
+<tr>
+<td>+0x6D90</td>
+<td>a vector of objects ticked by 0x179F64 (each whose byte <code>+0x252</code> is set)</td>
+</tr>
+<tr>
+<td>+0x6D98</td>
+<td><strong>the weather manager</strong> (see Rendering)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cgameclientshell">CGameClientShell</h3>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Field</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x888</td>
+<td>the player (<code>CPlayerObj</code>)</td>
+</tr>
+<tr>
+<td>+0x898</td>
+<td>the active camera (its vf6 0x1A6E3C returns the camera position)</td>
+</tr>
+<tr>
+<td>+0x8A8</td>
+<td>a client-state object (its <code>+0x183E0</code> flag switches NPC updates to a special path)</td>
+</tr>
+<tr>
+<td>+0xE50</td>
+<td>the current load task: <strong>a new pointer here means a load is starting</strong></td>
+</tr>
+<tr>
+<td>+0xE60</td>
+<td>the network mesh (see Saves, the store and the network layer)</td>
+</tr>
+<tr>
+<td>+0xE90</td>
+<td>the local users</td>
+</tr>
+</tbody>
+</table>
+<p>Its vf1 0x1A864C is the per-frame client update, half of the main thread's time in play (see
+Threads and the frame).</p>
+<h3 id="mainscene-and-the-ai-world">MainScene and the AI world</h3>
+<p>The MainScene's vf10 0x1F6958 is the scene tick and its vf1 0x3365A4 the render submission. Its
+members are the engine's world-side systems:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>System</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x778</td>
+<td><strong>the AI world</strong>: <code>+0x28</code> the fight-circle manager, <code>+0x30</code> the spawn manager (equal to <code>[base+0x26FFBE8]</code>), <code>+0x38</code> the alarm system, <code>+0x50</code> the sighting matrix</td>
+</tr>
+<tr>
+<td>+0x788</td>
+<td>ticked second in the scene tick (0x1F7240)</td>
+</tr>
+<tr>
+<td>+0x798</td>
+<td>game mode, projectiles, weapon-mode item givers, attached characters</td>
+</tr>
+<tr>
+<td>+0x7A8</td>
+<td>the slow-motion manager</td>
+</tr>
+<tr>
+<td>+0x7B0</td>
+<td>dynamic object groups</td>
+</tr>
+<tr>
+<td>+0x7D0</td>
+<td>resurrection and ambient areas</td>
+</tr>
+<tr>
+<td>+0x7D8</td>
+<td>render restart</td>
+</tr>
+<tr>
+<td>+0x7E0</td>
+<td>presentation bundles</td>
+</tr>
+<tr>
+<td>+0x7E8</td>
+<td>bundle unloads and world UI</td>
+</tr>
+<tr>
+<td>+0x868</td>
+<td>the character bundle manager</td>
+</tr>
+</tbody>
+</table>
+<p>The order in which the scene tick runs them is in Threads and the frame.</p>
+<h3 id="the-engine-interface">The engine interface</h3>
+<p>The engine interface hands out the engine's services; none of them has a global of its own:</p>
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Getter</th>
+<th>Field</th>
+<th>Service</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vf3</td>
+<td>0x11811D4</td>
+<td></td>
+<td>the video-clip request manager, which lives at <code>[[base+0x26FF050]+0xB50]</code> (vt_0x22C0DD0); the getter asserts "VideoClipRequestMgr not initialized!"</td>
+</tr>
+<tr>
+<td>vf10</td>
+<td>0x3AD870</td>
+<td>+0x98</td>
+<td>the sound manager (vt_0x1E6D5F8)</td>
+</tr>
+<tr>
+<td>vf26</td>
+<td>0x4C3310</td>
+<td>+0x90</td>
+<td>the render interface (vt_0x1FFD5E8)</td>
+</tr>
+<tr>
+<td>vf27</td>
+<td>0x32F9B0</td>
+<td>+0x88</td>
+<td>the movie manager <code>WBMovieMgr</code> (vt_0x230B308)</td>
+</tr>
+</tbody>
+</table>
+<p>The interface also registers world shapes: an atmosphere volume's brushes reach the renderer
+through its vf15 (see Rendering).</p>
+<h3 id="the-player">The player</h3>
+<p>The player list <code>[base+0x2A34C68]</code> is an engine vector <code>{+0x00 begin, +0x08 end, +0x10 u32
+capacity, +0x14 u8 owned}</code> of <code>CPlayerObj</code> (vt_0x1F96818). The <code>CPlayerObj</code> set-up pushes the player
+(push_back 0x19B8064), 0x19B9CBC erases it, and <code>Engine::GetActivePlayer</code> 0x360950 returns
+<code>begin == end ? 0 : *begin</code>. In single player the list has one entry, the same object as
+<code>[CGameClientShell]+0x888</code>.</p>
+<h2 id="time-and-frames">Time and frames</h2>
+<table>
+<thead>
+<tr>
+<th>Counter</th>
+<th>Where</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>world time</td>
+<td>the world clock's state <code>[[base+0x2702598]+0x08]</code>: <code>+0x18</code> u32 milliseconds, <code>+0x20</code> f64 seconds (the same instant)</td>
+<td>advances only while the simulation runs; stops while the game is paused or unfocused</td>
+</tr>
+<tr>
+<td>frame counter</td>
+<td>u32 at 0x2701FE8</td>
+<td>incremented once per frame by 0x160AF4, its only access; it advanced 249 times in 2 s, exactly like the presented-frame counter, also while the world was paused</td>
+</tr>
+<tr>
+<td>presented frames</td>
+<td>u64 at 0x272D268</td>
+<td>incremented by every successful <code>Present</code> (see Threads and the frame)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The clocks.</strong> The engine keeps a family of scaled clocks, each a holder object with its own vtable
+(vt_0x22F2E90 to vt_0x22F2F10) whose <code>+0x08</code> is the clock state: <code>+0x14</code> the current step, <code>+0x18</code>
+u32 milliseconds, <code>+0x20</code> f64 seconds, <code>+0x28 / +0x2C</code> the rate's numerator and denominator,
+<code>+0x30</code> the scale. The slots are the world <code>[base+0x2702598]</code>, the player <code>[base+0x2702548]</code>, the
+combat companion <code>[base+0x2702570]</code>, the world UI <code>[base+0x2702558]</code>, presentations
+<code>[base+0x2702578]</code>, an unscaled clock <code>[base+0x2702550]</code>, the UI <code>[base+0x2702588]</code> and
+<code>[base+0x2702590]</code>. Slow motion scales the first five as channels (see Quests, story and scenes).</p>
+<p>A character's time source <code>[char+0x88]</code> is the state of one of these clocks: 114 of 115 characters
+in the spawn manager use the world clock and the player uses the player clock. The object update
+scheduler subtracts that clock's step from each object's countdown (see Threads and the frame), so
+pausing (step 0.0) and slow motion throttle NPC and player updates through the same values. AI
+services run on the world time instead: each service is due when the world time at <code>+0x20</code> passes
+its own due time.</p>
+<h2 id="is-a-world-loaded">Is a world loaded?</h2>
+<ul>
+<li><strong>The spawn manager</strong> <code>[base+0x26FFBE8]</code> is null at the main menu and live once a world is
+  loaded. The player object persists across menus, so its presence proves nothing. A world is in
+  play when the spawn manager exists and holds spawned characters.</li>
+<li><strong>Spawn manager layout.</strong> <code>+0x190</code> is the number of characters owned by ambient spawning, not
+  the length of the character array. Entries are 0x40 bytes with the character at <code>+0x20</code>. The
+  manager is reallocated during travel, so a pointer to it must be re-read on every use; the same
+  holds for character controllers, which are replaced on respawn.</li>
+<li><strong>A load starting</strong> shows as a new pointer at <code>[CGameClientShell]+0xE50</code>.</li>
+<li><strong>Pause.</strong> The simulation pauses while the game window is unfocused: the world time stops and
+  the per-object time steps are 0, while the renderer keeps drawing at full rate.</li>
+<li><strong>Loads rebuild state.</strong> Some loading screens deserialise GameDB instance data and faction
+  members again, and a region change resets bundles and animation state, so values written into
+  those objects before a load do not survive it.</li>
+</ul>
+<h2 id="threads-and-asserts">Threads and asserts</h2>
+<p>Anything that allocates engine objects, dispatches to scripts or rebuilds a world object runs on
+the main thread; the render thread consumes commands the main thread posts (see Threads and the
+frame). Engine asserts are a write to a null address at 0x819113 with the message in <code>rcx</code>
+(<code>EngineAssert</code> 0x819104).</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>What the remaining frequently-touched slots near the managers hold: <code>[base+0x26FFC28]</code> (8 reads),
+  <code>[base+0x26FFC58]</code> (7 reads), <code>[base+0x2703710]</code> (8 reads, 3 writes; the live object's vtable is
+  0x1DB3480, a 142-slot class), <code>[base+0x26FFB40]</code> and <code>[base+0x26FFB78]</code> (null while a world is
+  loaded) and <code>[base+0x26FFB48]</code> (a small integer, one read and one write).</li>
+<li>What the clock state's remaining fields mean (<code>+0x08</code>, <code>+0x38</code>), and what <code>[base+0x2702590]</code> clocks.</li>
+<li>0x26FEF80 holds the same default-heap pointer as 0x26FEF88 and is read 456 times and written 430
+  times: which allocation paths use the second copy.</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
