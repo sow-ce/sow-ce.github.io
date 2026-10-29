@@ -1212,6 +1212,16 @@ English table has 68,547 keys. A key is <code>StringHash</code> of the key name 
   nothing does: neither archive is in the config list or the live mount vector, no string in the
   executable names either archive or <code>dlc\blade.txt</code> / <code>dlc\lithlad.txt</code>, and the third caller of
   <code>Mount</code>, vt_0x22BF9C8 vf2 0x11ACD04, is a generic "mount this path and report success" method.</li>
-<li>Whether the folder binary search can miss a folder in the seven archives whose folder order differs
-  from plain case-insensitive order (the compare length used by 0x3DDB90 is not traced).</li>
+<li>Whether the files of the folders the folder search cannot find are reached by another path (the
+  merged hash table at <code>fs+0x80</code>, or the next archive in search order). The search can miss
+  folders: 0x3DDB90 binary-searches the archive's folder array (<code>+0x40</code>, 0x30-byte entries, count
+  <code>+0x48</code>) with <code>_strnicmp</code>, whose length its main caller 0x3DDAD8 passes as 0x105, and a mounted
+  archive keeps its folders in the on-disk order (79 of 79 mounted archives compared, the seven
+  below included). Replaying that search over every archive, 15 of 16,302 folders cannot be found,
+  all names that are a prefix of a neighbour: <code>bundles\dlc4</code> in <code>Patch_09</code>, <code>Patch_10</code> and
+  <code>Patch_DLC4</code>; in <code>HighMip</code> the prefab folders <code>fort\stairsfortwallb</code> and <code>stairsfortwallc</code>,
+  <code>wilderness\human\mdbuildingb</code>, <code>flair\mystic\mystwalllow</code>, <code>volcano\architecture\bridge\walkway</code>
+  and <code>balrogpit\balrogpltfrm_05bot</code>; in <code>uhdmip</code> <code>mystwalllow03</code> and <code>balrogpltfrm_05bot2</code>; in
+  <code>uhdmip_DLC4</code> <code>stairsfortwallb</code>, <code>mdbuildingb</code> and <code>mystwalllow</code>; and <code>stairsfortwallb2</code> in
+  <code>Benchmark</code>.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
