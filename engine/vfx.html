@@ -424,8 +424,11 @@ player rig <code>LeftHand</code> / <code>RightHand</code>; the player skeleton's
 </ul>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>Which objects own the three managers outside the client shell (one of them, never visible, held 10
-  to 34 instances).</li>
+<li>Which objects own the three managers outside the client shell. Their time sources are known: in a
+  loaded Lithlad (eight managers in the global list, the client shell's five at <code>+0xA98 .. +0xAB8</code>
+  running on the world, real-time, player, companion and world-UI clocks), one extra manager ran on
+  the UI clock with 50 instances, one on the real-time clock with 10, and one on a clock state that
+  is none of the eight engine clocks, with 0. Nothing in the client shell points at them.</li>
 <li>Which of the KeyData slots vf6, vf7, vf8 and vf10 is the background update and which submits to the
   renderer.</li>
 <li>How a pooled run-time object attaches to its instance, and what kinds of parent the instance
