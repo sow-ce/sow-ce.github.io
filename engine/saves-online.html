@@ -1,0 +1,289 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Saves, the store and the network layer - Shadow of War engine reference</title><meta name="description" content="The save file format and its encryption, the typed section grammar and what each slot section holds, the engine&#x27;s own save switch and the new-game flow, the client side of the old in-game store, and the dormant peer-to-peer network stack with the asynchronous online modes."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" class="cur" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="saves-the-store-and-the-network-layer">Saves, the store and the network layer</h1><p class=\"lede\">The save file format and its encryption, the typed section grammar and what each slot section holds, the engine&#x27;s own save switch and the new-game flow, the client side of the old in-game store, and the dormant peer-to-peer network stack with the asynchronous online modes.</p>
+<h2 id="the-save-file">The save file</h2>
+<p>A Steam save is <code>Steam\userdata\&lt;account&gt;\356190\remote\&lt;account hex&gt;_&lt;slot&gt;_ShadowOfWar.sav</code>; the
+file-name prefix is the Steam account number in hexadecimal.</p>
+<pre><code>header  'SOM3' | u32 salt | u32 padded length (= file size - 16, a multiple of 16) | u32 real length
+body    AES-256-CBC, PKCS#7 padding
+key     a 32-byte constant (RVA 0x1E6CB08) with the salt's bytes 0-3 written to key positions
+        26, 11, 18, 17 and the account number's bytes 0-3 to positions 10, 30, 22, 2
+        (SOM2 files skip the account step)
+iv      the first 16 bytes of a constant at RVA 0x1E6CAF0
+</code></pre>
+<p>The reader 0x119A2C8 accepts <code>SOM2</code> and <code>SOM3</code> (<code>sub eax,'SOM2'; test eax,0xFEFFFFFF</code>); the writer is
+0x52B4BC, entered from 0x52B1CC. Both use OpenSSL's EVP layer linked into the executable
+(<code>EVP_CIPHER_CTX_new</code> 0x8C5350, <code>EVP_aes_256_cbc</code> 0x8C7D10, <code>EVP_DecryptInit_ex</code> 0x8C59C0,
+<code>set_padding</code> 0x8C5460, <code>EVP_DecryptUpdate</code> 0x8C59F0, <code>EVP_DecryptFinal_ex</code> 0x8C5810); the account
+value is read from <code>obj+0x868</code>. The padding byte equals padded length minus real length, and the
+plaintext's entropy drops from 8.00 to 5.01 bits per byte.</p>
+<h3 id="the-typed-grammar">The typed grammar</h3>
+<p>The plaintext opens with <code>SAVE</code> version 2: a header (a u32 profile-section count at <code>+0x18</code>, 5),
+the profile sections, a u32 slot count (3), then per slot <code>{u32 6, u32 length, u32 0, payload}</code>. A
+section is <code>tag, u32 version, u32 size, u32 0, u32 n (= size - 4), n bytes</code> of typed values:</p>
+<table>
+<thead>
+<tr>
+<th>Tag</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>00</code></td>
+<td>a 32-bit name hash (4 bytes)</td>
+</tr>
+<tr>
+<td><code>02</code></td>
+<td>u8</td>
+</tr>
+<tr>
+<td><code>04</code></td>
+<td>u32</td>
+</tr>
+<tr>
+<td><code>05</code></td>
+<td>two u32 (a GUID half, a pair of counters)</td>
+</tr>
+<tr>
+<td><code>08</code></td>
+<td>i32</td>
+</tr>
+<tr>
+<td><code>0A</code></td>
+<td>f32</td>
+</tr>
+<tr>
+<td><code>0C</code></td>
+<td>bool (1 byte)</td>
+</tr>
+<tr>
+<td><code>0E</code></td>
+<td>vec3 (12 bytes; positions in cm)</td>
+</tr>
+<tr>
+<td><code>0F</code></td>
+<td>byte string (u8 length + bytes: GUID text, a product id)</td>
+</tr>
+<tr>
+<td><code>10</code></td>
+<td>u32, the byte size of what follows</td>
+</tr>
+</tbody>
+</table>
+<p>With these ten tags, 27 of 27 sections of a story slot read to their exact end. GameDB records are
+saved as name hashes, never as strings (a 2.3 MB save holds 421 ASCII tokens, all settings); the
+hash does not carry a category, so the section's context decides which category it names.</p>
+<p><strong>Layout.</strong> 86 sections: 5 profile sections (<code>GOXC PERF PICB GPDC GMSC</code>) and the same 27 in each of
+the 3 slots. Per slot, in file order: <code>SAVE</code> (the summary, version 31), a u32 giving the byte length of
+the rest of the slot, <code>IVGD</code> (v3), <code>ENT2 IVSH PPDC PDIC PAIC IEUC IVMG</code> (v43), <code>IVPD</code> (v4), <code>TTRL
+LTMR</code>, about 1.28 MB with no typed section header, then <code>FAST FOTP ASMC DIFF CBTC GCPT INVA REEL QSTD</code>
+(v23) <code>PDCC LPDC AUDI IIUC UITC STOR</code> (v159). Most sections open with <code>04 3, 00 hash(&lt;game mode&gt;)</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SAVE</code> (slot)</td>
+<td>the summary: 10 values (region, a hash, a percentage, <strong>play time in minutes</strong>, ...)</td>
+</tr>
+<tr>
+<td><code>IVGD</code></td>
+<td>the 573 game variables, three times: <code>00 variable hash, 02 VariableType, value</code>. The first copy holds the played values; the other two hold the record defaults</td>
+</tr>
+<tr>
+<td><code>PPDC</code></td>
+<td>the per-mode level and XP table (<code>[GM+0x6D20]</code>): <code>{00 mode, 04 level0, 04 XP}</code> (level0 + 1 is the level shown)</td>
+</tr>
+<tr>
+<td><code>IVMG</code></td>
+<td>the player's inventory (below)</td>
+</tr>
+<tr>
+<td><code>IVPD</code></td>
+<td>584 <code>{00 item, 04 value}</code> pairs for the skill items (<code>PS_*</code>, <code>S_*</code>)</td>
+</tr>
+<tr>
+<td><code>PDIC</code></td>
+<td>contains world positions (vec3)</td>
+</tr>
+<tr>
+<td><code>GMSC</code> (profile)</td>
+<td>per game mode <code>{mode, int, sub-object, score record A, score record B, bool}</code>; a score record is <code>{mode, hash, 5 ints, 4 floats, bool}</code> with the score as its second float</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>IVMG</code>, the inventory</strong>, in order: a header (<code>04 3, 00 mode, 0C, 10 size, 05 (...), 00 PlayerSkin00,
+04 &lt;one above the highest item id&gt;, 04 729, 0C 1</code>); the owned stacks <code>{00 item, 04 count, 04, 04 n,
+n x 04, 0C}</code> (714 on a finished save; the Mirian currency is a stack too); 14 bools; then the gear
+records <code>{04 id, 04 level, 02 0, 00 Inventory/Items, 00 EquippedWeaponData, 00 0, 0C, 0C, 04 n, n x 00
+Affix/Definition, 04 0, 05 GUID low, 05 GUID high, 0F source product, 02 0, 0C has-nemesis}</code> followed,
+when set, by a nemesis block (<code>00 NemesisGear, 00 Description, 00 Role, 04 seed, 04 seed, 0C</code>, then
+optionally an upgrade tier, art, a <code>Combat/Challenge/Eval</code> challenge with its progress and a weighted
+<code>Faction/Loot/Tag</code> list) and two closing bools; then 25 per-slot entries <code>{0C, [04 item id]}</code>
+(one per inventory slot); then reward items and 8 gem sockets <code>{00 SocketType, 0C, 00 SocketType,
+00 gem}</code>, and DLC flags.</p>
+<p><strong>The front-screen card.</strong> The card printer 0xDF9370 reads the slot info
+<code>[CGameClientShell+0xEB8] + 0x1C8 + GameModes.SaveSlot * 0x298</code>: it prints <code>ceilf(+0x24 minutes)</code>
+as hours and minutes and <code>floorf(+0x20)</code> as the completion percentage; for a game mode with
+<code>GameModes.UseHighScore</code> (the fourth story DLC's mode) it prints the score from the <code>GMSC</code> entry found
+by 0xFAD1B0(<code>[base+0x2A36278]</code>, mode) (the first entry with <code>+0x80</code> equal to the mode and <code>+0x50</code>
+non-zero, score at <code>+0x68</code>).</p>
+<h2 id="saving-and-starting-a-new-game">Saving and starting a new game</h2>
+<p><strong>The save switch.</strong> Both world-save paths read <code>GameModes.CanSave</code> of the current game mode
+(<code>[base+0x2A36260]</code>; <code>SinglePlayer</code> in the campaign) and skip the save when it is clear: the save
+task (vt_0x1F6CC40 vf3 0x52C70C -&gt; 0x52C664, which also refuses on the client shell's state at
+<code>+0xE38</code>, flags at <code>+0x189</code> / <code>+0x194</code> and <code>+0xA20</code>; accessor 0x52C5EC) and the world save 0x5B7B58
+("Attempting to save the game without a world to restore", test at 0x5B7BA8). <code>CanSave</code> is packed
+bool 13 of the record's first cell. It ships clear on <code>QuestReplay</code> (story mission replays) and
+<code>Benchmark</code>: the engine is built to run a world that never saves. <code>SaveCurrentWorld</code> (bit 3) is a
+second gate inside 0x5B7B58.</p>
+<p><strong>The mode-select screen</strong> (<code>GameModeSelect</code>; layer class vt_0x1F92AF0, record
+<code>Interface/Menu/MenuLayer/GameModeSelect/ModeSelect</code>) lives in the menu system's layer vector
+(<code>[[base+0x26FFB08]+0x50]</code>, <code>+0x500 .. +0x508</code>). The highlighted row is <code>[layer+0x1348]</code> (node
+<code>+0x28</code> the record, <code>+0x230</code> the <code>GameModes</code> record, <code>+0x238</code> the world). The profile slot info is
+<code>[[CGameClientShell+0xEB8] + [CGameClientShell+0xED0] * 8]</code> (<code>+0x38</code> = 3 when ready); a mode's slot
+is <code>+0x1C8 + SaveSlot * 0x298</code>, whose <code>+0x08</code> is non-null when the mode has a save.</p>
+<ul>
+<li>0xD07AA0(mode, 0) is the mode's availability: 0 not ready, 1 / 2 a DLC not owned / not installed,
+  3 playable. 0xE37610(layer) tests whether the highlighted mode has a save.</li>
+<li><code>OnAction</code> (vf12 0xE39590): action <code>0x20</code> (MenuEnter) leads to 0xE39E00 - availability 1 / 2 opens
+  the DLC store, 3 with a save continues (0xCF8ED0), 3 without a save starts a new game by pushing the
+  <code>Difficulty</code> layer with the mode at <code>instance+0x9C8</code>. Action <code>0x54</code> (the "Delete Saved Game" prompt,
+  key 2 / pad X) opens a confirmation when the mode is playable and has a save.</li>
+<li>Delete 0xE3B650 resets every save-data chunk handler (0x184CA5C), the mode's <code>GMSC</code> entry
+  (0xFADDC0) and the slot info, and sets the row's world to <code>GameModes.DefaultWorld</code>. Deleting and then
+  starting is the only native way to restart a mode that has a save.</li>
+<li>The confirmation is a 0x1138-byte message-box request: <code>+0x00</code> the close callback 0x17DA030,
+  <code>+0x20</code> the <code>Interface/MessageBox</code> record for type 0x3F, <code>+0x28</code> type, <code>+0x2E</code> title <code>wchar[0x80]</code>,
+  <code>+0x12E</code> text <code>wchar[0x800]</code>; queued by 0x1784F14(<code>[CGameClientShell+0x890]</code>, request). The
+  callback calls the caller's function with the result; Delete acts only on 0 (Yes).</li>
+</ul>
+<p><strong>New Game+ was cut by nulling one link.</strong> <code>Interface/Shared/Shared</code> still carries the whole New
+Game+ card: <code>NewGamePlusPresentationItem</code> (<code>Inventory/Items/Player_PresentNewGamePlusDialog</code>), a
+bundle path that ships in no archive, an image, an icon, a command set
+(<code>Profile/CommandSets/NewGamePlusConfirm</code>), the title "Congratulations!" and a description key with
+no string - but <code>NewGamePlusPresentationEvent</code> is null, and the player-UI tick 0x5218C8 builds
+nothing without it. No restart logic stands behind the card. The console command
+<code>UI.NewGamePlusDialog</code> (registered by 0xB2220) only sets a byte at <code>+0x98</code> of the player's
+<code>+0x2F98</code> object, which nothing else in the analysed code writes; <code>Quest/Quests.ShowNewGameDialogOnComplete</code>
+has a field binding but no reader. The game's own delete warning lists what a new game keeps: all
+boosts, unused training orders, undeployed follower orcs and unopened chests ("available in Act 2").</p>
+<h2 id="the-in-game-store">The in-game store</h2>
+<p>The pre-2018 Market is the pause menu's <strong>GARRISON</strong>: <code>Root_Store</code> -&gt; <code>Interface/Menu/MenuLayer/Store</code>
+(the label resolves to "GARRISON"; an older patch archive still says "MARKET"). Its sections are
+<code>Store_Garrison</code> (Followers), <code>Store_Stash</code> (Unopened Chests), <code>Store_Contracts</code> (Training Orders), and
+<code>Store_Vendor</code> and <code>Store_Boosts</code>, which build only from visible catalog products.</p>
+<ul>
+<li><code>IsStoreEnabled</code> 0x1B1AE04 = <code>GetBool(current game mode, StoreEnabled)</code>; <code>SinglePlayer</code> ships
+  true. The gold predicate <code>CommerceCurrency_Paid</code> 0x1869F48 returns true when the store is off, so
+  gold-only content is free by design in that case.</li>
+<li>The client commerce object is <code>CUser+0xDB8</code> (vt_0x1F71020), <code>CUser</code> =
+  <code>([base+0x26FFA98]+0xE90).users[0]</code>: <code>+0x49</code> initialised, <code>+0x4B</code> / <code>+0x4C</code> / <code>+0x4D</code> definitions,
+  inventory and catalog loading, <code>+0x4E</code> catalog error, <code>+0x5D</code> store requested; wallets at <code>+0x158</code>
+  (paid Gold), <code>+0x160</code> (earned) and <code>+0x168</code> (social); boost state at <code>+0x100</code> (XP multiplier),
+  <code>+0x110</code> (end time) and <code>+0x120</code> / <code>+0x138</code> (Spoils), parsed by 0x17F6998.</li>
+<li>The 2018 update switched the store off on the client: the client never requests the catalog, and
+  the loop that creates shelf nodes was removed (with 9 store-layer action fields and the purchase
+  handlers). Every consumer survived, including the product-node setter 0x194D118 (still used by the
+  Buy Gold layer 0x1930650) and <code>AddNode</code> 0x195B78C. The console command <code>User.Commerce.LoadCatalog</code>
+  (0x17F4AB4) still fetches the catalog.</li>
+<li><strong>Opening a chest</strong> runs the 2017 pipeline: an unpack job (0x1FE1EC0) and one follower reward
+  (0x1FE1F88) per orc in the reply, building the orcs into <code>Faction_Player</code> with row
+  <code>Faction/Rows::player_created</code>. A local follower is built by the same chain: a builder instance
+  (0x1C62054, filled by 0xFF2370 from <code>Marketplace/Builders/FactionMember/*</code> type, class, tribe,
+  element, rarity and level) -&gt; 0x1B5B7F8(FS, region faction, instance) -&gt; 0x7D52B0(fm, 1) (bit 27 of
+  <code>FM+0x508</code>, player follower) -&gt; 0x1B5E254(FS, fm) (hierarchy slot). GARRISON's Followers section is
+  the online garrison: <code>Garrison::Add</code> 0xFCB3A0(<code>[FS+0x50]</code>, fm, notification) serialises the orc for
+  the online service.</li>
+<li>WB's binary format (Hydra) encodes booleans as <code>0x02</code> = true and <code>0x03</code> = false. Its parsed
+  catalog and inventory objects are freed after parsing.</li>
+<li><strong>GARRISON's Gold counter</strong> sits in the header embedded at <code>[[base+0x26FFB08]+0x50]+0x800</code>
+  (vt_0x1F92EC8: <code>+0xE0</code> header type, <code>+0x538</code> seven element pointers, Gold = element 2). The 2018
+  switch-off is only that element's callback (<code>element+0x30</code> = 0x1983288), which hides its <code>Value</code> and
+  <code>Desc</code> children on every update; the same callback also completes the header's transition step
+  (0x328748). The header type numbering changed between patches (5 in the older archives, 6 in the
+  final one). Currency icons are glyph tokens, not pictures: the Mirian setter 0xE49020 sets
+  <code>Desc</code> to the item's <code>UIItemData.GlyphReplacement.TokenText</code> (fallback <code>{M}</code>), and
+  <code>Interface/GlyphReplacement::PremiumCurrencyIcon</code> = <code>{G}</code> draws <code>kraken\gold.tex</code>.</li>
+</ul>
+<h2 id="the-network-layer">The network layer</h2>
+<p>The engine keeps an older peer-to-peer multiplayer layer. The shipped game builds it and ticks it
+every frame; nothing hosts or joins.</p>
+<ul>
+<li><strong>NetMesh</strong> (vt_0x22C1170, secondary vt_0x22C1128; constructor 0x119F92C, called only from the
+  engine interface's slot 18): one instance, at <code>CGameClientShell+0xE60</code>, with its node id (<code>+0xB8</code>,
+  u16) at 0xFFFF. <code>CGameClientShell</code> vf1 0x1A864C calls its slot 3 every frame (send vf4 0x66D8F4,
+  receive vf5 0x66DA68). Slots: 6 HostMesh 0x11A0F5C, 7 JoinMesh 0x11A1218, 10 Drop (host only), 12
+  DetermineNewHost ("Using matchmaking system NOT IMPLEMENTED"); <code>SendJoinRequest</code> 0x11A1C0C; the node
+  registry checks ids and endpoints at 0x119FDB0. HostMesh and JoinMesh have no callers.</li>
+<li><strong>NetStateMachine</strong> (<code>Engine\Runtime\net\</code>): the <code>JoinMesh</code> state (factory 0x11A01BC, vt_0x1E6FFE0)
+  and <code>HostVote</code> (console variables <code>Net.NSM.HostVote.Timeout</code> 15000 ms and <code>.PauseInStart</code>), plus
+  <code>Net.PhysicsPause</code> and <code>Net.MaxFinalizeTime</code>.</li>
+<li><strong>UDP transport:</strong> socket / bind / getsockname 0x11C57E0 (non-blocking UDP), <code>recvfrom</code> 0x11C5880,
+  <code>sendto</code> 0x11C4760 with a network simulator (drop percentage <code>[base+0x27C5480]</code>, corrupted-byte
+  percentage <code>[base+0x27C547C]</code>, a switch byte <code>[base+0x27C5484]</code> -&gt; 0x11C4B0C). Packets are
+  bitstreams (0x1197620, size = (bits + 7) / 8).</li>
+<li><strong>No replication layer:</strong> the bitstream builder's 19 callers all lie inside the network code
+  (0x117F000-0x11C4000); the client shell reads the player object directly (<code>+0x888</code>), so "client" and
+  "server" share memory. The client shell registers <code>LANOnly</code>, <code>publicserver</code> and <code>NetMeshGamePort</code>
+  (default 1032) and never reads them. <code>Profile/Multiplayer</code> ships the older engine's profile (client
+  port 27888, bandwidth settings, <code>IDS_PLAYER_NAME</code>).</li>
+<li>Also compiled in: Steam game-server, networking and matchmaking interfaces (lobby keys LobbyName,
+  ServerVersion, ReqPassword, BehindNAT, PubIP, PrivIP, LANOnly at 0x11EF670) and a WebSocket client
+  for the online service's real-time channel.</li>
+<li>The input thread polls four XInput pads (0x11537D8). The input-driven attack node runner 0x30FD80
+  is reached only from the player tick (0x162560 &lt;- 0x43B8F4): AI combat has no virtual controller.</li>
+</ul>
+<p><strong>The online modes are asynchronous.</strong> <code>GameModes</code> lists ranked and friend Overlord arenas (online
+fight pits), Vendetta and ranked / friend Conquest. Opponent data comes from the online service; the
+fight is simulated locally. An online fight pit is the quest <code>&lt;Region&gt;_ArenaOnline</code> (six regions;
+<code>Quest/Types::OnlineArena</code>; setup <code>Quest/Jobs/SetupSimple::ArenaOnline</code>: job 0 the player's Overlord,
+job 1 <code>ArenaOnlineOther</code> = <code>UseOnlineArenaOpponent</code>, builder <code>ArenaOnline_Other</code>). The ranked menu
+0xE24AE0 sends a matchmaking request; its reply parser 0xF74430 reads <code>{Id, Info, Overlord}</code> or an
+error string. The opponent goes through 0xF548C0, the same orc importer as Vendetta and Conquest
+(0x1B41894), is level-checked by 0xF58EF0 and stored as <code>__online_arena_opponent__</code>. Launching
+(0xF72D30, quest enter 0xEA7700) sends the current region's Overlord, serialised by <strong>0x1BC5044</strong>(fm,
+map), the engine's orc exporter (also used for publishing, Vendetta and Conquest; an exported orc
+carries name, title, trait level, rarity, appearance piece hashes, inventory, combat tree and about
+70 keys in all).</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Which value fills the card's completion percentage (<code>slot info +0x20</code>): the save summary's third
+  value read 100 while the card showed 75 % on the same save.</li>
+<li>What the second and third copies of the game variables in <code>IVGD</code> are (checkpoints, restore states).</li>
+<li>The 1.28 MB of each slot that carries no typed section header.</li>
+<li>Whether the 25 per-slot entries in <code>IVMG</code> are the equipped items per slot.</li>
+<li>Where the engine keeps the progress a new game inherits (the profile part or the online store).</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
