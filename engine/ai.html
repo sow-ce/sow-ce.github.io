@@ -407,6 +407,10 @@ slots:</p>
 </table>
 <p>A step's preconditions are code in vf5 and vf9 and its tuning is its record, so whether an NPC
 flees is decided by <code>NPC::IsFleeing</code> and the record's gates, not by the Flee step's existence.</p>
+<p><strong>The planner's debug output is compiled in but never switched on.</strong> The switch 0x2A361F1 is read by
+seven instructions (0x191030, vt_0x1DB55F0 vf5, vt_0x1FBC5E8 vf5 and vf6) and written by none; it
+lies in zero-initialised memory, so it stays 0 in a normal run. The two filters are string objects
+created at start-up (0xC16F0, 0xC1780) that the vf17 match 0x1B04B68 compares with an object's name.</p>
 <h3 id="construction-and-the-step-factory">Construction and the step factory</h3>
 <p>The plan tree is built once, at character set-up, from the NPC's <code>AI/CharacterTypes.PlanTree</code>
 record (accessor 0x7279C0): <code>vt_0x1FB3640::vf12</code> 0x3FA718 -&gt; 0x45AFDC -&gt; 0x6FC774 -&gt; 0x6FC7B8 -&gt;
@@ -1576,8 +1580,6 @@ makes the player captain 1 or 2, but <code>MissionEnd</code> decides the win on 
 <li>No stack entry parked a non-zero status in a 73.5 s fight capture, and the suspend byte
   <code>npc+0x2C21</code> was never seen set in it; reading it during a mount, a synchronised kill and a
   dialogue would show which systems set it besides the queued teleport.</li>
-<li>Whether the planner's debug output (switch 0x2A361F1, filters 0x2A361F8 / 0x2A36200) survives in
-  this build.</li>
 <li>50 step types have no class named from their own field reads; the factory map gives every one a
   vtable, but the table above lists only the ones read live or named.</li>
 <li>Is the target-select table ordered by <code>Cost</code>? Mapping each of the 27 objects (<code>picker+0x08</code>) to
