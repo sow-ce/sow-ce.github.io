@@ -1,0 +1,768 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rendering: the D3D11 layer, passes, shaders and lighting - Shadow of War engine reference</title><meta name="description" content="How the renderer drives Direct3D 11, the wrapper functions and the 55 pass entry points, the deferred G-buffer and its lighting classes, the surface overlay and fog passes, shader trees and the node table that holds them, the 220 global shader constants and what they reveal, material parameters, and the atmosphere, colour-grading and weather systems that decide the world&#x27;s look."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" class="cur" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="rendering-the-d3d11-layer-passes-shaders-and-lighting">Rendering: the D3D11 layer, passes, shaders and lighting</h1><p class=\"lede\">How the renderer drives Direct3D 11, the wrapper functions and the 55 pass entry points, the deferred G-buffer and its lighting classes, the surface overlay and fog passes, shader trees and the node table that holds them, the 220 global shader constants and what they reveal, material parameters, and the atmosphere, colour-grading and weather systems that decide the world&#x27;s look.</p>
+<p>The renderer is a deferred Direct3D 11 renderer that runs on its own thread as a command processor:
+the main thread records each frame into a command ring and the render thread replays it. How the
+ring works, the order of one frame's commands, where the render thread's time goes and how a frame
+is presented are in <strong>Threads and the frame</strong>; this chapter covers what the renderer does with the
+GPU.</p>
+<h2 id="the-direct3d-objects">The Direct3D objects</h2>
+<p>The engine keeps its Direct3D objects in one static block at 0x272D1C0:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Address</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>0x272D1C0</td>
+<td>the <code>ID3D11Device</code> (138 code references; stored once per interface version)</td>
+</tr>
+<tr>
+<td>+0x20</td>
+<td>0x272D1E0</td>
+<td>a render-device object (vt_0x1FFC508) whose <code>+0x08</code> is the next row</td>
+</tr>
+<tr>
+<td>+0x28</td>
+<td>0x272D1E8</td>
+<td><strong>the device context the world renderer calls</strong>: 450 reads in 96 functions</td>
+</tr>
+<tr>
+<td>+0x58</td>
+<td>0x272D218</td>
+<td>the immediate context created with the device (one reader, at shutdown)</td>
+</tr>
+<tr>
+<td>+0x60 .. +0x98</td>
+<td></td>
+<td>DXGI objects; <code>+0x88</code> the swap chain</td>
+</tr>
+<tr>
+<td>+0xA8</td>
+<td>0x272D268</td>
+<td>the presented-frame counter</td>
+</tr>
+</tbody>
+</table>
+<p>The object at <code>+0x28</code> answers the <code>ID3D11DeviceContext</code> interface: after <code>mov rcx, [0x272D1E8]</code> the
+code calls slots <code>+0x40, +0xC8, +0xF8, +0x1D8, +0x1F8, +0x218</code> with the same <code>(0, count, views)</code>
+arguments, which are the six shader stages' <code>SetShaderResources</code>. Three engine objects keep their
+own copy of the device pointer (vt_0x22C5F50 <code>+0xB0</code>, vt_0x230CBE0 <code>+0xA8</code>, vt_0x230CBA0 <code>+0x28</code>);
+none keeps a copy of the context, so every world draw goes through the static handle.</p>
+<p>The user interface does not use this path. Flash menus and the HUD draw through <strong>Scaleform GFx</strong>'s
+own renderer, <code>Render::HAL</code> (vt_0x2002498, 166 slots; 18 of them open a profiler scope named
+<code>HAL::...</code>: vf4 PushRenderTarget, vf11 BeginFrame, vf15 BeginScene, vf50 DrawProcessedPrimitive,
+vf55 PushBlendMode, vf58 PushFilters, vf74 beginDisplay ...). It holds its own context pointer at
+<code>this+0x3B3C8</code>, and the 24 functions that read it make only UI-style calls (shaders, vertex and index
+buffers, blend and depth state, viewports, clears, <code>DrawIndexedInstanced</code>).</p>
+<h3 id="the-wrapper-functions">The wrapper functions</h3>
+<p>76 functions call the context through a register loaded from the handle. Shader-resource binding
+dominates (compute 27 call sites, vertex 26, pixel, domain, hull and geometry 25 each), then
+<code>CopySubresourceRegion</code> (12) and <code>IASetIndexBuffer</code> (11). The wrappers most of the renderer goes
+through:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Does</th>
+<th>Callers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x33C8C8</td>
+<td><code>RSSetViewports</code></td>
+<td>36</td>
+</tr>
+<tr>
+<td>0x17DFA0</td>
+<td>render targets and UAVs</td>
+<td>19</td>
+</tr>
+<tr>
+<td>0x388444</td>
+<td><code>Dispatch</code></td>
+<td>15</td>
+</tr>
+<tr>
+<td>0x17C1FC</td>
+<td>bind shader resources on all six stages</td>
+<td>11</td>
+</tr>
+<tr>
+<td>0x389870</td>
+<td>unbind 12 shader resources per stage</td>
+<td>9</td>
+</tr>
+<tr>
+<td>0x3870A4</td>
+<td>input layout and vertex buffer</td>
+<td>8</td>
+</tr>
+<tr>
+<td>0x17C56C</td>
+<td>render targets and viewport</td>
+<td>6</td>
+</tr>
+<tr>
+<td>0x1E978C</td>
+<td><code>OMGetRenderTargets</code>, clear render target and depth-stencil</td>
+<td>5</td>
+</tr>
+<tr>
+<td>0x17F1B0 / 0x17F5A4</td>
+<td>input-assembler setup / <code>DrawIndexed</code></td>
+<td></td>
+</tr>
+<tr>
+<td>0x246FC8</td>
+<td><code>Draw</code></td>
+<td></td>
+</tr>
+<tr>
+<td>0x386D50</td>
+<td>index buffer + <code>DrawIndexed</code></td>
+<td></td>
+</tr>
+<tr>
+<td>0x17DB70</td>
+<td><code>DrawIndexedInstancedIndirect</code></td>
+<td></td>
+</tr>
+<tr>
+<td>0x1CBE0F4</td>
+<td><code>DispatchIndirect</code></td>
+<td></td>
+</tr>
+<tr>
+<td>0x1E83A0</td>
+<td>samplers on five stages</td>
+<td></td>
+</tr>
+<tr>
+<td>0x1E8564</td>
+<td>shaders on all stages</td>
+<td></td>
+</tr>
+<tr>
+<td>0x1E938C</td>
+<td><code>ClearState</code> + <code>ClearRenderTargetView</code></td>
+<td></td>
+</tr>
+<tr>
+<td>0x1CAA53C / 0x1CAB348</td>
+<td><code>Map</code> / <code>Unmap</code></td>
+<td></td>
+</tr>
+<tr>
+<td>0x5EFE84</td>
+<td><code>End</code> (queries)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-pass-entry-points">The pass entry points</h3>
+<p>A pass entry point is a function that sets or clears render targets, dispatches compute work or
+draws indirectly through these wrappers: there are <strong>55</strong>. Grouped by the code module they sit in
+and the strings that module uses:</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Count</th>
+<th>Entry points</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>render primitives and tessellation helpers</td>
+<td>14</td>
+<td></td>
+</tr>
+<tr>
+<td>instanced and indirect draws with <code>k_fRenderObjectID</code> / <code>DrawIcosahedronInstancesIndirect</code> (light volumes, render IDs)</td>
+<td>10</td>
+<td>0x388444, 0x1CBE0F4, 0x337E6C, 0x387DB8, 0x1CD2640, 0x1CD334C ...</td>
+</tr>
+<tr>
+<td>screen-space passes on <code>tLastFrameMap</code> + <code>tSceneNormalMap</code></td>
+<td>5</td>
+<td>0x102ABF0, 0x102BCC0, 0x102CD90, 0x102DF00, 0x1030FE0</td>
+</tr>
+<tr>
+<td>render-target clears and management</td>
+<td>5</td>
+<td></td>
+</tr>
+<tr>
+<td>the shadow atlas</td>
+<td>5</td>
+<td>targets 0x33B644; dispatches 0x337964, 0x33DA28, 0x337EB8, 0x1CAA73C</td>
+</tr>
+<tr>
+<td>point lights (<code>CRenderNodeLightPoint::GetCBCachedData()</code>)</td>
+<td>3</td>
+<td>0x687424, 0x4D951C, 0x6FFD74</td>
+</tr>
+<tr>
+<td>object-colour compute (<code>k_vObjectColor</code>)</td>
+<td>3</td>
+<td>0x1ED2F0, 0x1ED944, 0x1EDE58</td>
+</tr>
+<tr>
+<td>GPU vegetation</td>
+<td>2</td>
+<td>0x101A9C0, 0x10199C0</td>
+</tr>
+<tr>
+<td>UI (<code>uirender.cpp</code>)</td>
+<td>1</td>
+<td>0x2253D4</td>
+</tr>
+</tbody>
+</table>
+<p>Where they run in the frame, from sampling the render thread (Threads and the frame): inside the
+scene command, the main pass list 0x33CD60 runs mesh pass A (0x66E93C, the largest), then 0x255920
+and 0x185410, the GPU particles (0x33783C), the light accumulation (0x384640, which contains the
+point-light compute 0x4D951C) and finally mesh pass B (0x1F02E8). After the main pass list come the
+vegetation displacement and grouped GPU particles (0x1021250), the post-processing chain (0x33740C:
+motion blur, depth of field, blur, vignette), the colour-grading pass (0x339D6C) and, last, the
+object-colour compute (0x1EDE58).</p>
+<h2 id="the-g-buffer-and-lighting">The G-buffer and lighting</h2>
+<p>The renderer is deferred. The G-buffer pixel shaders write four targets:</p>
+<table>
+<thead>
+<tr>
+<th>Target</th>
+<th>Format</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>R10G10B10A2</td>
+<td>normals: bits 0-19 the bumped normal's offset, bits 20-31 the geometric normal</td>
+</tr>
+<tr>
+<td>1</td>
+<td>RGBA8</td>
+<td>diffuse albedo (bytes 0-2)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>RGBA8</td>
+<td>specular: byte 0 roughness (the lighting uses <code>r * r</code>), byte 1 specular occlusion, byte 2 reflectance (above 0.667 = metal)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>RGBA8</td>
+<td>material: alpha bits 28-31 = the <strong>lighting class</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The lighting is a compute pass (<code>lighting\tiledlighting.fxo</code>) that reads the normal, specular and
+material targets as UAVs and branches on the class: <strong>0 standard, 1 hair (a Marschner model), 2
+subsurface / emissive</strong>. Its sun term is GGX; dielectrics use a fixed <code>F0</code> of 0.04, and image-based
+light comes from split-sum probes sampled at mip <code>6 * sqrt(roughness)</code>. There is no screen-space
+reflection in the lighting.</p>
+<p>The work is tiled. Each frame the main thread issues 13 tile updates (<code>BufferTileIndices</code> 0x1791CC
+with 0x247108) and one indirect draw of light volumes as icosahedra
+(<code>DrawIcosahedronInstancesIndirect</code>, 0x6C74A8). The global shader constants (below) name the rest of
+the structure: screen tiles sorted by the kind of sun shadow they need into separate job queues
+(<code>k_RwPCFShadowTiles</code>, <code>k_RwPCFOneCSMShadowTiles</code>, <code>k_RwNoSunShadowTiles</code>,
+<code>k_RwPreLightbleedShadowTiles</code>, <code>k_ScreenTileJobQueue</code>, <code>k_ScreenTileWithCSMJobQueue</code>,
+<code>ClassifyJobCount</code>), a light octree (<code>Octree_Buffer</code>, <code>k_OctLight_vHalf</code>,
+<code>k_OctLight_vCharacterAdjust</code>), per-type light index offsets (<code>k_nPointLightIndexOffset</code>,
+<code>k_nSpotLightIndexOffset</code>, <code>k_nDirLightIndexOffset</code>), a baked <strong>static light volume</strong> sampled by
+world position (<code>k_mWorldToVolume</code>, <code>k_vStaticLightVolume_CellExtents / CellOffset / StencilHalf /
+StencilOffset / PivotContrast</code>, <code>k_fStaticLightVolume_Mip</code>) with <code>BufferProbes</code>, and a <strong>sparse
+shadow tree</strong> (<code>SparseShadowTree</code>, <code>SSTCoarseLUT</code>, <code>SparseShadowTreeStartIndex / WriteIndex</code>,
+<code>k_mViewToSSTree</code>, <code>k_nTreeDepth</code>, <code>k_nCoarseLevelRes / Offset</code>, <code>k_fPeelingThreshold</code>,
+<code>k_nSharedEmptyTileLocation</code>, <code>TreeStatsBuffer</code>). Sun shadows are cascaded (<code>k_vShadowScaleX/Y/Z</code>,
+<code>k_vShadowMoveX/Y/Z</code>, <code>k_vShadowSplitDistSquared</code>, <code>k_vShadowSplitDistSelect</code>,
+<code>k_vShadowFalloffParams</code>); spot and point lights project through <code>k_mSpotProjector_LightTransform</code>
+and <code>k_mCubeProjector_LightTransform</code>.</p>
+<p><strong>The per-view constant buffer.</strong> Every G-buffer pixel shader and the lighting share constant buffer
+<code>cb2</code>, the per-view buffer: <code>cb2[4..6]</code> are the camera-to-world rows (the lighting rebuilds a pixel's
+world position as <code>dot(cb2[4..6], (view position, 1))</code>). Column z of those rows is the camera's look
+axis and <code>.w</code> the camera position, so any material shader can read both. Material parameters
+(<code>.mat</code> values) arrive in <code>cb3</code>.</p>
+<h3 id="the-surface-overlay-pass">The surface overlay pass</h3>
+<p><code>translucent\overlay\rainandfireoverlay.fxo</code> is a full-screen pass that runs after the G-buffer and
+before the lighting. It reads and rewrites all four G-buffer targets as UAVs, so it changes every
+surface it covers: terrain, buildings, characters and gear. It rebuilds each pixel's world position
+from depth (<code>t0</code>), reads the world normal (<code>t1</code>; up is <code>t1.y</code>), and owns:</p>
+<ul>
+<li>wetness: the global wetness <code>cb3[3].z</code> lerps roughness toward the wet target <code>cb3[4].x</code>; on level
+  ground (up above 0.97) the bump is scaled to 15% before animated ripples are added;</li>
+<li>an animated raindrop-impact mask from time-scrolled noise (<code>t4</code>) that roughens, darkens and lowers
+  reflectance where a drop lands, faded out beyond 75 m;</li>
+<li>a roof-occlusion compare map (<code>t6</code>, matrices <code>cb2[28..31]</code>) used by the rain branch within 75 m, so
+  covered ground stays dry.</li>
+</ul>
+<p>The renderable behind it is the class vt_0x1FFECD8, which receives three render commands per frame
+(0x70C0E0, 0x7146A0, 0x72FDE0). Its parameters come from its material, <code>rainandfireoverlay.mat</code>, and
+from the weather (below). The pass belongs to the world view: menu scenes such as the army screen do
+not run it.</p>
+<h3 id="the-fog-pass">The fog pass</h3>
+<p><code>lighting\fogoverlay.fxo</code> runs after lighting. It reads the lit scene and rewrites it as
+<code>scene * transmittance + inscatter</code> (depth <code>t0.x</code>, the lit scene <code>t3</code>, view-to-world <code>cb2[4..6]</code>;
+its vertex shader builds the view ray from <code>cb2[21]</code> and the texture coordinate from <code>cb2[22]</code>).
+Because fog is added after lighting, distant surfaces take the fog's colour whatever their albedo.
+The render thread registers the fog material (<code>fog_overlay.mat</code>) during its own initialisation.</p>
+<h2 id="shaders">Shaders</h2>
+<p>Shaders ship as compiled <code>.fxo</code> files, addressed by tree path (<code>lighting\tiledlighting.fxo</code>,
+<code>solid\nemesis\gear_lod0.fxo</code>, <code>translucent\overlay\rainandfireoverlay.fxo</code> ...). A shader file
+holds variants: the orc gear shaders (<code>solid\nemesis\gear_lod0</code>, <code>_lod1</code>, <code>_alphatest_lod0</code>,
+<code>_alphatest_lod1</code>), which every orc shares, each carry three pixel-shader variants, skeletal,
+mesh type 4 (dithered fade: it discards where the dither value exceeds <code>1 - cb3[13].w</code>) and mesh
+type 5 (which blends reflectance toward four constant specular tints). Talion's gear uses its own
+trees (<code>talion_armor</code>, <code>_detail</code>, <code>armornocull</code>, <code>cloth</code>, <code>weapon</code>, <code>hair</code>, <code>ring</code> ...);
+<code>talion_armor</code> is one pixel shader whose output reflectance above 0.667 marks metal.</p>
+<h3 id="the-shader-tree-node-table">The shader-tree node table</h3>
+<p>Every loaded shader tree, the renderer's own and every material's, hangs in <strong>one static hash
+table at 0x27AEC38</strong>: 128 buckets of 0x18 bytes <code>{first, last, self}</code> (each bucket points at itself,
+so a bucket is recognisable), and the bucket is <code>StringHash(tree path) &amp; 127</code>. A node is:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Field</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00 / +0x08</td>
+<td>next / previous (the chain ends back at the bucket)</td>
+</tr>
+<tr>
+<td>+0x10</td>
+<td>the tree path's hash (equal to the resource's <code>+0x20</code>)</td>
+</tr>
+<tr>
+<td>+0x30</td>
+<td>the shader tree object in use</td>
+</tr>
+<tr>
+<td>+0x38, +0x50</td>
+<td>the resource</td>
+</tr>
+</tbody>
+</table>
+<p>There is one node per material and draw state, not one per tree: Talion's armour shader had 33
+nodes, his weapon 8, his cloth 8, his head 8. Walking one bucket finds every node of a shader. A
+material loaded later gets new nodes on the same tree. Tree names carry a content hash.</p>
+<h3 id="the-global-shader-constants">The global shader constants</h3>
+<p>The engine's global shader parameters are <strong>220 static objects</strong> of 0x50 bytes, laid out in runs
+in the image (the largest run is 28 objects from 0x2A3AD40):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Field</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>vtable: the value's class</td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>flags; the high word is the value's size in bytes</td>
+</tr>
+<tr>
+<td>+0x10</td>
+<td>the bind address, always <code>self + 0x40</code></td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td>the name (<code>k_vObjectColor</code>)</td>
+</tr>
+<tr>
+<td>+0x20</td>
+<td>u32 name hash, u32 index</td>
+</tr>
+<tr>
+<td>+0x28 / +0x30</td>
+<td>previous / next sibling</td>
+</tr>
+<tr>
+<td>+0x40</td>
+<td><strong>the value</strong> the shaders receive</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Value size</th>
+<th>Objects</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vt_0x2001AA8</td>
+<td>8 (a buffer or view)</td>
+<td>73</td>
+<td><code>BufferTileIndices</code>, <code>SparseShadowTree</code>, <code>VegetationInstances0</code></td>
+</tr>
+<tr>
+<td>vt_0x2001A98</td>
+<td>16 (float4)</td>
+<td>55</td>
+<td><code>k_vObjectColor</code>, <code>k_vShadowScaleXY</code>, <code>k_vToneMappingParams0</code></td>
+</tr>
+<tr>
+<td>vt_0x2001AE8</td>
+<td>12 (float3)</td>
+<td>27</td>
+<td><code>k_vWorldSpaceEyePos</code>, <code>k_vDirectional_Dir</code></td>
+</tr>
+<tr>
+<td>vt_0x2001AB8</td>
+<td>4 (uint)</td>
+<td>18</td>
+<td><code>k_nCaptureMode</code>, <code>k_nTreeDepth</code></td>
+</tr>
+<tr>
+<td>vt_0x2001AF8</td>
+<td>48 (3x4 matrix)</td>
+<td>12</td>
+<td><code>k_mObjectToWorld</code>, <code>k_mWorldToVolume</code></td>
+</tr>
+<tr>
+<td>vt_0x2001A68</td>
+<td>4 (float)</td>
+<td>11</td>
+<td><code>k_fRenderObjectID</code>, <code>k_fPaperWhite</code></td>
+</tr>
+<tr>
+<td>vt_0x2001AC8</td>
+<td>64 (4x4 matrix)</td>
+<td>7</td>
+<td><code>k_mObjectToClip</code>, <code>k_mGFxTransform</code></td>
+</tr>
+<tr>
+<td>vt_0x2001A28</td>
+<td>4</td>
+<td>7</td>
+<td><code>k_numBufferEntries</code>, <code>k_BufferOffset</code></td>
+</tr>
+<tr>
+<td>vt_0x2001A38</td>
+<td>8</td>
+<td>6</td>
+<td><code>k_HairLightFactor</code>, <code>k_nPointLightIndexOffset</code></td>
+</tr>
+<tr>
+<td>vt_0x2001A18</td>
+<td>16</td>
+<td>2</td>
+<td><code>k_nLightIndex</code>, <code>k_nClearMask</code></td>
+</tr>
+<tr>
+<td>vt_0x2001A48</td>
+<td>12</td>
+<td>1</td>
+<td><code>k_nCoarseLevelRes</code></td>
+</tr>
+<tr>
+<td>vt_0x2001A78</td>
+<td>8</td>
+<td>1</td>
+<td><code>k_nCoarseLevelOffset</code></td>
+</tr>
+</tbody>
+</table>
+<p>The names are a map of the renderer. Besides the lighting and shadow structures above they cover
+object transforms with their previous-frame copies for motion vectors (<code>k_mPrevObjectToClip</code>,
+<code>k_mWorldToPrevWorld</code>), temporal anti-aliasing (<code>k_AAParams1/2</code>, <code>k_mPreviousMotionTransform</code>,
+<code>k_PrevTexCoordScale</code>), the six frustum planes, tone mapping and HDR output (<code>k_vToneMappingParams0/1</code>,
+<code>k_fPaperWhite</code>, <code>DynamicExposureBuffer</code>), <strong>GPU cloth simulation</strong> (<code>k_RwClothPosBuffer0..7</code>,
+<code>k_ClothConstraintsBuffer</code>, <code>k_ClothBendSpringsBuffer</code>, <code>k_ClothSpringGroupsBuffer</code>,
+<code>k_ClothNodeDataBuffer</code>, <code>k_ClothBoundingBuffer</code>), <strong>tessellated terrain</strong> (<code>k_vTerrainHullParams0..2</code>,
+<code>k_vTerrainDomainParams0..3</code>: hull and domain shader inputs), <strong>GPU vegetation</strong> (instance buffers
+0-7 with read-write twins, per-LOD sort buffers <code>k_VegSortBufferLOD0..3</code> and <code>DitherLOD</code>,
+<code>k_VegInstanceCounters</code>, override buffers, <code>k_WindFXBuffer</code>), <strong>volumetric clouds</strong> (shadow,
+scatter, two noise layers, sun direction and colour, dimensions, camera position), GPU particles
+(emit rate, lifetime, inherited velocity, initial velocity and colour ranges, grouped particles and a
+distance merge sort), hair (<code>k_HairParamsBuffer</code>), Bink video (<code>k_vBinkUVScale</code>) and Scaleform's
+transforms and colour vectors (<code>k_mGFxTransform</code>, <code>k_vGFxColorMulVector</code>, <code>k_vGFxTexGen*</code>).</p>
+<p><strong>When values change.</strong> Sampling all 220 values 3,000 times in 5.5 s while the world was paused (the
+world clock did not advance and the camera-position constant held one value) and the renderer kept
+drawing (505 frames): 117 changed and 103 held. Many constants are therefore
+written per draw, per light or per pass, not per frame. <code>k_vObjectColor</code> is refilled for each draw by
+0x254B80 from the draw item's packed colour at <code>+0x4C</code> (only when it differs from the previous
+draw's); the per-object matrices took hundreds of values; <code>k_vShadowScale*</code> and <code>k_vShadowMove*</code> each
+alternated between two values with the camera still. <code>k_vToneMappingParams0/1</code> and <code>k_fPaperWhite</code>
+are rewritten every frame by the colour-grading pass 0x339D6C from the frame's HDR settings. A value
+written into one of these objects from outside the render thread lasts only until the engine's next
+write, at most one draw.</p>
+<h3 id="material-parameters-at-runtime">Material parameters at runtime</h3>
+<p>A material's parameters can be changed at runtime through a <strong>material override handle</strong>
+(vt_0x1DC47B8; <code>+0x18</code> u32 reference count). Its setters, all keyed by <code>StringHash(name)</code> with seed 0
+(0x114CFB0):</p>
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Function</th>
+<th>Call</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vf3</td>
+<td>0x3094FC</td>
+<td><code>SetParamFloat(this, hash, value)</code> (asserts the reference count is non-zero)</td>
+</tr>
+<tr>
+<td>vf4</td>
+<td>0x2E9944 -&gt; 0x2E994C</td>
+<td><code>SetParamFloatArray(this, count, {u32 hash, f32 value}[])</code></td>
+</tr>
+<tr>
+<td>vf5</td>
+<td></td>
+<td><code>SetParamBool</code></td>
+</tr>
+<tr>
+<td>vf6</td>
+<td>0x1CC2624</td>
+<td>an array of another kind (through 0x11585A4)</td>
+</tr>
+</tbody>
+</table>
+<p>The setters copy their data and post it to the render command ring (0x1154B34 / 0x2E99E8 with
+0x17906C), so they are main-thread calls. On the render thread 0x65482C calls 0x177D7C for each pair
+(0x177D7C is the constant-upload command that appears 53 times per frame); it writes the handle's
+record list <code>[this+8] -&gt; {begin, end}</code>, records packed as <code>{u32 (5 &lt;&lt; 28) | (hash &amp; 0x0FFFFFFF),
+u32 4, f32 value}</code>. The list is the set of overrides currently applied.</p>
+<p>The weather owns one such handle for the surface overlay, <code>[[GM+0x6D98]+0xC0]</code> (its renderable at
+<code>+0xB8</code> is the vt_0x1FFECD8 object above); the weather update 0x43C574 sets only <code>k_fWetness</code> and
+<code>k_fRaininess</code> through it. Weather patterns can name further material overrides
+(<code>nazgul_wraithmode_ambientoverlay.mat</code> with <code>k_fIntensity 150</code> in the Minas Ithil Great Hall
+pattern); these reach the renderer as the render commands 0x1B7A40 / 0x1B7A94. Per-piece runtime
+material slots and the per-character material controller are in <strong>Characters</strong>.</p>
+<h2 id="the-atmosphere">The atmosphere</h2>
+<p>The world's lighting look (exposure, bloom, fog and sky scattering, sun and moon light, shadows,
+wind, colour grading) comes from <strong>AtmosphereVolume</strong> objects (vt_0x1FDEFB8) placed in world layers.
+Each volume names component objects in its own layer:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>vtable</th>
+<th>Main properties</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HDRSettingsComponent</td>
+<td>0x1FCBEB8</td>
+<td><code>ExposureAdj</code>, <code>Contrast</code>, <code>Saturation</code>, <code>BloomWeight</code>, <code>BloomThreshold</code>, <code>HDRMax</code>, <code>HDRGreyMin/Max</code>, <code>RelativeLightScaleWorld/FX</code>, <code>DynamicAmbientScalar</code>, <code>RadialBlur*</code>, each with a <code>Use*Override</code> flag and an <code>_HDRTV</code> twin for HDR displays</td>
+</tr>
+<tr>
+<td>FogSettingsComponent</td>
+<td>0x1FCC318</td>
+<td><code>SunColor</code>, <code>SkyColor</code> (ARGB integers), <code>SunIntensity</code>, <code>Rayleigh_*</code>, <code>Mie_*</code>, <code>SkyExtinction</code>, <code>LightWavelengths</code> (atmospheric scattering)</td>
+</tr>
+<tr>
+<td>OutdoorLightComponent</td>
+<td>0x1FCC0E8</td>
+<td><code>DiffuseColor</code>, <code>SpecularColor</code> (ARGB), <code>Intensity</code>: the sun or moon</td>
+</tr>
+<tr>
+<td>OutdoorShadowComponent</td>
+<td>0x1FCC660</td>
+<td></td>
+</tr>
+<tr>
+<td>SkyShadowComponent</td>
+<td>0x1FCC548</td>
+<td></td>
+</tr>
+<tr>
+<td>WindSettingsComponent</td>
+<td>0x1FCC430</td>
+<td></td>
+</tr>
+<tr>
+<td>ColorGradingComponent</td>
+<td>0x1FCC788</td>
+<td>one property, <code>3DLUT</code>, a texture path</td>
+</tr>
+</tbody>
+</table>
+<p>A component carries only the properties its author set; the rest fall back to engine defaults
+(the Minas Ithil HDR components set no SDR <code>Contrast</code> and mostly no <code>Saturation</code>). 130 of the 147
+property names were recovered as hashes of strings in the executable.</p>
+<p><strong>A component stores no values.</strong> The values stay in the layer's property database: the
+component's <code>+0x50</code> is its property record (field count, tag 0x0A, descriptor run at <code>+0x08</code>,
+instance at <code>+0x10</code>; cells at <code>instance + link * 8</code>, booleans packed as bits), and <strong>the atmosphere
+system re-reads those cells every frame</strong>. Doubling <code>ExposureAdj</code> in the cells of the active HDR
+components moved <code>k_vToneMappingParams1.w</code> from 0.104 to 6.656 on the next frame and multiplied
+<code>k_vSpecularColor</code> by 64; restoring the cells restored both. Several records can share one instance,
+so the same cell can belong to more than one component.</p>
+<p><strong>The volume registry</strong> is a static pool at 0x27293A0: 0x200 slots of 16 bytes <code>{u64 0 used / 1 free,
+object}</code>, a free-index ring at <code>+0x2000</code>, head and count at 0x272BBA0 / 0x272BBA4 (initialised by
+0x8BA7D4). A volume's components are weak references at <code>+0x140 .. +0x148</code> (0x28 bytes each, the
+component at <code>+0x20</code>). <code>+0x120</code> is the enabled byte, set through <code>AtmosphereController::SetEnabled</code>
+0x1A3428(this, bool); its initial value is the property <code>StartEnabled</code> (default true, 0x1BF1848).
+Enabling and disabling blend over time on the game clock, so a paused game shows no change.</p>
+<p><strong>Scope.</strong> A volume's own properties decide where it applies: <code>WeatherContext "Wraith"</code> marks Wraith
+World and cinematic overrides (<code>WraithAtmo</code> at priority 42, <code>PresentationWraithAtmo</code>, <code>Cinema*Atmo</code>,
+<code>NazgulWraithAtmo</code>); <code>Timer "UI"</code> marks menu scenes (<code>AV_Pause</code>, <code>AV_Hier*</code>, <code>AV_Map</code>, <code>AV_Market</code>);
+everything else is world. One Minas Ithil sample held 23 world, 24 menu and 8 Wraith volumes.</p>
+<h3 id="which-volume-wins">Which volume wins</h3>
+<p>Volumes are spatial. Their shapes are convex brushes stored in the layer's object data, in a
+<code>VOLM</code> block (block id 0x8A27BAE6), in world space:</p>
+<pre><code>header    +0x18 instance count, +0x24 brush count, +0x28 name entries + 1, +0x34 face count,
+          +0x38 face-vertex count, +0x3C plane count
+planes    {nx, ny, nz, d} from 0x44 (a point is inside when n . p &gt;= d for every plane)
+          then face counts, vertices
+type      {StringHash(&quot;AtmosphereBrush&quot;) 0xD1A57B78, u32, char[64]} (absent when the block is empty)
+brushes   0x28 bytes {AABB, first plane, plane count, first face, first face vertex}
+instances 0x30 bytes {brush, 3 x u32, inverse translation, rotation quaternion, scale}
+names     {P919 hash of the volume's name, count, first instance}
+</code></pre>
+<p>A volume registers its brushes under <code>StringHash(its name)</code> when it activates (vf16 0x1C30068). Live,
+48 of 50 registered brushes matched the file plane for plane, and 65 of 65 contained their own
+bounding-sphere centre.</p>
+<p>Every frame the player view update 0x51C43C passes <strong>the active camera's position</strong> (camera vf6
+0x1A6E3C on <code>[CGameClientShell+0x898]</code>) to 0x2B1290 with the container <code>[player+0x3340]</code>. It runs a
+point query over every enabled brush; then, for each system state (HDR vt_0x1F673C8, Fog
+vt_0x1F67388, OutdoorLight vt_0x1F6E230, OutdoorShadow vt_0x1F6E260, ColorGrading vt_0x22F4BD0,
+Wind vt_0x22F4C00, SkyShadow vt_0x22F4C30, ScreenEffect vt_0x22F30C8, Rain vt_0x22F4D40), 0x2B164C
+picks the hit volume with the highest <code>Priority</code> that owns that system's component. Priority is read
+live each frame (0x2B182C, default 0), and on a tie the current winner stays. The winner (at
+<code>state+0x28</code>) blends in over its <code>TransitionTime</code> (for HDR, <code>state = lerp(state, value, w)</code> in
+0x2B2CF0). The top volume's <code>WeatherContext</code> goes to the weather manager (0x7DC5C4 / 0x7DC4A0).</p>
+<p>The look therefore follows the camera, not the player: in one live check the query point was 3.8 m
+behind and 2.4 m above Talion.</p>
+<h3 id="colour-grading">Colour grading</h3>
+<p>The post-processing pass 0x339D6C binds two colour-grading 3D LUTs (<code>tColorGrade3DLUT1/2</code>) only
+while a ColorGradingComponent is active. Its view settings hold the two LUT textures at
+<code>+0x290 / +0x298</code>, the enabled byte at <code>+0x288</code>, the blend <code>k_fLUTBlend</code> at <code>+0x2A0</code> and the remaps
+<code>k_fLUT1Remap / k_fLUT2Remap</code> at <code>+0x2A4 / +0x2A8</code>. LUTs are 8x8x8 RGBA8 volume textures; the
+default is <code>Client/Shared.ColorGradingDefault</code> = <code>fx\common\colorgrading\baselinelut8x8.tex</code>. The stage
+is rarely active: in the Minas Ithil main world four layers and one other object carry a
+ColorGradingComponent. An engine texture object holds its dimensions at <code>+0x50</code>, the
+<code>ID3D11Resource</code> at <code>+0x90</code> and its shader-resource views at <code>+0x98 / +0xA0</code>.</p>
+<h2 id="weather">Weather</h2>
+<p>The weather manager is <code>W = [GM+0x6D98]</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Field</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x20</td>
+<td>its world bundle group (the sections it loads)</td>
+</tr>
+<tr>
+<td>+0xA0</td>
+<td>its section ids</td>
+</tr>
+<tr>
+<td>+0xC0</td>
+<td>the surface-overlay material override handle</td>
+</tr>
+<tr>
+<td>+0x1C8</td>
+<td>the pending pattern</td>
+</tr>
+<tr>
+<td>+0x1D1</td>
+<td>apply now</td>
+</tr>
+<tr>
+<td>+0x1D8</td>
+<td>the pattern being loaded</td>
+</tr>
+<tr>
+<td>+0x1E8</td>
+<td>the current pattern</td>
+</tr>
+<tr>
+<td>+0x418</td>
+<td>the forecast</td>
+</tr>
+<tr>
+<td>+0x421</td>
+<td>a swap in progress</td>
+</tr>
+</tbody>
+</table>
+<p>A <strong>weather pattern</strong> is a lighting <code>Section</code> (a world layer loaded as a bundle) plus an effects
+<code>Bundle</code>, <code>WeatherTypes</code> and <code>FXContexts</code>. <strong>Each region's lighting is one layer, chosen by the
+current pattern's <code>Section</code></strong>: Minas Ithil has <code>day01</code>, <code>night01</code>, <code>morgul</code> and <code>gh_night01</code> (the Great
+Hall at night). The update 0x43C574 -&gt; 0x1B4CFE8 releases every section the new pattern does not name
+and requests the ones it does in <code>W+0x20</code>. Requests are de-duplicated per bundle group only
+(0x4B1FE4), so the same layer loaded through another group is a second copy. A pattern whose
+<code>Section</code> is empty names no lighting layer at all: switching to one releases the region's lighting
+and the scene renders black.</p>
+<p>From script: <code>ChangeForecast</code> is <code>SetForecast</code> 0x1DBBE4 plus the apply flag; <code>ChangeWeatherPattern(p)</code>
+(stub 0x1B7B734) sets the pending pattern and clears the forecast. A forecast record lists a
+pattern with options such as <code>UsePrexisting</code>, <code>AllowTransitions</code> and <code>ResetTOD</code>. The Minas Ithil
+finale (<code>finale_mi.lua</code>) shows the pieces together: it hides the keep, calls
+<code>ChangeForecast(MI_GH_Night)</code> (pattern <code>MI_GreatHall_Night</code>, whose section is <code>gh_night01</code>), and later
+<code>ChangeForecast(None)</code>.</p>
+<p><strong>Falling rain, snow and ash</strong> are not part of the pattern's lighting. They are the climate's
+<code>GlobalCameraFX</code>: on each region load 0x1B4B34C (from vt_0x1F68920 vf4) creates one
+<code>WeatherCameraFXController</code> per entry through the object server (the manager's controller vector
+at <code>+0x00 / +0x08</code>, entries of 0x28 bytes). A controller reads its record's <code>FXData</code> live (the
+record at controller <code>+0x128</code>). A fast travel within the same region does not rebuild them.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>What the object at <code>+0x28</code> of the Direct3D block is. It answers the device-context interface and
+  carries every world draw, but it is a different object from the immediate context at <code>+0x58</code>.</li>
+<li>Which mesh pass writes the G-buffer and which draws after lighting (translucent / forward). The
+  order (A before the light accumulation, B after it) suggests A is the G-buffer pass; reading the
+  bound render targets would settle it.</li>
+<li>Where the shadow-atlas passes run in the frame (their entry points were too rarely sampled to
+  place) and how the sparse shadow tree and the screen-tile shadow classes divide the work.</li>
+<li>The sun-shadow cascade count: <code>k_vShadowScale*</code> alternates between two values per frame with the
+  camera still, which fits two cascades, but the cascade setup code has not been read.</li>
+<li>What the "center lit" set is (<code>k_nCenterLitCount</code>, <code>k_nCenterLitID</code>, <code>CenterLitBuffer</code>; the ID
+  changed 83 times in a paused sample).</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
