@@ -200,6 +200,281 @@ nothing without it. No restart logic stands behind the card. The console command
 <code>+0x2F98</code> object, which nothing else in the analysed code writes; <code>Quest/Quests.ShowNewGameDialogOnComplete</code>
 has a field binding but no reader. The game's own delete warning lists what a new game keeps: all
 boosts, unused training orders, undeployed follower orcs and unopened chests ("available in Act 2").</p>
+<h2 id="the-player-profile-and-settings">The player profile and settings</h2>
+<p>The engine keeps the local player profiles in a vector at <code>CGameClientShell+0xE90</code> (<code>+0x28</code> begin,
+<code>+0x30</code> end; one profile on PC) with the active index at <code>+0x40</code> (u8, 0xFF = none). 0x30B254 returns
+the active profile when its state <code>+0x38</code> is 3 (loaded). The profile object (vt_0x1F6CC40,
+constructor 0x17C32F8) also owns the save task (its slot 3 is 0x52C70C, see Saving and starting a new
+game) and the slot summaries the front-screen card prints.</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>+0x1C0</code></td>
+<td>u8 bitmask of the slots present</td>
+</tr>
+<tr>
+<td><code>+0x1C8</code></td>
+<td>three slot summaries of 0x298 bytes</td>
+</tr>
+<tr>
+<td><code>+0xAB0</code></td>
+<td>the option store (the <code>GOXC</code> chunk)</td>
+</tr>
+<tr>
+<td><code>+0xB10</code></td>
+<td>pointer to the input binding object</td>
+</tr>
+<tr>
+<td><code>+0xB28</code></td>
+<td>the per-mode score chunk (<code>GMSC</code>)</td>
+</tr>
+<tr>
+<td><code>+0xB30</code></td>
+<td>the command-set manager</td>
+</tr>
+</tbody>
+</table>
+<h3 id="where-the-settings-are-stored">Where the settings are stored</h3>
+<p>Settings live in the save file itself: the five profile sections at the start of every save (see The
+save file) are the profile's chunk objects, each returning its tag from slot 5 and its name from slot
+9.</p>
+<table>
+<thead>
+<tr>
+<th>Tag</th>
+<th>Chunk</th>
+<th>Version</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GOXC</code></td>
+<td>GlobalOptionChunk</td>
+<td>5</td>
+<td>the two difficulty settings, then 118 <code>{00 option name, 02 type, value}</code>; a record-typed option is <code>04 hash(category name), 00 hash(record name)</code>; then 19 <code>{00 DLC/Config record, 0C flag}</code></td>
+</tr>
+<tr>
+<td><code>PERF</code></td>
+<td>PerformanceChunk</td>
+<td>6</td>
+<td>25 <code>{0F console-variable name, 0A value}</code>: <code>ClientFXMgr.DetailLevel</code>, <code>WorldDetail</code>, <code>FSAA</code>, <code>LODTextures</code>, <code>ScreenWidth</code>, <code>ScreenHeight</code> ...</td>
+</tr>
+<tr>
+<td><code>PICB</code></td>
+<td>ControlRebindings</td>
+<td>8</td>
+<td>the player's rebinds: <code>{00 button, 04 hash(ActionID), 02 slot, 0C, 0C, 00 model-override type}</code></td>
+</tr>
+<tr>
+<td><code>GPDC</code></td>
+<td>GlobalProfileDataChunk</td>
+<td>5</td>
+<td>profile statistics: 269 integer pairs, 78 flags, 3 floats</td>
+</tr>
+<tr>
+<td><code>GMSC</code></td>
+<td>GameModeSessionChunk</td>
+<td>5</td>
+<td>per-mode scores (see The save file)</td>
+</tr>
+</tbody>
+</table>
+<p>The value of an option changed in the menus is the same in the live store and in the save file.</p>
+<h3 id="options">Options</h3>
+<p><code>Profile/GlobalOptions</code> defines 118 options (<code>EGlobalOptionType</code>: 65 bool, 24 float, 23 integer, 6
+record) with their defaults; the prefixes group them: <code>CP_</code> controls (25), <code>GP_</code> gameplay (25), <code>VP_</code>
+video (14), <code>AP_</code> audio (6), <code>Skin_</code> skin unlock and notification flags (19), <code>SS_</code> save slots,
+<code>Lang_</code> languages. <code>Lang_Text</code> and <code>Lang_Audio</code> hold the locale as a four-character code (<code>enUS</code>), and
+<code>CP_Binding_PC</code> names a <code>Profile/Inputs/PC/Bindings</code> record.</p>
+<p>The store (vt_0x1F6F548):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>+0x08</code></td>
+<td>vector</td>
+<td>difficulty settings (reset from <code>Difficulty/Lists.DefaultDifficultySettings</code>)</td>
+</tr>
+<tr>
+<td><code>+0x18</code></td>
+<td>table</td>
+<td><code>{data, u32 count, category}</code> of 0x20-byte entries <code>{+0x00 record, +0x08 value, +0x10 u32 type}</code>, indexed by record index; the value is a bool, f32 or i32 in its low bytes, or a record pointer</td>
+</tr>
+<tr>
+<td><code>+0x30</code></td>
+<td>u8</td>
+<td>dirty</td>
+</tr>
+<tr>
+<td><code>+0x38</code></td>
+<td>table</td>
+<td><code>DLC/Config</code> flags, 16-byte entries <code>{record, u8}</code></td>
+</tr>
+</tbody>
+</table>
+<p>Options are addressed by name: 0x2784D0 hashes the name and binary-searches the category's sorted
+name index (<code>[base+0x27007A8]</code>), and the getters read the record's entry: GetBool 0x2785A0 (falling
+back to the record's <code>DefaultBool</code>), GetRecord 0x438468, SetBool 0x7CF4C8, and a float getter
+0x5238A4 (used for <code>CP_AnalogDeadzone</code>). Slot 1 (0x17D5060) resets every option to its default.
+When the profile loads (0x17C65FC) the engine polls four gamepad ports through the input system
+<code>[base+0x26FEFC8]</code> (slot 13), clears <code>CP_UseGamepad</code> when none answers, and applies the binding named
+by <code>CP_Binding_PC</code>.</p>
+<h3 id="commands-buttons-and-bindings">Commands, buttons and bindings</h3>
+<p><code>Profile/Commands</code> (382 records) defines one command per action: <code>ActionID</code> (a string enum; at run
+time commands are keyed by the enum index), <code>CommandType</code> (0: 119, 2: 9, 3: 8, 4: 2, 5: 244),
+<code>Event</code> (289 of 382), <code>IgnoreWaitForOff</code>, and two button slots per platform: <code>PCKeyboard</code>,
+<code>PCGamepad</code>, <code>XBoxOne</code> and <code>ps4</code>. The keyboard binds 226 commands (60 in both slots), the PC gamepad
+275, the console pads 270 each. <code>Profile/BindingSets</code> (17) group commands in a <code>CommandList</code> plus
+<code>CommandCharacterModelOverrides</code> (alternative commands for the <code>Eltariel</code> and <code>Baranor</code> model
+types); <code>Debug</code> and <code>DebugSyncAction</code> are marked <code>DebugOnly</code>. <code>Profile/Inputs/PC/Bindings</code> holds nine
+keyboard bindings, one per locale, each listing the same 13 sets; <code>Profile/PCKeyboards</code> adds the
+AZERTY, QWERTY and QWERTZ layouts with five key overrides.</p>
+<p><code>Profile/Inputs/PC/Buttons.Device</code> is one code space for every PC device (155 of 155 records):</p>
+<table>
+<thead>
+<tr>
+<th>Codes</th>
+<th>Device</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8-223</td>
+<td>keyboard keys: the Win32 virtual-key code (<code>KeyBack</code> 8 ... <code>KeyOEM8</code> 223; 117 keys)</td>
+</tr>
+<tr>
+<td>1000-1008</td>
+<td>mouse: buttons 1-5, the X and Y axes, wheel up and down</td>
+</tr>
+<tr>
+<td>2000-2019</td>
+<td>gamepad: 2000 + the console pad's own code (<code>Profile/Inputs/Durango/Buttons</code>, 0-19)</td>
+</tr>
+</tbody>
+</table>
+<p>0x438498(binding object, binding record, gamepad) builds the active bindings through 0x5B6D20: for
+each set of the record (skipping <code>DebugOnly</code> sets), first each model override and then each command,
+every non-empty slot of <code>PCKeyboard</code> (or <code>PCGamepad</code>) becomes a 0x18-byte entry:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>+0x00</code></td>
+<td>ptr</td>
+<td>the button record</td>
+</tr>
+<tr>
+<td><code>+0x08</code></td>
+<td>ptr</td>
+<td>the model-override type, or null</td>
+</tr>
+<tr>
+<td><code>+0x10</code></td>
+<td>u32</td>
+<td>the ActionID enum index</td>
+</tr>
+<tr>
+<td><code>+0x14</code></td>
+<td>u8</td>
+<td>slot (0, 1; 2 for a copied binding)</td>
+</tr>
+<tr>
+<td><code>+0x15</code></td>
+<td>u8</td>
+<td><code>Event</code></td>
+</tr>
+<tr>
+<td><code>+0x16</code></td>
+<td>u8</td>
+<td><code>IgnoreWaitForOff</code></td>
+</tr>
+</tbody>
+</table>
+<p>0x5B6C00 then applies <code>CopyBindings</code> (copies of one command's entries under another command, slot 2).
+The binding object holds the player's rebinds at <code>+0x00</code> (from <code>PICB</code>), the active list at <code>+0x18</code> and
+a copy of the record-built list at <code>+0x30</code>; 0x438518 overlays the rebinds, replacing the button of the
+entry with the same ActionID, slot and override type, or appending, and only for keyboard and mouse
+(it returns at once while <code>CP_UseGamepad</code> is set). With <code>KeyboardEnglish</code> the active list holds 363
+entries: the 348 the records predict (280 in slot 0, 68 in slot 1, 128 of them model overrides), 13
+copied slot-2 entries and 2 rebinds. The binding is rebuilt by the handlers of <code>CP_Binding_PC</code>,
+<code>CP_UseGamepad</code> and <code>CP_Southpaw</code>.</p>
+<h3 id="command-sets">Command sets</h3>
+<p>A command set enables or disables commands while some state lasts. <code>Profile/CommandSets</code> has 231:
+<code>EnableCommands</code>, <code>DisableCommands</code>, <code>DisableAllOtherCommands</code> with <code>DisableAllOtherExclusions</code>,
+<code>WaitForOff</code> and <code>AllowMenuToGameplay</code>. The profile's manager (vt_0x1F6B510, constructor 0x17B77F4)
+compiles all 231 once (0x17B7E08 -&gt; 0x17B8580) and keeps a stack:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>+0x08</code></td>
+<td>priority table <code>{data, u32 count, category}</code>, 16-byte entries <code>{record, u32 priority}</code></td>
+</tr>
+<tr>
+<td><code>+0x40</code> / <code>+0x48</code></td>
+<td>the compiled sets</td>
+</tr>
+<tr>
+<td><code>+0x58</code></td>
+<td>the input-system context handle</td>
+</tr>
+<tr>
+<td><code>+0x7B</code></td>
+<td>u8 dirty</td>
+</tr>
+<tr>
+<td><code>+0xD0</code> / <code>+0xD8</code></td>
+<td>the active stack: set records in ascending priority</td>
+</tr>
+<tr>
+<td><code>+0xE8</code> / <code>+0xF0</code></td>
+<td>the compiled-set index of each stack entry</td>
+</tr>
+<tr>
+<td><code>+0x100</code> / <code>+0x108</code></td>
+<td>sets pushed with the flag argument</td>
+</tr>
+</tbody>
+</table>
+<p>A compiled set holds the enabled ActionIDs (<code>+0x00</code>), the disabled ActionIDs (<code>+0x18</code>), the
+<code>DisableAllOtherCommands</code> byte (<code>+0x30</code>), the exclusions (<code>+0x38</code>), the <code>WaitForOff</code> byte (<code>+0x50</code>)
+and the record (<code>+0x58</code>). The priority (0x17B745C) is the record count minus the set's position in
+<code>Profile/CommandSetPriority.Shared</code> (217 entries, 213 distinct; the first is the highest, a later
+duplicate overwrites); an unlisted set has priority 0.</p>
+<p><strong>Push</strong> 0x5B5E40(manager, set, flag) (43 callers) refuses a set already on the stack, inserts it
+before the first entry of higher priority (or appends it) and marks the stack dirty; <strong>pop</strong>
+0x5B4AEC(manager, set) (55 callers) removes it; 0x17B7D38 clears the stack. The active profile's push
+and pop are 0x7DFB8C and 0x7DFCF8. Scripts reach them through <code>PlayerInput.ApplyCommandSet</code> /
+<code>ReleaseCommandSet</code> and <code>Quest::ApplyCommandSet</code> / <code>ReleaseCommandSet</code>; menus, presentations, photo
+mode, struggles and interrogation push their own sets. The debug menu pushes the set named in
+<code>Debug/Shared.DebugMenuCommandSet</code> (<code>DebugMenu</code>: menu navigation plus two debug shortcuts, with
+<code>DisableAllOtherCommands</code> and <code>WaitForOff</code>) on open (0x18CC238, 0x7B5980) and pops it on close. A
+stack read in free roam held <code>StateSupported</code> (priority 15) below <code>PresentationIdentifySystemic</code>
+(126).</p>
 <h2 id="the-in-game-store">The in-game store</h2>
 <p>The pre-2018 Market is the pause menu's <strong>GARRISON</strong>: <code>Root_Store</code> -&gt; <code>Interface/Menu/MenuLayer/Store</code>
 (the label resolves to "GARRISON"; an older patch archive still says "MARKET"). Its sections are
@@ -286,4 +561,15 @@ carries name, title, trait level, rarity, appearance piece hashes, inventory, co
 <li>The 1.28 MB of each slot that carries no typed section header.</li>
 <li>Whether the 25 per-slot entries in <code>IVMG</code> are the equipped items per slot.</li>
 <li>Where the engine keeps the progress a new game inherits (the profile part or the online store).</li>
+<li>Which function evaluates the command-set stack for an incoming command, and so how
+  <code>DisableAllOtherCommands</code>, <code>WaitForOff</code> and <code>AllowMenuToGameplay</code> combine at run time; it is
+  probably behind the input-system interface <code>[base+0x26FEFC8]</code>.</li>
+<li>What the <code>CommandType</code> values mean, and what the two flag bytes of a <code>PICB</code> rebind entry are.</li>
+<li>The hash scheme of the <code>GPDC</code> statistics: none of its 269 keys is the plain name hash of an
+  <code>Interface/GameProfileData</code> record.</li>
+<li>Where the PC build keeps its graphics detail settings: the 25 <code>PERF</code> values read 0.0, and the
+  <code>render.cfg</code> and <code>\USER\render.cfg</code> paths named at 0xC27FE0, 0x10152C0, 0x1172A34 and 0x11798AC have
+  no file beside the game or the saves.</li>
+<li>Whether the 13 copied slot-2 bindings (all one ActionID, no button) come from the default PC
+  <code>CopyBindings</code> record, whose two links are empty.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
