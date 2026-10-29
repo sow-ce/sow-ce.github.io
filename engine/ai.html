@@ -916,8 +916,22 @@ is reallocated during travel; its destructor 0x1A90C60 clears the global and del
 request, so a fast travel discards pending spawns.</p>
 <p>Script interface (<code>AISpawnManager</code>): <code>Enable</code> 0x1B81FB4, <code>Disable</code> 0x1B819D4,
 <code>RemoveAllAmbientAI</code> 0x1BA2AB8, <code>ForceAISpawnerSet</code> 0x1B830A8, <code>AddScenarioOverrideRecord</code>
-0x7B91DC, <code>SummonGrunts</code> 0x1BB138C and <code>SummonNPCs</code> 0x1BB1468.</p>
+0x7B91DC, <code>SummonGrunts</code> 0x1BB138C and <code>SummonNPCs</code> 0x1BB1468.
+The same table (registered by 0x1B91DC8, twelve functions) also holds <code>ForceAISpots</code> 0x7B9264,
+<code>CalcNumFactionMembersForHijackRecord</code> 0x1B76B58, <code>AddScenarioOverrideRecordPersistent</code> 0xF77760,
+<code>RemoveScenarioOverrideRecord</code> 0x1BA317C and <code>Debug_ResetScenarioMgr</code> 0x1B812F0.
+<code>AISpawnerAmbientSet</code> registers 44 functions (0x1B928EC: enable, restock, replenish, scenario,
+distance, predicate, removal and node-tag accessors, <code>Create</code>, <code>Cast</code>, <code>Serialize</code>), and
+<code>DifficultyMgr</code> five (0x1B96668): <code>SetScriptDifficultyRange</code> 0x1BAE47C, <code>LockAITemplate</code> 0x1B8D93C,
+<code>UnlockAITemplate</code> 0x1BB2188, <code>ClearLockedAITemplates</code> 0x1B7C2D8 and <code>GetSpawnLimit</code> 0x1B89BD8.</p>
 <h3 id="ambient-spawners">Ambient spawners</h3>
+<p><strong>Live census.</strong> In one loaded desert world, walking the world contexts' object tables found
+5,002 <code>AISpawnerAmbientNormal</code> objects (vt_0x1DC5800), packed at a stride of 0x1D0 (4,556 of the
+neighbour gaps). Their channels (<code>+0x1C0</code>): <code>Owner_DifficultyMelee</code> 915, <code>Owner_Infantry</code> 779,
+<code>Goblin_Difficulty</code> 480, <code>Owner_Warg</code> 475, <code>Owner_DifficultyAny</code> 378, <code>Spider_AI</code> 286 ... and 233
+<code>Enemy_*</code>. On 400 of them <code>+0x158</code> held an <code>AI/SpawnAmbient/Areas</code> record (400), <code>+0x160</code> an
+<code>AI/SpawnAmbient/AlarmAreas</code> record (387), <code>+0x170</code> an <code>AutoNodeTag</code> (4), <code>+0x178</code> / <code>+0x190</code> the
+<code>FortAssault/Side</code> / <code>StageList</code> records (5) and <code>+0x198</code> an <code>Inventory/Transform</code> (30).</p>
 <p>The placed spawners (see World for their placement and counts) are classes derived from
 <code>AISpawnerAmbientBase</code> (0x1C0 bytes):</p>
 <table>
@@ -1023,6 +1037,12 @@ predicate record has <code>CanSpawnWithoutEntry</code>, <code>ProcessAllValidInt
 <p><strong>The budget.</strong> 0x1A92F18 lets a request through when <code>[SM+0x190] + requested &lt;= [SM+0x180]</code>;
 past the budget it passes only when the scenario's <code>AI/SpawnAmbient/SpawnScenarioSetup.ForceAISpots</code>
 is set and the caller's flag is clear.</p>
+<p><strong>Spawner sets</strong> are refused by 0x1AB9E0C for eleven reasons, each formatted for
+<code>[AI|SPAWNAMBIENTSET]:</code>: not enough AI slots, the set cooldown, the quest-finish cooldown, the time
+of day, a global-variable predicate, the area's alarm level (<code>AI/SpawnAmbient/AlarmAreas</code>), a
+disabled scenario, a scenario already active, a disabled optional category, a category that may not
+spawn more AI, and no spawnable hijack for the type. Like the per-spawner refusals, these messages go
+to the empty logging function 0x19C83AC.</p>
 <p><strong>Scenarios.</strong> <code>AI/SpawnAmbient/SpawnScenarioSetup</code> (282 records) gives <code>Priority</code>,
 <code>ScenarioType</code>, <code>RequiredAITypes</code>, global and instance cooldowns, <code>ForceNextScenario</code>,
 <code>ForceAISpots</code>, <code>MaxConcurrent</code>, <code>MaxConcurrentAI</code>, <code>MinDistance</code>, <code>ScenarioCategories</code>,
@@ -1159,9 +1179,84 @@ Easterling squads, summon groups ...) are ordinary spawn channels.</p>
 <code>ReturnToBandLeader</code>, with the target select <code>WaitForBandMember</code>; FollowLeader's update 0x48DB00
 calls the band movement 0xF498C0. The AI world ticks the buddy and follower system at <code>+0xB0</code>
 (0x3608C8), and buddies have their own target select (<code>BuddyCommand</code>) and alertness level
-(<code>ActiveBuddy</code>). <code>AI/LeadPlayer</code> (16 records) configures escort and guide NPCs (<code>ReachRadius</code>,
-<code>LeadRange</code>, <code>SlotRadius</code>, wait and beckon settings, <code>MovementData</code> -&gt;
-<code>AI/BandTypes/BandMovementData</code>).</p>
+(<code>ActiveBuddy</code>).</p>
+<h3 id="leading-the-player">Leading the player</h3>
+<p>Story characters that guide Talion somewhere (Ratbag, Idril, Blade, Gollum, the Ranger, the third
+story DLC's Architect, Thrall and Flint, the fourth's Gondorians) run a lead behaviour configured by
+one of the 16 <code>AI/LeadPlayer</code> records (distances in cm, times in seconds):</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th><code>DLC3_Architect</code></th>
+<th>Read by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LeadRange</code></td>
+<td>(2,000, 4,000)</td>
+<td>0x1AE7794</td>
+</tr>
+<tr>
+<td><code>SlotRadius</code></td>
+<td>(200, 400)</td>
+<td>0x1AE7794, 0x1AFD62C</td>
+</tr>
+<tr>
+<td><code>WaitWidth</code> / <code>WaitExtension</code></td>
+<td>1,200 / 200</td>
+<td>0x1AE7794</td>
+</tr>
+<tr>
+<td><code>ReachRadius</code> / <code>ReachMovementSpeed</code></td>
+<td>500 / <code>Run</code></td>
+<td>0x1AFD62C</td>
+</tr>
+<tr>
+<td><code>BeckonDelay</code> / <code>BeckonSmartObjectPicker</code></td>
+<td>(4, 6) / <code>Bip_Idle_Looping</code></td>
+<td>the step's vf9 0x1AFD1E0; the picker also 0x1AFC7FC (from vf5)</td>
+</tr>
+<tr>
+<td><code>BeckonAudioInitialDelay</code> / <code>BeckonAudioRepeatDelay</code></td>
+<td>(2, 3) / (5, 8)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>AllowRepathing</code>, <code>RepathDelay</code></td>
+<td>true, 5</td>
+<td>0x1AE70D4, 0x1AE7488</td>
+</tr>
+<tr>
+<td><code>UnreachableRepathDelay</code></td>
+<td>1</td>
+<td>0xF40F00</td>
+</tr>
+<tr>
+<td><code>ReferenceAgentHorizontalRange</code> / <code>VerticalRange</code></td>
+<td>300 / 500</td>
+<td>0x1AE7488</td>
+</tr>
+<tr>
+<td><code>PauseConversation</code></td>
+<td>(-1, -1)</td>
+<td>0x1AE70D4, 0x1AE7B5C</td>
+</tr>
+<tr>
+<td><code>MovementData</code></td>
+<td><code>LeadPlayer_Architect</code> (an <code>AI/BandTypes/BandMovementData</code> record)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>The script native <code>NPC::LeadPlayer</code> starts it (0x1AE70D4 reads <code>AllowRepathing</code> and
+<code>PauseConversation</code>). Every NPC update ticks the guide's lead state (0x1AE7338, through 0x2F6150 on
+the NPC's <code>+0x2D30</code>): it recomputes the lead geometry (0x1AE7794: <code>LeadRange</code>, <code>SlotRadius</code>,
+<code>WaitWidth</code>, <code>WaitExtension</code>), the reference agent and repath timer (0x1AE7488) and the conversation
+pause (0x1AE7B5C). The planner's <code>LeadPlayer</code> step (vt_0x1FBCA70) does the beckoning: its update vf9
+0x1AFD1E0 waits <code>BeckonDelay</code> and then plays a smart object from <code>BeckonSmartObjectPicker</code>, and
+0x1AFD62C tests arrival against <code>ReachRadius</code>.</p>
 <h3 id="mounts">Mounts</h3>
 <p>The creature a captain rides comes from the trait <code>Quirk_HasMount</code>: <code>MountAITemplate</code> -&gt;
 <code>AI/Templates::Warg_Tamed</code>, <code>FleeFindMount</code> -&gt; <code>AI/FindMount::FleeOnWarg</code> (attack type
@@ -1355,6 +1450,12 @@ watched fight is decided by the fight. <code>Faction/Events/SimEventChance</code
 <code>SubjectAlwaysWins</code> and <code>SubjectAlwaysLoses</code> differ only in <code>StartChance</code> (1.0 and 0.0; every
 scalar 0, both <code>*Max</code> -1.0). <code>Arena</code>, <code>ArenaFollower</code>, <code>ArenaTest</code> and <code>Gauntlet</code> to <code>Gauntlet3</code>
 link <code>WinChance</code> to <code>Arena</code>; <code>Duel</code> and <code>Duel_Origin</code> to <code>Duel</code>; <code>DuelG</code> to <code>Default_1orc_general</code>.</p>
+<p>The chance is computed by 0x1BEDA40, the only reader of <code>StartChance</code>: <code>StartChance</code>, plus the level
+difference times <code>CharacterLevelDeltaScalar</code>, plus the henchman difference times
+<code>HenchmanDeltaScalar</code>, plus two further terms (0x1BEF460 and 0x1BEDD84), plus the subject's supporter
+term minus the other's (<code>SupporterDeltaScalar</code>), plus an interaction-score difference built from
+<code>TotalInteractionScoreDeltaScalar</code>, <code>PlayerFollowerTotalISDeltaScalar</code> and their <code>Max</code> caps. The sum
+is clamped to the <code>ClampFinalChance</code> range.</p>
 <h3 id="the-fight-pits-are-quests">The fight pits are quests</h3>
 <p>The pits in the Army menu are <code>Quest/Quests</code> records of type <code>Quest/Types::Gauntlet</code> (<code>IsGauntlet</code>,
 <code>ActivationType</code> 1, <code>CanReplay</code> and <code>XPAwardOnReplay</code> True, <code>ItemAwardOnReplay</code> False):
@@ -1428,6 +1529,30 @@ makes the player captain 1 or 2, but <code>MissionEnd</code> decides the win on 
   cast to a character), makes both the player's bodyguards, and reads the gauntlet stage from the
   quest at <code>[+0x700]+0x258</code> (<code>Quest/Quests.GauntletStage</code>). The camera data is
   <code>Arena/CameraDirector::Duel_ACD</code> (camera lists, picker, HUD state, <code>ArenaRadius</code>).</li>
+<li><code>Duel_ACD</code> is the only <code>Arena/CameraDirector</code> record: <code>ArenaRadius</code> 1350; <code>StartCameraList</code> 3,
+  <code>PrimaryCameraList</code> 6, <code>SecondaryCameraList</code> 3 and <code>TertiaryCameraList</code> 1 entries (10 distinct
+  <code>Arena/CameraEntry</code> records); <code>CameraPicker</code> <code>ArenaList</code>, <code>HUDState</code> <code>OrcArena</code>, <code>CommandSet</code>
+  <code>ArenaCamera</code>. <code>Arena/CameraObject</code> holds eight objects (<code>Center_OBJ</code>, <code>Combatant1_OBJ</code>,
+  <code>Combatant2_OBJ</code>, <code>Fallback_OBJ</code>, <code>Stands1_OBJ</code> .. <code>Stands4_OBJ</code>); the director's set-up 0x179E3C8
+  looks up <code>Combatant1_OBJ</code>, <code>Combatant2_OBJ</code> and <code>Center_OBJ</code> and reads <code>ArenaRadius</code>. Eight
+  <code>Mob/MobDefinition</code> records (<code>Arena_EnemyDef_MD</code>, <code>Arena_EnemyInf_MD</code>, <code>Arena_EnemyArmy_MD</code>,
+  <code>Arena_EnemyOlog_MD</code> and the four <code>Arena_Friendly*_MD</code>) each hold one <code>Members</code> field.</li>
+<li><strong>Who won.</strong> 0x179EE48 calls the arena telemetry builder 0xF511E0. It counts a combatant as dead
+  when bit 2 of its <code>FactionMember+0x508</code> is set, or else when <code>CCharacter::IsDead</code> (0x190F1C) holds
+  for the character at <code>+0x48</code> of the same FactionMember, and reports <code>Combatant 1</code>, <code>Combatant 2</code>,
+  <code>Draw</code> or <code>Both Dead</code>. The quest-complete screen 0xE69B60 tests bit 21 (0x200000) of <code>+0x508</code> on
+  both combatants: both set gives <code>UI_QuestComplete_Resolution_Gauntlet_BothDead</code>, one set
+  <code>UI_QuestComplete_Resolution_Gauntlet_Winner</code>, neither <code>UI_QuestComplete_Resolution_Gauntlet_Timeout</code>.
+  The same function picks <code>UI_QuestComplete_Resolution_Showdown_Dead</code> from bit 21 and
+  <code>UI_QuestComplete_Resolution_Showdown_Recruit</code> from bit 27.</li>
+<li><strong>AutoInfight</strong> 0x1A857F8 stages a fight between two members: it clears the spawn manager's enable
+  byte (<code>+0x194</code>), removes every ambient AI and the dead bodies, queues the members at <code>+0x38</code> and
+  <code>+0x60</code> of its object through 0x1A91360 under the names <code>AutoInfightNPC1</code> and <code>AutoInfightNPC2</code>,
+  and clears the bytes <code>+0xB8</code> and <code>+0xB9</code>.</li>
+<li>The gauntlet menu's input actions are <code>SimEventGauntlet_MenuEnter</code> 0x16A, <code>SimEventGauntlet_MenuExit</code>
+  0x16B, <code>SimEventGauntlet_ActivateFirst</code> 0x16C and <code>SimEventGauntlet_ActivateLast</code> 0x16D;
+  <code>Arena_CameraAdvance</code> is 0x15A (values stored explicitly by the input-action table 0x3123CC, 0x179
+  entries).</li>
 <li>Arena telemetry names the arena type (0x1B2A1F4: 0 <code>Gauntlet</code>, 1 <code>Blood Duel</code>, 2
   <code>Assassination</code>, 3 <code>Online Ranked</code>, 4 <code>Online Friendly</code>) and the event (0x1B2A1C0: 0 <code>Started</code>, 1
   <code>Hazard Triggered</code>, 2 <code>Completed</code>).</li>
@@ -1450,10 +1575,9 @@ makes the player captain 1 or 2, but <code>MissionEnd</code> decides the win on 
   vtable, but the table above lists only the ones read live or named.</li>
 <li>Is the target-select table ordered by <code>Cost</code>? Mapping each of the 27 objects (<code>picker+0x08</code>) to
   its record would show it, and which pickers dominate the scan.</li>
-<li>Are the <code>Enemy_*</code> channels authored in the world layers replaced by <code>Owner_*</code> / <code>Invader_*</code>
-  channels when a region loads, while the player-side human channels keep their names? A census of
-  the live spawners' channels (<code>+0x1C0</code>) against the layer data of the same region would settle it
-  and lead to the code that does it.</li>
+<li>Which <code>Enemy_*</code> channels are replaced by <code>Owner_*</code> / <code>Invader_*</code> channels when a region loads: in one
+  loaded desert, 233 of the 5,002 live ambient spawners (4.7%) still carried <code>Enemy_*</code> channels, so the
+  replacement is not applied to all of them.</li>
 <li>What the spawner value at <code>+0x160</code> is: <code>AISpawnerAmbientNormal</code> passes it to the channel resolver
   as its third argument. Decoding how the resolver uses it would name it.</li>
 <li>Why a Balrog summoned onto the player's side follows but never fights: its combat tree has no
