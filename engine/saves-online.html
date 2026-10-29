@@ -276,7 +276,7 @@ save file) are the profile's chunk objects, each returning its tag from slot 5 a
 <td><code>GPDC</code></td>
 <td>GlobalProfileDataChunk</td>
 <td>5</td>
-<td>profile statistics: 269 integer pairs, 78 flags, 3 floats</td>
+<td>profile statistics, one entry per <code>Interface/GameProfileData</code> record (350 of 350): a count and <code>{04 key, 04 value}</code> for the 269 records of <code>DataType</code> 0, then the 3 of <code>DataType</code> 1 with <code>0A</code> float values, then the 78 of <code>DataType</code> 2 with <code>0C</code> flags, then three zero integers; the key is the CRC-32 of the record's name</td>
 </tr>
 <tr>
 <td><code>GMSC</code></td>
@@ -286,6 +286,12 @@ save file) are the profile's chunk objects, each returning its tag from slot 5 a
 </tr>
 </tbody>
 </table>
+<p>The statistic keys use the standard CRC-32 (0x505400(buffer, length), table 0x27C54D0, initial value
+0xFFFFFFFF; six of its 13 callers read <code>Interface/GameProfileData</code>), case-sensitive: all 350 keys of one
+save reproduce. It is a third name hash beside the GameDB's (see GameDB) and the animation keywords'
+multiply-by-31 hash (see Animation). Each statistic record also carries <code>IsGlobalData</code>,
+<code>ResetOnNewGame</code>, <code>StorageType</code>, <code>UseOnlineStorage</code>, <code>Association</code>, <code>CollectableList</code> and the
+platform statistic names (<code>SteamAgoraName</code>, <code>XONEStatId</code>).</p>
 <p>The value of an option changed in the menus is the same in the live store and in the save file.</p>
 <h3 id="options">Options</h3>
 <p><code>Profile/GlobalOptions</code> defines 118 options (<code>EGlobalOptionType</code>: 65 bool, 24 float, 23 integer, 6
@@ -334,7 +340,10 @@ When the profile loads (0x17C65FC) the engine polls four gamepad ports through t
 by <code>CP_Binding_PC</code>.</p>
 <h3 id="commands-buttons-and-bindings">Commands, buttons and bindings</h3>
 <p><code>Profile/Commands</code> (382 records) defines one command per action: <code>ActionID</code> (a string enum; at run
-time commands are keyed by the enum index), <code>CommandType</code> (0: 119, 2: 9, 3: 8, 4: 2, 5: 244),
+time commands are keyed by the enum index), <code>CommandType</code> (<code>ECommandType</code>, named in the executable's enum table: <code>COM_MOVE</code> 0 on 119 commands,
+<code>COM_INV</code> 1 on none, <code>COM_VIEW</code> 2 on 9 - yaw, pitch, their accelerations, the debug camera's four and <code>CenterView</code> -, <code>COM_MISC</code> 3 on 8 - the message-box
+confirm and deny commands and <code>DebugMenuActivate1</code>-<code>4</code> -, <code>COM_WEAP</code> 4 on <code>CombatSecondary01</code> and
+<code>02</code>, and <code>kNumCommandTypes</code> 5, the count used as "none", on 244),
 <code>Event</code> (289 of 382), <code>IgnoreWaitForOff</code>, and two button slots per platform: <code>PCKeyboard</code>,
 <code>PCGamepad</code>, <code>XBoxOne</code> and <code>ps4</code>. The keyboard binds 226 commands (60 in both slots), the PC gamepad
 275, the console pads 270 each. <code>Profile/BindingSets</code> (17) group commands in a <code>CommandList</code> plus
@@ -564,9 +573,7 @@ carries name, title, trait level, rarity, appearance piece hashes, inventory, co
 <li>Which function evaluates the command-set stack for an incoming command, and so how
   <code>DisableAllOtherCommands</code>, <code>WaitForOff</code> and <code>AllowMenuToGameplay</code> combine at run time; it is
   probably behind the input-system interface <code>[base+0x26FEFC8]</code>.</li>
-<li>What the <code>CommandType</code> values mean, and what the two flag bytes of a <code>PICB</code> rebind entry are.</li>
-<li>The hash scheme of the <code>GPDC</code> statistics: none of its 269 keys is the plain name hash of an
-  <code>Interface/GameProfileData</code> record.</li>
+<li>What the two flag bytes of a <code>PICB</code> rebind entry are, and what reads a command's <code>CommandType</code>.</li>
 <li>Where the PC build keeps its graphics detail settings: the 25 <code>PERF</code> values read 0.0, and the
   <code>render.cfg</code> and <code>\USER\render.cfg</code> paths named at 0xC27FE0, 0x10152C0, 0x1172A34 and 0x11798AC have
   no file beside the game or the saves.</li>
