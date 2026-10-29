@@ -826,7 +826,10 @@ army's stage (0x62E30C). The 7 of its 12 call sites examined all pass an army co
 every army 0x1B5D66C, fort-upgrade removal 0x1B5E39C, 0x1C1B22C, 0x1C1DB10, the promotion events
 0x1C1D828 (with a temporary container), the console rebuild, and 0x7A97DC, which first replaces the
 army's summary container (0x62AFD4) and is called after the faction system initialises and from
-sim-event generation. A member is not a valid first argument.</p>
+sim-event generation. A member is not a valid first argument: the rebuild's first instructions
+(<code>mov rax,[rdx+0xD8]</code> / <code>mov [rcx+0x9F50],rax</code>) store the context's <code>+0xD8</code> in the container's
+<code>+0x9F50</code> before anything is tested, so a member and his 0x1C0-byte appearance object in place of a
+context and a container put a pointer 0x9F50 bytes past the appearance object.</p>
 <h3 id="the-army-screen">The Army screen</h3>
 <p>The Army screen draws each captain from his army's summary (0x1A8 bytes, one per member, in the
 summary container), not from the member (see User interface for the stage objects). The refill
