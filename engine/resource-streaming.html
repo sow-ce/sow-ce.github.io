@@ -227,7 +227,8 @@ its reference count (a <code>make_shared</code> layout) and has no vtable:</p>
    open thread is off). Producers include the texture streamer 0x3DD45C and the bundle content job
    0x3DB5E4.</li>
 <li><strong>Open</strong> 0x3DD588: picks the path (resource <code>+0x28</code>, or the bundle's <code>.embb</code>), waits on a
-   semaphore at <code>core+0x7B8</code> that bounds how many files are open at once, opens the file through the
+   semaphore at <code>core+0x7B8</code> that bounds how many files are open at once (0x1184864 creates it with an
+   initial and maximum count of 32, the u32 at 0x262AAA0), opens the file through the
    file system and passes the request to the load stage.</li>
 <li><strong>Load</strong> 0x2D3444: a resource is read into new resource data (0x3DCFDC, 0x3DCF80) and passed to
    the parse stage (0x3DD248); a bundle content request goes to the bundle loader 0x3DBE50 with the
@@ -415,7 +416,6 @@ accumulates across regions. <code>WorldInfo.MaxBundleSizePC</code> (1096 on PC, 
 only when content is packed; no run-time code reads it.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>The maximum count of the open-file semaphore at <code>core+0x7B8</code> (its creator is not traced).</li>
 <li>The meaning of the resource-data states other than 3 (finalized), and what the parse stage's second
   work vector carries.</li>
 <li>Why the global path table's second field is 0 while the per-bundle name arrays carry 1.</li>
