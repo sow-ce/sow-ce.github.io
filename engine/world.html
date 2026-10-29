@@ -1,0 +1,1395 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>World: regions, layers, placements and world objects - Shadow of War engine reference</title><meta name="description" content="How a region&#x27;s world is assembled from streamed parts, what a world part holds (the object registry and its fourteen blocks, static placements, prefabs, terrain and vegetation), how placed objects look in memory, how the engine creates, binds and moves them, and the world data behind traversal (context-action lines), weather-gated effects and collision."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" class="cur" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="world-regions-layers-placements-and-world-objects">World: regions, layers, placements and world objects</h1><p class=\"lede\">How a region&#x27;s world is assembled from streamed parts, what a world part holds (the object registry and its fourteen blocks, static placements, prefabs, terrain and vegetation), how placed objects look in memory, how the engine creates, binds and moves them, and the world data behind traversal (context-action lines), weather-gated effects and collision.</p>
+<p>A region's world is a set of <strong>world parts</strong>, each streamed in as a section and turned into a world
+context full of placed objects. This chapter describes the parts on disk, the streamer that loads
+them, the objects they create and the world data that the rest of the engine queries.</p>
+<h2 id="regions-and-world-parts">Regions and world parts</h2>
+<p>The game has eight regions. Each has one <strong>main part</strong> (<code>worlds\retail\&lt;folder&gt;\&lt;folder&gt;</code>, the only
+part with terrain) and a set of <strong>layers</strong> under <code>worlds\retail\&lt;folder&gt;\sectionsandlayers\</code>: story
+and side content, fortress pieces, lighting and its per-Overlord variants. 1,303 layers ship (each
+identified by the paths its own container lists, never by its archive entry name):</p>
+<table>
+<thead>
+<tr>
+<th>Folder</th>
+<th>Region</th>
+<th>Layers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>volcano</code></td>
+<td>Gorgoroth</td>
+<td>243</td>
+</tr>
+<tr>
+<td><code>snowmtn</code></td>
+<td>Seregost</td>
+<td>239</td>
+</tr>
+<tr>
+<td><code>island</code></td>
+<td>Nurnen</td>
+<td>228</td>
+</tr>
+<tr>
+<td><code>mtnpass</code></td>
+<td>Cirith Ungol</td>
+<td>228</td>
+</tr>
+<tr>
+<td><code>desert</code></td>
+<td>Lithlad</td>
+<td>221</td>
+</tr>
+<tr>
+<td><code>minasithil</code></td>
+<td>Minas Ithil</td>
+<td>138</td>
+</tr>
+<tr>
+<td><code>blackgates</code></td>
+<td>the Black Gate</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>baraddur</code></td>
+<td>Barad-dur</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<p>Seven regions have a region archive and a lighting archive (<code>&lt;folder&gt;.arch06</code>,
+<code>&lt;folder&gt;_lighting.arch06</code>), and the patch archives add and replace parts. Lithlad has neither: its
+main part and all 221 of its layers are in the patch archives (the containers in <code>Patch_DLC4</code>, with
+standalone <code>.objres</code> and <code>.scripts</code> copies in later patches).</p>
+<p>A world part is an EMBB container (see Archives and file formats). Every layer carries its own
+prefab (<code>.inst</code>), and 1,302 of 1,303 carry the same eight further parts, named after the layer:
+<code>.objres</code> (the object registry below), <code>.terrain</code>, <code>.hkai</code> (navigation mesh), <code>.wldclnt</code> (static
+placements), <code>.veggrid</code>, <code>.scripts</code> (its script; see Scripting), <code>.uis</code> and <code>.uiwd</code>; then the
+prefabs, meshes, materials, textures and effects it uses (176 layers also carry a world mesh,
+<code>.wldmsh</code>). A layer's <code>.terrain</code> is an empty 12-byte section; only main parts carry terrain.</p>
+<p>Across all 1,311 parts (1,303 layers and 8 main parts) the object registries place <strong>1,247,824
+objects of 156 classes</strong>. The most common: <code>AINodeMenacePlace</code> 113,874, <code>AINavMeshObstacle</code> 67,714,
+<code>SpecialFX</code> 67,460, <code>DynamicObjectGroupState</code> 67,361, <code>ScriptRelay</code> 56,290,
+<code>StaticLightOctreeBias</code> 54,700, <code>FireVolume</code> 50,718, <code>AISpawnerAmbientNormal</code> 49,769, <code>LightCube</code>
+47,771, <code>Group</code> 43,956, <code>VolumeController</code> 35,992.</p>
+<p><strong>Patched registries win.</strong> The engine does not load the registry embedded in a part when a patch
+archive ships a standalone <code>.objres</code> for that part (2,753 standalone registries ship). Lithlad's
+main registry in a running game is the copy in <code>Patch_DLC5</code> (161,821 context-action lines), not the
+one embedded in the <code>Patch_DLC4</code> container (161,828) or the copies in <code>Patch_09</code> / <code>Patch_10</code>
+(161,836). Layer scripts follow the same rule (see Scripting).</p>
+<h2 id="how-a-region-s-world-is-assembled">How a region's world is assembled</h2>
+<h3 id="the-section-streamer">The section streamer</h3>
+<p><code>WorldBundleMgr</code> (<code>GameSystems\Core\WorldBundleMgr.cpp</code>) is <code>[GM+0x6D90]</code>. It keeps a registry
+vector of <strong>world bundle groups</strong> at <code>+0x00 / +0x08</code> (145 groups in Lithlad, each pointing back to
+the manager at <code>+0x240</code>). The scene tick walks the groups (see Threads and the frame) and services
+only those whose want-load byte <code>+0x252</code> is set.</p>
+<p>A group (0x258 bytes, constructor 0x1D297EC) is the head of a circular list of entries: <code>+0x00</code> the
+first entry, <code>+0x08</code> the last, closing back on the group in both directions. <code>+0x251</code> set disables
+the duplicate check, <code>+0x252</code> is the want-load gate. An <strong>entry</strong> (0x168 bytes, vt_0x1DB6558) is one
+requested section:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x34</td>
+<td>u32 id = <code>StringHash(path)</code> (127 of 127)</td>
+</tr>
+<tr>
+<td>+0x38</td>
+<td>list links {next, prev}</td>
+</tr>
+<tr>
+<td>+0x48</td>
+<td>the <code>CResourceBundle</code> of the section (vt_0x1E6E678, path equal to the entry's: 127 of 127)</td>
+</tr>
+<tr>
+<td>+0x50</td>
+<td>the part's object-registry request (set on 126 of 127)</td>
+</tr>
+<tr>
+<td>+0x58</td>
+<td>the bundle load request</td>
+</tr>
+<tr>
+<td>+0x63</td>
+<td>the path, inline (<code>...\&lt;part&gt;.bndl</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><code>AddSection</code> 0x4B41CC(group, path, &amp;id) calls 0x4B420C, which rejects an empty path, appends
+<code>.bndl</code>, returns the existing entry when the path is already requested in that group (0x4B1FE4) and
+otherwise links a new entry at the front of the list. <code>RemoveSection</code> 0x4B1BCC(group, id) releases
+every entry with that id (0x4B5C34). The entry exists as soon as it is requested, long before its
+content has streamed. Requests are de-duplicated per group only, so the same section requested
+through two groups is loaded twice.</p>
+<p>A plain bundle load (see Resource streaming) makes a part's resources resident without placing
+anything; a section requested through a group is what creates its world context and objects.</p>
+<h3 id="what-a-region-loads">What a region loads</h3>
+<p><code>MainScene</code> (<code>[base+0x26FFAB0]</code>) owns eight group slots. In Lithlad during play they held:</p>
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Gates</th>
+<th>Sections</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x720</td>
+<td></td>
+<td>none (the null group)</td>
+</tr>
+<tr>
+<td>+0x728</td>
+<td>flag <code>+0x250</code> set</td>
+<td><code>worlds\retail\desert\desert.bndl</code>, the main part</td>
+</tr>
+<tr>
+<td>+0x730</td>
+<td>flag set</td>
+<td>empty</td>
+</tr>
+<tr>
+<td>+0x738</td>
+<td></td>
+<td><code>worlds\retail\shared\wraith\lightingwraith.bndl</code> and <code>prefabs\ui\worlduimenuws.bndl</code></td>
+</tr>
+<tr>
+<td>+0x740</td>
+<td>want-load <strong>0</strong></td>
+<td>the quest group: <code>sectionsandlayers\fortassault\fortassault.bndl</code></td>
+</tr>
+<tr>
+<td>+0x748</td>
+<td>flag set</td>
+<td>the fortress: <code>drakecollision</code>, <code>fortwallgameplay</code>, <code>fortwallprops</code>, and <code>sectionsandlayers\dynamicfort\</code> <code>keeplarge</code>, <code>flairoutlawkeepl</code>, <code>flairoutlawworld</code>, <code>gatessimple</code>, <code>pourtrapsfire</code>, <code>fort_wd</code></td>
+</tr>
+<tr>
+<td>+0x750</td>
+<td>duplicate check off</td>
+<td>empty</td>
+</tr>
+<tr>
+<td>+0x758</td>
+<td>flag set</td>
+<td>empty</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>lighting layer</strong> is requested by the weather manager in its own group (<code>[[GM+0x6D98]+0x20]</code>):
+the current weather pattern's <code>Section</code> field names it (see Rendering, "Weather"). In Lithlad the
+pattern was <code>DS_OL_Outlaw_Clear</code>, whose <code>Section</code> is <code>worlds\retail\desert\sectionsandlayers\ol_outlaw.bndl</code>,
+and that group held exactly that section. The <code>ol_*</code> layers are per-Overlord variants: Lithlad ships
+nine (<code>ol_dark</code>, <code>ol_feral</code>, <code>ol_machine</code>, <code>ol_marauder</code>, <code>ol_mystic</code>, <code>ol_outlaw</code>, <code>ol_slaughter</code>,
+<code>ol_terror</code>, <code>ol_warmonger</code>) beside its plain <code>night01..03</code> layers; Nurnen, Cirith Ungol and
+Seregost nine each (Nurnen's and Cirith Ungol's include a shared <code>ol_share01</code>); Gorgoroth 27, each
+also in <code>_bd</code> and <code>_bduc</code> forms. Lithlad's <code>ol_outlaw</code> holds what a lighting layer holds (1,104
+<code>SpecialFX</code>, 959 <code>LightCube</code>, 612 <code>Sound</code>, 175 <code>WorldModel</code> ... and an <code>AtmosphereVolume</code>), much like
+its <code>night03</code> (1,492 <code>SpecialFX</code>, 959 <code>LightCube</code>, 612 <code>Sound</code>, 32 <code>AtmosphereVolume</code>s).</p>
+<p>Of the 68 groups with entries, 63 hold only the menus' 3D scenes: 86 sections under
+<code>prefabs\ui\mordormap\</code> (the world map's region pieces such as <code>minasmorgul.bndl</code>, and each
+fortress's keep and gate pieces by tribe, <code>fortworldsections\keeps\blackguard\bgrdflairped05.bndl</code>),
+12 under <code>prefabs\ui\store\</code>, 6 battle-report scenes and 8 region-faction scenes
+(<code>wuim_*_ws.bndl</code>). 127 sections were loaded in all, 13 of them from <code>worlds\</code>.</p>
+<p><strong>Conditional sections.</strong> At load <code>MainScene+0x760 .. +0x768</code> receives 16-byte pairs
+<code>{section record, u32 id}</code> copied from the region's <code>WorldInfo.ConditionalWorldSections</code>. The
+evaluator 0x1DFAC8 (called from 0x1DF500) reads each section's
+<code>_StructuresWorldInfoConditionalSection.GameDataVariable</code>: true with id 0 requests the section
+through <code>[MainScene+0x758]</code> (0x4B41CC); false with a nonzero id releases it (0x4B1BCC). Lithlad has
+none; Minas Ithil during the Shadow Wars has 12 (its pre-fall sections released, the post-fall ones
+loaded).</p>
+<p><strong>Region travel.</strong> The script call <code>System:LoadWorld(DBWorldInfo.&lt;world&gt;)</code> on the main thread
+starts a region load within 0.1-0.2 s (<code>LoadWorldCustom</code>, which no shipped script uses, shares its
+implementation 0x1780824). The current region record <code>[[GM+0x6C68]+0x1B0]</code> changes at the start
+of the load, before the destination's objects exist.</p>
+<h3 id="world-contexts">World contexts</h3>
+<p>The objects of a streamed part live in a <strong>world context</strong> (vt_0x1DB5D58). The object update
+manager's object sets (see Threads and the frame) are these contexts: 129 of 129 sets in Lithlad
+carry that vtable, and every placed object points back to its own at <code>+0x58</code> (105,946 of 105,946).</p>
+<p>A context's object-name table is <code>[ctx+0x68]</code>: 0x800 buckets of 0x18 bytes, bucket =
+<code>hash &amp; 0x7FF</code>, list head at <code>+0x08</code>; the node is embedded in the object at <code>+0x28</code> (<code>+0x08</code> next,
+<code>+0x10</code> hash, <code>+0x18</code> name). 20 of the 129 contexts had a table, holding 105,946 objects; the
+largest is the main part's.</p>
+<p>Matching each table against the shipped registries by object name:</p>
+<table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Objects in the file</th>
+<th>In the live table</th>
+<th>Same name</th>
+<th>Same rotation</th>
+<th>Position within 1 cm</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lithlad main</td>
+<td>95,205</td>
+<td>90,863</td>
+<td>90,546</td>
+<td>90,510</td>
+<td>70,240</td>
+</tr>
+<tr>
+<td><code>fortwallprops</code></td>
+<td>679</td>
+<td>635</td>
+<td>635</td>
+<td>635</td>
+<td>635</td>
+</tr>
+<tr>
+<td><code>ol_outlaw</code></td>
+<td>5,545</td>
+<td>5,545</td>
+<td>5,545</td>
+<td>5,455</td>
+<td>5,398</td>
+</tr>
+</tbody>
+</table>
+<p>Of the main part's names, 4,659 are not in the live table, among them every <code>StartupCommand</code>
+(<code>*.SC</code>) and some <code>MapCanvas</code> objects (<code>*.MCNV_H</code>); 317 names exist only live (<code>Avian0</code> ..
+<code>Avian11</code>, <code>CTP_D_103.CTP</code> ...). The position differences are <strong>AI placements moved vertically</strong>:
+20,211 of the 20,306 moved objects in the main part are AI nodes, ambient spawners and combat
+teleport points, and in every one of those classes the median horizontal change is 0.0 cm while the
+median vertical change is -47 to -285 cm (<code>AINodeMenacePlace</code> 6,802 of 6,869 moved, median -181 cm;
+<code>AISpawnerAmbientNormal</code> 4,343 of 4,920, -150 cm; <code>AINodeRetreat</code> 432 of 432, -285 cm;
+<code>CombatTeleportPoint</code> 751 of 849, -47 cm). The other 95 moved objects belong to other classes.</p>
+<h2 id="the-object-registry-objres">The object registry (<code>.objres</code>)</h2>
+<p>A part's <code>.objres</code> is an OBJR chunk registry:</p>
+<pre><code>'OBJR' | u32 13 | u32 hash | u32 block count
+block count x { u32 name hash | u32 size | payload }
+</code></pre>
+<p>The chain ends exactly at the end of the section in 1,310 of 1,310 parts. Parts with context-action
+data carry 14 blocks (724 parts), the others 12 (no CAWR / CADB). <strong>Each block hash is
+<code>StringHash</code> of the name its handler registers with the resource manager</strong>; the names sit together
+in the image at 0x1E6B4E8-0x1E6B6B0, 14 of 14:</p>
+<table>
+<thead>
+<tr>
+<th>Tag</th>
+<th>Hash</th>
+<th>Engine name</th>
+<th>Handler (vf3)</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>KEYF</td>
+<td>0x9B011056</td>
+<td><code>ObjRes.Keyframer</code></td>
+<td>vt_0x23017A0, 0x4BB804</td>
+<td>key-framed motion paths</td>
+</tr>
+<tr>
+<td>SFXS</td>
+<td>0xBE10C375</td>
+<td><code>ObjRes.SpecialFx</code></td>
+<td>vt_0x2301300, 0x4BB9E4</td>
+<td>static effect placements</td>
+</tr>
+<tr>
+<td>SWFX</td>
+<td>0x71F34310</td>
+<td><code>ObjRes.WeatherFx</code></td>
+<td>vt_0x2301468, 0x7C692C</td>
+<td>weather-gated effect points</td>
+</tr>
+<tr>
+<td>ONLS</td>
+<td>0xACECAC8A</td>
+<td><code>ObjRes.ObjNameList</code></td>
+<td>vt_0x2301808, 0x4BBB80</td>
+<td>group member lists</td>
+</tr>
+<tr>
+<td>NLFE</td>
+<td>0x9F53FC59</td>
+<td><code>ObjRes.NativeLife</code></td>
+<td>vt_0x22F3A08, 0x7C34B0</td>
+<td>ambient-life emitters</td>
+</tr>
+<tr>
+<td>PFDG</td>
+<td>0x22A69B09</td>
+<td><code>ObjRes.PrefabDebug</code></td>
+<td>vt_0x22F3B78, 0x4B8554</td>
+<td>the prefab tree for the debug viewer</td>
+</tr>
+<tr>
+<td>(none)</td>
+<td>0xC3685E5B</td>
+<td><code>ObjRes.Clutter</code></td>
+<td>vt_0x22F3890, 0x4B680C</td>
+<td>instanced clutter meshes with geometry</td>
+</tr>
+<tr>
+<td>SCRB</td>
+<td>0xD69D2456</td>
+<td><code>ObjRes.ScriptBind</code></td>
+<td>vt_0x230EF30, 0x4B6B58</td>
+<td>which script function runs for which object and event</td>
+</tr>
+<tr>
+<td>VOLM</td>
+<td>0x8A27BAE6</td>
+<td><code>ObjRes.VolumeDB</code></td>
+<td>loader 0x7B83B8</td>
+<td>convex volume brushes (see Rendering)</td>
+</tr>
+<tr>
+<td>CAWR</td>
+<td>0xA7ED4C13</td>
+<td><code>ObjRes.ContextLineDB</code></td>
+<td>vt_0x2301110, 0x4B6368</td>
+<td>context-line owner index</td>
+</tr>
+<tr>
+<td>CADB</td>
+<td>0x8B7E18E7</td>
+<td><code>cntx</code></td>
+<td>vt_0x1FF6B98, 0x501478</td>
+<td>context-action lines</td>
+</tr>
+<tr>
+<td>GADB</td>
+<td>0x29F76277</td>
+<td><code>ObjRes.ObjProps</code></td>
+<td></td>
+<td>the object property database</td>
+</tr>
+<tr>
+<td>(none)</td>
+<td>0xB9E81CF3</td>
+<td><code>ObjRes.WorldPhysics</code></td>
+<td></td>
+<td>which prefab each dynamic object draws, and collision shapes</td>
+</tr>
+<tr>
+<td>OBJL</td>
+<td>0xAE72B7E7</td>
+<td><code>ObjRes.ObjList</code></td>
+<td>vt_0x22C0338, 0x502B8C</td>
+<td>the object list</td>
+</tr>
+</tbody>
+</table>
+<p>Across the 1,310 registries the blocks total 736 MB: <code>ObjRes.WorldPhysics</code> 416 MB, CADB 123 MB,
+OBJL 84 MB, VOLM 40 MB, GADB 23 MB, PFDG 18 MB, ONLS 14 MB, Clutter 11 MB, SCRB 3.1 MB, NLFE 2.2 MB;
+the rest are under 0.4 MB. Atmosphere volumes and their <code>VOLM</code> brushes are described in Rendering;
+the context-action blocks and SWFX have their own sections below.</p>
+<h3 id="the-object-list-objl">The object list (OBJL)</h3>
+<pre><code>'OBJL' | u32 5 | u32 sets | u32 N | u32 class bytes | u32 name bytes | u32 group bytes
+0x1C   class names, object names, group names (NUL-terminated string tables)
+then   per set: u32 set hash | u32 count | count x 50-byte record (unaligned)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>u32</td>
+<td>class name (offset into the class table)</td>
+</tr>
+<tr>
+<td>+0x04</td>
+<td>u32</td>
+<td>object name (offset into the name table)</td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>u16</td>
+<td>the prefab instance that placed the object (offset into the group table; 0xFFFF = none)</td>
+</tr>
+<tr>
+<td>+0x0A</td>
+<td>u32</td>
+<td>index of the object's record in the property database</td>
+</tr>
+<tr>
+<td>+0x0E</td>
+<td>f32[3]</td>
+<td>position, world space (cm)</td>
+</tr>
+<tr>
+<td>+0x1A</td>
+<td>f32[4]</td>
+<td>rotation quaternion (x, y, z, w)</td>
+</tr>
+<tr>
+<td>+0x2A</td>
+<td>u32</td>
+<td>0</td>
+</tr>
+<tr>
+<td>+0x2E</td>
+<td>u32</td>
+<td>an id (0 on the world-collision objects)</td>
+</tr>
+</tbody>
+</table>
+<p>The table ends exactly at the block end and every offset lands on a string start in 1,310 of 1,310
+registries (re-read on five layers and Lithlad's main part, 104,489 objects; the 9,284 layer objects
+all have unit quaternions). Most lists hold one set, the world set (hash 0x3BDE767D). Object
+names carry their prefab instance and their role: <code>Barre_46.DOGS_Fire</code>, <code>MesaE_08.VC_NoHang</code>,
+<code>HideS_138.FP</code>, <code>pGCarags.spwCaptain</code>. In all ten parts read, the list opens with a
+<code>WorldInitializer</code> object and then <code>WorldCollision</code> objects at the origin: <code>PhysicsBSP</code> (and
+<code>LargeAIIgnore</code> in some layers); Lithlad's main part has four (<code>PhysicsBSP</code>, <code>PlayerBlocker</code>,
+<code>CameraBlocker</code>, <code>LargeAIIgnore</code>).</p>
+<h3 id="the-object-property-database-gadb">The object property database (GADB)</h3>
+<p><code>ObjRes.ObjProps</code> is a complete GameDB database (version 17) whose root type is <code>ObjectPropertyDB</code>,
+with the category <code>ObjectDB</code> and records named <code>ObjectRec</code> (see GameDB). An object's OBJL record index
+selects its record, and every property the object reads at creation comes from it. Records are
+de-duplicated: objects with identical properties share one (Minas Ithil <code>night01</code>: 3,160 objects,
+1,886 records; Lithlad main: 95,205 objects, 21,430 records). In a running game an object keeps its
+record at <code>+0x50</code>.</p>
+<h3 id="group-members-onls-and-script-bindings-scrb">Group members (ONLS) and script bindings (SCRB)</h3>
+<p>Both key objects by <code>StringHash(object name)</code>.</p>
+<ul>
+<li><strong>ONLS</strong> lists the members of every grouping object: <code>'ONLS' | u32 1 | u32 area bytes | u32 index
+  bytes</code>; the area holds groups <code>{u32 n, n x {u16 length, name}}</code>, the index <code>{u32 hash(owner), u32
+  offset of its group}</code> sorted by hash. Over 400 layers 6,360 of 6,360 owners are objects of the
+  part (<code>Group</code> 5,515, <code>AINodeRoute</code> 735, <code>AINodeSearch</code> 83, static-light probes) and 107,097 of
+  107,097 member names exist in OBJL. A prefab instance's children (<code>Barre_00.DOGS_Alive</code>, <code>.VC</code>,
+  <code>.NMO</code>, <code>.FX_P</code> ...) form one group.</li>
+<li><strong>SCRB</strong> says which function of the part's script runs for which object and event: <code>'SCRB' |
+  u32 1 | u32 string bytes | u32 bindings | u32 objects</code>, then the strings, bindings <code>{u32
+  hash(event), u32 event name, u32 hash(script resource path), u32 function name}</code> and an object
+  index <code>{u32 hash(object), u32 first binding, u32 count}</code> sorted by hash. Over 400 layers 18,129 of
+  18,129 scripted objects are named (<code>ScriptRelay</code> 8,906, <code>ScriptObject</code> 4,700, <code>StartupCommand</code>
+  2,795, <code>QuestRelay</code> 438, <code>RemoteScript</code> 365 ...), every script hash is the hash of the part's own
+  <code>worlds\retail\...\&lt;layer&gt;.scripts</code> path (5,844 of 5,844), and every bound name exists in that
+  part's shipped script. Events include <code>Script</code>, <code>Script1</code>, <code>Start/Cleanup/Fail/CompleteQuestScript</code>,
+  <code>PreActivateQuestScript</code>, <code>Departure/ArrivalScript</code>, <code>OnInitialize</code> and <code>OnEnterScript</code>. A binding
+  names either a function <code>name = function(self, threadId, scriptId) ... end</code> (4,938 of 6,312) or,
+  for a <code>ScriptObject</code>'s <code>Script</code>, a script object <code>name = hmake &lt;Type&gt;_meta { ... }</code> (1,374).</li>
+</ul>
+<h3 id="what-a-dynamic-object-draws-objres-worldphysics">What a dynamic object draws (<code>ObjRes.WorldPhysics</code>)</h3>
+<p>The static placements (below) list only static prefabs. Everything the engine can burn, break, open
+or animate is an OBJL object, and its geometry and collision are found through this block:</p>
+<pre><code>u32 n_objects | u32 n_records
+n_objects x u32 hash(object name)   (unsorted)
+n_objects x u16 record index
+records:  {u32 1, u16 0, f32[6]}                                   no path: world collision
+          {u32 flag, u16 length, path, u32 key, f32 cull, f32 half[3], f32 centre[3]}   a prefab (.inst)
+then the records' Havok shapes (tagfile TAG0, SDKV20160200, hknpCompoundShape)
+</code></pre>
+<p>Lithlad's main part lists 18,943 objects over 585 records. In Cirith Ungol's main part 12,638 of
+12,639 hashes are OBJL object names, all of geometry or physics classes (<code>FireProp</code> 2,491 of 2,491,
+<code>DynamicObjectGroupBrush</code> 1,382 of 1,382, <code>WorldModel</code> 590 of 590, <code>AINavMeshObstacle</code> 6,397, the
+world-collision objects). A record's bounds are its prefab's decoded bounds (the orc furnace base:
+half-extents 18.1 x 8.9 x 22.1 m), and records are per (prefab, class), so a prop and its navigation
+obstacle use different records of the same prefab.</p>
+<h3 id="motion-paths-effects-ambient-life-and-clutter">Motion paths, effects, ambient life and clutter</h3>
+<ul>
+<li><strong>KEYF</strong> (<code>CClientKeyframer</code>): <code>'KEYF' | u32 1 | u32 n | u32 data bytes</code>, n x <code>{u32 id, u32
+  offset}</code>; an entry is <code>{u32 5, u32 keys, u32 frames, u32 frame bytes}</code>, keys <code>{u32 hash(name),
+  u32 frame}</code> (<code>Open</code>, <code>Closed</code>, <code>Start</code>, <code>End</code>), frames of 40 bytes <code>{f32 time (s), f32 offset[3],
+  f32 quat[4], u32 0xFFFFFFFF, u32 tag}</code>. The id is the <code>KeyDataIndex</code> property of a <code>KeyFramer</code>
+  object (449 of 449 resolve). 45 of 1,310 blocks carry paths (431 paths; quaternions unit 4,848 of
+  4,848, times monotonic in 431 of 431); a gate leaf slides 400 cm over its 10 s <code>TotalPathTime</code>.</li>
+<li><strong>SFXS</strong>, static effects that are not objects (falling leaves, furnace smoke): header <code>1 | off_a |
+  off_b | n | n2 | 0 | 0</code>, <code>.fxp</code> paths, at off_a n x <code>{f32 position[3], f32 cull range}</code>, at off_b
+  n x <code>{f32 quat[4], u32 .fxp path offset, u32 3, 0, 0}</code>.</li>
+<li><strong>NLFE</strong>, ambient-life emitters: <code>'NLFE' | 1 | 0x1C | n | group-name bytes | name bytes |
+  groups</code>; the group names are <code>NativeLife/Definition</code> records (<code>con_TourchLight</code>, <code>con_MeatFlies</code>),
+  then n group indices, n instance names (<code>light_05L.Moths</code>; prefixed by their prefab instance, not
+  OBJL objects), n zeros and n positions.</li>
+<li><strong>Clutter</strong> (<code>CClutterMgr</code>, <code>ClientShellDLL\ClutterMgr.cpp</code>): instanced static meshes carried
+  with their geometry. Header <code>u32 1 | u32 string bytes | u16 meshes | u16 instances | u16 elements
+  | u16 vertex buffers | u32 buffer bytes</code>; <code>.mat</code> strings; per mesh <code>{u32 material, u16 elements,
+  u16 vertex buffers, u16 vertices, u16 indices, u16 users}</code> with its vertex elements, 56-byte
+  vertices <code>{pos[3], normal[3], uv0[2], uv1[2], tangent[3], u32 colour}</code> and u16 triangle indices;
+  then 40-byte instances <code>{f32 pos[3], f32 quat[4], f32 scale, u16 left, u16 right, u16 mesh, u16 1}</code>
+  forming a binary tree with one root per block. 51 blocks are non-empty (275 meshes, 9,630
+  instances); Lithlad's main part has 23 meshes and 1,657 instances.</li>
+<li><strong>PFDG</strong>, the prefab tree of the debug viewer (registered by <code>CPrefabDebugViewer</code> 0x1796274, which
+  draws a cube <code>CPrefabDebugViewer.Box</code> scaled by each node's extent): <code>'PFDG' | 1 | n | string
+  bytes</code>, n x <code>{f32 centre[3], f32 extent[3]}</code> (the extent is signed: 21% have a negative
+  component), n packed 21-byte nodes <code>{u32 parent, u32 first child (0xFFFFFFFF none), u8 r, g, b, a,
+  u32 path, u32 name, u8 flag}</code>, strings. 381,195 nodes, every link valid.</li>
+</ul>
+<h2 id="static-geometry">Static geometry</h2>
+<h3 id="placements-wdsc-wldclnt">Placements (WDSC, <code>.wldclnt</code>)</h3>
+<pre><code>0x00  'WDSC' | u32 9 | u32 | u32 | u32 INSTANCES | u32 | u32 has-world-mesh | u32 MATERIALS | u32 | u32
+      | u32 STRING BYTES
+0x2C  strings: the part's .wldmsh, its materials, every prefab .inst it places
+      then {u32 materials, u32 0, u32 offsets[1 + materials]} when it has a world mesh or materials
+      then INSTANCES x 76 bytes (unaligned)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>f32[3] / f32[3]</td>
+<td>world bounds min / max</td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td>f32[3]</td>
+<td>pivot position (world, cm; the base centre of the prefab)</td>
+</tr>
+<tr>
+<td>+0x24</td>
+<td>f32[4]</td>
+<td>rotation quaternion (x, y, z, w)</td>
+</tr>
+<tr>
+<td>+0x34</td>
+<td>f32</td>
+<td>scale</td>
+</tr>
+<tr>
+<td>+0x38</td>
+<td>u32</td>
+<td>flags</td>
+</tr>
+<tr>
+<td>+0x3C</td>
+<td>u32</td>
+<td>kind</td>
+</tr>
+<tr>
+<td>+0x40</td>
+<td>u32</td>
+<td>hash</td>
+</tr>
+<tr>
+<td>+0x44</td>
+<td>f32</td>
+<td>cull distance (cm)</td>
+</tr>
+<tr>
+<td>+0x48</td>
+<td>u32</td>
+<td>prefab path (offset from 0x2C)</td>
+</tr>
+</tbody>
+</table>
+<p>Lithlad's main part places 12,877 static instances of 242 prefabs (quaternions unit 12,877 of
+12,877, scale 0.12-2.03, flags 1 on 12,789; kind 0 on 11,659, 3 on 1,210, 1 on 8; cull distances
+mostly 60 m, 90 m, 350 m and 4 km). Layers place few or none (0 to 17 in five read). These are the static buildings,
+walls and rocks; prefabs that can change (destructible, animated, interactive) are objects instead.</p>
+<h3 id="prefabs-prfb-inst">Prefabs (PRFB, <code>.inst</code>)</h3>
+<p>A prefab's baked geometry; static world geometry is never <code>.mesh</code> (prefab <code>.mesh</code> files are the
+destructible and animated pieces). <code>'PRFB' | u32 8 | u32 hash | ...</code> with header words for draws
+<code>[4]</code>, materials <code>[5]</code>, child prefabs <code>[6]</code> and vertex formats <code>[9]</code>, then:</p>
+<ul>
+<li><strong>LOD records</strong> from 0x38, 44 bytes each with -1.0 at <code>+28</code>, in groups that open with a per-group
+  tag (0xD238B9DD on a keep wall, 0xD238B9DE on human buildings, 0x3249 on lanterns, an extra leading
+  group 0x159A on fortress pieces): a root <code>{tag, -1, 0, 0, next = first unit, f32 cull distance}</code>
+  and units <code>{tag, name hash, first draw, draw count, next unit (-1 = finest), f32 switch distance,
+  f32, -1.0, 0, 0, distinct draws}</code>. Per instance the engine walks coarse to fine and draws the first
+  unit whose <code>next</code> is -1 or whose switch distance the camera is beyond (a keep wall switches at 320,
+  150 and 80 m and is culled at 7 km). A unit may draw nothing at its range; draws in no unit are
+  depth-prepass and shadow casters. Header word <code>[7]</code> is not the unit count (88 of 431 chained
+  prefabs disagree).</li>
+<li><code>{u32 draws, u32 vertex bytes, u32 index bytes}</code>, then per draw one vertex block ending at its
+  <code>vend</code> (stream 0 then stream 1, stride-aligned), then u16 indices (<code>idx_min .. idx_max</code>, rebased
+  by <code>idx_min</code>).</li>
+<li>The tail: vertex formats <code>{u8 stream, u8 type, u8 usage, u8 index}</code> (types 2 float3, 12 half4,
+  10 half2, 4 ubyte4; usages 0 position, 1 normal, 2 tangent, 3 binormal, 4 uv, 5 colour), 52-byte
+  draw records <code>{0, n, n, index start, base, triangles, material, 0, 0, format, vend, f32, f32}</code>,
+  then the material paths. Positions are prefab-local with the pivot at the base centre. A composite
+  prefab ends with a block of placed child prefabs.</li>
+</ul>
+<p>A layer carries the prefabs it places as PRFB sections of its own container (Minas Ithil's
+<code>sabotagecages_00</code> carries <code>guard_caragors.inst</code> and three footprint-tracking prefabs).</p>
+<h3 id="world-meshes-texture-arrays-terrain-and-vegetation">World meshes, texture arrays, terrain and vegetation</h3>
+<ul>
+<li><strong>MESH version 5 (<code>.wldmsh</code>)</strong> is a part's own world-space mesh, laid out like the PRFB tables with
+  the vertex buffer at 0x2C (header <code>[3]</code> draws, <code>[4]</code> formats, <code>[9]</code> vertex bytes, <code>[10]</code> index
+  bytes); its materials index the part's WDSC list. Draws wider than 20 km are sky domes and vista
+  cards (504 km in Minas Ithil's <code>night01</code>, 960 km for Cirith Ungol's <code>mt_v01</code>).</li>
+<li>In Cirith Ungol about 90% of the world's triangles use <strong>texture-array</strong> materials (<code>.texa</code>),
+  which blend array slices by a mask and a height map.</li>
+<li><strong>TERR version 9 (<code>&lt;region&gt;.terrain</code>)</strong>, main parts only (Barad-dur has none), read by 0x7AC0F4:
+  per terrain a root grid (4x4 or 8x8), position (the centre), quaternion, extent, height range, an
+  f32 (400; 500 in Lithlad, 1000 at the Black Gate), the node count, a material and a global
+  texture (a 32x32 flag map, one cell per depth-3 node), then nodes <code>{u32 flags; unless flags &amp;
+  0x20: f32 min, f32 max, u32 tile}</code> and tiles of three texture paths; the file ends exactly after
+  them in every region. Each root is a quadtree stored in pre-order (flag bits 0-3 = children present,
+  0x40 root, 0x20 no data); every root's tile 0 is the region overview, deeper nodes own a 68x68
+  16-bit height tile and two 132x132 BGRA maps (four texture-array slice indices and their weights).
+  World placement: <code>U = (x - pos.x) / size + 0.5</code>, <code>V = (z - pos.z) / size + 0.5</code>,
+  <code>y = pos.y + h * range</code>. The terrain shader <code>disp_terrain.fxo</code> keeps the four heaviest of up to 24
+  slices per point; slice index 255 means no layer, which marks the holes (outside the play area,
+  and pockets such as forts and caves).</li>
+<li><strong>VEGT (<code>.vegtile</code>)</strong>, vegetation, read by 0x503A0C: <code>'VEGT' | u32 version (1-3) | f32 centre[3] |
+  f32 half[3] | u32 species</code>, then per species <code>{u16 length, name, u32 n, n x 16-byte instance}</code>.
+  An instance is <code>u16 qx, qy, qz</code> (position = <code>(centre - half) + q * step</code>, step = <code>max(half) * 2 /
+  65535</code>), <code>u8 scale</code> (<code>b / 127.5</code>), a u8, four rotation bytes, a 3-byte bounding-sphere offset and
+  <code>u8 flags</code> (bit 0 hidden). The rotation is decoded on the GPU
+  (<code>vegetation_sort_nomotion.fxo</code>): <code>cos yaw = 2 b0 / 255 - 1</code>, <code>sin yaw = 2 b1 / 255 - 1</code>,
+  <code>a2 = b2 * 2pi / 255 - pi</code>, <code>a1 = b3 * 2pi / 255 - pi</code>, world = <code>s Rz(a2) Ry(yaw) Rx(a1) local +
+  position</code>. Species are <code>Vegetation/Type</code> records; 108 species and 1,291,234 instances ship, in
+  tiles <code>worlds\retail\&lt;folder&gt;_&lt;n&gt;v.vegtile</code> (inside the region folder for Gorgoroth and Seregost)
+  and in layer tiles. A tile's file ends exactly after its last species.</li>
+</ul>
+<h2 id="world-objects-in-memory">World objects in memory</h2>
+<h3 id="layout">Layout</h3>
+<p>Read on every object of the 20 named contexts in Lithlad (105,946 objects):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>ptr</td>
+<td>vtable: exactly one per class (142 classes, 142 vtables)</td>
+</tr>
+<tr>
+<td>+0x28</td>
+<td>node</td>
+<td>the name-table node: <code>+0x08</code> next, <code>+0x10</code> hash (<code>StringHash(name)</code>, 105,946 of 105,946), <code>+0x18</code> name</td>
+</tr>
+<tr>
+<td>+0x40</td>
+<td>char*</td>
+<td>the registered name (equal to the node's, 105,946 of 105,946)</td>
+</tr>
+<tr>
+<td>+0x50</td>
+<td>ptr</td>
+<td>the object's <code>ObjectRec</code> in its part's property database (a GameDB record on 105,383; null on 563)</td>
+</tr>
+<tr>
+<td>+0x58</td>
+<td>ptr</td>
+<td>its world context (105,946 of 105,946)</td>
+</tr>
+<tr>
+<td>+0x60</td>
+<td>node</td>
+<td>the update-list link (see Threads and the frame)</td>
+</tr>
+<tr>
+<td>+0x78</td>
+<td>ptr</td>
+<td>its runtime class entry</td>
+</tr>
+<tr>
+<td>+0x80</td>
+<td>ptr</td>
+<td>render component (set on 8,457)</td>
+</tr>
+<tr>
+<td>+0x88</td>
+<td>ptr</td>
+<td>time source (see Engine core)</td>
+</tr>
+<tr>
+<td>+0x98</td>
+<td>ptr</td>
+<td>physics body (pieces vector at body <code>+0x08 .. +0x10</code>)</td>
+</tr>
+<tr>
+<td>+0xAC</td>
+<td>f32[3]</td>
+<td>position (cm)</td>
+</tr>
+<tr>
+<td>+0xB8</td>
+<td>f32[4]</td>
+<td>rotation quaternion (x, y, z, w): unit on 105,946 of 105,946</td>
+</tr>
+<tr>
+<td>+0xC8</td>
+<td>f32</td>
+<td>scale</td>
+</tr>
+<tr>
+<td>+0xD0</td>
+<td>f32</td>
+<td>update countdown</td>
+</tr>
+<tr>
+<td>+0xD4, +0xD8</td>
+<td>u32</td>
+<td>copied from the create parameters <code>+0x30</code>, <code>+0x34</code></td>
+</tr>
+<tr>
+<td>+0xDE</td>
+<td>u8</td>
+<td>1 = the name was copied, 0 = it points into the part's string table</td>
+</tr>
+<tr>
+<td>+0xE2</td>
+<td>u8</td>
+<td>flags: bit 0 visible, 0x0C solid (<code>FireProp</code> 0x0F on 4,077 of 4,129)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Classes.</strong> The runtime class entry is 0x38 bytes in a heap array: <code>+0x00</code> the static class
+descriptor, <code>+0x18</code> <code>StringHash(class name)</code>, <code>+0x20</code> the class name, <code>+0x30</code> <code>align &lt;&lt; 32 | size</code>
+(<code>WorldInitializer</code>: 0x800000100, alignment 8 and size 0x100). The static descriptor (in <code>.idata</code>)
+holds <code>+0x00</code> the name, <code>+0x08</code>
+the base class's descriptor, <code>+0x10</code> flags, <code>+0x18</code> the constructor, <code>+0x20</code> the destructor, <code>+0x2C</code>
+the instance size and <code>+0x30</code> the alignment. A shape-validated sweep of the image finds 433
+descriptors with 433 distinct names (431 in <code>.idata</code>, 2 in <code>.xtext</code>; 121 constructors lie outside
+<code>.arch</code>). 320 classes descend from <code>BaseClass</code>, 256 of them from <code>GameBase</code> (0x120 bytes, constructor
+0x7DCC78), and 64 from <code>BrushBase</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>vtable</th>
+<th>Size</th>
+<th>Constructor</th>
+<th>Base</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>WorldInitializer</code></td>
+<td>0x1DB5E28</td>
+<td>0x100</td>
+<td>0x481F9C</td>
+<td><code>BaseClass</code></td>
+</tr>
+<tr>
+<td><code>WorldCollision</code></td>
+<td>0x1DCD4A8</td>
+<td>0xE8</td>
+<td>0x7C6208</td>
+<td><code>BaseClass</code></td>
+</tr>
+<tr>
+<td><code>VolumeController</code></td>
+<td>0x1DB0340</td>
+<td>0x148</td>
+<td>0x47DD1C0</td>
+<td><code>GameBase</code></td>
+</tr>
+<tr>
+<td><code>StreamingStamp</code></td>
+<td>0x1FDE810</td>
+<td>0x1A8</td>
+<td>0x1C2CD14</td>
+<td><code>GameBase</code></td>
+</tr>
+<tr>
+<td><code>DynamicObjectGroup</code></td>
+<td>0x1DBD300</td>
+<td>0x238</td>
+<td>0x5BD384</td>
+<td><code>GameBase</code></td>
+</tr>
+<tr>
+<td><code>DynamicObjectGroupBrush</code></td>
+<td>0x1DBD570</td>
+<td>0x1E8</td>
+<td>0x4875F50</td>
+<td><code>GameBase</code></td>
+</tr>
+<tr>
+<td><code>DynamicObjectGroupState</code></td>
+<td>0x1DBCAE8</td>
+<td>0x3C8</td>
+<td>0x5AF74C</td>
+<td><code>GameBase</code></td>
+</tr>
+<tr>
+<td><code>FireProp</code></td>
+<td>0x1DCA878</td>
+<td>0x240</td>
+<td>0x7834D4</td>
+<td><code>ParticleSurface</code> (&lt; <code>WorldModelBase</code>)</td>
+</tr>
+<tr>
+<td><code>WorldModel</code></td>
+<td>0x1DC7368</td>
+<td>0x150</td>
+<td>0x1A2AE74</td>
+<td><code>WorldModelBase</code></td>
+</tr>
+<tr>
+<td><code>TeleportPoint</code></td>
+<td>0x1DC9C38</td>
+<td>0x148</td>
+<td>0x767FC8</td>
+<td><code>GameBase</code></td>
+</tr>
+<tr>
+<td><code>AINavMeshObstacle</code></td>
+<td>0x1DCB420</td>
+<td>0x128</td>
+<td>0x49326F0</td>
+<td><code>GameBase</code></td>
+</tr>
+<tr>
+<td><code>AINodeMenacePlace</code></td>
+<td>0x1DB0478</td>
+<td>0x2E8</td>
+<td>0x2BFB9C</td>
+<td></td>
+</tr>
+<tr>
+<td><code>AISpawnerAmbientNormal</code></td>
+<td>0x1DC5800</td>
+<td>0x1C8</td>
+<td>0x48CE4A0</td>
+<td><code>AISpawnerAmbientBase</code></td>
+</tr>
+<tr>
+<td><code>LightCube</code></td>
+<td>0x1FE1148</td>
+<td>0x168</td>
+<td>0x6FBF2B0</td>
+<td><code>LightBase</code></td>
+</tr>
+<tr>
+<td><code>Sound</code></td>
+<td>0x1DBBE78</td>
+<td>0x180</td>
+<td>0x4861DF0</td>
+<td><code>GameBase</code></td>
+</tr>
+<tr>
+<td><code>SpecialFX</code> / <code>SpecialFXSeq</code></td>
+<td>0x1DC13D8 / 0x1DC1530</td>
+<td>0x178 / 0x280</td>
+<td>0x655868 / 0x6558FC</td>
+<td><code>GameBase</code></td>
+</tr>
+<tr>
+<td><code>CombatExplosion</code></td>
+<td>0x1DCA058</td>
+<td>0x178</td>
+<td>0x775FA8</td>
+<td><code>GameBase</code></td>
+</tr>
+<tr>
+<td><code>Group</code></td>
+<td>0x1DC9D50</td>
+<td>0x140</td>
+<td>0x769064</td>
+<td><code>GameBase</code></td>
+</tr>
+<tr>
+<td><code>ScriptRelay</code> / <code>ScriptObject</code></td>
+<td>0x1DA9218 / 0x1DCAB18</td>
+<td>0x170 / 0x128</td>
+<td>0xFCED4 / 0x784DD4</td>
+<td><code>GameBase</code></td>
+</tr>
+<tr>
+<td><code>RemoteScript</code></td>
+<td>0x1DBFDA8</td>
+<td>0x140</td>
+<td>0x4889000</td>
+<td><code>GameBase</code></td>
+</tr>
+<tr>
+<td><code>TriggerSpatialDims</code> / <code>TriggerSpatialShape</code></td>
+<td>0x1DC1660 / 0x1DC1228</td>
+<td>0x1D8 / 0x1E0</td>
+<td>0x65599C / 0x65575C</td>
+<td><code>TriggerSpatialBase</code></td>
+</tr>
+<tr>
+<td><code>KeyFramer</code></td>
+<td>0x1FAEB70</td>
+<td>0x318</td>
+<td>0x6DB7CA0</td>
+<td><code>GameBase</code></td>
+</tr>
+<tr>
+<td><code>AtmosphereVolume</code></td>
+<td>0x1FDEFB8</td>
+<td>0x160</td>
+<td>0x6F9B700</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>The most numerous live classes in Lithlad were <code>AINavMeshObstacle</code> 11,588, <code>AINodeMenacePlace</code>
+7,249, <code>FireVolume</code> 7,189, <code>DynamicObjectGroupState</code> 6,251, <code>ScriptRelay</code> 5,993,
+<code>AISpawnerAmbientNormal</code> 5,002, <code>Group</code> 4,628, <code>FireProp</code> 4,129 and <code>VolumeController</code> 3,882.</p>
+<p><strong>Position.</strong> <code>+0xAC</code> is the logical position for world objects; prefabs are authored with their
+pivot at the base centre. Characters share the transform offsets (see Characters).</p>
+<h2 id="creating-binding-moving-and-removing-objects">Creating, binding, moving and removing objects</h2>
+<p>All of this runs on the main thread.</p>
+<h3 id="the-object-server">The object server</h3>
+<p>The object server <code>[base+0x26FF058]</code> (vt_0x22C0B28) is the world-object factory:</p>
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Function</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vf4</td>
+<td>0x7AAB6C -&gt; 0x43DBC8</td>
+<td>the time-sliced object-set streamer</td>
+</tr>
+<tr>
+<td>vf5</td>
+<td>0x1F6EA0</td>
+<td>"busy" (the update walk is skipped while it reports busy)</td>
+</tr>
+<tr>
+<td>vf8</td>
+<td>0x43D630</td>
+<td><code>CreateObject(params)</code>: requires a class at <code>params+0x40</code>, copies the parameters (0x43D680), calls the creator, then the new object's vf21 (<code>+0xA8</code>, post-create)</td>
+</tr>
+<tr>
+<td>vf14</td>
+<td>0x502034</td>
+<td>find an object by name in a context</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>creator</strong> 0x1CD454 (also called by the part loader 0x11B4EC0 for every object a part
+streams in) requires an object set at <code>params+0x1A0</code>, allocates the object through the class holder
+at <code>params+0x40</code>, runs its <code>ReadProps</code> (vtable <code>+0x60</code>, which pulls every property from the
+<code>ObjectRec</code>), builds the transform from the parameters into <code>+0xAC</code>, registers the name, links the
+object into its context, builds its components (vtable <code>+0x68</code>) and activates it (<code>+0x80</code>, <code>+0x70</code>,
+<code>+0x48</code>). A part's loader creates every object first and post-creates each afterwards.</p>
+<p><code>CObjectCreateParams</code> (defaults 0x43DAA0):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning (default)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x01</td>
+<td>flags, copied to the object's <code>+0xE2</code> (0)</td>
+</tr>
+<tr>
+<td>+0x04</td>
+<td>position (0, 0, 0)</td>
+</tr>
+<tr>
+<td>+0x10</td>
+<td>scale (1.0)</td>
+</tr>
+<tr>
+<td>+0x14</td>
+<td>rotation quaternion (0, 0, 0, 1)</td>
+</tr>
+<tr>
+<td>+0x30, +0x34</td>
+<td>copied to the object's <code>+0xD4</code>, <code>+0xD8</code> (0, 0xFFFF)</td>
+</tr>
+<tr>
+<td>+0x40</td>
+<td>the class holder (copied to <code>+0x78</code>)</td>
+</tr>
+<tr>
+<td>+0x168</td>
+<td>inline name</td>
+</tr>
+<tr>
+<td>+0x188</td>
+<td>name pointer (0 = use <code>+0x168</code>)</td>
+</tr>
+<tr>
+<td>+0x198</td>
+<td>the <code>ObjectRec</code> (copied to <code>+0x50</code>)</td>
+</tr>
+<tr>
+<td>+0x1A0</td>
+<td>the object set, that is the world context (copied to <code>+0x58</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="names">Names</h3>
+<p>The name registrar 0x4DBF08 either copies the name (and sets <code>+0xDE</code> to 1) or keeps a pointer into
+the part's strings (<code>+0xDE</code> = 0), hashes it into the node at <code>+0x28</code> and calls the context's vf10
+0x4DBF78, which picks the bucket (<code>hash &amp; 0x7FF</code>, 0x4DBF84) and appends the node at the tail
+(0x115ED3C, which asserts "Error: Adding a link that is already inside of a list" only when the node
+itself is already linked). <strong>Duplicate names are legal</strong>: nothing checks the name. The lookup
+0x4DC078 compares the hash and then the name case-insensitively, walking from the tail, so the
+newest object of a name answers.</p>
+<p><strong>Render and collision are bound by name.</strong> The component build (vtable <code>+0x68</code> -&gt; 0x333430) asks
+the context's vf5 0x3334F0, which looks the registered name (<code>+0x40</code>) up in the context's resource
+table (<code>ctx+0x98</code>). An object created under a name its part does not list gets no render component
+and no physics; created under an existing object's name it receives that object's model and
+collision. Because the newest object answers a name, the members of a prefab created after the
+original members bind to each other during post-create.</p>
+<h3 id="binding-from-script">Binding from script</h3>
+<p>A script's <code>Create</code> does not construct anything: the objects already exist in the part before any
+script runs, and scripts bind to them by name. The <code>&lt;Class&gt;.Create(scriptId, name, b3, relative)</code>
+stubs of 117 of 125 script classes share 0x5013A8 -&gt; 0x501B64, which composes the name (a <code>#.</code>
+prefix or <code>relative</code> prepends the prefab instance's name) and calls the object server's vf14 with
+the scriptId's own context; the lookup is not given the class. A missing name or a class mismatch
+returns <code>Class.None</code>; <code>ScriptObject.Create</code> is a function of its own, 0x501CAC. A scriptId is
+<code>{PrefabName, PropertyName, Instance}</code>; <code>Instance</code> is a weak handle (prefab instance at payload
+<code>+0x48</code>) that becomes null when the prefab's part streams out.</p>
+<h3 id="moving">Moving</h3>
+<p><code>GameBase:CopyXForm(A, B)</code> 0x1823B70 is <code>SetPosition(A, B+0xAC)</code> 0x1454EC followed by
+<code>SetRotation(A, B+0xB8)</code> 0xEF690; render state and spatial structures follow the setters, and it
+works across contexts. <strong>Collision follows ownership</strong>: the setter path 0x274C3C forwards to the
+physics body at <code>+0x98</code>, so only pieces the object owns move. 3,382 of 3,491 <code>FireProp</code>s own no
+pieces (their collision is baked into the part's static <code>PhysicsBSP</code>), so a moved bench or barrel
+stack keeps its old collision; <code>DynamicObjectGroupBrush</code>es (607 of 634) and cage brushes (vt_0x1FA3C00,
+84 of 84) own theirs and stay solid where they go. A destructible prop is a prefab of sibling objects
+(brush, explosion, effects, nav obstacle, volume controller): moving one member leaves the others
+behind.</p>
+<h3 id="removing">Removing</h3>
+<p>Objects live and die with their part's context. When the part streams again its objects are
+created again from the file, so a moved object is back at its authored transform and an object
+created into that context is gone. Nothing about placed objects is saved. A class's destructor is
+at <code>+0x20</code> of its static descriptor.</p>
+<h2 id="dynamic-object-groups">Dynamic object groups</h2>
+<p>Cages, nests, barrels, gates and traps are <strong>dynamic object groups</strong>: a <code>DynamicObjectGroup</code> object
+(the root) with <code>DynamicObjectGroupBrush</code> members (the breakable or interactive geometry),
+<code>DynamicObjectGroupState</code> members named after their states (<code>Barre_46.DOGS_Fire</code>,
+<code>WaspN_03.DOGS_Shoot</code>) and the prefab's effects. The brushes bind the group's composite prefab
+(<code>caragorcage</code>, <code>waspnest</code>, <code>ghulcloset</code>: no draws of their own) and sit at fixed offsets from the
+root (35 of 35, 53 of 53 and 226 of 226 in those three); the drawn art is the prefab's children at
+the root's transform.</p>
+<p>The data is in four GameDB categories:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Records</th>
+<th>Fields</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DynamicObjectGroup/Setup</code></td>
+<td>103</td>
+<td><code>States</code>, <code>VisibilityMaxDistance</code>, <code>Tags</code>, <code>ValidateStateTransitions</code>, <code>ValidateBrushDamage</code></td>
+</tr>
+<tr>
+<td><code>DynamicObjectGroup/StateTransition</code></td>
+<td>101</td>
+<td><code>StateToEnter</code>, <code>ActiveQuestList</code>, <code>IncludedParentStateTypeList</code>, <code>ExcludedParentStateTypeList</code>, <code>IncludedBrushDestroyedAttackCategory</code>, <code>ExcludedBrushDestroyedAttackCategory</code>, <code>ChildState</code>, <code>ChildrenInStateMin</code></td>
+</tr>
+<tr>
+<td><code>DynamicObjectGroup/StateType</code></td>
+<td>77</td>
+<td>none: bare state tags (<code>Alive</code>, <code>Destroyed</code>, <code>Hidden</code> ...)</td>
+</tr>
+<tr>
+<td><code>DynamicObjectGroup/PlacementID</code></td>
+<td>16</td>
+<td>none: fortress slots (<code>GateBrow</code>, <code>WallTop</code>, <code>TowerFace</code>, <code>Keep</code> ...)</td>
+</tr>
+</tbody>
+</table>
+<p>A transition is a guarded rule: the attack categories and parent states it accepts, and the state
+tag it enters. The state tags carry no data; what a state shows is the part's
+<code>DynamicObjectGroupState</code> objects for it and the scripts bound to them.</p>
+<p>At run time a group's current state is <code>DOG+0x188</code> (the state object; its <code>+0x180</code> is the
+<code>StateType</code> record), and <code>DOG+0x190</code> holds its 32 state links. The group's post-create 0x4871190
+collects the links but does not enter a state; a group streamed in with its part receives its
+initial state afterwards. <code>DynamicObjectGroup:Script_SetState</code> is 0x5ADF0C(dog, StateType record):
+when the ready flag <code>+0x22C</code> is set the request is queued at <code>+0x160</code>, otherwise it is applied at
+once (0x5AEABC). A brush's current state object is <code>brush+0x148</code>; while it is null, hits on the
+brush are routed nowhere. A brush's <code>ReadProps</code> does not fill the visibility flags (a <code>FireProp</code>'s
+does), so a brush created without them is invisible.</p>
+<h2 id="placed-lights-and-sounds">Placed lights and sounds</h2>
+<p>Light and sound objects read their colours and radii from their property records at creation and
+keep them in the object:</p>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>vtable</th>
+<th>Live fields</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LightCube</code>, <code>LightSpot</code>, <code>LightDirectional</code>, <code>DecalLightDirectional</code></td>
+<td>0x1FE1148, 0x1FE0998, 0x1FE0E98, 0x1FE0D40</td>
+<td><code>+0x138</code> LightColor, <code>+0x13C</code> SpecularColor, <code>+0x140</code> LightRadius, <code>+0x144</code> IntensityScale</td>
+</tr>
+<tr>
+<td><code>Sound</code></td>
+<td>0x1DBBE78</td>
+<td><code>+0x130</code> OuterRadius</td>
+</tr>
+</tbody>
+</table>
+<p>In Lithlad the live values equal the decoded property records: LightColor, SpecularColor and
+IntensityScale 950 of 950, LightRadius 903 of 903, Sound OuterRadius 1,326 of 1,326 (each control
+read 0). 2,810 lights were matched by name; 45 sat more than 1 cm from their decoded position. 3 of
+those sit exactly where the patch <code>.objres</code> places them. The other 42 are lantern lights
+(<code>LightHangOrc*_l.LC_Out01</code>, <code>light_NN.LC_Out01</code>) displaced 2-22 cm horizontally (vertical median
+0.4 cm, none downward), and 16 of them moved between two reads a minute apart.</p>
+<h2 id="context-actions-traversal-markup">Context actions: traversal markup</h2>
+<p>Where Talion can hang, pull up, vault, rail-run or leap from a mount is world data: <strong>context-action
+lines</strong> owned by <code>VolumeController</code>, <code>WorldInitializer</code> and <code>StreamingStamp</code> objects, built into a
+world grid on the <code>ContextActionBuilderThread</code> (see Threads and the frame) and queried by the
+movement behaviour graphs. <code>ContextActionDB</code> (<code>ContextActionDB.cpp</code>, initialised by 0x1B43A90,
+vt_0x23010A8) is <code>[GM+0x6DA0]</code>; it registers the <code>cntx</code> resource type.</p>
+<h3 id="on-disk-cadb-and-cawr">On disk: CADB and CAWR</h3>
+<p>CADB (read by 0x7CB194 for the header and vt_0x1FF6B98::vf3 0x501478 for the body; exact in 724 of
+724 parts, all version 3):</p>
+<pre><code>'CADB' | u32 version | u32 nA | u32 nL | u32 nP | u32 nV | u32 nO          (0x1C bytes)
+nA x u32   action palette: hash of a Character/Models/ContextActions record
+nL x 0x34  line   {f32 p0[3], f32 p1[3], f32 normal[3], u128 mask}   mask bit i = palette action i
+nP x 0x10  plane  {f32 normal[3], f32 d}
+nV x 0x20  volume {f32 min[3], f32 max[3], u32 first plane, u32 plane count}
+nO x 0x34  owner  {u32 key, f32 min[3], f32 max[3], u32 first line, u32 line count,
+                   u32 list-1 first volume, u32 count, u32 list-2 first volume, u32 count}
+</code></pre>
+<p>Across 724 parts: 7,883 of 7,886 palette entries name one of the 124 <code>Character/Models/ContextActions</code>
+records (fields <code>Group</code>, <code>DebugColor</code>, <code>AdditionalReferencedActions</code>; so a global mask fits 128 bits);
+2,209,930 lines, every one owned exactly once and inside its owner's box; 314,834 planes (all unit);
+50,668 volumes; 32,104 owners, whose key is the hash of an OBJL object name (32,104 of 32,104:
+<code>VolumeController</code> 31,803, <code>WorldInitializer</code> 288, <code>StreamingStamp</code> 13), sorted. Lines are not level
+in general (1,551,979 slope) and 68,951 normals have a vertical component. The busiest actions by
+line count: <code>Edge_Hang</code> 997,374, <code>Edge_Pullup</code> 388,445, <code>Edge_NoHang</code> 350,260, <code>Block_Movement</code>
+326,177, <code>Block_Movement_RailRun</code> 219,953, <code>Edge_Hang_Dangle</code> 216,272, <code>Hurdle</code> 94,327,
+<code>Edge_MountJumpTo</code> 93,946, <code>VaultOver_Mount</code> 91,633, <code>Edge_NoTrollJump</code> 83,358, <code>Rail_Running</code>
+56,365.</p>
+<p>CAWR (<code>ObjRes.ContextLineDB</code>) is the owner index: <code>'CAWR' | u32 1 | u32 n | n x {u32 key, u32 asset,
+u32 key}</code> (exact in 724 of 724). <code>key</code> is the hash of the object name; the middle word is 0 on disk and
+is filled at load with the hash of the <code>cntx</code> resource that holds the owner (2,777 of 2,777 live).</p>
+<h3 id="loading">Loading</h3>
+<p>A loaded <code>cntx</code> object is 0x80 bytes (0x7CD444): lines at <code>+0x20</code> (stride 0x38: the mask at <code>+0x00</code>,
+the vectors from <code>+0x10</code>), planes <code>+0x30</code>, volumes <code>+0x40</code>, owner keys <code>+0x50</code>, owners <code>+0x60</code>, the
+asset's hash at <code>+0x1C</code>, and a node at <code>+0x08</code> in the database's list <code>DB+0x68</code> (vf5 0x79A948 asserts
+"Duplicate asset being loaded."). <strong>vf4 0x41E564 rewrites every line mask</strong> from palette bits to
+global bits: the database's action table (<code>DB+0x10</code> count, 124; <code>DB+0x18</code> entries of 0x28 bytes
+<code>{u32 record hash, u128 own bit, u128 closure}</code>, sorted, "Improperly sorted database records!")
+closes each action over its <code>AdditionalReferencedActions</code> to a fixed point, and a line stores the
+OR of its actions' closures. A query for one action therefore also finds every line whose action
+lists it.</p>
+<p>Live, for the four loaded parts with a shipped source, 163,048 of 163,048 lines equal the file in
+geometry and in the predicted global mask (the unconverted file mask equals the live one in only 806
+of 161,821), as do 2,364 of 2,364 planes, 344 of 344 volumes and 2,091 of 2,091 owners.</p>
+<h3 id="registration">Registration</h3>
+<p><code>Register</code> 0x2B9E9C(DB, &amp;handle, object, cut group) is called by three classes: <code>VolumeController</code>
+(vf21 0x2B9758), <code>WorldInitializer</code> (vf21 0x7A53B8) and <code>StreamingStamp</code> (vf16 0x1C2CF04). It
+resolves the object in two steps: CAWR (list <code>DB+0x98</code>) binary-searches the hash of the object's
+name (0x2BA01C), then the owner is found in the <code>cntx</code> object named by the middle word (list
+<code>DB+0x68</code>) by its key (0x2BB7B8). Live, 3,889 objects carried the <code>VolumeController</code> vtable, 3,748
+of them named <code>*.VC*</code> (<code>.VC</code>, <code>.VC_NoHang</code>, <code>.VC_Pullup</code>, <code>.VC_Side</code>, <code>.VC_Alive</code>,
+<code>.VC_Destroyed</code>) and the rest other markup names; 126 were <code>WorldInitializer</code>s and one a
+<code>StreamingStamp</code> (<code>SS_00</code>).</p>
+<p>A registration row (<code>DB+0x50</code>, 0x38 bytes) is <code>{u32 A, u32 B, ptr handle, u8 active +0x10, f32
+pos[3] +0x14, f32 quat[4] +0x20, u32 cntx hash +0x30, u32 owner key +0x34}</code>. A is a serial from
+<code>DB+0x48</code>. <strong>B is the cut group</strong>: the hash of the object's <code>ContextCuttingGroup</code> property, one of
+the 11 field-less <code>Character/Models/ContextActionCutGroup</code> records (<code>PropKit</code>, <code>WallKit</code>,
+<code>WallFlair</code>, <code>GateKit</code>, <code>GateFlair</code>, <code>KeepWallFlair</code>, <code>KeepWallKit</code>, <code>TowerFlair</code>, <code>TowerKit</code>,
+<code>WildFlair</code>, <code>WildTower</code>); only <code>VolumeController</code>s pass one. <code>VolumeController::SetEnabled</code>
+0x5B21A8 (a script function; the <code>StartEnabled</code> property seeds it) calls 0x2BA65C, which writes the
+row's active byte and sets <code>DB+0x4C</code>, the rebuild flag.</p>
+<h3 id="building-the-grid-kill-and-cut-volumes">Building the grid: KILL and CUT volumes</h3>
+<p><code>QueueRebuild</code> 0x2BB1C8 files each row by its transform (full rotation, translation only, identity).
+The build 0x2BA9F8 first instances every owner's two volume lists (planes transformed by 0x2BB01C,
+<code>{A, B}</code> copied, covered cells flagged), then inserts every line through 0x257C70:</p>
+<ul>
+<li><strong>List 1 = KILL.</strong> The engine calls these volumes <code>MarkupKiller</code> (4 to 64 cutting planes, asserted
+  in 0x694AC4; the editor class is <code>MarkupKillerBrush</code>). A line that touches an applicable kill
+  volume is dropped whole.</li>
+<li><strong>List 2 = CUT.</strong> 0x2582F8 removes the part of a line inside an applicable cut volume; the outside
+  pieces survive if they are at least <strong>25 cm</strong> long (the constant 0x267A4D8, compared squared:
+  grid <code>+0x28</code> = 625). Uncut lines keep any length (20,199 live lines are under 25 cm).</li>
+<li><strong>Which volumes apply</strong> (0x258280): a volume applies to a line unless the line belongs to the
+  volume's own owner (same A) or both have the same nonzero cut group. A line with A = 0 is never
+  touched. A disabled owner's cut volumes are still built (125 of 1,051), but its own lines are hidden
+  from queries.</li>
+</ul>
+<p>Measured in a running game (two reads with the world re-streamed between them; 186,023 and 184,993
+lines): no line lies more than 1 cm inside a volume that applies to it, for 106 kill and 1,051 cut
+volumes. Control: the same volumes moved 300 cm along x would contain 31 kill and 1,890 cut lines.</p>
+<h3 id="the-world-grid">The world grid</h3>
+<p><code>[DB+0xB8]</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00 / +0x0C</td>
+<td>f32 min[3] / max[3]</td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td>f32 inverse cell size[3]</td>
+</tr>
+<tr>
+<td>+0x24</td>
+<td>u8 cell counts[3]</td>
+</tr>
+<tr>
+<td>+0x28</td>
+<td>f32 minimum piece length squared (625)</td>
+</tr>
+<tr>
+<td>+0x30</td>
+<td>the inner tables</td>
+</tr>
+<tr>
+<td>+0x38</td>
+<td>u32 line count</td>
+</tr>
+</tbody>
+</table>
+<p>The cell target is 2000 x 8000 x 2000 cm (0x267A448 .. 0x267A450). Lithlad's grid spans 1,120 x 244
+x 1,220 m in 56 x 4 x 61 = 13,664 cells of 2000 x 6105 x 2000 cm (the extent divided by the target,
+rounded up, on all three axes) and holds 184,993 lines. The inner tables: <code>+0x10</code> cells (0x28 bytes: u32 index, u8 x, y, z, u8 has
+kill <code>+7</code>, u8 has cut <code>+8</code>, a run vector at <code>+0x10</code>), <code>+0x20</code> owner instances (0x20: u32 A, u8 active
+<code>+4</code>, run vector <code>+8</code>), <code>+0x30</code> kill volumes, <code>+0x40</code> cut volumes (0x38: box, u32 plane count
+<code>+0x18</code>, planes <code>+0x20</code>, u32 A <code>+0x28</code>, u32 B <code>+0x2C</code>, u8 cell range[6] <code>+0x30</code>), <code>+0x50</code> world planes
+(16 bytes <code>{n[3], d}</code>, inside when <code>n . p - d &lt;= 0</code>). A world line is 0x40 bytes: <code>u8 flags</code> (bit 0 =
+owner active), <code>u32 home cell | bit 31</code>, <code>u128 global mask +8</code>, <code>f32 p0 +0x18</code>, <code>p1 +0x24</code>, <code>normal
++0x30</code>.</p>
+<h3 id="the-query">The query</h3>
+<p><code>ContextActionDB::Query</code> 0xFEAFB0(DB, AABB <em>box, u128 </em>any, u128 <em>all, u128 </em>none, u128 <em>not_all,
+results </em>) locks <code>DB+0x20</code> and runs 0xFEAE40 over every cell the box covers (0xFEB3B0) and every run
+in it (0xFEB070). It returns each <strong>active</strong> line once (de-duplicated by its home cell) for which
+<code>mask &amp; any != 0</code>, <code>mask &amp; all == all</code>, <code>mask &amp; none == 0</code> and <code>mask &amp; not_all != not_all</code> (a zero
+mask skips its test) and whose segment meets the box (slab test 0x5AA774). Results are <code>{u32 n, n x
+0x38 {u128 mask, p0, p1, normal}}</code>, at most 256. Running the engine's own 0xFEAE40 in an emulator
+against live memory, on boxes around the player and on random lines with five or six mask sets, gave
+the same answer as this model in 96 of 96 and 80 of 80 queries; returning inactive lines would have
+changed the answer in 18 of 19 and 9 of 9.</p>
+<p>The callers build the masks from the action table's own bits (0x41F954): <code>any</code> from a node's
+<code>GameDBContextAction</code> and <code>GameDBContextAction_OR</code>, <code>all</code> from <code>_AND</code>, <code>none</code> from <code>_NOT_OR</code>,
+<code>not_all</code> from <code>_NOT_AND</code>. The seven callers of 0xFEAFB0 are behaviour-graph nodes (see Animation):
+<code>Predicate.DetectedEdge</code> (<code>DetectEdgeData</code> 0x1C6EF90: fields <code>Direction</code>, <code>VerticalOffset</code>,
+<code>Radius</code>, <code>Height</code> and the five action lists; box = position + (0, VerticalOffset, 0) +- (Radius,
+Height / 2, Radius); defaults -104, 100 and 10 cm), <code>Predicate.FoundRailing</code> / <code>Modifier.FindRailing</code>
+(<code>RailingData</code> 0x1C700D4), <code>Modifier.MoveWithBrush</code> (vt_0x2303CD8::vf11 0x1C46DE0),
+<code>Predicate.FoundContextActionBasic</code> (0x41F39C), <code>Character/Models.LockPhysicsContextActionRecords</code>
+(0x41E70C -&gt; 0x41FBF0), 0x1C6FA58 (from 0x1BE703C, <code>R_Foot</code>) and 0x3ADC94.</p>
+<h2 id="weather-gated-static-effects-swfx">Weather-gated static effects (SWFX)</h2>
+<p><code>ObjRes.WeatherFx</code> places effects that play only under a given forecast. It is the empty 16-byte
+header in 1,300 of 1,310 parts; the ten others are seven region main parts (not Barad-dur), Minas
+Ithil's <code>t1prefallprops</code> and <code>t1postfallprops</code>, and Gorgoroth's <code>fx_environment</code> (10 types, 51
+points).</p>
+<pre><code>'SWFX' | u32 1 | u32 n_types | u32 n_points
+n_types  x {u32 record hash, u32 first point, u32 END point}     ranges tile [0, e0), [e0, e1) ...
+n_points x f32 position[3]
+n_points x f32 quat[4]
+</code></pre>
+<p>The ranges tile the points in 10 of 10 blocks (79 of 79 types; quaternions unit 8,110 of 8,110). The
+type hashes are records of <code>Weather/FX/Static</code> (the category cached at 0x2700050; 32 records, 28 of
+28 distinct hashes resolve): <code>Ledge_1m / 3m / 5m / 10m / Corner</code>, <code>Curtain01_20m</code>, <code>Curtain02_40m</code>,
+<code>Curtain_CeilingFill01 / 02</code>, <code>Lightning_Far0N</code>, <code>Lightning_Near0N</code>, <code>Lightning_VOL_Far0N</code>,
+<code>Lightning_VOL_Near0N</code>, <code>Desert_AtmoDust_Lrg01</code>, <code>ISLD_Pollen_5m / 10m</code>. A record has a
+<code>BubbleRadius</code> (cm: <code>Ledge_1m</code> 2,000, <code>Curtain01_20m</code> 15,000, <code>Desert_AtmoDust_Lrg01</code> 45,000,
+<code>Lightning_VOL_Near</code> 125,000, <code>Lightning_Far</code> 300,000) and <code>Data</code> =
+<code>_StructuresWeather.StaticFXData</code> {<code>Predicate</code> -&gt; <code>_StructuresWeather.StaticFXPredicate</code>
+{<code>Forecast</code> -&gt; <code>Weather/Predicates/Forecast/&lt;RainLight | RainMedium | RainHeavy | ...&gt;</code>}, <code>Effect</code>
+(<code>fx\weather\rain\edgedrips\rainlight_edgedrip01_1m.fxp</code>,
+<code>fx\weather\lightning\static_lightning_rainheavy_far01.fxp</code>)}: play this effect here, under that
+forecast, within the bubble radius. Lithlad's main part has six types and 1,646 points (<code>Ledge_1m</code>
+590, <code>Ledge_3m</code> 323, <code>Ledge_5m</code> 242, <code>Ledge_10m</code> 6, <code>Ledge_Corner</code> 421, <code>Desert_AtmoDust_Lrg01</code> 64).</p>
+<p><strong>The rain drips sit on the climbing ledges.</strong> In Lithlad the nearest live context-action line is
+within 25 cm of 538 of 590 <code>Ledge_1m</code> points (median 5.1 cm), 296 of 323 <code>Ledge_3m</code>, 233 of 242
+<code>Ledge_5m</code>, 6 of 6 <code>Ledge_10m</code> and 310 of 421 <code>Ledge_Corner</code>; with every point moved 3 m sideways
+the counts fall to 34, 23, 15, 0 and 24. The dust points (64) lie a median 9.7 m from any line.</p>
+<h2 id="collision-and-navigation">Collision and navigation</h2>
+<ul>
+<li><strong>World collision objects.</strong> Every part opens its object list with <code>WorldCollision</code> objects
+  (vt_0x1DCD4A8; <code>PhysicsBSP</code>, and in a main part also <code>PlayerBlocker</code>, <code>CameraBlocker</code>,
+  <code>LargeAIIgnore</code>). Their records in <code>ObjRes.WorldPhysics</code> carry no prefab path; the block ends with
+  the records' Havok shapes (<code>hknpCompoundShape</code> in a TAG0 tagfile, SDK <code>SDKV20160200</code>; see
+  Physics for the shape classes). A <code>FireProp</code> that owns no physics pieces is covered by its part's
+  static <code>PhysicsBSP</code> collision instead.</li>
+<li><strong>Navigation.</strong> Every part carries one <code>HKAI</code> section, an <code>HKAI</code> header around a Havok tagfile
+  holding <code>hkaiNavMesh</code> data (see Physics for the navigation-mesh layout). Placed objects carry more
+  navigation data: <code>AINavMeshObstacle</code> (11,588 live in Lithlad), <code>AINavMeshDynamicNavMeshPiece</code> (the
+  props' own navigation pieces, <code>.dnmp</code>; 1,998 live) and <code>DynamicOffMeshLink</code> (2,986 live).</li>
+<li><strong>A prop's navigation obstacle and context-line controller are prefab siblings at one position</strong>,
+  named with the prefab instance's prefix (<code>barre_02.VC</code>, <code>barre_02.NMO</code>, <code>barre_02.FV_00</code>).</li>
+</ul>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>What the 109 world contexts without a name table hold, and whether every loaded section maps to
+  exactly one context: 127 loaded sections, 129 contexts and 126 live <code>WorldInitializer</code> objects
+  (every part read opens with one) suggest it.</li>
+<li>The meaning of the OBJL id field (+0x2E): zero on the world-collision objects, otherwise repeated
+  across objects (134 distinct ids over 286 objects in one layer) and not the hash of the object's
+  or its group's name.</li>
+<li>The data after the WDSC instance table (52-268 bytes in layers, 137,850 bytes in Lithlad's main
+  part), and the meaning of the instance <code>kind</code> (0, 1, 3) and <code>hash</code> words.</li>
+<li>Whether NativeLife emitter positions are world space: of 48 axis and sign choices the identity is
+  by far the closest to the prefab's own objects (median 41 m), but no live emitter has been read.</li>
+<li>What the second SFXS count means: it differs from the first in some parts (Minas Ithil main 1,273
+  against 1,271), and the sections tile with the first.</li>
+<li>What spawns a SWFX effect at run time: the block handler's vf5 0x6FEAF90 only queues the object
+  on <code>[GM+0x30]</code>. Whether the rain-drip points are generated from the same ledge markup as the
+  context-action lines, as their placement suggests.</li>
+<li>Whether the lantern lights that sit 2-22 cm from their authored points follow an animated or
+  simulated lamp socket (16 of 42 moved within a minute).</li>
+<li>Which context-action nodes Talion's own behaviour graph uses, and whether the other node types
+  that carry the same action lists (<code>FoundContextAction</code>, <code>AlignToBrush</code>, <code>FoundContextActionEnd</code>,
+  <code>FoundRailingCorner</code>, <code>CameraContextActionData</code>, <code>FindMoveAndPinIK</code>) reach the grid through the
+  seven known callers.</li>
+<li>Why the AI placements move vertically at load (class medians 0.5 to 2.9 m down, single objects
+  up to 38 m down and 7 m up): a projection onto the navigation mesh or the ground would explain a
+  move without a horizontal component.</li>
+<li>Whether the context's resource table at <code>ctx+0x98</code>, which the render and collision binding
+  queries by name, is built from the part's <code>ObjRes.WorldPhysics</code> block.</li>
+<li>What the unnamed TERR f32 is (400 in most regions, 500 in Lithlad, 1000 at the Black Gate); the
+  terrain texture repeat is the obvious candidate.</li>
+<li>Whether the PFDG prefab tree is used outside the debug viewer.</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
