@@ -1,0 +1,203 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Comparison with Shadow of Mordor - Shadow of War engine reference</title><meta name="description" content="How Shadow of Mordor (2014) differs from Shadow of War at the file and engine level: the executable, the archive format and its compression, container and asset format versions, the GameDB, the orc skeletons, materials and textures, the Army screen&#x27;s arena, and the Mordor-to-War nemesis importer that ships inside Shadow of War."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" class="cur" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="comparison-with-shadow-of-mordor">Comparison with Shadow of Mordor</h1><p class=\"lede\">How Shadow of Mordor (2014) differs from Shadow of War at the file and engine level: the executable, the archive format and its compression, container and asset format versions, the GameDB, the orc skeletons, materials and textures, the Army screen&#x27;s arena, and the Mordor-to-War nemesis importer that ships inside Shadow of War.</p>
+<p>Shadow of Mordor (2014) is the predecessor engine generation. Its internal project name is
+<strong>Firebird</strong>; Shadow of War's is <strong>Kraken</strong>. The two games share their archive family, container
+idea, GameDB format and much of their orc rig, but nearly every asset format moved on by several
+versions, so no Mordor asset loads in War unchanged.</p>
+<h2 id="the-executables">The executables</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Shadow of Mordor</th>
+<th>Shadow of War</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>x64</code> executable</td>
+<td><code>ShadowOfMordor.exe</code>, 27,930,624 bytes</td>
+<td><code>ShadowOfWar.exe</code>, 117,732,784 bytes</td>
+</tr>
+<tr>
+<td>Load address</td>
+<td>0x140000000 preferred, relocatable (<code>DYNAMIC_BASE</code>, relocation table present)</td>
+<td>always 0x140000000 (relocations stripped)</td>
+</tr>
+<tr>
+<td>Code</td>
+<td>a conventional <code>.text</code> section of about 20.6 MB</td>
+<td><code>.arch</code> (about 30 MB) plus 70 MB of code in <code>.bss a</code> (see The executable)</td>
+</tr>
+</tbody>
+</table>
+<p>Because Mordor's executable is relocatable, its addresses move with ASLR every run; War's static
+addresses never move.</p>
+<h2 id="archives">Archives</h2>
+<p>Both games use LTAR archives. Mordor's are version 3 (<code>.arch05</code>), War's version 4 (<code>.arch06</code>, see
+Archives and file formats). The Mordor install has <strong>66 archives, 45.4 GB</strong>.</p>
+<pre><code>header (0x18 bytes)  &quot;LTAR&quot; | u32 version (3) | u32 names size | u32 folder count | u32 file count | u32 1
+names                null-separated strings from 0x18; the last string may run past the declared size,
+                     and a small block precedes the entry table
+entry (0x20 bytes)   u64 data offset | u64 compressed size | u64 uncompressed size | u32 flag (9) | u32 name offset
+</code></pre>
+<p>The entry table is found by its signature (the flag 9 at <code>+0x18</code> of consecutive entries). Parsing
+all 66 archives gives <strong>28,884 entries, equal to the 28,884 declared in the headers</strong>; every
+entry's data lies inside its file and the data offsets ascend in all 28,828 consecutive pairs. A
+name offset may point into the middle of a string, and an entry's name does not reliably describe
+its payload, so asset paths are taken from the containers' own path tables, as in War.</p>
+<p><strong>Compression.</strong> Mordor stores each entry as a stream of chunks <code>{u32 compressed length, u32
+uncompressed length (at most 65,536), data}</code> compressed with <strong>zlib</strong>; chunks whose two lengths are
+equal are stored uncompressed (of 192 sampled chunk headers, 166 began with the zlib marker and 26
+were stored). Chunks are padded, so the next chunk header can sit a few bytes after the previous
+chunk's data. War compresses with Oodle.</p>
+<h2 id="containers-and-asset-formats">Containers and asset formats</h2>
+<p>Mordor's containers are <strong>BNDL version 4</strong> (War: version 6); 8,034 of them hold 67,982 asset paths
+(66,731 distinct). Mordor's world prefabs are <code>PRFB</code> version 5 and its Scaleform movies GFX version 8
+(ActionScript 2).
+Asset formats are older versions that War's loaders reject:</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Shadow of Mordor</th>
+<th>Shadow of War</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mesh (<code>MMSH</code>)</td>
+<td>9</td>
+<td>16-17</td>
+</tr>
+<tr>
+<td>skeleton (<code>SKEL</code>)</td>
+<td>8 (War's loader rejects it)</td>
+<td></td>
+</tr>
+<tr>
+<td>texture (<code>TEXR</code>)</td>
+<td>3</td>
+<td>8</td>
+</tr>
+<tr>
+<td>material instance (<code>LTMI</code>)</td>
+<td>4</td>
+<td>7-8</td>
+</tr>
+</tbody>
+</table>
+<p>Mordor's version-9 mesh vertex is 60 bytes: half-precision position (4 halves), 16-bit texture
+coordinates, 32-bit normal, tangent and bitangent, a colour, blend weights in BGRA order and bone
+indices; strides can differ between a mesh's elements. <strong>Every Mordor mesh has one UV set</strong>, while
+War's orc gear shaders read a second one. Mordor's texture coordinates can run to 2.0. Textures use
+the same DDS-based payload, and War's texture header adds a 23-byte block.</p>
+<p>Materials are authored differently: Mordor's orcs use about 21 generic shaders, War's use the
+dedicated nemesis gear, head and body shader trees (see Rendering). For the one weapon compared
+directly (the Master Pike), Mordor's albedo was about half as bright as War's equivalent (mean
+56 / 45 / 39 against 108 / 93 / 82).</p>
+<h2 id="the-gamedb">The GameDB</h2>
+<p>Mordor's GameDB is a <code>GADB</code> version 17 file (the same container version as War's; see GameDB) of
+23,264,671 bytes inside <code>hotchunk.arch05</code>'s
+<code>globaldatabase</code> bundle: the entry after the named manifest entry, a BNDL v4 wrapping the
+database. It holds 115 character models named <code>Cha_*</code>. The Black Númenórean characters are
+three unique models: <code>Cha_Belroth</code> (the Hammer), <code>Cha_Imrakhad</code> (the Tower) and <code>Cha_Zainzadan</code>
+(the Black Hand, whose mesh one of Talion's alternative skins in Mordor is built from). Mordor ships no
+generic Black Númenórean soldier armour: a census of every container path (66,731 distinct), every
+self-named texture (12,714, none unreferenced) and every XML manifest (8,071) finds none.</p>
+<p>The warband downloads (<code>layer52</code> to <code>layer56</code> archives) are 216-byte unlock stubs: the Guardian,
+Blood Hunter, Crusher and Flesh Burner orcs are GameDB presets assembling base-game pieces with
+paint, not new assets.</p>
+<h2 id="orc-skeletons">Orc skeletons</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Shadow of Mordor</th>
+<th>Shadow of War</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>orc body rig</td>
+<td>112 bones (the berserker 116)</td>
+<td><code>orc_base</code>, 100 bones</td>
+</tr>
+<tr>
+<td>shared bone names</td>
+<td>72</td>
+<td>72</td>
+</tr>
+<tr>
+<td>face rig</td>
+<td>33 joints</td>
+<td>124 joints</td>
+</tr>
+</tbody>
+</table>
+<p>The 72 shared bones sit at the same bind positions (median difference 0.07 cm, at most 0.94 cm for
+the core bones), but 36 of them differ in bind rotation (the forearm twist by 81 degrees). The face
+rigs share no joint names. Of Mordor's orc pieces, those that use only bones <code>orc_base</code> also has:
+armour 35 of 40, flair 116 of 131, bodies 15 of 15, heads 44 of 111.</p>
+<h2 id="the-army-screen">The Army screen</h2>
+<p>Mordor's hierarchy screen is a world of its own,
+<code>worlds\cinematics\wraith_visions\hierarchymenu_son.bndl</code> (<code>son.arch05</code> entry 15, 232,667,989 bytes,
+446 assets; near-identical copies in <code>intro.arch05</code> and <code>outro.arch05</code>): a scene, an object database,
+a world mesh and 10 prefabs (the hierarchy art, the Warchief pedestals, glyphs, orc light posts, a
+ruin wall, backdrop rocks), with the crowd drawn as card meshes
+(<code>fx\ui\hierarchy\models\orcarmy_outlinecards.mesh</code>). The seats are logical rows and columns in
+<code>_StructuresFaction.HierarchyFactionPos</code> (5 Warchiefs and captain rows of 8, 7 and 5: 25 seats),
+placed in the world as objects <code>Hier.Faction_&lt;row&gt;_&lt;column&gt;</code> with a character spot <code>.Chr</code>, a camera
+<code>.Cam</code> and about 20 points of interest each. The screen's movie is
+<code>interface\flash\widgets\hierarchy.gfx</code>, which holds no logic.</p>
+<h2 id="the-mordor-importer-in-shadow-of-war">The Mordor importer in Shadow of War</h2>
+<p>Shadow of War ships an importer for Mordor nemeses, compiled from
+<code>...\KRAKEN_CODE_STREAM\source\Game\Shared\NemesisForgeUtils.cpp</code> (log tag <code>[NEMESISFORGE]:</code>). Its
+GameDB schema declares conversion tables keyed by Firebird (Mordor) records:</p>
+<ul>
+<li><code>NemesisForge/FirebirdFactionPersonality</code>, <code>FirebirdFactionRole</code>, <code>FirebirdFactionTrait</code>,
+  <code>FirebirdModelScarType</code>;</li>
+<li><code>NemesisForge/FirebirdSimpleModel</code> with <code>FirebirdSimpleModelHead</code>, <code>FirebirdSimpleModelPiece</code>,
+  <code>FirebirdSimpleModelColorId</code> and <code>FirebirdSimpleModelColorSetup</code>;</li>
+<li>script functions <code>NemesisForge.CreateNemesis</code>, <code>NemesisForge.CreateFollower</code> and
+  <code>NemesisForge.Override.ClearAll</code>, the events <code>Events_NemesisForgeImportEnabled</code> and
+  <code>Events_NemesisForgeImportSampled</code>, a <code>FirebirdProfileID</code> and a user property
+  <code>User.OwnsShadowOfMordor</code>.</li>
+</ul>
+<p>So a Mordor captain is described to War by Mordor's own personality, role, trait, scar and model
+record identifiers, which War maps to its own records to build a captain or a follower.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>How the importer obtains a Mordor nemesis (the profile identified by <code>FirebirdProfileID</code>) and
+  which code consumes the <code>NemesisForge/Firebird*</code> tables.</li>
+<li>Whether some of War's orc geometry is Mordor geometry carried over (the broom and the Beheader
+  helmet have identical level-of-detail counts in both games).</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
