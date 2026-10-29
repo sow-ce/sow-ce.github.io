@@ -887,6 +887,14 @@ empty and 73,591 of the other 76,765 name a file (<code>.bndl</code> 29,795, <co
 <p><strong>A StringEnum holds a hash, not a pointer.</strong> All 336,338 cells have a zero high dword, and 336,337
 equal P919 of the name the file stores. The hash folds case, so <code>HIGH</code> and <code>High</code> are one value. Read
 as an address, such a hash can land inside the database's own memory, which lies below 4 GB.</p>
+<p><strong>The executable names its enums.</strong> Initialised data from 0x2A42590 to 0x2A60340 holds 16-byte entries
+<code>{char* name, u32 P919(name), u32 value}</code>: 3,654 of them in 330 runs of two or more (a whole-image scan
+that accepts an entry only when its hash is P919 of the string it points at). Most runs start at 0
+(314) and count up (266); an empty entry usually separates two enums, but not always (one run of 156
+goes from a quality list into the PC button codes, ending at <code>Mouse_Wheel_Down</code> 1008). For example
+<code>ECommandType</code> reads <code>COM_MOVE</code> 0, <code>COM_INV</code> 1, <code>COM_VIEW</code> 2, <code>COM_MISC</code> 3, <code>COM_WEAP</code> 4 and
+<code>kNumCommandTypes</code> 5. Since a StringEnum cell holds the same P919, these tables turn a cell into its
+integer; which code does that has not been traced.</p>
 <p><strong>A float pair is a pointer.</strong> GetFloatRangeFast 0x311320 loads the qword in the cell and copies the
 8 bytes it points at; the pair is not stored in the cell.</p>
 <h3 id="shared-values">Shared values</h3>
