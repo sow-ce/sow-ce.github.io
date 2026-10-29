@@ -1024,8 +1024,15 @@ that fails (0x165B68, below); and a full spawner. The count check uses signed by
 <code>+0x1AD</code> (0 = no limit) and <code>CurSpawned</code> at <code>+0x1AE</code>, refusing when <code>CurSpawned &gt;= MaxSpawn</code>
 (the message's arguments fix which byte is which). <code>AISpawnerAmbientNormal</code>'s
 vf38 0x165844 runs that check first, then resolves its channel (0x114B1BC calls the channel
-resolver with the channel at <code>+0x1C0</code> and the value at <code>+0x160</code>) and the character-bundle gate
-0x16652C (see Resource streaming). Every refusal is formatted for <code>[AI|SPAWNAMBIENT|REJECT]:</code>, but
+resolver <code>CreateEntityFromArchetype</code> 0x1B3098 with the channel at <code>+0x1C0</code> and the spawner's alarm
+area at <code>+0x160</code>) and the character-bundle gate 0x16652C (see Resource streaming). The resolver walks
+the channel's <code>AI/SpawnAmbient/AITypes</code> entries and keeps the templates of the best <code>Priority</code>
+(below 101). When the channel is <code>DifficultyBased</code>, the alarm area decides which table applies:
+0x1B62F6C turns the area into its current alarm level (0x11FBC8: the live alarm state looked up
+through <code>[base+0x26FFBF0]</code>, else the area's <code>TransientAlarmSettings.RequiredDefaultAlarmLevel</code>) and
+takes the first table in <code>[GM+0x6CC8]+0x18</code> whose <code>AlarmLevelList.AlarmLevels</code> contains that level
+(0x465CE8). A spawner in an alarmed area therefore spawns from a different difficulty table than
+the same spawner at rest. Every refusal is formatted for <code>[AI|SPAWNAMBIENT|REJECT]:</code>, but
 the logging function 0x19C83AC is empty in the shipped build.</p>
 <p><strong>The predicate.</strong> 0x165B68 takes the given predicate or the spawner's own (<code>+0x168</code>, an
 <code>AI/SpawnAmbient/Predicates</code> record, 67 exist); with none it passes. When the bytes <code>+0x1A8</code>,
@@ -1578,11 +1585,11 @@ makes the player captain 1 or 2, but <code>MissionEnd</code> decides the win on 
 <li>Which <code>Enemy_*</code> channels are replaced by <code>Owner_*</code> / <code>Invader_*</code> channels when a region loads: in one
   loaded desert, 233 of the 5,002 live ambient spawners (4.7%) still carried <code>Enemy_*</code> channels, so the
   replacement is not applied to all of them.</li>
-<li>What the spawner value at <code>+0x160</code> is: <code>AISpawnerAmbientNormal</code> passes it to the channel resolver
-  as its third argument. Decoding how the resolver uses it would name it.</li>
 <li>Why a Balrog summoned onto the player's side follows but never fights: its combat tree has no
   <code>CombatCircleNodes</code>, unlike the AI Talion's (<code>AI_Talion_CombatCircle</code>). Comparing the attack
   decision of an AI Talion against an orc with the Balrog's would locate the difference.</li>
 <li>What the spawn manager's pointers at <code>+0x168</code> / <code>+0x170</code> and the counters at <code>+0x184</code> / <code>+0x188</code>
-  / <code>+0x18C</code> hold.</li>
+  / <code>+0x18C</code> hold. In one loaded Lithlad both pointers held the same object (vt_0x1DAAA20) and the
+  counters read 40, 8 and 100 beside the budget of 100 at <code>+0x180</code>; only <code>MaxAmbientAI</code> is copied
+  from <code>AI/Count/Configuration</code> (to <code>+0x180</code>), and <code>+0x18C</code> is written by a single function.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
