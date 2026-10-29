@@ -1,0 +1,1562 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Nemesis system: factions, captains and the army - Shadow of War engine reference</title><meta name="description" content="The faction system and its pools and 38 armies, the FactionMember object and its saved fields, the seat table of every army&#x27;s rows, the nemesis flag word and its engine setters, faction events, turns and sim events, cheat death and the event history, the ambush queue, rarity and Training Orders, followers, bodyguards and mercenaries, and how story and DLC characters take seats."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" class="cur" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="the-nemesis-system-factions-captains-and-the-army">The Nemesis system: factions, captains and the army</h1><p class=\"lede\">The faction system and its pools and 38 armies, the FactionMember object and its saved fields, the seat table of every army&#x27;s rows, the nemesis flag word and its engine setters, faction events, turns and sim events, cheat death and the event history, the ambush queue, rarity and Training Orders, followers, bodyguards and mercenaries, and how story and DLC characters take seats.</p>
+<p>Every named orc, olog and story character is a <code>FactionMember</code> owned by the faction system, seated
+in an army's rows, and changed by faction events that the engine applies to it. The hierarchy, the
+promotions, the returns from death and the ambushes are data: rows, events and reward lists in the
+<code>Faction/*</code> categories of the GameDB, driven by a small set of engine functions.</p>
+<p>Traits, classes and personalities are in Captain traits, classes and personalities; story
+characters, betrayal scenes and region ownership in Quests, story and scenes; looks in Captain
+appearance; what a save keeps in Saves, the store and the network layer.</p>
+<h2 id="the-faction-system">The faction system</h2>
+<p>The faction system is <code>FS = [GM+0x6C68]</code> (<code>[[base+0x26FFAA8]+0x6C68]</code>; see Engine core). The scene
+tick calls 0x1E2BC4 on it every frame (see Threads and the frame); through 0x1E2A58 that also runs
+the ambush update 0x6DDBA8.</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x30</td>
+<td>the ambush manager (below)</td>
+</tr>
+<tr>
+<td>+0x68</td>
+<td>the pools: one 0xC0-byte entry per <code>Faction/Pool</code> record</td>
+</tr>
+<tr>
+<td>+0x98</td>
+<td>the army contexts: a map <code>{+0x00 entries, +0x08 u32 count (38), +0x10 the Faction/Definition category}</code></td>
+</tr>
+<tr>
+<td>+0xE0</td>
+<td>the trait flag table (see Captain traits)</td>
+</tr>
+<tr>
+<td>+0x1B0</td>
+<td>the current region (a <code>Regions/Region</code> record)</td>
+</tr>
+<tr>
+<td>+0x1B8</td>
+<td>the current region's army (a <code>Faction/Definition</code> record)</td>
+</tr>
+<tr>
+<td>+0x1F0</td>
+<td>events queued while another is being processed; +0x208 is the busy flag</td>
+</tr>
+<tr>
+<td>+0x218</td>
+<td>u16 the turn counter (below)</td>
+</tr>
+<tr>
+<td>+0x21C</td>
+<td>a counter incremented by every cheat-death mark</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pools">Pools</h3>
+<p>Members live in pools, one per game mode, not per region: the MainGame pool holds every captain of
+every region. A pool entry's first qword is its <code>Faction/Pool</code> record; the pool object starts at
+entry+8 (vt_0x1FD8310) and holds its member vector at <code>+0x18 / +0x20</code>. <code>FM+0x174</code> is the member's
+index in that vector (500 of 500 members).</p>
+<table>
+<thead>
+<tr>
+<th>Pool</th>
+<th><code>MaxMembersToTrack</code></th>
+<th><code>Serialize</code></th>
+<th><code>NemesisCanComeFromThisPool</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Player</td>
+<td>32</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr>
+<td>QuestReplay</td>
+<td>50</td>
+<td>True</td>
+<td>False</td>
+</tr>
+<tr>
+<td>QuestReplay_Ratbag2</td>
+<td>75</td>
+<td>True</td>
+<td>False</td>
+</tr>
+<tr>
+<td>InvasionGame</td>
+<td>250</td>
+<td>True</td>
+<td>False</td>
+</tr>
+<tr>
+<td>Test</td>
+<td>32</td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr>
+<td>Demo</td>
+<td>64</td>
+<td>True</td>
+<td>False</td>
+</tr>
+<tr>
+<td>DLC3</td>
+<td>450</td>
+<td>True</td>
+<td>False</td>
+</tr>
+<tr>
+<td>DLC4</td>
+<td>250</td>
+<td>True</td>
+<td>False</td>
+</tr>
+<tr>
+<td>MainGame</td>
+<td>500</td>
+<td>True</td>
+<td>True</td>
+</tr>
+</tbody>
+</table>
+<p>The MainGame record also carries importance coefficients (<code>ImpC_XPLevel</code> 1.5, <code>ImpC_RowRank</code>,
+<code>ImpC_Role</code>, <code>ImpC_ISTotal</code> 1.0). A new member comes from 0x1BD2E20 (reached through 0x1C23C10),
+which builds the object with 0x19ED468. When the pool is full it recycles its least important member,
+and never one with a row (<code>+0x268</code>), a preset (<code>+0x190</code>), a current sim event (<code>+0x4F0</code>), a unique
+builder instance (<code>+0x350</code>) or flag bit 45. A late campaign's MainGame pool sits at its 500 cap; in one such save the
+recyclable members were 201 dead former followers and 48 unassigned grunts, and no living follower.</p>
+<h3 id="armies">Armies</h3>
+<p>An army is a <code>Faction/Definition</code> record. 38 ship, and every one has a context in every game mode.
+The context map at <code>FS+0x98</code> is indexed by the definition's record index: entry+0 is the record and
+the context is entry+8 (vt_0x1FDDF78). 0x18DE04(map, record) returns it and asserts "Bad record
+index" when the record belongs to another category.</p>
+<table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>Armies</th>
+<th>Pool</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Campaign</td>
+<td><code>Faction_MinasIthil</code>, <code>Faction_MtnPass</code>, <code>Faction_island</code>, <code>Faction_volcano</code>, <code>Faction_snowMtn</code>, <code>Faction_desert_Real</code></td>
+<td>MainGame</td>
+</tr>
+<tr>
+<td>Unused twin</td>
+<td><code>Faction_desert</code> (same row records as <code>Faction_desert_Real</code>, <code>FillFactionOnInitialization</code> False)</td>
+<td>MainGame</td>
+</tr>
+<tr>
+<td>Quest replays</td>
+<td>10 <code>Faction_&lt;region&gt;_QuestReplay*</code></td>
+<td>QuestReplay (QuestReplay_Ratbag2 for <code>_RB2</code>)</td>
+</tr>
+<tr>
+<td>Online invasions</td>
+<td>6 <code>InvasionFaction_*</code></td>
+<td>InvasionGame</td>
+</tr>
+<tr>
+<td>Blade of Galadriel</td>
+<td>5 <code>Faction_&lt;region&gt;_DLC3</code>, 5 <code>Real_Faction_&lt;region&gt;_DLC3</code></td>
+<td>DLC3</td>
+</tr>
+<tr>
+<td>Desolation of Mordor</td>
+<td><code>Faction_desert_DLC4</code>, <code>Faction_desert_mercs_DLC4</code></td>
+<td>DLC4</td>
+</tr>
+<tr>
+<td>Other</td>
+<td><code>Faction_Demovolcano</code> (Demo), <code>Faction_Player</code> (Player, one 32-seat row <code>player_created</code>), <code>Faction_None</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>A region's army is its <code>Regions/Region.Faction</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Region record</th>
+<th>Region</th>
+<th>Army</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MinasIthil</code></td>
+<td>Minas Ithil</td>
+<td><code>Faction_MinasIthil</code></td>
+</tr>
+<tr>
+<td><code>MtnPass</code></td>
+<td>Cirith Ungol</td>
+<td><code>Faction_MtnPass</code></td>
+</tr>
+<tr>
+<td><code>island</code></td>
+<td>Nurnen</td>
+<td><code>Faction_island</code></td>
+</tr>
+<tr>
+<td><code>volcano</code></td>
+<td>Gorgoroth</td>
+<td><code>Faction_volcano</code></td>
+</tr>
+<tr>
+<td><code>snowMtn</code></td>
+<td>Seregost</td>
+<td><code>Faction_snowMtn</code></td>
+</tr>
+<tr>
+<td><code>desert</code></td>
+<td>Lithlad</td>
+<td><code>Faction_desert_Real</code></td>
+</tr>
+</tbody>
+</table>
+<p>Each region also names an <code>InvasionFaction</code>, and Gorgoroth a <code>DEMOFaction</code> (<code>Faction_Demovolcano</code>).
+The region <code>desert_mercs</code> names no army in its <code>Faction</code> field; its game-mode override maps it to the
+mercenary army in the Desolation of Mordor mode, and the region-to-army lookup 0x1E4418 returns null
+for it in any other mode. Because twins share row records, a row name does not identify the live
+army: the live army is the one a seated member's <code>FM+0x178</code> names.</p>
+<p>The definition decides how an army is built and run:</p>
+<table>
+<thead>
+<tr>
+<th><code>Faction/Definition</code> field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Pool</code>, <code>RequiredSaveSlot</code></td>
+<td>the pool it draws from; the save slot (<code>Faction/SaveSlot</code>: MainGame, DLC3, DLC4) it belongs to; army initialisation skips the fill of an army whose slot is not the current one</td>
+</tr>
+<tr>
+<td><code>Rows</code></td>
+<td>its rows, in order (an array: 6 in five regions, 5 in Minas Ithil, 3 in the mercenary army)</td>
+</tr>
+<tr>
+<td><code>EventSetup</code></td>
+<td>its event switchboard (below)</td>
+</tr>
+<tr>
+<td><code>PresetMembers</code>, <code>QuestOnlyPresetMembers</code></td>
+<td>story characters built at army initialisation, and those only quests build</td>
+</tr>
+<tr>
+<td><code>InitFactionOnCreate</code>, <code>FillFactionOnInitialization</code></td>
+<td>whether the army is initialised and filled</td>
+</tr>
+<tr>
+<td><code>MustHaveOverlordOnLoad</code>, <code>EmergencyOverlordBuilder</code></td>
+<td>the Overlord guarantee and the builder that provides one</td>
+</tr>
+<tr>
+<td><code>InitialMemberIntelLevel</code>, <code>InitialMemberDefaultFollower</code>, <code>InitialMemberIsMercenary</code></td>
+<td>flags given to filled members (the mercenary army: 30, True, True)</td>
+</tr>
+<tr>
+<td><code>InterrogationSetup</code>, <code>NameLockedCombatTree</code></td>
+<td>intel stages and the combat tree shown for an unknown member (<code>Orc_Unknown</code>)</td>
+</tr>
+<tr>
+<td><code>AdvanceTODCurrentFaction</code>, <code>AdvanceTODStoryActive</code></td>
+<td>which armies process a turn (below)</td>
+</tr>
+<tr>
+<td><code>WorldUIFaction</code></td>
+<td>the Army-screen stage the army is drawn on (see User interface)</td>
+</tr>
+<tr>
+<td><code>PlayerBodyguardSummonDataSlot0-2</code></td>
+<td>summon data for the player's bodyguards (filled only in <code>Faction_desert_DLC4</code>)</td>
+</tr>
+<tr>
+<td><code>HireCostOption</code>, <code>HireCostVariable</code></td>
+<td>the hiring price scalar</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-army-context">The army context</h3>
+<table>
+<thead>
+<tr>
+<th>Context offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x20</td>
+<td>the pool object the army draws from and registers members in</td>
+</tr>
+<tr>
+<td>+0x30</td>
+<td>the army's summary container: one summary per seat (see User interface)</td>
+</tr>
+<tr>
+<td>+0x90 / +0x98</td>
+<td>the army's sim events</td>
+</tr>
+<tr>
+<td>+0xD8</td>
+<td>an object used for a row's level (0x1C1BDA8) and to test the army's own presets (0x1C1C638)</td>
+</tr>
+<tr>
+<td>+0xF8 / +0x100</td>
+<td>the runtime rows (below)</td>
+</tr>
+<tr>
+<td>+0x140</td>
+<td>pending work, drained by 0x1C1C4E4 on a flushing turn</td>
+</tr>
+<tr>
+<td>+0x1E0</td>
+<td>staggers the first three events' lifetimes</td>
+</tr>
+<tr>
+<td>+0x1ED, +0x218, +0x219</td>
+<td>generate at the first tick; regenerate after an event ends</td>
+</tr>
+<tr>
+<td>+0x1EE, +0x1F0</td>
+<td>dirty bytes set when a seat is vacated</td>
+</tr>
+<tr>
+<td>+0x21C</td>
+<td>the fill latch: the army fills once per initialisation</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-hierarchy-rows-and-seats">The hierarchy: rows and seats</h2>
+<p>An army's <code>Rows</code> are <code>Faction/Rows</code> records named <code>&lt;region&gt;_Row_&lt;rank&gt;</code>. The seat count of a row is
+its <code>ColumnMax</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Row</th>
+<th>Rank</th>
+<th>Seats in five regions</th>
+<th>Minas Ithil</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_Row_Overlord</code></td>
+<td>Overlord</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>_Row_Inner_Warchief</code></td>
+<td>Warchief_Inner</td>
+<td>2</td>
+<td>(no row)</td>
+</tr>
+<tr>
+<td><code>_Row_Outer_Warchief</code></td>
+<td>Warchief_Outer</td>
+<td>4</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>_Row_Captain_0</code></td>
+<td>Captain</td>
+<td>4</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>_Row_Captain_1</code></td>
+<td>Captain</td>
+<td>8</td>
+<td>8</td>
+</tr>
+<tr>
+<td><code>_Row_Captain_2</code></td>
+<td>Captain</td>
+<td>7</td>
+<td>7</td>
+</tr>
+<tr>
+<td>total</td>
+<td></td>
+<td>26</td>
+<td>25</td>
+</tr>
+</tbody>
+</table>
+<p>The quest-replay, invasion and Blade of Galadriel armies of each region have the same rows (the DLC
+armies through their own <code>DLC3_&lt;region&gt;_Row_*</code> records), the Desolation of Mordor desert army the same
+26 seats, and the mercenary army three captain rows <code>DLC4_desert_Row_Mercs_0/1/2</code> of 5 seats with
+<code>HireCost</code> 6000, 3000 and 1500. The 38 definitions name 208 rows in all; the six campaign armies hold
+155 seats.</p>
+<p><strong>Ranks.</strong> <code>Faction/RowRanks</code> has four records:</p>
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th><code>IsOverlord</code></th>
+<th><code>IsWarchief</code></th>
+<th><code>ImportanceScore</code></th>
+<th><code>CanBePlayerBodyguard</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Overlord</td>
+<td>True</td>
+<td>False</td>
+<td>0</td>
+<td>False</td>
+</tr>
+<tr>
+<td>Warchief_Inner</td>
+<td>False</td>
+<td>True</td>
+<td>40</td>
+<td>False</td>
+</tr>
+<tr>
+<td>Warchief_Outer</td>
+<td>False</td>
+<td>True</td>
+<td>40</td>
+<td>False</td>
+</tr>
+<tr>
+<td>Captain</td>
+<td>False</td>
+<td>False</td>
+<td>0</td>
+<td>True</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Row records</strong> carry the rules of their seats:</p>
+<table>
+<thead>
+<tr>
+<th><code>Faction/Rows</code> field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Rank</code>, <code>ColumnMax</code>, <code>ColumnLocks</code></td>
+<td>the rank, the seat count, per-column lock entries (two on the inner warchief rows)</td>
+</tr>
+<tr>
+<td><code>GlobalVarPredicate</code></td>
+<td>a campaign gate on the row (Overlord rows: <code>OverlordsUnlocked</code> in Nurnen and Cirith Ungol, <code>IntroComplete</code> in Minas Ithil, none in Gorgoroth)</td>
+</tr>
+<tr>
+<td><code>EnableHenchmen</code>, <code>HenchmenRows</code>, <code>HenchmenCount</code>, <code>HenchmenAddChance</code></td>
+<td>Overlord and warchief rows bring henchmen (bodyguards) from the region's three captain rows, add chance 0.35</td>
+</tr>
+<tr>
+<td><code>ResurrectionEnabled</code></td>
+<td>whether a death in the row can be cheated</td>
+</tr>
+<tr>
+<td><code>InitialLevels</code>, <code>InitBuilderChance</code>, <code>InitBuilderRecords</code></td>
+<td>levels and builders used when the row is filled</td>
+</tr>
+<tr>
+<td><code>SimEventGenerationSetup</code>, <code>SimEventGeneration</code></td>
+<td>what missions members of the row generate (below)</td>
+</tr>
+<tr>
+<td><code>Locations</code>, <code>LocationsLowPriority</code>, <code>LocationsLastResort</code></td>
+<td>where members of the row are placed in the world (55 / 27 / 5 locations on a Nurnen captain row)</td>
+</tr>
+<tr>
+<td><code>RewardListOnEnterRow</code></td>
+<td>rewards applied on entering the row (every Overlord row: the Legendary upgrade lists, below; in Nurnen the warchief rows <code>Default_TerrorBodyguardDefeat</code> and the captain rows <code>Default_BloodBrother</code>)</td>
+</tr>
+<tr>
+<td><code>RandomIntelWeight</code></td>
+<td>intel weight: 1.0 captains, 0.5 warchiefs, 0.25 the Overlord</td>
+</tr>
+<tr>
+<td><code>PerceptionOverride</code>, <code>DifficultySetupOverride</code>, <code>DeathStimulus</code></td>
+<td>the Overlord and warchief rows' perception (<code>Warlord</code>), difficulty and the stimulus their death sends</td>
+</tr>
+<tr>
+<td><code>HireCost</code></td>
+<td>the mercenary rows' price</td>
+</tr>
+<tr>
+<td><code>CanBeRevengeTarget</code>, <code>ClearExistingSimEventsOnEnterRow</code>, <code>RemoveBossOnEnter</code></td>
+<td>further row rules</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Runtime rows.</strong> The context's rows at <code>ctx+0xF8 / +0x100</code> are 0x28 bytes, one per definition row:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>the <code>Faction/Rows</code> record</td>
+</tr>
+<tr>
+<td>+0x08 / +0x10</td>
+<td>the seats: int32 per column, the occupant's pool index, -1 = empty</td>
+</tr>
+<tr>
+<td>+0x20</td>
+<td>u32 seat count (the seat function checks a column against it)</td>
+</tr>
+<tr>
+<td>+0x24</td>
+<td>u32 column lock bits (tested by 0x24EBB8)</td>
+</tr>
+</tbody>
+</table>
+<p>A member's own seat is <code>FM+0x268</code> (the row record) plus <code>FM+0x51B</code> (the column; 0xFF = rowless).
+Several members share one row record because a row has several seats; each seat holds exactly one
+member. The save stores the row as its index in the army's <code>Rows</code> and the column as a byte.</p>
+<p><strong>Moving members.</strong></p>
+<ul>
+<li><strong>Seat</strong> 0x61E13C(ctx, fm, row, column, flag): flag 1 = a new member (the creator 0x1C1D378), 0 = a
+  move (the sim outcome 0x40C304). It refuses a move into a warchief row whose side differs from the
+  Overlord's when <code>FM+0x4F8</code> is set (0x1E4C08 / 0x114E020); it vacates first, re-levels the member for
+  the row (0x1C1BDA8 -&gt; SetLevel 0x35188C), checks that the column is below the seat count, unlocked
+  and empty, then writes the pool index into the seat, <code>FM+0x51B</code> and <code>FM+0x268</code> (0x61B614).</li>
+<li><strong>Vacate</strong> 0x61B274(ctx, fm): -1 in every seat holding his index, <code>FM+0x51B</code> = 0xFF, <code>FM+0x268</code> = 0,
+  and the dirty bytes <code>ctx+0x1EE / +0x1F0</code>. 0x61D354(fm, bool) marks a member as moving (<code>FM+0x51F</code>).</li>
+<li><strong>Swap</strong>, the engine's own at 0x40C767 (inside the event-processing code): mark both, vacate B,
+  unlink B's pool node (<code>FM+0x18</code>), seat A into B's seat and B into A's old one (both flag 0), unmark.</li>
+<li><strong>Transfer</strong> between armies is <code>FactionSystem::TransferMember</code> 0xF6AC90(FS, fm, {army, row,
+  column}): it refuses unless both armies share a pool and refuses a move inside one army; it unlinks
+  the member (0x1C25500), rewrites <code>FM+0x178</code> (and <code>+0x180</code> when empty) and fires the destination's
+  <code>EventSetup.TransferIntoFaction</code> (every base army ships <code>Transform_HireMercToEmpty</code>). Any two MainGame
+  armies share a pool.</li>
+</ul>
+<p><strong>Dead captains keep their seats.</strong> In a late campaign the six regional armies held no empty seat and
+one to three dead captains each. The sim-event seat predicate 0xFDC350 treats an empty seat, or a dead
+member without flag bit 4, as free ("Passed: Dead") and refuses a dead member with bit 4 ("Failure:
+Resurrectable"), then checks the preset, spy (bit 28) and follower (bit 27) states, a blocking
+captor event and a duel. The jobs that take a dead or empty seat (<code>Quest/Jobs/Definition</code>
+<code>DeadOrEmptyPosition</code>, <code>_WC</code>, <code>_Overlord</code>) require <code>MustHaveCanResurrect</code> False; 26 of the 849
+shipped jobs set that field, all to False. A captain who will return therefore keeps his seat.</p>
+<p><strong>Filling.</strong> <code>FillFaction</code> 0x1C1E13C(ctx) is army initialisation's fill. Per row and per column whose
+seat holds -1 and whose lock bit is clear, it creates one new member: from the row's
+<code>InitBuilderRecords</code> by <code>InitBuilderChance</code> (0x1C1E280 -&gt; 0x1C1CFAC), or by the generic build 0x1C1D100
+(allocate 0x1C23C10 -&gt; pool 0x1BD2E20, build 0x1BC0084, register in the pool 0x61B5E8, level
+0x1C1BDA8 -&gt; SetLevel, seat 0x61E13C with flag 1, the definition's intel, follower and mercenary
+flags, henchmen 0x7DEEE0). The builder path calls no SetLevel. The latch <code>ctx+0x21C</code> limits the fill to
+once per initialisation (0x185FE0).</p>
+<h2 id="the-factionmember">The FactionMember</h2>
+<p>The <code>FactionMember</code> (vt_0x1FD5EA0) is <strong>0x528 bytes</strong>. Both allocation sites ask for 0x528 bytes
+(0x19ED468: <code>mov ecx,0x528</code> -&gt; allocator 0x3DE238 -&gt; constructor 0x1BB4C1C; 0xF99FF0 likewise) and
+the constructor's last store is <code>+0x520</code>. Everything at <code>+0x530</code> and above belongs to other
+allocations: the appearance object is a separate object at <code>[FM+0x2D8]</code> (it sat directly after the
+member for 0 of 206 row captains), and the traits live in vectors (see Captain traits).</p>
+<p><strong>Valid member test:</strong> <code>[FM+0x178]</code> is a GameDB record (526 of 526 members pass, 0 of 53 other
+pointers do). <code>FM+0x174</code> is not a validity flag: the MainGame and DLC pools both hold a member at
+index 0.</p>
+<p><strong>Member keys.</strong> The engine refers to a member by the pair <code>{faction record = FM+0x178, u32 pool index
+= FM+0x174}</code>, not by pointer: faction events, ambush requests and the boss link all store keys.</p>
+<h3 id="fields">Fields</h3>
+<p>The save keys are the names the FactionMember loader 0x1BC21B4 reads each field under; flags go
+through the flag setter 0x1156740(fm, bit, value).</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Save key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x18</td>
+<td>node</td>
+<td></td>
+<td>the member's link in its pool's lists</td>
+</tr>
+<tr>
+<td>+0x48</td>
+<td>ptr</td>
+<td></td>
+<td>the spawned character; null when he is not in the world</td>
+</tr>
+<tr>
+<td>+0x50</td>
+<td>object</td>
+<td><code>Inventory</code></td>
+<td>the inventory component (see Items)</td>
+</tr>
+<tr>
+<td>+0x150</td>
+<td>ptr</td>
+<td><code>player_interaction_score</code></td>
+<td>the interaction score object</td>
+</tr>
+<tr>
+<td>+0x168</td>
+<td>u64</td>
+<td><code>random_seed</code></td>
+<td>the seed his rolls start from</td>
+</tr>
+<tr>
+<td>+0x170</td>
+<td>u32</td>
+<td><code>name_string_id_hash</code></td>
+<td>the name's string id (below)</td>
+</tr>
+<tr>
+<td>+0x174</td>
+<td>u32</td>
+<td><code>faction_id</code></td>
+<td>index in the pool's member vector</td>
+</tr>
+<tr>
+<td>+0x178</td>
+<td>record</td>
+<td><code>faction_record</code></td>
+<td>the army (<code>Faction/Definition</code>); copied to <code>+0x180</code></td>
+</tr>
+<tr>
+<td>+0x188</td>
+<td>record</td>
+<td><code>combat_tree_record</code></td>
+<td>the combat tree (<code>Combat/Tree</code>)</td>
+</tr>
+<tr>
+<td>+0x190</td>
+<td>record</td>
+<td><code>preset_record</code></td>
+<td>the <code>Faction/PresetMembers</code> record of a story character</td>
+</tr>
+<tr>
+<td>+0x198, +0x1B0, +0x1E0</td>
+<td>vectors</td>
+<td><code>trait_marker_list</code>, <code>trait_picker_list</code></td>
+<td>active traits, markers and trait slots (see Captain traits)</td>
+</tr>
+<tr>
+<td>+0x1F8</td>
+<td>vector</td>
+<td><code>levelchange_reward_list</code></td>
+<td>the level-change reward list</td>
+</tr>
+<tr>
+<td>+0x240</td>
+<td>list</td>
+<td><code>relationship_list</code></td>
+<td>relationships (blood brothers, hatred)</td>
+</tr>
+<tr>
+<td>+0x258</td>
+<td>ptr</td>
+<td></td>
+<td>the sim-event cooldown table (below)</td>
+</tr>
+<tr>
+<td>+0x268</td>
+<td>record</td>
+<td><code>faction_row</code></td>
+<td>the row (<code>Faction/Rows</code>)</td>
+</tr>
+<tr>
+<td>+0x270</td>
+<td>record</td>
+<td><code>personality_record</code></td>
+<td>the personality (see Captain traits)</td>
+</tr>
+<tr>
+<td>+0x278</td>
+<td>record</td>
+<td><code>character_record</code></td>
+<td>the class model (<code>Character/Models</code>)</td>
+</tr>
+<tr>
+<td>+0x280</td>
+<td>record</td>
+<td><code>purpose_levelremap_record</code>, <code>trait_picker_level_remap</code></td>
+<td>a <code>Faction/Traits/PickerLevelRemap</code> record (<code>TraitLevelOffset_-2</code> .. <code>_+2</code>)</td>
+</tr>
+<tr>
+<td>+0x288</td>
+<td>record</td>
+<td><code>revengetype_record</code></td>
+<td><code>Faction/RevengeType</code> (Kill, Betrayal, Humiliation)</td>
+</tr>
+<tr>
+<td>+0x290</td>
+<td>record</td>
+<td><code>purpose_record</code></td>
+<td>his purpose</td>
+</tr>
+<tr>
+<td>+0x2C0</td>
+<td>record</td>
+<td><code>last_deathtype_record</code></td>
+<td>how he last died (<code>Faction/Resurrection</code>)</td>
+</tr>
+<tr>
+<td>+0x2C8</td>
+<td>key</td>
+<td><code>boss_faction_id</code></td>
+<td>16 bytes: a member key {his own army, the boss's pool index}</td>
+</tr>
+<tr>
+<td>+0x2D8</td>
+<td>ptr</td>
+<td><code>SMCStorage</code></td>
+<td>the appearance object (see Captain appearance)</td>
+</tr>
+<tr>
+<td>+0x2E0</td>
+<td>ptr</td>
+<td></td>
+<td>the mock member (below)</td>
+</tr>
+<tr>
+<td>+0x300 / +0x308</td>
+<td>vector</td>
+<td><code>faction_event_list</code></td>
+<td>the event history (below)</td>
+</tr>
+<tr>
+<td>+0x318</td>
+<td>record</td>
+<td><code>role_record</code></td>
+<td>the role and title (<code>Faction/Roles/Definitions</code>, 914)</td>
+</tr>
+<tr>
+<td>+0x328</td>
+<td>record</td>
+<td><code>tribe_record</code></td>
+<td>the tribe (<code>Faction/Tribes/Definitions</code>)</td>
+</tr>
+<tr>
+<td>+0x330</td>
+<td>record</td>
+<td><code>location_record</code></td>
+<td>his location</td>
+</tr>
+<tr>
+<td>+0x348</td>
+<td>record</td>
+<td><code>resurrect_scartype_record</code></td>
+<td>the scar a pending return brings</td>
+</tr>
+<tr>
+<td>+0x350</td>
+<td>record</td>
+<td></td>
+<td>the builder's <code>UniqueBuilderInstance</code> (null for most members)</td>
+</tr>
+<tr>
+<td>+0x370</td>
+<td>record</td>
+<td><code>resurrect_applied_scartype_record</code></td>
+<td>the scar last applied</td>
+</tr>
+<tr>
+<td>+0x378</td>
+<td>record</td>
+<td></td>
+<td>the first active gang-leader trait (a cache; see Captain traits)</td>
+</tr>
+<tr>
+<td>+0x390</td>
+<td>record</td>
+<td></td>
+<td>the rarity (below)</td>
+</tr>
+<tr>
+<td>+0x398</td>
+<td>record</td>
+<td></td>
+<td>a campaign variable set when he dies (story characters)</td>
+</tr>
+<tr>
+<td>+0x3A0</td>
+<td>record</td>
+<td></td>
+<td>the <code>Faction/FactionMemberBuilder</code> that built him (null for story characters)</td>
+</tr>
+<tr>
+<td>+0x468</td>
+<td>u32</td>
+<td><code>npc_next_state_id</code></td>
+<td></td>
+</tr>
+<tr>
+<td>+0x498</td>
+<td>char[32]</td>
+<td></td>
+<td>the name as text (below)</td>
+</tr>
+<tr>
+<td>+0x4B8</td>
+<td>i32</td>
+<td><code>menace_level</code></td>
+<td>the level, 0-based</td>
+</tr>
+<tr>
+<td>+0x4C0</td>
+<td>i32</td>
+<td><code>trait_level</code></td>
+<td>the level the traits were resolved for (equal to <code>+0x4B8</code> on 155 of 155)</td>
+</tr>
+<tr>
+<td>+0x4C4</td>
+<td>i32</td>
+<td><code>player_kills</code></td>
+<td>how many times he killed the player</td>
+</tr>
+<tr>
+<td>+0x4F0</td>
+<td>ptr</td>
+<td></td>
+<td>the sim event he is assigned to</td>
+</tr>
+<tr>
+<td>+0x4FC / +0x512</td>
+<td>u32 / u16</td>
+<td><code>purpose_string_id</code>, <code>purpose_timeout</code></td>
+<td></td>
+</tr>
+<tr>
+<td>+0x500</td>
+<td>u32</td>
+<td><code>resurrect_count</code></td>
+<td>returns from death</td>
+</tr>
+<tr>
+<td>+0x508</td>
+<td>u64</td>
+<td>(one key per bit)</td>
+<td>the flag word (below)</td>
+</tr>
+<tr>
+<td>+0x510</td>
+<td></td>
+<td></td>
+<td>the intel mask, rebuilt from the intel level</td>
+</tr>
+<tr>
+<td>+0x514 / +0x516</td>
+<td>u16</td>
+<td><code>encounter_current_index</code>, <code>encounter_previous_index</code></td>
+<td></td>
+</tr>
+<tr>
+<td>+0x51A</td>
+<td>u8</td>
+<td><code>interrogation_level</code></td>
+<td>the intel level</td>
+</tr>
+<tr>
+<td>+0x51B</td>
+<td>u8</td>
+<td><code>faction_col</code></td>
+<td>the column in his row; 0xFF = rowless</td>
+</tr>
+<tr>
+<td>+0x51C</td>
+<td>u8</td>
+<td></td>
+<td>set to 1 by a full trait rebuild</td>
+</tr>
+<tr>
+<td>+0x51F</td>
+<td>u8</td>
+<td></td>
+<td>the moving mark</td>
+</tr>
+<tr>
+<td>+0x520</td>
+<td>u8</td>
+<td></td>
+<td>2 for a builder-built member, 3 for a story character</td>
+</tr>
+</tbody>
+</table>
+<h3 id="names">Names</h3>
+<p>The name is a string id, <code>FM+0x170</code>. 0x1BC6040(fm, id) stores it, looks up the localized UTF-16
+string, converts it with <code>WideCharToMultiByte</code> on the system ANSI code page (<code>CodePage</code> 0, Windows-1252
+on a Western system) and copies at most 31 characters into the 32-byte buffer <code>FM+0x498</code>; an id of 0
+clears the buffer. A builder-built orc gets his name id from the name table of his class map
+(<code>_StructuresFactionClassDataMap.NameTable</code>; <code>Faction/NameTable</code> has Orc, Olog, Forthog and
+Easterling), so <code>+0x498</code> is a derived copy and the id is what the save keeps.</p>
+<h3 id="levels">Levels</h3>
+<p><code>FM+0x4B8</code> is stored 0-based; the game shows it plus one, and caps the shown level at 85. SetLevel
+0x35188C ends in 0x353C44, which sets flag bits 30 and 31 when the level reaches two thresholds read
+from the army; crossing the second with no tribe assigns one (0x1BC6718, reason "XPLevel"). Seating
+re-levels a member for the row (0x1C1BDA8); a story character without a row starts at
+<code>NoRowXPLevel - 1</code>.</p>
+<h2 id="finding-every-captain">Finding every captain</h2>
+<ul>
+<li><strong>From the seats.</strong> For each army context, each runtime row and each column, a seat value other
+  than -1 is a pool index into the army's pool object (<code>ctx+0x20</code>). This finds exactly the seated
+  members, dead or alive, with their row and column.</li>
+<li><strong>From the pools.</strong> Walk every pool's member vector and keep the valid members (<code>[FM+0x178]</code> is a
+  record). A member with a row (<code>FM+0x268</code>, named <code>&lt;region&gt;_Row_&lt;rank&gt;</code>) is a captain, warchief or
+  Overlord; dead ones have flag bit 2. Story characters carry <code>FM+0x190</code> and normally no row.
+  Spawned members have <code>FM+0x48</code>.</li>
+</ul>
+<p>Pools are by game mode, so the region of a member is his army (<code>FM+0x178</code>) or his row's prefix, never
+his pool.</p>
+<h2 id="the-nemesis-flag-word">The nemesis flag word</h2>
+<p><code>FM+0x508</code> is a u64 of flags. The getter 0x114B55C is a bare <code>bt [fm+0x508], bit</code>; 0x114DFE8 tests
+bit 2 (dead). The loader's keys name most bits:</p>
+<table>
+<thead>
+<tr>
+<th>Bit</th>
+<th>Name</th>
+<th>Meaning and writers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>is_resurrected</code></td>
+<td>set by the un-death</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>is_dead</code></td>
+<td>SetDead 0x626E38</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>killed_by_player</code></td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>can_resurrect</code></td>
+<td>a return from death is pending (below)</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>is_player_presented</code></td>
+<td>the player has met him</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>is_menu_presented</code></td>
+<td>shown in the hierarchy; set after creation</td>
+</tr>
+<tr>
+<td>10</td>
+<td></td>
+<td>ignore the player-level cap (setter 0xF88AA0)</td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>has_vow</code></td>
+<td></td>
+</tr>
+<tr>
+<td>14, 19, 34, 38, 43</td>
+<td></td>
+<td>derived from his traits (see Captain traits)</td>
+</tr>
+<tr>
+<td>17</td>
+<td><code>is_severed</code></td>
+<td>decapitated; set by the sever-on-death handler 0x6DE30C</td>
+</tr>
+<tr>
+<td>21</td>
+<td><code>is_mockdead</code></td>
+<td>the mock member is dead: the hierarchy shows him eliminated</td>
+</tr>
+<tr>
+<td>22</td>
+<td><code>can_interrogate_about</code></td>
+<td></td>
+</tr>
+<tr>
+<td>24</td>
+<td><code>is_revengetarget</code></td>
+<td></td>
+</tr>
+<tr>
+<td>25</td>
+<td><code>was_ever_preset</code></td>
+<td></td>
+</tr>
+<tr>
+<td>27</td>
+<td><code>is_player_follower</code></td>
+<td>setter 0x7D52B0</td>
+</tr>
+<tr>
+<td>28</td>
+<td><code>is_spy</code></td>
+<td></td>
+</tr>
+<tr>
+<td>29</td>
+<td></td>
+<td>the player's bodyguard</td>
+</tr>
+<tr>
+<td>30, 31</td>
+<td></td>
+<td>level thresholds (above)</td>
+</tr>
+<tr>
+<td>32</td>
+<td></td>
+<td>not written to the local save</td>
+</tr>
+<tr>
+<td>41</td>
+<td><code>cant_change_xp_level</code></td>
+<td></td>
+</tr>
+<tr>
+<td>45</td>
+<td></td>
+<td>never recycled by a full pool</td>
+</tr>
+<tr>
+<td>48-50</td>
+<td></td>
+<td>the player's bodyguard summon slot 0/1/2, read by the summon 0x1010790</td>
+</tr>
+<tr>
+<td>51</td>
+<td></td>
+<td>mercenary (setter 0xF88AD0, getter 0xF86B90)</td>
+</tr>
+</tbody>
+</table>
+<p>The engine's setters do more than the bit, so a direct write to the word skips their side effects:</p>
+<ul>
+<li><strong>SetDead</strong> 0x626E38(fm, dead) sets bit 2 and, when <code>FM+0x398</code> names a campaign variable, sets that
+  variable (0x59A1D8): a story character's death unlocks the next scene this way. Its un-death branch
+  (0x627197) clears bits 2, 12 and 17 but not 21.</li>
+<li><strong>The follower setter</strong> 0x7D52B0(fm, bool) changes the member; the character's
+  <code>CCharacter::SetIsPlayerFollower</code> 0x102F0C(char, bool) also sets the character's follower byte
+  (<code>+0x23B8</code>) and its combat stats before calling it. Region ownership is the Overlord's bit 27 (see
+  Quests, story and scenes).</li>
+<li><strong>The intel setter</strong> 0x353EC4(fm, level, fireEvent, force) refuses a level that is not higher unless
+  forced, clamps to the setup's <code>DataStages</code>, writes <code>FM+0x51A</code>, rebuilds the mask <code>FM+0x510</code>
+  (0x62136C), notifies the player (0x7BE290, which reaches the global script agent <code>[GM+0x6CF0]</code>, so
+  it belongs on the main thread), updates trait visibility on a body, fires the army's
+  <code>DataLevelChangeEvent</code> when asked, and re-resolves his traits (UpdateTraits reason 6).</li>
+<li>Bit 32's clear 0x18E218 is a bare <code>btr</code> with no event.</li>
+</ul>
+<p>The pool serializer 0x59460C writes every member unless 0x595890(fm) (= not bit 32) refuses him;
+0x595CA0 is the only other reader of bit 32. Members held by the online garrison carry it.</p>
+<h2 id="faction-events">Faction events</h2>
+<p>Everything that happens to a member is a <code>Faction/Events/Events</code> record (2,039 ship, each with the
+same 77 fields) applied by the engine:</p>
+<ol>
+<li><code>System::CreateAndProcessFactionEvent</code> 0x1B5B610(FS, event, subject, other) builds a 0x60-byte
+   descriptor holding the subject's key, the other's key (index -1 when there is none), the event and
+   the other's row index (0x1E4D90) and column, then calls 0x40C0AC(FS, descriptor). The script
+   binding 0x1B7F210 resolves its handles in the current region's pool first.</li>
+<li>0x40C0AC processes the event synchronously; an event raised while another is in progress
+   (<code>FS+0x208</code>) is queued at <code>FS+0x1F0</code> and drained afterwards (post-processing 0x1E2DA0).</li>
+<li>0x40C13C -&gt; 0x62E670, the dispatcher, picks and records the event's replay (the Army-screen
+   flashback: 0x7421A0 -&gt; 0x741284, <code>[SIMEVENT|REPLAY]</code>), then the apply 0x630644 changes the member.</li>
+</ol>
+<p>What the shipped events do (fields set, counted over the 2,039 records):</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Events</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LevelsToAdd</code></td>
+<td>1,736 (1,711 of them 1)</td>
+<td>levels; <code>LevelsToAddFollower</code> (44) for followers</td>
+</tr>
+<tr>
+<td><code>RewardLists</code></td>
+<td>558</td>
+<td>reward lists to roll (below)</td>
+</tr>
+<tr>
+<td><code>ReplayType</code>, <code>Replay</code></td>
+<td>420, 153</td>
+<td>the replay shown for the event</td>
+</tr>
+<tr>
+<td><code>KeepPriority</code></td>
+<td>153</td>
+<td>how long the history keeps the event (below)</td>
+</tr>
+<tr>
+<td><code>SetMockMemberDead</code></td>
+<td>142 (113 True)</td>
+<td>mark the mock member dead or alive</td>
+</tr>
+<tr>
+<td><code>ForceLevelUp</code></td>
+<td>82</td>
+<td></td>
+</tr>
+<tr>
+<td><code>PickNewSimEvent</code>, <code>PickNewLocation</code></td>
+<td>53, 14</td>
+<td>re-plan the member</td>
+</tr>
+<tr>
+<td><code>UnlockName</code>, <code>UnlockTraits</code></td>
+<td>47, 19</td>
+<td>intel</td>
+</tr>
+<tr>
+<td><code>SetIsPrisoner</code>, <code>SetPlayerFollower</code>, <code>SetIsSpy</code></td>
+<td>46, 35, 29</td>
+<td>links to <code>Combat/Predicates/Bool/True</code> or <code>False</code></td>
+</tr>
+<tr>
+<td><code>Ambush</code></td>
+<td>32</td>
+<td>queue an ambush</td>
+</tr>
+<tr>
+<td><code>ClearCopyFactionMemberData</code></td>
+<td>24</td>
+<td>drop the mock member</td>
+</tr>
+<tr>
+<td><code>Resurrect</code></td>
+<td>18</td>
+<td>un-death for a member with bit 4</td>
+</tr>
+<tr>
+<td><code>ScarType</code></td>
+<td>18</td>
+<td>a scar (<code>Branded_Slave</code> 14, <code>Shamed</code> 3)</td>
+</tr>
+<tr>
+<td><code>EjectIfWarchief</code>, <code>EjectIfOverlord</code></td>
+<td>12, 11</td>
+<td>remove him from a warchief or Overlord seat</td>
+</tr>
+<tr>
+<td><code>CreateFactionMemberProfile</code></td>
+<td>11</td>
+<td>make a grunt or creature a named member (<code>ActiveKillPlayer_grunt</code>, <code>ActiveKillNamedAI</code>)</td>
+</tr>
+<tr>
+<td><code>SetRevengeTarget</code>, <code>RevengeTargetType</code></td>
+<td>4, 9</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ToggleIsPlayerFollower</code></td>
+<td>4</td>
+<td>the four arena wins</td>
+</tr>
+<tr>
+<td><code>ChangePlayerBodyguard</code></td>
+<td>1</td>
+<td><code>BecomeBodyguard</code></td>
+</tr>
+<tr>
+<td><code>PlayerResurrect</code></td>
+<td>1</td>
+<td><code>Resurrected_PlayerAbility_RaiseDead</code></td>
+</tr>
+<tr>
+<td><code>CopyAndHideFactionMemberData</code></td>
+<td>0</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><code>ActiveKillPlayer_grunt</code>, the event of a grunt killing the player, sets <code>CreateFactionMemberProfile</code>,
+<code>UnlockName</code>, <code>SetRevengeTarget</code> (type Kill), <code>SetMockMemberPresented</code>, <code>KeepPriority</code> 100 and the
+reward lists <code>KillPlayer_Rewards_grunt</code> and <code>_gruntSlaveBrand</code>.</p>
+<p><strong>The apply and following.</strong> The apply calls the follower setter only behind <code>SetPlayerFollower</code> (a
+link, 0x630CB8) and <code>ToggleIsPlayerFollower</code> (a bool, 0x630EF5); an event without them leaves an
+enemy an enemy.</p>
+<p><strong>Rewards.</strong> For each reward list the engine draws <code>count = 0x34F980(list)</code> rewards with
+<code>reward = 0x350500(fm, list)</code> (eligibility 0x105AEC, weights 0x3505F4, a random pick; 0 = none) and
+applies each with <code>ApplyReward</code> 0x3511F4(fm, reward, other, 1) -&gt; 0x351AF8, which re-resolves every
+trait slot (see Captain traits). Called directly, <code>ApplyReward</code> skips eligibility.</p>
+<h3 id="the-switchboard">The switchboard</h3>
+<p>Which event a game situation fires is per army: <code>Faction/Definition.EventSetup</code> names a
+<code>Faction/Events/Setup</code> record (seven ship: one per region and <code>Faction_Player_Setup</code>). In Nurnen's:</p>
+<table>
+<thead>
+<tr>
+<th>Setup field</th>
+<th>Event</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>KilledByPlayerEvent</code></td>
+<td><code>ActiveKilledByPlayer</code></td>
+</tr>
+<tr>
+<td><code>KillPlayerEvent</code>, <code>KillPlayerAlreadyNamed</code>, <code>KillPlayerAssistEvent</code></td>
+<td><code>ActiveKillPlayer_grunt</code>, <code>ActiveKillPlayer_AlreadyNamed</code>, <code>ActiveKillPlayerAssist</code></td>
+</tr>
+<tr>
+<td><code>ResurrectedPresentationEvent</code></td>
+<td><code>Resurrected_Presented</code></td>
+</tr>
+<tr>
+<td><code>EventSwapFactionPositionsPromotion</code> / <code>PromotionEmpty</code></td>
+<td><code>Transform_SwapPromotionOccupied</code> / <code>Transform_SwapPromotionEmpty</code></td>
+</tr>
+<tr>
+<td><code>EventSwapFactionPositionsDemotion</code> / <code>DemotionEmpty</code>, <code>Lateral</code> / <code>LateralEmpty</code></td>
+<td>the matching <code>Transform_Swap*</code> events</td>
+</tr>
+<tr>
+<td><code>EventSlotOverlord</code>, <code>EventSlotOverlord_NoChange</code></td>
+<td><code>Transform_SlotOverlord</code>, <code>_NoChange</code></td>
+</tr>
+<tr>
+<td><code>OverlordEjectedEvent</code>, <code>WarchiefEjectedEvent</code></td>
+<td><code>OverlordEjected</code>, <code>WarchiefBrandedEjection</code></td>
+</tr>
+<tr>
+<td><code>SetPlayerFollowerEvent</code>, <code>ClearPlayerFollowerEvent</code></td>
+<td><code>ActivePlayerFollowerSet</code>, <code>ActivePlayerFollowerClear</code></td>
+</tr>
+<tr>
+<td><code>EventApplyIsPlayerFollower</code>, <code>EventRemoveIsPlayerFollower</code></td>
+<td><code>IsPlayerFollowerApply</code>, <code>IsPlayerFollowerRemove</code></td>
+</tr>
+<tr>
+<td><code>TransferIntoFaction</code>, <code>TransferOutOfFaction</code></td>
+<td><code>Transform_HireMercToEmpty</code>, <code>TransferOutOfFaction</code></td>
+</tr>
+<tr>
+<td><code>DataLevelChangeEvent</code>, <code>GainInterrogationIntelEvent</code>, <code>InterrogatedEvent</code></td>
+<td><code>DatalLevelChanged</code>, <code>ActiveGainInterrogationIntel</code>, <code>ActiveInterrogated</code></td>
+</tr>
+<tr>
+<td><code>HierarchyPresentedEvent</code>, <code>HenchmenKilledEvent</code>, <code>BossKilledEvent</code>, <code>LoadMemberEvent</code></td>
+<td><code>HierarchyPresented</code>, <code>HenchmenKilled</code>, <code>BossKilled</code>, <code>LoadMember</code></td>
+</tr>
+<tr>
+<td><code>TimePassedEvent</code></td>
+<td><code>TimePassed</code> (one level)</td>
+</tr>
+<tr>
+<td><code>FleeEvent</code>, <code>FleeRunStartEvent</code>, <code>DespawnWhileFleeingEvent</code></td>
+<td><code>ActiveFlee</code>, <code>FleeRunStart</code>, <code>ActiveDespawnWhileFleeing</code></td>
+</tr>
+<tr>
+<td><code>TimedSimEvents</code></td>
+<td><code>HalfEmpty</code>, <code>Resurrection</code>, <code>FillUpCompletely_LongDelay</code>, <code>CompletelyEmpty</code></td>
+</tr>
+<tr>
+<td><code>PromoteEventSetup</code></td>
+<td><code>Faction/Events/PromotionEventSetup/Default</code> (<code>HardMode</code> and <code>_MinasIthil</code> variants exist)</td>
+</tr>
+</tbody>
+</table>
+<p>A promotion, a demotion or a lateral move is therefore an event; the seat changes themselves go
+through the seat function with flag 0 (from the sim-event outcome 0x40C304) and the engine's swap.</p>
+<h2 id="turns-and-sim-events">Turns and sim events</h2>
+<p>The missions on the Army screen (power struggles, hunts, executions, fort assaults) are <strong>sim
+events</strong>, and they advance in turns, not in real time.</p>
+<ul>
+<li><strong>AdvanceTurn</strong> 0x1B5EE88(FS, unused, u8 flushPending) increments the turn <code>FS+0x218</code>, on a flush runs
+  0x1C1C4E4 on every army (draining <code>ctx+0x140</code>), then runs 0xFDEC20(ctx, save slot), turn processing
+  and generation (<code>FactionSimEventGenerate</code> 0x597A9C), for every army that passes 0x1B5B058. That test
+  refuses an army with <code>AdvanceTODCurrentFaction</code> unless it is the current region's army (<code>FS+0x1B8</code>),
+  and otherwise requires the army's <code>AdvanceTODStoryActive</code> to match a state read through
+  <code>[GM+0x6D30]</code> (0x114E008); the campaign armies ship with the first False and the second True.
+  AdvanceTurn's callers are the quest post-active state 0x19F8C34, the world reset 0x1789F0C (the
+  player's death), the single-hierarchy view 0x434CF0 (no flush) and 0x1B5ED08. The world clock stops
+  while the Army screen is open.</li>
+<li><strong>Generation.</strong> For each member, his row's <code>SimEventGenerationSetup</code> lists entries that are tried in
+  order (0x5924EC; each entry may require a follower, a non-follower or either). An entry's
+  <code>Faction/Events/SimEventGenerationType</code> records (68 ship) are picked by weight (a reservoir pick
+  0x1B3B90 in 0x5926EC; a failure drops the type and retries) and 0x5935DC creates the event. A type's
+  weight is <code>Weights[min(active events of that type in the army, count - 1)]</code>, or its
+  <code>WeightOverride</code>'s entries when set (difficulty-scaled through <code>SimEventGeneration_*</code> constants);
+  weight 0 is the cap. <code>PowerStruggle_Act2</code> lists 13 sim events (Chase, Duel, Execution2,
+  GraugHeist, the raids, the trials ...) with <code>Weights</code> 10, 7, 4, 0 and the global-variable predicate
+  <code>Act2</code>. Candidate lists are capped at 64 (0x597E44); members with a current event (<code>FM+0x4F0</code>),
+  dead members without bit 4, and members with bit 21 are skipped; one event per member.</li>
+<li><strong>The event object</strong> (vt_0x1DBC8A8): <code>+0x40</code> the army, <code>+0x48</code> the <code>Faction/Events/SimEvent</code> (431
+  ship), <code>+0x50 / +0x58</code> its quest (a <code>Quest/Quests</code> record such as <code>VO_Chase_02</code>), <code>+0x60</code> the
+  generation type, <code>+0x94</code> a serial number and <code>+0x98</code> the turn it expires (created turn plus the
+  type's lifespan). An army's events are at <code>ctx+0x90 / +0x98</code>.</li>
+</ul>
+<h3 id="the-cooldown-table">The cooldown table</h3>
+<p>Each member can hold a cooldown table <code>[FM+0x258]</code>: a 0x18-byte object <code>{entries, u32 count,
+category}</code> of <code>{record, u32 expiry turn}</code> entries, the category being <code>Faction/Events/SimEventCooldown</code>
+(<code>[base+0x2701A18]</code>; two records, <code>PowerStruggle_CD</code> and <code>HuntingMission_CD</code>). The gate
+0x1BC0C2C(fm, <code>SimEvent.RequiredCooldown</code>) passes when there is no table or the entry has expired,
+and <strong>refuses when the table exists but has no entry</strong> (the lookup 0x1BBC410 returns null). The setter
+0x1BB7578 creates and sizes a table (0x1BBF840) only when none exists. The FactionMember loader
+creates the table when the save flags one (0x1BC0F2C) but never sizes it, and reads each saved entry
+into a temporary (0x1BC0EC4). After a load, every member that had a cooldown is refused power
+struggles and hunts permanently: in a late-campaign pool of 500, no table was sized and 60 living
+seated captains carried an empty one. An emulated generation pass on Minas Ithil's army, with every
+captain free and no events, refused 204 of 221 attempts; every power-struggle and hunt candidate
+(340 of 340) failed at this gate, the rest at their campaign gates.</p>
+<h2 id="cheat-death-and-the-return">Cheat death and the return</h2>
+<p>Death and return run through the kill path and events:</p>
+<ol>
+<li><strong>Mark.</strong> The kill path 0x6DB95C (0x1BB9F84 for event kills) stores the death's <code>Faction/Resurrection</code>
+   record at <code>FM+0x2C0</code> and, when the row has <code>ResurrectionEnabled</code>, rolls the odds (0x6DBD4C: presets
+   refused, row, predicate, odds table). On success the evaluator 0x1BC5D44 picks a fitting scar
+   (0x1B5AA00; none = "No Available Scars", nothing changes), increments <code>FS+0x21C</code> and <code>FM+0x500</code>,
+   sets bit 4, stores the scar at <code>FM+0x348</code> (unless it equals <code>FM+0x370</code>) and fires the record's
+   <code>DeathEvent</code> through 0x40C0AC. Without <code>ResurrectionEnabled</code> the kill path resets the mock member
+   (0x6DBCFC).</li>
+<li><strong>Queue.</strong> The death event (<code>WillResurrect_&lt;death&gt;</code>, 23 of them, <code>KeepPriority</code> 30) carries reward
+   lists that queue the ambush: <code>CheatDeath_Ambush</code> for an enemy, <code>CheatDeath_Betrayal</code> or
+   <code>CheatDeath_FollowerStillLoyal</code> for a follower. <code>CheatDeath_Ambush</code> retries forever (<code>RetryMax</code> -1,
+   <code>RetryDelay</code> 0.25 minutes), never for an Overlord, and fires only in its own region; one such request
+   reached 1,121 retries. The return is not a job: no shipped job requires <code>MustHaveCanResurrect</code> True.</li>
+<li><strong>Complete.</strong> Only the apply 0x630644 un-deaths: when the member has bit 4 and the event has
+   <code>Resurrect</code>, or the event has <code>PlayerResurrect</code>, it clears bits 4 and 6, sets 0 and 16, clears 2
+   and 17, then runs 0xE7DF70(fm). <code>Resurrected_Presented</code> (the ambush's success event) adds
+   <code>SetMockMemberDead</code> False, <code>ClearCopyFactionMemberData</code>, <code>PickNewSimEvent</code>, one level plus a
+   player-based level change, and <code>EjectIfWarchief</code> / <code>EjectIfOverlord</code>.</li>
+</ol>
+<p>Other readers of bit 4: the seat predicate 0xFDC350, the cancel pass 0xF9BA70 (from 0xF665F0 and
+0xFA0D30: a dead member with bit 4 that fails 0xFF3D30 loses bits 4, 0 and 16), the sever abort
+0x6DE30C ("Aborting Resurrection, Faction member was severed after death", only while the corpse is
+in the world), SetDead, the writer 0x1BC5044 and the script property <code>CanResurrect</code> 0x1BC45A8.</p>
+<p><strong>The data.</strong> <code>Faction/Resurrection</code> has 34 death types. Each names an <code>OddsTable</code>
+(<code>Faction/Resurrection/Tables</code>: Base, Bleedout, BodyCleaved_Uruk, Death_from_Fall, HeadRemoved_Olog,
+over 14 <code>Faction/Resurrection/Chance</code> records), a <code>ScarType</code>, a <code>SecondScarChance</code> and
+<code>SecondScarType</code>, a <code>DeathEvent</code> and loot tags. <code>Resurrection_Torment</code>: table Base, scar <code>Curse</code>, a
+second scar (<code>Sack_Head</code> or <code>Metal_Head</code>) at 0.5, event <code>WillResurrect_Torment</code>. <code>Resurrection_HeadRemoved</code>
+has no odds table and no death event: a decapitated orc never returns (the olog has its own table).</p>
+<p><strong>The mock member.</strong> <code>FM+0x2E0</code> is a 0x20-byte copy <code>{appearance, inventory, role, flag}</code> that the Army
+screen draws instead of the real member while it exists (0x75D2FC / 0x75D314 read it). Rewards with
+<code>CopyAndHideFactionMemberData</code> build it (22 of 1,239 rewards: role transforms, pinnacle scars), as does
+an event's <code>SetMockMemberDead</code> True; <code>ClearCopyFactionMemberData</code>, <code>SetMockMemberDead</code> False and the
+kill path without resurrection drop it. Bit 21 says the mock member is dead. Every death in a
+resurrection row keeps the copy whether or not the member will return; among living members only one
+returned but not yet presented carries it, together with bit 21 (<code>SimResurrected</code> sets <code>Resurrect</code>
+without touching the mock member). In one late save the 11 seated dead members all had bit 21 and 9
+of them a copy; of 197 seated living members, one (returned, not yet presented) had a copy and bit 21.</p>
+<p><strong>Raising the dead.</strong> <code>Resurrected_PlayerAbility_RaiseDead</code>, the only event with <code>PlayerResurrect</code>,
+un-deaths any member, scars him <code>Resurrected_PlayerAbility_RaiseDead</code>, adds a level, aborts his
+ambushes and rolls <code>PlayerSkill_Resurrected_Captain</code>: one of four rewards giving tribe
+<code>TribeDef_Undead</code>, the undead items, personality <code>Damaged901_Undead_pss_Moaner</code>, deranged markers, a
+permanent fire vulnerability, poison immunity and Unbreakable, after removing every fire and poison
+trait. It does not touch the follower bit.</p>
+<h2 id="the-event-history">The event history</h2>
+<p><code>FM+0x300 / +0x308</code> is the member's history: 16-byte entries <code>{Faction/Events/Events record, u16 the
+turn}</code>, in order (488 of 488). 0x631648 trims it whenever it exceeds 32 entries through 0x1BC3EB8, which
+erases the entry with the lowest <code>KeepPriority</code>, the oldest on a tie; the save writes 32 slots
+(0x594788). <code>KeepPriority</code> is read only by that eviction. Shipped priorities: the <code>WillResurrect_*</code>
+death events and <code>Resurrected_Presented</code> 30, <code>ActiveKilledByPlayer</code> 10, <code>ActiveKillPlayer_grunt</code> 100,
+and 50 for frequent events such as
+<code>ActiveInitialPlayerThreat</code>, <code>ActiveKillNamedAI</code>, <code>FleeRunStart</code> and every fear or hate trigger, so a
+full history drops its deaths before them: 196 of 515 histories were at the cap, and 18 of 86 members
+who had cheated death had lost the record of it, all 18 at the cap. A spawned character's audio object
+receives a copy of the list (see Audio and video).</p>
+<h2 id="ambushes">Ambushes</h2>
+<p>The ambush manager is <code>[FS+0x30]</code>. <code>TriggerAmbush</code> 0x6DDCB8(manager, definition, forced member)
+only queues a 0x40-byte request in the vector at <code>+0x338</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Request offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x18</td>
+<td>the region's army it was queued in</td>
+</tr>
+<tr>
+<td>+0x20</td>
+<td>the <code>Faction/Ambush/Definition</code></td>
+</tr>
+<tr>
+<td>+0x28</td>
+<td>the forced ambusher's key (<code>{0, -1}</code> = none)</td>
+</tr>
+<tr>
+<td>+0x38</td>
+<td>u32 due time in milliseconds on the world clock</td>
+</tr>
+<tr>
+<td>+0x3C</td>
+<td>retries</td>
+</tr>
+</tbody>
+</table>
+<p>A second request for a queued definition is refused unless its forced member is dead (0x114DFE8);
+one for the active definition is refused. The update 0x6DDBA8 runs only while no ambush is active
+(<code>[manager]</code> holds the active one) and evaluates each due request with 0x6DD92C: a forced member
+already in the world is discarded; the gates are the global enable <code>[base+0x267D598]</code>, <code>manager+0x368</code>
+(the running quest allows ambushes), <code>+0x369</code> (the player is not in a <code>FactionAmbushDisableBrush</code>)
+and the post-quest timer <code>+0x36C</code>; a request whose army is not the current region's is retried (see
+Quests, story and scenes). Then 0x1C5E358: the chance (0x1C5F0E8: <code>AmbushChance</code>, the global-variable
+predicate, the player's excluded attacks, tags and buffs, minimum followers, the Overlord-follower
+predicate), the ambusher 0x1C5D458 (the forced one unless he is spawned or fails the job, else a job
+pick 0x1B5AC8C; 16 definitions with <code>NeverPickAmbusherWithJob</code> or no job can only fire with a provided
+ambusher), validation 0x1C5F070 (not spawned, rank not in <code>ExcludedRowRanks</code>) and the result 0x1C5D624.
+A failed pass re-queues the request after <code>RetryDelay</code> minutes. A rowless member's rank is null, so
+an empty <code>ExcludedRowRanks</code> refuses every rowless ambusher. The active ambush object
+(vt_0x1FFACB0) keeps <code>+0x38</code> the ambusher, <code>+0x90</code> the definition, <code>+0xA5</code> completed and <code>+0xA6</code> done;
+its slot 2 0x1C7E1FC only sets <code>+0xA6</code>, after which the manager's tick drops the request and deletes
+the object.</p>
+<h2 id="rarity-and-training-orders">Rarity and Training Orders</h2>
+<p><code>FM+0x390</code> is a <code>Faction/Traits/MarkerRarity</code> record: <code>OrcRarity_Common</code>, <code>OrcRarity_Epic</code>,
+<code>OrcRarity_Legendary</code> and a test record <code>OrcRariry_Unique</code> (display name <code>test_string</code>). Each gives the hierarchy's
+selection effect (<code>Interface/ElementFXList/Rarity_*</code>), a priority (0, 1, 2) and a tint (Epic
+0xFFED5132, Legendary 0xFF4509C4). Rarity is also a trait: <code>Picker_OrcRarity_*</code> -&gt; the
+<code>OrcRarity_*</code> trait -&gt; the item <code>Buff_OrcRarity_*</code>. A Legendary carries two epic traits (<code>ET_*</code>) and
+an <code>ET_CanRemove_*</code> marker, an Epic one.</p>
+<p>A Training Order is an event. <code>Contract_LegendaryTraining</code> adds one level and rolls the reward lists
+<code>Contract_LegendaryTraining_CommonOrc</code>, <code>_EpicOrc</code>, <code>Default_EpicTraits_PickRemovable</code> and
+<code>_MarkerSwap</code>; the events <code>Upgrade_OrcRarity_ToEpic</code> and <code>_ToLegendary</code> are the other upgrades. The marker swap
+<code>LT_MarkerSwap</code> is eligible only for a member who already has an epic trait (<code>IncludedTraitPicker
+PickerListRaw_AllEpicTraits</code>), so applying it directly through <code>ApplyReward</code> makes a Legendary with no
+epic traits; rolling the lists through 0x350500 gives the traits first. Entering an Overlord row
+applies the same kind of upgrade: its <code>RewardListOnEnterRow</code> rolls
+<code>OverlordSetup_LegendaryUpgrade_CommonOrc</code> (twice), <code>_EpicOrc</code>, <code>Default_EpicTraits_PickRemovable</code>,
+<code>Contract_LegendaryTraining_MarkerSwap</code> and <code>Overlord_ElementalVent_Resistances</code>.</p>
+<h2 id="tribes-roles-and-builders">Tribes, roles and builders</h2>
+<ul>
+<li><strong>Tribes</strong> are <code>Faction/Tribes/Definitions</code> (19): Dark, Feral, Machine, Marauder, Militant, Outlaw,
+  Slaughter, Sorcerous, Terror, Warmonger, Undead, Easterling, Tribeless, the special tribes Bruz,
+  Gondor, Sauron, ShadowWar and NazgulTwins, and <code>DLC_TribeDef_Sorcerous_Poison</code>. A member gets one when he is
+  built (0x1BC6718, reason "Builder") or crosses the level threshold without one.</li>
+<li><strong>Roles</strong> (<code>FM+0x318</code>, 914 <code>Faction/Roles/Definitions</code>) carry the title; the role setter 0x1BC63F8
+  writes <code>+0x318</code> and <code>+0x320</code>.</li>
+<li><strong>Builders.</strong> A <code>Faction/FactionMemberBuilder</code> (608 ship) is a recipe: <code>CombatTrees</code>, <code>Roles</code>,
+  <code>Tribe</code> / <code>IncludedTribes</code>, <code>ArmorRowRank</code>, <code>MinLevel</code> (+ <code>MinLevelDelta</code>, <code>PlayerBasedXPLevel</code>),
+  <code>CalcXPLevelOnAssignToRow</code>, <code>DataLevel</code>, trait markers, desired and excluded trait pickers,
+  <code>RandomTraitPickerLists</code>, personalities, <code>Rewards</code> / <code>RewardLists</code>, <code>SimEventPickers</code>, <code>PlayerFollower</code>,
+  <code>CanSave</code>, <code>RemoveAfterQuest</code>, <code>EnableTraitChanges</code>, <code>EnableRelationships</code>, <code>UniqueBuilderInstance</code>.
+  <code>Captain</code> (<code>MinLevel</code> 5) and <code>EmergencyOverlord</code> (<code>MinLevel</code> 30 +/- 5, enters through
+  <code>Builder_EnterHierarchy</code>) are the base ones; families such as <code>FD_InvCap_*</code>, <code>DLC5_Y&lt;n&gt;_&lt;region&gt;_C&lt;n&gt;_*</code>,
+  <code>SW_Y*</code> and <code>Gauntlet_*</code> serve other game modes. A build request is prepared by 0x1C63920, which
+  stores the builder at request <code>+0x168</code>, its <code>UniqueBuilderInstance</code> at <code>+0x140</code> and its flags; the
+  builder build 0x1BBF928 then copies the builder to <code>FM+0x3A0</code> and the instance to <code>FM+0x350</code>, sets
+  <code>+0x520</code> = 2, and writes the seed, a name from the class map, a
+  personality (0x1BDA7AC), forces the intel level to 0 (0x353EC4 with <code>force</code>), assigns a tribe, the
+  follower and level-cap flags, then levels him and resolves his traits.</li>
+</ul>
+<h2 id="followers-bodyguards-and-mercenaries">Followers, bodyguards and mercenaries</h2>
+<ul>
+<li><strong>Followers.</strong> Bit 27; set and cleared by events (<code>SetPlayerFollower</code>, <code>ToggleIsPlayerFollower</code>)
+  and by the follower setter 0x7D52B0, which <code>CreateEmergencyPlayerFollower</code> uses. A betrayal clears it.</li>
+<li><strong>Bodyguards.</strong> Only the Captain rank has <code>CanBePlayerBodyguard</code>. Bit 29 marks the player's
+  bodyguard (the event <code>BecomeBodyguard</code> is the one with <code>ChangePlayerBodyguard</code>), and bits 48-50 give
+  the summon slot read by 0x1010790 together with the army's <code>PlayerBodyguardSummonDataSlot0-2</code>.
+  Overlords and warchiefs have their own bodyguards: their rows' henchmen, made by 0x7DEEE0 when the
+  army fills or a preset with henchmen is built.</li>
+<li><strong>Spies and prisoners</strong> are event flags (<code>SetIsSpy</code>, bit 28; <code>SetIsPrisoner</code>).</li>
+<li><strong>Mercenaries.</strong> A hire is a transfer, not a new member. The mercenary screen's action 0xDBC910 takes
+  the member from <code>Faction_desert_mercs_DLC4</code>, prices him (0xFA3AF0: the row's <code>HireCost</code> through the
+  army's <code>HireCostVariable</code> / <code>HireCostOption</code>, scalar 1.0 without discount skills), pays (0x189353C)
+  in the currency item of the player's skill setup (<code>PC_Mirian</code> for Talion), then calls
+  <code>TransferMember</code> 0xF6AC90. A zero price passes the spend check 0x1BCEC24. The mercenary army fills
+  its members as followers and mercenaries (bits 27 and 51). It binds the DLC4 pool and belongs to
+  the DLC4 save slot, so the base campaign never fills it.</li>
+</ul>
+<h2 id="story-and-dlc-characters-in-the-hierarchy">Story and DLC characters in the hierarchy</h2>
+<p>A story character is a <code>Faction/PresetMembers</code> record (203; 67 belong to the DLCs). The saves of the
+base campaign hold the DLC cast too: the mercenary army, the ten Blade of Galadriel twin armies and
+their presets (the Nazgul sisters <code>DLC3_Nazgul_Twin_1</code>, eight <code>DLC3ToMain_*</code> specialists,
+<code>DLC_FakeDarkTalion</code>, <code>DLC4_Desert_Overlord</code>). The base game's Nazgul are presets as well (six
+<code>GP_Nazgul_*</code>). The build sequence is in Quests, story and scenes; the seating law is the creator's:</p>
+<p><strong>The creator seats any preset by its <code>FactionRow</code>.</strong> 0x1C1D378(ctx, preset) allocates (0x1C23C10),
+builds (0x1BC06C0: <code>+0x190</code> = the preset, <code>+0x3A0</code> = 0, <code>+0x520</code> = 3, flag 25) and registers the member
+(0x61B5E8). With no row he is rowless at <code>NoRowXPLevel - 1</code> (0x1C21448). With a row he is levelled for
+it (0x1C1BDA8), the column is the preset's <code>FactionColumn</code> (0x1C206AC); if that seat is taken (0x4F9014)
+or the column is negative, the row (0x61AC00) gives a free column (0x1C1BEB4), and the seat call
+0x61E13C(flag 1) runs <strong>only when a free column exists</strong>: in a full row the character is built but
+unseated. Then each preset event is fired through 0x40C0AC. Its callers are army initialisation
+0xFDAC54 (the definition's <code>PresetMembers</code>), the henchmen builder 0x1BB7898 (<code>PresetHenchmen</code>) and the
+quest path 0x62666C. Seated this way, a preset takes the row's level and his own tribe (a Blade of
+Galadriel preset in a Seregost warchief row: level 84, <code>TribeDef_NazgulTwins</code>).</p>
+<p><code>DLC_FakeDarkTalion</code> (<code>AI_Talion</code>, <code>IsDarkTalion</code>, <code>LockedXPLevel</code> 60) has the build event
+<code>Debug_RecruitFollower</code>, which makes him a follower: seated as an Overlord he hands the region to the
+player. An occupied Overlord seat is emptied synchronously by an event with <code>EjectIfOverlord</code> through
+0x1B5B610; the engine re-places the ejected Overlord in a captain row shortly afterwards.</p>
+<h2 id="unknown-captains-and-intel">Unknown captains and intel</h2>
+<p><code>FM+0x51A</code> is the intel level (0-3 in play), and <code>FM+0x510</code> the intel mask that 0x62136C rebuilds from it
+with the army's <code>InterrogationSetup</code> (<code>Default</code>, three <code>DataStages</code>): level 0 gives 0x2, level 1 0x9B,
+levels 2 and 3 0xFB (3, 30 and 531 of 564 members). Mask bit 0 means the name is known; <code>UnlockName</code>
+0x621208 sets it. The Army screen draws a generic model (<code>Character/Models/HierarchyUnknown</code>) for a
+member whose name is not known and who has never killed the player (see User interface). A level-0
+start is ordinary: the builder build, 0x1BC00C8, 0x1BC02AC, the preset build (twice) and
+<code>System::HierarchyResetPreSetMemberData</code> 0x1C2373C force it, and the war simulation (0xFCD340,
+0xFD0660) forces it whenever its level is lower. The hierarchy treats bit 21 (mock dead) as
+eliminated: the henchmen link effects 0x18316FC / 0x183191C skip such a member.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>What <code>FM+0x4F8</code> and flag bits 16, 35 and 37 mean (the seat function tests <code>+0x4F8</code>; the builder
+  build sets bit 37; the un-death sets bit 16).</li>
+<li>Whether the runtime row's seat count at <code>+0x20</code> is always the record's <code>ColumnMax</code>, and whether pools
+  are indexed by their record index as the army contexts are.</li>
+<li>Whether the pool's <code>ImpC_*</code> coefficients are the importance score used when a full pool recycles a
+  member.</li>
+<li>Whether <code>FS+0x21C</code>, the cheat-death mark counter, is a running total and who reads it (it read 375 with
+  two returns pending).</li>
+<li>What triggers the cancel pass 0xF9BA70 that strips bit 4 from dead members.</li>
+<li>Whether a queued ambush request's retry count survives a save and reload.</li>
+<li>Which loading screens rebuild the army contexts and members: values changed in the mercenary army's
+  context and records survived two region changes.</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
