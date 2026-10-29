@@ -469,13 +469,26 @@ then   per set: u32 set hash | u32 count | count x 50-byte record (unaligned)
 <tr>
 <td>+0x2E</td>
 <td>u32</td>
-<td>an id (0 on the world-collision objects)</td>
+<td>the authoring id of the object's template (see below; not kept at load)</td>
 </tr>
 </tbody>
 </table>
 <p>The table ends exactly at the block end and every offset lands on a string start in 1,310 of 1,310
 registries (re-read on five layers and Lithlad's main part, 104,489 objects; the 9,284 layer objects
-all have unit quaternions). Most lists hold one set, the world set (hash 0x3BDE767D). Object
+all have unit quaternions).</p>
+<p><strong>The loader</strong> (vt_0x22C0338 vf3, 0x502B8C) expands each 50-byte record into an 0x50-byte run-time
+record: <code>+0x08</code> the name, <code>+0x10</code> the group offset, <code>+0x14</code> <code>StringHash(name)</code>, <code>+0x18</code> the property
+record index, <code>+0x1C</code> the position, <code>+0x28</code> the quaternion, <code>+0x38</code> the word at file <code>+0x2A</code>, <code>+0x40</code>
+the class name. It builds, per object set, a table of {name hash, u16 index} pairs used to find an
+object by name. It reads the id at file <code>+0x2E</code> into a local and discards it: nothing at run time
+keys on it. The id is the authoring identifier of the object's template. Every copy of an object
+placed through the same prefab carries the same id (one <code>AINodeMenacePlace</code> prefab node: 9,275 copies
+over 74 parts share 0x2651E0E7; one hanging-light trigger: 8,749 copies over 109 parts), while
+objects authored directly in a part have their own: over the whole game, 1,247,824 objects carry
+167,063 distinct ids, 151,160 of them used by a single object. The id never equals the hash of the
+object's name (0 of 1,247,824) and stays within one class (two exceptions: 0 on every
+<code>WorldInitializer</code> and <code>WorldCollision</code> object, and one pair of unrelated objects, as expected from
+chance collisions among 167,063 random 32-bit values). Most lists hold one set, the world set (hash 0x3BDE767D). Object
 names carry their prefab instance and their role: <code>Barre_46.DOGS_Fire</code>, <code>MesaE_08.VC_NoHang</code>,
 <code>HideS_138.FP</code>, <code>pGCarags.spwCaptain</code>. In all ten parts read, the list opens with a
 <code>WorldInitializer</code> object and then <code>WorldCollision</code> objects at the origin: <code>PhysicsBSP</code> (and
@@ -535,7 +548,13 @@ obstacle use different records of the same prefab.</p>
   4,848, times monotonic in 431 of 431); a gate leaf slides 400 cm over its 10 s <code>TotalPathTime</code>.</li>
 <li><strong>SFXS</strong>, static effects that are not objects (falling leaves, furnace smoke): header <code>1 | off_a |
   off_b | n | n2 | 0 | 0</code>, <code>.fxp</code> paths, at off_a n x <code>{f32 position[3], f32 cull range}</code>, at off_b
-  n x <code>{f32 quat[4], u32 .fxp path offset, u32 3, 0, 0}</code>.</li>
+  n x <code>{f32 quat[4], u32 .fxp path offset, u32 3, 0, 0}</code>. The loader (vt_0x2301300 vf3, 0x4BB9E4)
+  refuses a block unless <code>(off_b - off_a) / 16 = n</code> and <code>n2 &lt;= n</code>, squares every cull range at load,
+  and keeps n at <code>+0x20</code> and n2 at <code>+0x24</code>. <strong>n2 counts the distance-culled entries</strong>: the file puts
+  every entry with a positive cull range first and the entries with range 0 after them. In all 60
+  non-empty blocks (5,737 entries) no entry before n2 has range 0 and none after it has a positive
+  range; the game has exactly two range-0 entries, Minas Ithil's two distant waterfalls
+  (<code>mi_waterfallfar01_base</code> and <code>_top</code>, n 1,273, n2 1,271).</li>
 <li><strong>NLFE</strong>, ambient-life emitters: <code>'NLFE' | 1 | 0x1C | n | group-name bytes | name bytes |
   groups</code>; the group names are <code>NativeLife/Definition</code> records (<code>con_TourchLight</code>, <code>con_MeatFlies</code>),
   then n group indices, n instance names (<code>light_05L.Moths</code>; prefixed by their prefab instance, not
@@ -552,16 +571,28 @@ obstacle use different records of the same prefab.</p>
   draws a cube <code>CPrefabDebugViewer.Box</code> scaled by each node's extent): <code>'PFDG' | 1 | n | string
   bytes</code>, n x <code>{f32 centre[3], f32 extent[3]}</code> (the extent is signed: 21% have a negative
   component), n packed 21-byte nodes <code>{u32 parent, u32 first child (0xFFFFFFFF none), u8 r, g, b, a,
-  u32 path, u32 name, u8 flag}</code>, strings. 381,195 nodes, every link valid.</li>
+  u32 path, u32 name, u8 flag}</code>, strings. 381,195 nodes, every link valid. The viewer is created and
+  its handler registered unconditionally at client start-up (<code>CGameClientShell::InitializeSubsystems</code>
+  0x1772E1C), so the block is parsed on every load; the handler's finalize step (vf5 0x483F78) hands
+  each tree, keyed by <code>StringHash("&lt;part&gt;.objres")</code>, to the viewer (0x483FDC) and to nothing else. No
+  other code names the resource type.</li>
 </ul>
 <h2 id="static-geometry">Static geometry</h2>
 <h3 id="placements-wdsc-wldclnt">Placements (WDSC, <code>.wldclnt</code>)</h3>
-<pre><code>0x00  'WDSC' | u32 9 | u32 | u32 | u32 INSTANCES | u32 | u32 has-world-mesh | u32 MATERIALS | u32 | u32
-      | u32 STRING BYTES
+<p>The whole section is read by one handler (vt_0x230A800 vf3 0x6B3510 -&gt; 0x6B3914, then 0x6B3664), in
+this order; the walk ends exactly at the section end in 1,310 of 1,310 parts:</p>
+<pre><code>0x00  'WDSC' | u32 9
+0x08  u32 CELLS | u32 total boxes | u32 INSTANCES | u32 total groups | u32 MESH ENTRIES
+      | u32 total materials | u32 total polygons | u32 total polygon vertices | u32 STRING BYTES
 0x2C  strings: the part's .wldmsh, its materials, every prefab .inst it places
-      then {u32 materials, u32 0, u32 offsets[1 + materials]} when it has a world mesh or materials
-      then INSTANCES x 76 bytes (unaligned)
+      MESH ENTRIES x {u32 n, u32 mesh path, u32 value, n x u32 material path}   (1 when the part has
+                                                                               its own world mesh)
+      INSTANCES x 76 bytes (unaligned)
+      CELLS x cell
+      the trailing block
 </code></pre>
+<p>The header's totals size one allocation for everything the cells hold (Lithlad: 1 cell, 16 boxes,
+2 groups, 6 polygons with 24 vertices). An instance:</p>
 <table>
 <thead>
 <tr>
@@ -594,17 +625,17 @@ obstacle use different records of the same prefab.</p>
 <tr>
 <td>+0x38</td>
 <td>u32</td>
-<td>flags</td>
+<td>flags (only "non-zero" is kept)</td>
 </tr>
 <tr>
 <td>+0x3C</td>
 <td>u32</td>
-<td>kind</td>
+<td>kind (two bits kept)</td>
 </tr>
 <tr>
 <td>+0x40</td>
 <td>u32</td>
-<td>hash</td>
+<td>the tag of the prefab LOD group to draw</td>
 </tr>
 <tr>
 <td>+0x44</td>
@@ -618,10 +649,46 @@ obstacle use different records of the same prefab.</p>
 </tr>
 </tbody>
 </table>
+<p>The reader 0x1CCB150 turns each into a 0x60-byte run-time record: bounds at <code>+0x00 / +0x10</code>, the
+pivot at <code>+0x40</code>, the quaternion at <code>+0x4C</code>, the scale at <code>+0x5C</code>, the squared cull distance at <code>+0x3C</code>
+(a default when the file value is not positive), and at <code>+0x38</code> the kind in bits 0-1 and "flags
+non-zero" in bit 2. <strong>The <code>+0x40</code> word selects which LOD group of the prefab the instance draws</strong>: the
+reader passes <code>StringHash(prefab path)</code> and this tag to 0x58A928, which keeps, per prefab path, a
+small table of the tags placed with it (three inline, then blocks of 14) and returns the tag's index,
+stored at <code>+0x3A</code>. The tags are the ones the prefab's LOD records open with (see Prefabs): in Lithlad
+and Minas Ithil 18,937 of 18,937 instances whose prefab ships in the part's own container name one of
+their prefab's groups; 163 of them use a prefab with several groups and 45 pick one other than the
+first. Composite prefabs use the same tag on their child records. Lithlad's 12,877 instances use 15
+distinct tags, one per prefab for 241 of 242 prefabs.</p>
 <p>Lithlad's main part places 12,877 static instances of 242 prefabs (quaternions unit 12,877 of
-12,877, scale 0.12-2.03, flags 1 on 12,789; kind 0 on 11,659, 3 on 1,210, 1 on 8; cull distances
-mostly 60 m, 90 m, 350 m and 4 km). Layers place few or none (0 to 17 in five read). These are the static buildings,
-walls and rocks; prefabs that can change (destructible, animated, interactive) are objects instead.</p>
+12,877, scale 0.12-2.03, flags 1 on 12,789; cull distances mostly 60 m, 90 m, 350 m and 4 km). The
+kind is a property of the prefab (constant for 242 of 242): 0 on 11,659, 3 on 1,210 (cliff-base rocks,
+torches, fort stairs, doors, pickaxes) and 1 on 8 (a zipline). Layers place few or none (0 to 17 in
+five read). These are the static buildings, walls and rocks; prefabs that can change (destructible,
+animated, interactive) are objects instead.</p>
+<p><strong>Cells</strong> (read by 0x6B3CD0). Each main part has one cell; 351 layers have one, 65 two, 2 more, and
+884 none:</p>
+<pre><code>u32 boxes | u32 polygons | u32 groups
+boxes    x 32 bytes {f32 min[3], f32 max[3], u8, u8, u8, u8, u16, u16}
+polygons x {u8 n, n x f32[3]}                     (four vertices in every main part)
+groups   x {u32 key, u32 n, n x u32 instance index}
+</code></pre>
+<p>For each group the engine builds two lists of instance bounds, each entry the instance's bounds with
+its squared cull distance in the fourth component: one of every instance in the group, and one that
+leaves out the instances of kind 3. A cell's groups cover its instances: Lithlad's cell lists 12,714
+instances under key 0 and 163 under 0xD7D4D586 (12,877 in all).</p>
+<p><strong>The trailing block</strong> (read by 0x6B3664) opens with 13 words, four of which must be 0: <code>A count |
+first cell of a range | 0 | B count | ? | 0 | total s | total hull references | hull count | ? | 0 |
+total A-to-A references | 0</code> (the loader keeps a pointer to the cells from "first cell" on, and the
+totals size its allocation); then:</p>
+<pre><code>hulls x {f32, u32, u32 vertices, u32 n1, u32 n2, vertices x f32[3], n1 x u16, n2 x u16}
+A     x {60 bytes, ending with u32 count c1, u32 count c2, i32 cell (-1 none), u8 count s;
+         then s x 16 bytes, c1 x u32 hull references, c2 x u32 references to other A records}
+B     x {u32 n, u32, f32, i32, i32, n x u32 references to A records}
+</code></pre>
+<p>The engine computes each hull's bounds from its vertices. Every main part has one or two A records
+and one B record; Barad-dur and the Black Gate have no hulls, the others 86 to 207. 1,217 of the
+1,302 layers carry only the empty 52-byte header, and 85 carry records.</p>
 <h3 id="prefabs-prfb-inst">Prefabs (PRFB, <code>.inst</code>)</h3>
 <p>A prefab's baked geometry; static world geometry is never <code>.mesh</code> (prefab <code>.mesh</code> files are the
 destructible and animated pieces). <code>'PRFB' | u32 8 | u32 hash | ...</code> with header words for draws
@@ -629,7 +696,7 @@ destructible and animated pieces). <code>'PRFB' | u32 8 | u32 hash | ...</code> 
 <ul>
 <li><strong>LOD records</strong> from 0x38, 44 bytes each with -1.0 at <code>+28</code>, in groups that open with a per-group
   tag (0xD238B9DD on a keep wall, 0xD238B9DE on human buildings, 0x3249 on lanterns, an extra leading
-  group 0x159A on fortress pieces): a root <code>{tag, -1, 0, 0, next = first unit, f32 cull distance}</code>
+  group 0x159A on fortress pieces); a placement names the tag of the group it draws (see Placements): a root <code>{tag, -1, 0, 0, next = first unit, f32 cull distance}</code>
   and units <code>{tag, name hash, first draw, draw count, next unit (-1 = finest), f32 switch distance,
   f32, -1.0, 0, 0, distinct draws}</code>. Per instance the engine walks coarse to fine and draws the first
   unit whose <code>next</code> is -1 or whose switch distance the camera is beyond (a keep wall switches at 320,
@@ -656,8 +723,10 @@ destructible and animated pieces). <code>'PRFB' | u32 8 | u32 hash | ...</code> 
 <li>In Cirith Ungol about 90% of the world's triangles use <strong>texture-array</strong> materials (<code>.texa</code>),
   which blend array slices by a mask and a height map.</li>
 <li><strong>TERR version 9 (<code>&lt;region&gt;.terrain</code>)</strong>, main parts only (Barad-dur has none), read by 0x7AC0F4:
-  per terrain a root grid (4x4 or 8x8), position (the centre), quaternion, extent, height range, an
-  f32 (400; 500 in Lithlad, 1000 at the Black Gate), the node count, a material and a global
+  per terrain a root grid (4x4 or 8x8), position (the centre), quaternion, extent, height range, a
+  terrain shader parameter (400; 500 in Lithlad, 1000 at the Black Gate: with Lithlad loaded,
+  <code>k_vTerrainHullParams0.y</code> and <code>k_vTerrainDomainParams1.w</code> both hold 500, next to the height range
+  13,000 in <code>k_vTerrainDomainParams1.y</code>), the node count, a material and a global
   texture (a 32x32 flag map, one cell per depth-3 node), then nodes <code>{u32 flags; unless flags &amp;
   0x20: f32 min, f32 max, u32 tile}</code> and tiles of three texture paths; the file ends exactly after
   them in every region. Each root is a quadtree stored in pre-order (flag bits 0-3 = children present,
@@ -1368,15 +1437,15 @@ the counts fall to 34, 23, 15, 0 and 24. The dust points (64) lie a median 9.7 m
 <li>What the 109 world contexts without a name table hold, and whether every loaded section maps to
   exactly one context: 127 loaded sections, 129 contexts and 126 live <code>WorldInitializer</code> objects
   (every part read opens with one) suggest it.</li>
-<li>The meaning of the OBJL id field (+0x2E): zero on the world-collision objects, otherwise repeated
-  across objects (134 distinct ids over 286 objects in one layer) and not the hash of the object's
-  or its group's name.</li>
-<li>The data after the WDSC instance table (52-268 bytes in layers, 137,850 bytes in Lithlad's main
-  part), and the meaning of the instance <code>kind</code> (0, 1, 3) and <code>hash</code> words.</li>
+<li>What the WDSC cell groups' keys and the trailing block's hulls and records are for. The handler's
+  module also manages <strong>visibility layers</strong> (render commands that set a layer's state, keyed by two
+  words; asserts "Setting visibility layer state on a visibility layer that does not exist" and
+  "ReleaseVisibilityLayer must be paired with AddVisibilityLayer"), and group keys such as
+  0xD7D4D586 / 0xD7D4D587 / 0xD7D4D58B differ only in their last character, as numbered layer names
+  would; matching the keys against the layer state requests would settle it. What kind 3 excludes
+  instances from (the second bounds list) is part of the same question.</li>
 <li>Whether NativeLife emitter positions are world space: of 48 axis and sign choices the identity is
   by far the closest to the prefab's own objects (median 41 m), but no live emitter has been read.</li>
-<li>What the second SFXS count means: it differs from the first in some parts (Minas Ithil main 1,273
-  against 1,271), and the sections tile with the first.</li>
 <li>What spawns a SWFX effect at run time: the block handler's vf5 0x6FEAF90 only queues the object
   on <code>[GM+0x30]</code>. Whether the rain-drip points are generated from the same ledge markup as the
   context-action lines, as their placement suggests.</li>
@@ -1391,7 +1460,8 @@ the counts fall to 34, 23, 15, 0 and 24. The dust points (64) lie a median 9.7 m
   move without a horizontal component.</li>
 <li>Whether the context's resource table at <code>ctx+0x98</code>, which the render and collision binding
   queries by name, is built from the part's <code>ObjRes.WorldPhysics</code> block.</li>
-<li>What the unnamed TERR f32 is (400 in most regions, 500 in Lithlad, 1000 at the Black Gate); the
-  terrain texture repeat is the obvious candidate.</li>
-<li>Whether the PFDG prefab tree is used outside the debug viewer.</li>
+<li>What the TERR shader parameter does inside the terrain shaders (400 in most regions, 500 in
+  Lithlad, 1000 at the Black Gate). The terrain domain shader computes its texture coordinate as
+  <code>world.xz / cb0[30].w</code>; if that register is <code>k_vTerrainDomainParams1</code>, the value is the world
+  size of one texture repeat. Matching the register to the constant would settle it.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
