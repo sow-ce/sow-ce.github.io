@@ -969,6 +969,68 @@ which under the lock 0x27C45A0 calls the function pointer <code>[base+0x27C45C8]
 stream if the byte 0x27C45D1 is set. In the retail game the pointer is null (written only by its static
 initialiser 0x585A0 and the exit path 0x1196AF4) and the byte has one reader and no writer.</p>
 <p>The debug camera these pages drive is described in Characters, the player and the camera.</p>
+<h2 id="tutorials">Tutorials</h2>
+<p>Tutorials are data. Four families of records drive them:</p>
+<table>
+<thead>
+<tr>
+<th>Family</th>
+<th>Records</th>
+<th>What a record holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Interface/Tutorial/Pausing</code></td>
+<td>116</td>
+<td>a modal pane set that pauses play: <code>HUDState</code> (<code>Interface/HUD/State.PausingTutorial</code>), <code>HeaderString</code>, <code>DismissString</code>, <code>Panes</code> (348 <code>_StructuresTutorialPausingPaneData</code> structures in all: <code>BodyString</code>, <code>image</code>, or <code>video</code>, an <code>Interface/Movies</code> record), its own <code>Bundle</code> (<code>interface\bundles\kraken\tutorials\*.bndl</code>), the input <code>CommandSet</code> that holds play (<code>Profile/CommandSets.TutorialModal_A</code>), <code>InputLockout</code> (0.5 s), <code>RequireAllPressed</code>, <code>HoldAndPress</code>, <code>InputHoldDuration</code> and enter / exit sounds</td>
+</tr>
+<tr>
+<td><code>Interface/Tutorial/Gameplay</code></td>
+<td>120</td>
+<td>an in-play hint: <code>DisplayString</code>, <code>duration</code>, sounds</td>
+</tr>
+<tr>
+<td><code>Interface/Tutorial/Menu</code></td>
+<td>82</td>
+<td>a menu tutorial: a <code>Setup</code> (screen position) and <code>OnEnter</code>, <code>OnExitBegin</code>, <code>OnExit</code> steps (253 <code>_StructuresTutorial_MenuStep</code>)</td>
+</tr>
+<tr>
+<td><code>Faction/HierarchyTutorial</code></td>
+<td>62</td>
+<td>an Army-screen tutorial: a predicate, <code>ExitMenuOnFinished</code> and <code>FirstState</code>, a chain of <code>Faction/HierarchyTutorial/States</code> (84)</td>
+</tr>
+</tbody>
+</table>
+<p>A <strong>menu step</strong> applies or removes an input command set (<code>HierarchyTutorial_A</code>,
+<code>HierarchyTutorial_LStickX</code> ...), enables or blocks mouse movement and fast travel, advances on the
+common input, and may change the menu around it through three record kinds: <code>WidgetData</code> (18:
+<code>Show_</code> / <code>Hide_</code> a widget such as the fort status header or the hierarchy overview), <code>TreeData</code> (24:
+restrict a menu tree to some nodes, <code>ChallengesRestrict</code>, <code>GemSocketsRestrict</code> ..., or clear the
+restriction) and <code>MenuSelectionData</code> (8: lists of <code>Interface/Menu/MenuSelection/Predicate</code> records to
+disable, for example every order on a captain during the Bruz ambush tutorials). Layer data adds
+per-screen settings (<code>ShowMemberNavMarker</code> / <code>HideMemberNavMarker</code> on the Army screen, <code>SelectMtnPass</code> on
+the quest log).</p>
+<p>An <strong>Army-screen state</strong> names the menu tutorial to show, an optional map presentation, a preset or job
+member or the mercenary entry point to select, the view, a camera transition to wait for (with a
+command set to apply meanwhile), <code>PopupDelay</code> (1.0 s in <code>PlayerDiedFirstTime_State01</code>), <code>DelayNextState</code>
+and <code>Next</code>, and closing conditions (<code>CloseOnPositionSelected</code>, <code>CloseOnNewEquipmentHighlighted</code>). The
+tutorials' predicates live in <code>Faction/HierarchyTutorial/Preadicates</code> (83 records, 73 fields; the
+category's name carries the misspelling). <code>TutorialViwed</code> links a <code>Combat/Predicates/Bool</code> record (has
+this tutorial been seen) and <code>AnyTutorialsViwed</code>, <code>AllTutorialsViwed</code> and <code>NotTutorialsViwed</code> test other
+tutorials; the rest test the Army screen's mode and state (normal, replay, interrogation, commanding,
+orders, assault setup; overview or details), the selected captain's known state (known, location known,
+full info, presumed dead, branded, decapitated, henchman ...), the active game mode, inventory and
+new-item counts, skill points and store counts.</p>
+<p><strong>From script.</strong> <code>TutorialPausingShow</code> / <code>TutorialPausingHide</code> and <code>TutorialGameplayShow</code> /
+<code>TutorialGameplayHide</code> are methods of the <code>CCharacter</code> script class (0x1BB2108 resolves the
+<code>Interface/Tutorial/Pausing</code> record and calls the character's vtable slot 99); the player raises
+<code>OnTutorialPausingDismissed</code> / <code>OnTutorialGameplayDismissed</code>. <code>System:GetHierarchyTutorialViewed</code>
+(0x1B86BA4) checks a <code>Faction/HierarchyTutorial</code> record against the viewed list reached through the
+player (<code>[CGameClientShell]+0x888</code>, with its byte <code>+0x3880</code>; the test is 0x30C46C). The HUD classes are
+<code>CUIHUDPausingTutorial</code> and <code>CUIHUDGameplayTutorial</code>; the Army-screen tutorials are run by the
+hierarchy menu's tutorial manager (<code>HierarchyMenuTutorialMgr.cpp</code>), and the console names a
+<code>HierarchyMenu.ResetTutorials</code> command.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
 <li>Is the <code>UIThread</code> object ever started, and under what condition? Nothing in the retail game's named
@@ -981,4 +1043,5 @@ initialiser 0x585A0 and the exit path 0x1196AF4) and the byte has one reader and
   overview's two keys carry? Decoding the shared float-pool pairs of keys 340 and 341 would settle it.</li>
 <li>Does anything consume the <code>DebugMenuActivate1-4</code> command IDs? No consumer of those IDs was found.</li>
 <li>Which code selects the <code>Interface/LoadingScreen</code> record for a given load.</li>
+<li>Where the viewed-tutorial list is stored and whether it is saved with the game or the profile.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
