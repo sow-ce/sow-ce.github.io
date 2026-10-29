@@ -1,0 +1,399 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The executable: sections, functions, vtables, libraries - Shadow of War engine reference</title><meta name="description" content="The layout of ShadowOfWar.exe: where code, vtables and globals live, how many functions there really are and why the exception table is not the list of them, vtables with and without run-time type information, the C runtime&#x27;s initializer tables, the linked libraries, how the build&#x27;s whole-program optimisation shows in the code, the engine&#x27;s allocators and the most-called runtime primitives."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" class="cur" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="the-executable-sections-functions-vtables-libraries">The executable: sections, functions, vtables, libraries</h1><p class=\"lede\">The layout of ShadowOfWar.exe: where code, vtables and globals live, how many functions there really are and why the exception table is not the list of them, vtables with and without run-time type information, the C runtime&#x27;s initializer tables, the linked libraries, how the build&#x27;s whole-program optimisation shows in the code, the engine&#x27;s allocators and the most-called runtime primitives.</p>
+<p><code>ShadowOfWar.exe</code> is a 64-bit image of 117,732,784 bytes. It has no relocation table
+(<code>IMAGE_FILE_RELOCS_STRIPPED</code>, no <code>DYNAMIC_BASE</code>), so it always loads at 0x140000000 and every code
+and static address is the same in every run; only heap addresses move. Control Flow Guard is off
+(load configuration of 148 bytes, no guard flags), so the image carries no compiler-made list of
+address-taken functions.</p>
+<h2 id="sections">Sections</h2>
+<p>The section names do not describe their contents. Executability comes from each section's
+characteristics, not from its name:</p>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>RVA range</th>
+<th>Access</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.arch</code></td>
+<td>0x0001000 - 0x1D87C00</td>
+<td>read, execute</td>
+<td>the engine's code (about 30 MB)</td>
+</tr>
+<tr>
+<td><code>.sdata</code></td>
+<td>0x1D88000 - 0x1D91400</td>
+<td>read, execute</td>
+<td>more code</td>
+</tr>
+<tr>
+<td><code>.xtext</code></td>
+<td>0x1D92000 - 0x25AC000</td>
+<td>read</td>
+<td>read-only data: <strong>the vtables</strong>, strings, the GameDB schema metadata</td>
+</tr>
+<tr>
+<td><code>.idata</code></td>
+<td>0x25AC000 - 0x2AA5000</td>
+<td>read, write</td>
+<td>the writable globals: singletons, managers, static objects, startup tables</td>
+</tr>
+<tr>
+<td><code>.pdata</code></td>
+<td>0x2AA5000 - 0x2C85000</td>
+<td>read</td>
+<td>the exception directory: 163,575 unwind entries</td>
+</tr>
+<tr>
+<td><code>.bss a</code></td>
+<td>0x2C89000 - 0x729714D</td>
+<td>read, write, execute</td>
+<td>70 MB of code (below)</td>
+</tr>
+<tr>
+<td><code>.text</code></td>
+<td>0x7299000 - 0x7299014</td>
+<td>read, write</td>
+<td>20 bytes, not executable</td>
+</tr>
+</tbody>
+</table>
+<p>Several further small sections hold the import and export directories, resources and other data.</p>
+<p><strong><code>.bss a</code></strong> holds engine methods that are reached only through vtables: of 2,134 vtables with
+recovered starts, 1,847 have at least one method there, and 12,832 of 71,422 vtable slots point into
+it. None of those methods is the target of a direct call (0 of 400 sampled; the static call graph
+has 4,371 call sources in the section and no call targets), so a function there with no callers is
+not evidence of a wrong address. The section also holds a large amount of code that is not part of
+the engine's call graph: inside it, only data references (vtable slots, pointer tables) identify
+engine functions, and jump targets do not.</p>
+<h2 id="functions">Functions</h2>
+<p>The exception directory is not the list of functions:</p>
+<ul>
+<li><strong>Leaf functions have no entry.</strong> The x64 ABI requires an unwind entry only for a function that
+  needs unwinding; a leaf (no stack frame, no non-volatile registers touched, no calls) may omit it.
+  The engine's <code>StringHash</code> 0x423E70, with more than 2,000 callers, is one of them.</li>
+<li><strong>16.1% of the entries are fragments</strong>: 26,293 of 163,575 carry <code>UNW_FLAG_CHAININFO</code> and end with
+  their parent's entry (8,140 directly after the parent, 11,001 within 64 KB, 7,152 far away as cold
+  blocks; 12,232 functions own fragments). A fragment is entered by a jump, not a call.</li>
+<li><strong>Jump tables sit inline in <code>.arch</code></strong> right after their function (the MSVC form <code>lea rB,
+  [__ImageBase]; mov eJ, [rB + rI*4 + T]; add rJ, rB; jmp rJ</code>), so a linear disassembly turns their
+  bytes into millions of false instructions. Decoding must follow control flow from known starts and
+  never continue past a terminator.</li>
+<li><strong>Tails</strong>: 4,822 call-free blocks outside every entry that a function jumps to and back from belong
+  to that function.</li>
+</ul>
+<p>The function list is therefore <strong>243,839 functions</strong>: 137,282 with their own unwind entry and the
+rest leaves found as call targets, callbacks whose address is only ever loaded (<code>lea</code>), and methods
+referenced from vtables and pointer tables. 99.1% of the leaves start the way real functions start
+(16-byte aligned, or after <code>int3</code> / <code>nop</code> padding, or directly after another function's body),
+against 97.0% for functions with an unwind entry.</p>
+<p>The unwind data is complete enough to walk any thread's stack frame by frame from its registers,
+which is how the frame timings in Threads and the frame were measured. A return address found by
+scanning a stack is not proof of a live frame: locals keep return addresses of earlier, deeper
+calls.</p>
+<h3 id="startup-tables">Startup tables</h3>
+<p>33,354 qword slots in the writable globals are zero in the file and hold code pointers once the
+game has started (21,343 distinct targets): registration tables that startup code fills with
+<code>lea rdx, [function]</code> followed by a call to a register function (only 1,044 slots are written by a
+direct <code>mov</code>). Across two launches the slots and their targets agreed with a Jaccard index of
+0.9997 over 33,347 slots; the few differences are run-time state (a stored return address and a
+captured call stack), not tables.</p>
+<h3 id="the-c-runtime-s-initializer-tables">The C runtime's initializer tables</h3>
+<p>The C runtime entry 0x8C3E5C runs <code>_initterm_e(0x1DA8778, 0x1DA8798)</code> (C initializers) and
+<code>_initterm(0x1D93950, 0x1DA8760)</code>: <strong>10,690 C++ global constructors</strong>, in link order. The first
+global each constructor writes increases along the table in 8,043 of 9,483 steps (84.8%): data is
+laid out per object file. Code is not: across 18,206 functions, the correlation between a function's
+address and the address of its private globals is 0.105 (Spearman), the signature of whole-program
+optimisation reordering code. Only local runs survive (functions bracketed by one source file's
+strings belong to that file in 451 of 454 cases).</p>
+<p>649 of the constructors register developer-console entries. Each is the same 0x7C-byte body:
+thread-safe initialisation of the console registry, the static object 0x2A58BC0 (vt_0x1EC6488, a
+critical section and a sorted entry list, guard 0x2A58BB0, built by 0x816CF4), <code>Register(entry)</code>
+(registry slot 12), then <code>atexit(unregister)</code>. The registry's <code>Execute</code> is 0x15D0338, <code>Find</code>
+0x7CBBA4 and <code>Register</code> 0x77F54C.</p>
+<h2 id="vtables-and-classes">Vtables and classes</h2>
+<p>Vtables are read-only data in <code>.xtext</code>. <strong>1,546 classes carry MSVC run-time type information</strong>
+(a complete-object locator before the vtable). About 4,100 more do not: 5,007 runs of two or more
+function pointers in <code>.xtext</code> are loaded by a <code>lea</code> and have no type information; for 4,097 of them
+(81.8%) the constructor pattern holds, the run's address being stored at <code>[object+0]</code>, against
+1,399 of 1,746 (80.1%) for vtables with type information. <code>CResourceBundle</code> (0x1E6E678, 18 slots,
+constructors 0x3DB434 and 0x3DB6EC) is one of the classes without it.</p>
+<p>Vtables without type information pack back to back with no separator, so a table's end is the next
+table's start, and a start needs evidence: a code reference, a data pointer or a run-time pointer to
+it. A string-guessed start inside another table cuts that table short: the NPC class vt_0x1FB3640
+has at least 129 slots (its per-frame AI update is slot 119, and slots 121, 122 and 128 are in use). Multiple inheritance shows as tables
+side by side: an inventory item's primary vtable 0x1FDABF8 has one slot and its secondary vtable,
+stored at <code>+0x18</code>, is 0x1FDABD0 with five.</p>
+<p>The C runtime's initializer table is not a vtable even though it is a long run of code pointers
+in <code>.xtext</code>.</p>
+<p><strong>Live census.</strong> Walking the allocators of a running game (Minas Ithil) and testing each
+allocation's first qword against every known vtable finds <strong>2.51 million objects of 2,518
+classes</strong>, about two thirds of them of classes without type information. The most instantiated
+class is vt_0x1DBC010 (176,706 objects, 0x38 bytes each). Consecutive instances repeat at a fixed
+stride equal to the object size: an inventory item is 0x118 bytes, a <code>CResourceBundle</code> 0x180 and an
+AI character 0x3188.</p>
+<p>A class's runtime implementation of a GameDB record type can be recognised from what its methods
+read: a class whose methods read fields of one category (at least three reads, at least 60% of them)
+implements that record type. 195 classes are named this way, 184 of them without type information,
+among them the AI planner steps (see AI).</p>
+<h2 id="whole-program-optimisation">Whole-program optimisation</h2>
+<p>The build uses link-time code generation, and it shows in the calling convention. Values stay in
+<strong>volatile registers across calls</strong> to functions the compiler proved do not touch them: computing
+each function's written registers as a fixed point over the call graph, 61,578 of 133,050 callees
+preserve at least one volatile general-purpose register, and between 74,179 and 83,251 preserve a
+given <code>xmm</code> register (0x1C0B634 keeps the screen width in <code>xmm1</code> across the screen-height accessor).
+Analysis that assumes every call clobbers <code>rax, rcx, rdx, r8-r11</code> loses these values.</p>
+<p>The linker also <strong>folds identical functions</strong>. Many script bindings share one implementation, so a
+function address claimed by many bindings is not an identity: the engine assert 0x819104 (3,226 call
+sites), the 5-byte <code>operator delete</code> thunk 0x8C4370 (4,839 callers) and the record-name getter
+0x18BDB0 (2,203) each sit under many binding names. Binding stubs are packed back to back with no
+padding (a <code>ret</code> at 0x1B75A4B, the next stub's <code>mov r11, rsp</code> at 0x1B75A4C).</p>
+<h2 id="libraries">Libraries</h2>
+<p>Identified from library strings and source paths, the namespaces of type information, imports,
+known constants (CRC32, FNV, SHA, MD5, AES tables) and contiguity (libraries link as contiguous
+object files; a gap bracketed by one library belongs to it, with 622 of 626 held-out anchors
+confirmed), <strong>13,886 functions belong to linked libraries</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Library</th>
+<th>Functions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Havok (physics, AI navigation, cloth)</td>
+<td>8,090</td>
+</tr>
+<tr>
+<td>MSVC standard library</td>
+<td>2,793</td>
+</tr>
+<tr>
+<td>OpenSSL</td>
+<td>1,897</td>
+</tr>
+<tr>
+<td>Hydra (the publisher's online-services client)</td>
+<td>619</td>
+</tr>
+<tr>
+<td>Steamworks</td>
+<td>327</td>
+</tr>
+<tr>
+<td>HavokScript</td>
+<td>61</td>
+</tr>
+<tr>
+<td>Bink</td>
+<td>45</td>
+</tr>
+<tr>
+<td>Wwise</td>
+<td>34</td>
+</tr>
+<tr>
+<td>zlib</td>
+<td>17</td>
+</tr>
+</tbody>
+</table>
+<p>The online layer also links the Apache Avro C library (<code>avro_record_set</code>, <code>src\Core\avFloatType.cpp</code>).
+Small routines were identified by running them in an emulator against reference implementations:
+37 functions behave as <code>strcpy</code>, 13 as <code>memcpy</code>, 5 as <code>strlen</code>, plus CRC32, FNV-1a and the engine's
+string hash.</p>
+<p><strong><code>StringHash</code> 0x423E70</strong> (the P919 name hash, <code>h = h * 919 + LUT[c]</code> with the table at 0x1DB50D0)
+takes its seed in <code>r8</code> and never clears its accumulator, so callers chain hashes; a caller that
+leaves a value in <code>r8</code> gets a different hash.</p>
+<h2 id="memory">Memory</h2>
+<h3 id="the-engine-s-allocators">The engine's allocators</h3>
+<p>The engine allocates through <strong>Doug Lea's malloc 2.8.x, built with mspaces, two copies linked in</strong>:
+one with its parameters at 0x277CDD8 and its global state at 0x277CE10, the other with its parameters
+at 0x277D1E8 (<code>create_mspace</code> 0x1176058, <code>sys_alloc</code> 0x11744F8; segments from <code>VirtualAlloc</code>;
+<code>malloc_state</code> <code>+0x358</code> footprint, <code>+0x370</code> flags, <code>+0x3A0</code> the segment list
+<code>{base, size, next, flags}</code>; chunk head = size | 1 previous-in-use | 2 in-use, user memory at
+chunk + 16, segments closed by a 0xB fencepost). In one running game a single state of the second
+copy owned <strong>123 segments summing exactly to its 2,695 MB footprint</strong>, 78% of the process's heap
+memory: 1,086,315 chunks, 2,663 MB in use.</p>
+<table>
+<thead>
+<tr>
+<th>Primitive</th>
+<th>Callers</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GetDefaultHeap</code> 0x602D20</td>
+<td>690 (+3,033 through the thunk 0x114CC98)</td>
+<td>returns <code>[0x26FEF88]</code>; the first use builds the default heap in the static object 0x277CB40 ("Failed to create default memory heap!"); callers pass <code>(heap, pointer)</code> to a heap-type dispatch 0x1B08C4</td>
+</tr>
+<tr>
+<td><code>ArenaAlloc</code> 0x22A040 / <code>ArenaFree</code> 0x22A4E4</td>
+<td>406 / 514</td>
+<td>the arena table <code>[0x2A86798]</code>, entries of 0x78 bytes: critical section <code>+0x30</code>, base <code>+0x58</code>, kind <code>+0x60</code>, used <code>+0x64</code>, size <code>+0x68</code>, linked arena <code>+0x6C</code>, owner thread <code>+0x70</code> (a call from the owner thread goes to the linked arena); 16 arenas in use in a running game, two of 20 MB</td>
+</tr>
+<tr>
+<td><code>BumpAlloc</code> 0x24A4BC</td>
+<td>363</td>
+<td>a linear arena: align up, assert on overflow, advance <code>+0x08</code></td>
+</tr>
+<tr>
+<td><code>RefCountRelease</code> 0xC51540 / 0x2158A4</td>
+<td>546 / 370</td>
+<td><code>lock xadd [obj+8], -1</code>; the last reference calls vtable slot 0 (the deleting destructor) with flag 1</td>
+</tr>
+<tr>
+<td><code>OperatorDeleteSized</code> 0x8C4370</td>
+<td>4,839</td>
+<td>every scalar deleting destructor calls it as <code>(this, sizeof)</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Havok keeps its own heap</strong> inside one 512 MB engine allocation. Its root <code>[base+0x2A86808]</code> is an
+<code>hkFreeListMemorySystem</code>; <code>+0x18</code> is the <code>hkFreeListAllocator</code>, whose <code>+0x48</code> is an
+<code>hkLargeBlockAllocator</code> (dlmalloc-shaped: top <code>+0x28</code>, top size <code>+0x30</code>) with an embedded
+<code>FixedMemoryBlockServer</code> at <code>+0x138</code> = <code>{start, end, limit, break, ..., page list +0x40}</code>: an <code>sbrk</code>
+over the fixed buffer. Small allocations come from 16 <code>hkFreeList</code>s (0x70 bytes each, inline in the
+allocator; size classes 8 to 640 bytes, 64 KB blocks) and per-thread caches (<code>hkThreadMemory</code>, 16
+rows <code>{head, u32 count}</code> from <code>+0x28</code>, row sizes at <code>+0x12C</code>). In one region Havok used 121.5 MB of
+the 512: 1,864 large allocations (107.2 MB) and 106,677 free-list elements (12.8 MB); 389.7 MB past
+the break had never been handed out. The Havok world itself is reached through
+<code>[base+0x2A86760]+0x20</code> (see Physics).</p>
+<h3 id="what-the-memory-holds">What the memory holds</h3>
+<p>Resources keep the engine's own byte accounting at <code>res+0x38</code> (28,968 resources declaring 2,405 MB);
+for most resource types that figure covers GPU memory, not a CPU block. The largest single owner of
+CPU memory is the animation object vt_0x1E6F528 (constructor 0x57E4F4, destructor 0xC3A5A0; its
+resource <code>[[obj+8]]+0x28</code> names an <code>.anix</code> file), whose buffers at <code>+0x68</code> held about 790 MB; each
+object's owned memory matched its resource's <code>+0x38</code> within 1 KB for 88.8% of objects (4.6% for a
+mismatched control).</p>
+<p>Allocations that begin with a file signature identify themselves: 70 Wwise sound banks (<code>BKHD</code>,
+216 MB), 27 behaviour graphs (15 MB), 18 Scaleform movies (10 MB), the GameDB blob
+(<code>GameDatabase</code>, 10 MB), 2,474 DXBC shaders, 2,024 effect databases (<code>FXDB</code>) and 9 Wwise packages
+(<code>AKPK</code>). The localization strings live in one 7.44 MB allocation built at load from the string
+tables: ascending rows <code>{u32 P919(key), u32 character offset}</code> (68,559 rows) followed by UTF-16
+text (64,175 strings).</p>
+<p>Direct3D resources are created through a few engine functions: 0x1B9D10 creates texture surfaces
+(<code>ID3D11Device::CreateTexture2D</code>, "Surface size mismatch!"), 0x1E71F0 creates textures, 0x39F930
+creates constant buffers (<code>CreateBuffer</code> with bind flags 4; 89,080 allocations in a 150 s window)
+and 0x39F814 is the dynamic constant-buffer factory (usage dynamic, CPU write, "Failed to create
+constant buffer!").</p>
+<h2 id="runtime-primitives">Runtime primitives</h2>
+<p>The most-called functions without a library name:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Callers</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CRT::atexit</code> 0x8C4608</td>
+<td>3,580</td>
+<td><code>_onexit(f)</code> (0x8C45B8): every static's destructor registration</td>
+</tr>
+<tr>
+<td><code>CRT::__chkstk</code> 0xB39470</td>
+<td>1,983</td>
+<td>stack probe, one touch per 4 KB page down to the request</td>
+</tr>
+<tr>
+<td><code>CRT::__security_check_cookie</code> 0x8C3D50</td>
+<td>1,520</td>
+<td>the <code>/GS</code> cookie check; failure goes to 0x8C4690</td>
+</tr>
+<tr>
+<td><code>ScriptArgsBegin</code> 0x500930</td>
+<td>1,574</td>
+<td>called by every script binding: <code>{+0 argc = (L.top - L.base) / 16, +4 argc - expected + returns, +8 lua_State}</code>; "Incorrect number of arguments to function '%s.%s'"</td>
+</tr>
+<tr>
+<td><code>ScriptArgsEnd</code> 0x407F68</td>
+<td>1,862</td>
+<td>after every binding body: sets <code>L.top</code> (<code>+0x48</code>) to <code>base (+0x50) + n * 16</code>, filling with nil</td>
+</tr>
+<tr>
+<td><code>lua_remove</code> 0x565800</td>
+<td>490</td>
+<td>shifts the 16-byte values down one slot</td>
+</tr>
+<tr>
+<td><code>PropRegister</code> 0xC6DA00</td>
+<td>18,963</td>
+<td>the most-called function: registers one schema property <code>(slot, name, type code, &amp;default, ...)</code> and hashes its name; GameDB and effect schemas both use it (see GameDB)</td>
+</tr>
+<tr>
+<td><code>EngineAssert</code> 0x819104</td>
+<td>3,226 call sites</td>
+<td>the engine assert: a write to a null address at 0x819113 with the message in <code>rcx</code></td>
+</tr>
+<tr>
+<td><code>CompiledOutLog</code> 0x19C83AC</td>
+<td>630</td>
+<td>spills <code>r8</code> / <code>r9</code> and returns: a varargs logger compiled out of the shipping build</td>
+</tr>
+<tr>
+<td><code>NullSub</code> 0x120405C</td>
+<td>670</td>
+<td><code>ret 0</code></td>
+</tr>
+<tr>
+<td><code>IsNullOrEmptyStr</code> 0x188C80 / <code>StrNotEmpty</code> 0x185FE0</td>
+<td>767 / 873</td>
+<td>C-string tests</td>
+</tr>
+</tbody>
+</table>
+<p>Because the logger is compiled out, the shipping build is silent about most failures: a refused
+request returns without a message, and only the code (or running the function in an emulator against
+live memory) shows why.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>The names of the most instantiated classes without type information (vt_0x1DBC010 and its
+  neighbours): their methods read no GameDB field, so the record-type rule does not name them.</li>
+<li>Two engine allocation pairs of about 58 MB together: a 5.7-5.9 MB index (beginning with the bytes
+  <code>1f6e31e4a8778d21</code>) pointing into a 13.6-13.7 MB float blob with four-character name stubs ("Duel",
+  "Kill", "Sync", "Shad", "Moun", "Dom_", "PreD", "Came"), held by arrays of vt_0x1DB7120 at stride
+  0x390.</li>
+<li>What the value at <code>+0x2C</code> of an arena entry is (it looks like a name hash, but none of the 18 values
+  matches a known name).</li>
+<li>0x13F79C (903 callers) has the shape of Havok's array reserve (capacity masked with 0x3FFFFFFF,
+  the sign bit meaning "not owned", the allocator's vtable <code>+0x28</code> realloc / <code>+0x18</code> alloc); 0x816D68
+  (355 callers) is a lock-guarded static getter using thread-local storage. Neither is named.</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
