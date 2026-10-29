@@ -1,0 +1,281 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Physics: Havok integration - Shadow of War engine reference</title><meta name="description" content="How the engine embeds Havok 2016.2: the new-pipeline (hknp) world with legacy-pipeline ragdolls, the engine&#x27;s handle to the world, the world&#x27;s layout and gravity, the material palette and its half-precision fields, what is live and what ships unused, the Havok heap, and the tagfiles that carry navigation meshes and collision shapes."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" class="cur" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="physics-havok-integration">Physics: Havok integration</h1><p class=\"lede\">How the engine embeds Havok 2016.2: the new-pipeline (hknp) world with legacy-pipeline ragdolls, the engine&#x27;s handle to the world, the world&#x27;s layout and gravity, the material palette and its half-precision fields, what is live and what ships unused, the Havok heap, and the tagfiles that carry navigation meshes and collision shapes.</p>
+<h2 id="which-havok">Which Havok</h2>
+<p>Physics is Havok Physics 2016.2 (<code>hk2016_2_0_r1</code>) in its new pipeline: the <code>hknp*</code> classes, which
+replaced the older <code>hkp*</code> API. The build is a hybrid: rigid bodies are <code>hknp</code>, but ragdoll
+constraints are still the legacy <code>hkpRagdollConstraintData</code> and <code>hkpLimitedHingeConstraintData</code>.
+Havok AI (<code>hkai*</code>) provides navigation meshes, avoidance and silhouettes, and Havok Cloth deforms
+cloth with <code>hkaSkeleton</code>; Havok Animation and Behavior are not used (see Animation). HavokScript runs
+the game's scripts (see Scripting).</p>
+<p>Havok work runs on three <code>HavokWorkerThread</code>s (shared routine 0x11AFE58) and on the main thread's task
+queue: in play the main thread spends about 5% of its time in the physics step (<code>TtPhysics</code>,
+0x6528B8) and about 3% in the Havok task queue, where <code>hkaiAvoidanceSolverTask</code> shows up.</p>
+<h2 id="the-engine-s-handle">The engine's handle</h2>
+<p>The world has exactly one construction path (its constructor 0x15464FC has one caller, 0x11B1504,
+whose only caller is 0x1187004), and the engine publishes its owner in a static slot:</p>
+<pre><code>[base+0x2A86760]   the physics owner (0x6860 bytes), published by 0x1186FB0
+                   (1 write, 66 reads in 60 functions)
+[base+0x2A86768]   u32 generation, incremented at each publish
+  owner+0x20 -&gt; hknpWorld (allocated from the Havok heap, 0xAA0 bytes)
+</code></pre>
+<p>The world is rebuilt on every world load.</p>
+<h2 id="the-world">The world</h2>
+<p><code>hknpWorld</code> (vt_0x22EEA90). Sub-objects, named by their own run-time type information:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Class</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x018</td>
+<td>a pointer to itself</td>
+</tr>
+<tr>
+<td>+0x470</td>
+<td><code>hknpMultithreadedSimulation</code></td>
+</tr>
+<tr>
+<td>+0x478</td>
+<td><code>hknpDynamicSpaceSplitter</code></td>
+</tr>
+<tr>
+<td>+0x488</td>
+<td><code>hknpHybridBroadPhase</code></td>
+</tr>
+<tr>
+<td>+0x6C8</td>
+<td><code>hknpStreamContactSolver</code></td>
+</tr>
+<tr>
+<td>+0x6D0</td>
+<td><code>hknpConstraintAtomSolver</code></td>
+</tr>
+<tr>
+<td>+0x9C0</td>
+<td><strong>gravity</strong>, an aligned <code>hkVector4</code> (0, -9.81, 0, 0): Y is up, SI units</td>
+</tr>
+<tr>
+<td>+0x9D8</td>
+<td><code>hknpMaterialLibrary</code> (vt_0x22ED5C8; from the construction info, else a default made by 0x154AC7C)</td>
+</tr>
+<tr>
+<td>+0x9E0</td>
+<td><code>hknpMotionPropertiesLibrary</code> (vt_0x22ED290; 8 motion properties)</td>
+</tr>
+<tr>
+<td>+0x9E8</td>
+<td>the body-quality library (0x620 bytes: 32 inline 0x30-byte <code>hknpBodyQuality</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>Arrays are Havok <code>hkArray</code>s (<code>{T* data, u32 size, u32 capacity and flags}</code>). The body arrays at
+<code>+0x040</code>, <code>+0x050</code>, <code>+0x0C8</code> and <code>+0x0D8</code> / <code>+0x0F8</code> hold 15,360 entries each: <strong>the body capacity is
+15,360</strong>, kept as parallel structure-of-arrays lanes. <code>+0x0B8</code> is the active-body id list (254 of
+15,364 in a combat scene); a body id packs <code>index | generation &lt;&lt; 24</code>. <code>+0x108</code> has capacity 1,024,
+matching the material palette.</p>
+<p>This gravity drives the rigid-body solver only. Characters move through the engine's character
+controller, which the behaviour graph owns (see Animation).</p>
+<h2 id="materials">Materials</h2>
+<p>Both libraries keep their entries in an <code>hkArray</code> at <code>+0x30</code>. The material palette is one contiguous
+array of 1,024 <code>hknpMaterial</code> entries (vt_0x1DAC040, stride 0x80):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Field</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x32</td>
+<td>hkHalf</td>
+<td>dynamic friction</td>
+<td>0.5</td>
+</tr>
+<tr>
+<td>+0x34</td>
+<td>hkHalf</td>
+<td>static friction</td>
+<td>0.5</td>
+</tr>
+<tr>
+<td>+0x36</td>
+<td>hkHalf</td>
+<td>restitution</td>
+<td>0.0</td>
+</tr>
+<tr>
+<td>+0x3C</td>
+<td>f32</td>
+<td>-</td>
+<td>0.05</td>
+</tr>
+<tr>
+<td>+0x40</td>
+<td>f32</td>
+<td>max contact impulse (-1.0 = an untouched slot)</td>
+<td>-1.0</td>
+</tr>
+<tr>
+<td>+0x44</td>
+<td>f32</td>
+<td>-</td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>+0x48</td>
+<td>f32</td>
+<td>-</td>
+<td>1.0</td>
+</tr>
+</tbody>
+</table>
+<p><code>hkHalf</code> is not IEEE half precision: it stores the top 16 bits of a float32 (decode with
+<code>float_from_bits(h &lt;&lt; 16)</code>). Only a handful of entries are configured - they carry a maximum contact
+impulse of FLT_MAX instead of the sentinel - and the number grows during play as surfaces register
+on demand: 13 and then 18 configured entries were seen in one world about an hour apart. Entries 0-7
+are nearly uniform (friction 0.5, restitution 0, with one bouncier entry at 0.199 and one at
+friction 0.547 / restitution 0.05), so a handful of shared materials surfaces the whole world.</p>
+<h2 id="what-is-live-and-what-ships-unused">What is live, and what ships unused</h2>
+<p>A census of the live heap in a desert scene (169 live Havok classes; controls passing):</p>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Live</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hknpConvexPolytopeShape</code></td>
+<td>6,673</td>
+</tr>
+<tr>
+<td><code>hknpBoxShape</code></td>
+<td>5,680</td>
+</tr>
+<tr>
+<td><code>hknpCapsuleShape</code></td>
+<td>3,062</td>
+</tr>
+<tr>
+<td><code>hknpCompressedMeshShape</code> (static world collision)</td>
+<td>798</td>
+</tr>
+<tr>
+<td><code>hknpTriangleShape</code></td>
+<td>528</td>
+</tr>
+<tr>
+<td><code>hknpCompoundShape</code></td>
+<td>372</td>
+</tr>
+<tr>
+<td><code>hknpSphereShape</code></td>
+<td>264</td>
+</tr>
+<tr>
+<td><code>hknpShapeMassProperties</code></td>
+<td>7,009</td>
+</tr>
+<tr>
+<td><code>hknpMaterial</code></td>
+<td>1,024</td>
+</tr>
+<tr>
+<td><code>hknpBodyQuality</code></td>
+<td>32</td>
+</tr>
+<tr>
+<td><code>hkpRagdollConstraintData</code></td>
+<td>1,857</td>
+</tr>
+<tr>
+<td><code>hkpLimitedHingeConstraintData</code></td>
+<td>420</td>
+</tr>
+<tr>
+<td><code>hkaiNavMeshInstance</code></td>
+<td>464</td>
+</tr>
+<tr>
+<td><code>hkaiNavMeshClearanceCache</code></td>
+<td>5,300</td>
+</tr>
+<tr>
+<td><code>hkaiPointCloudSilhouetteGenerator</code></td>
+<td>3,124</td>
+</tr>
+<tr>
+<td><code>hknpWorld</code></td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>The default modifier set (<code>hknpDefaultModifierSet</code>) instantiates the six per-contact modifiers:
+trigger, mass changer, restitution, soft contact, surface velocity and animated-shape surface
+velocity.</p>
+<p>Shipped in the executable with their vtables but never instantiated: the complete Havok vehicle
+suite (<code>hknpVehicleInstance</code> with its engine, transmission, steering, suspension, brake,
+aerodynamics, velocity damper, tyre marks and ray-cast wheels), Havok's demo guns (<code>hknpBallGun</code>,
+<code>hknpGravityGun</code>, <code>hknpProjectileGun</code>, <code>hknpMountedBallGun</code>, <code>hknpFirstPersonGun</code>,
+<code>hknpFirstPersonCharacter</code>), the spring / unary / binary actions, and the linear and circular surface
+velocity objects.</p>
+<h2 id="the-havok-heap">The Havok heap</h2>
+<p>Havok allocates its whole heap in one call (0x11870E4); its size is the u32 at 0x262AC80. The world,
+both libraries, the material palette and the motion array all live in that single region, which is
+the largest single allocation in the process (512 MB with a raised setting).</p>
+<h2 id="tagfiles-navigation-meshes-and-collision-shapes">Tagfiles: navigation meshes and collision shapes</h2>
+<p>Havok data ships as tagfiles (root <code>hkRootLevelContainer</code>) that carry their own type table, so every
+class layout is read from the file itself. Every carrier parses exactly: 923 standalone <code>.hkai</code> files
+(185 types), 1,176 <code>HKAI</code> sections inside bundles, and 5,148 physics files in world-object entries
+plus 4,808 inside bundles (196 types).</p>
+<ul>
+<li><strong>Navigation meshes:</strong> <code>hkaiNavMesh</code> version 16 (208 bytes): faces, edges and vertices in world
+  space (cm). <code>worlds\retail\mtnpass\mtnpass.hkai</code> (37.5 MB) holds 713 navigation meshes, all
+  structurally exact; its main mesh has 205,467 vertices, 273,917 edges and 49,774 faces (3-14 edges
+  each); every edge's opposite is symmetric (227,694 of 227,694). The smaller meshes are the dynamic
+  navigation pieces of props (<code>Resou_09.W.dnmp</code>, <code>Store_34.NMPtop</code>).</li>
+<li><strong>Collision shapes:</strong> roots are <code>hknpCompoundShape</code>s holding <code>hknpCompressedMeshShape</code>,
+  <code>hknpConvexPolytopeShape</code> (boxes and capsules), <code>hknpSphereShape</code>, <code>hknpHeightFieldShape</code> and
+  <code>hknpConvexShape</code>, in metres; an instance places a shape as <code>p' = R (p * scale) + t</code>.</li>
+</ul>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>What registers a new material slot during play.</li>
+<li>The meaning of the unnamed floats of a material (<code>+0x3C</code>, <code>+0x44</code>, <code>+0x48</code>) and of the solver
+  values near the gravity vector.</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
