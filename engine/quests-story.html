@@ -1,0 +1,462 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Quests, story and scenes - Shadow of War engine reference</title><meta name="description" content="The campaign state store, the quest table and the quest object&#x27;s state machine, how story characters are built, betrayals and region ownership, army transforms, and the presentation system that plays scripted scenes: relays, events, sequences, actors, cameras, the scene clock and slow motion."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" class="cur" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="quests-story-and-scenes">Quests, story and scenes</h1><p class=\"lede\">The campaign state store, the quest table and the quest object&#x27;s state machine, how story characters are built, betrayals and region ownership, army transforms, and the presentation system that plays scripted scenes: relays, events, sequences, actors, cameras, the scene clock and slow motion.</p>
+<h2 id="campaign-state">Campaign state</h2>
+<p>Campaign progress is data, held in two tables owned by the GameManager (<code>GM = [base+0x26FFAA8]</code>).</p>
+<p><strong>Game variables.</strong> <code>GameData/Variables</code> holds 573 records (<code>VariableType</code> 1 int, 2 bool, 0 float:
+45 / 514 / 14, each with a default and a designer's description). The store is <code>[GM+0x6C58]</code>:
+<code>+0x00</code> entries (stride 0x18), <code>+0x08</code> count, <code>+0x10</code> the category; an entry is <code>+0x00</code> the record,
+<code>+0x08</code> the value. Entries are in record-index order. Scripts use <code>GameData.&lt;Variable&gt;:GetValue()</code> /
+<code>:SetValue(v)</code>; the method tables are registered by 0x1B46E44, 0x1B46EF4 and 0x1B46FA4 (Set,
+SetValueByRecord, Get, GetSerializeId, TestPredicate). The getter core is 0x1E154C(store, record) and
+the bool setter 0x59A1D8(store, record, value).</p>
+<p>The variable <code>StoryState</code> carries the campaign stage (its stages, from its own description): 5
+intro, 100 Act 1, 105 after the intro of the Shadow of the Past, 110 after Gondor 1, 198 / 199 Blade
+1, 200 Act 2, 205 / 210 after the Ratbag and Carnan steps, 230 after Carnan 3, 290 during the finale,
+300 after the finale.</p>
+<p><strong>Global-variable predicates</strong> (<code>Quest/GlobalVarPredicates</code>, 290 records) gate quests and scenes.
+The evaluator 0x1E1118: with <code>AndTest</code> (the default) every test must pass, otherwise any one; a
+bool test (0x1DFF70) passes when the value equals <code>RequiredValue</code>; an int test (0x1E1470) when
+<code>Min &lt;= value &lt;= Max</code> inclusive; a test without a variable fails; with no tests an AND passes and an
+OR fails. 330 of the 573 variables are read by no GameDB record (scripts may still read them).</p>
+<p><strong>Quests.</strong> The quest system is <code>[GM+0x6C60]</code>. Its table at <code>+0x18</code>: entries of 0x40 bytes,
+count at <code>+0x08</code>, category at <code>+0x10</code>; an entry is <code>+0x00</code> the <code>Quest/Quests</code> record, <code>+0x28</code> the
+placed quest object (null when its region is not loaded) and <code>+0x34</code> the completion counter
+(<code>GetIsComplete</code> 0x19F4064 -&gt; 0x1B55008: counter &gt;= <code>NumCompletesForPreReq</code>, which is 1 for every
+quest). 2,256 quests exist. <code>GetIsActive</code> 0x171A20 tests the object's state for 17. The running
+quests are listed at <code>+0x3D8</code> of the quest system.</p>
+<p>Quest availability (0x1E00C4) rejects at the first failing gate, in this order: completed /
+incomplete quest lists (<code>Quest/QuestLists</code> with <code>RequireAllMatch</code>), failed last attempt, active /
+inactive quests, any quest active, triggerable quests, preset member unlocked, day only, the
+global-variable predicate, and the rest. The rejection messages exist in the executable, but the
+logging function they are passed to (0x19C83AC) is an empty <code>ret</code> in the shipped build.</p>
+<h2 id="the-quest-object">The quest object</h2>
+<p>A mission marker is a placed quest object (vt_0x1F9DFE0): <code>+0x40</code> name, <code>+0x58</code> context, <code>+0x120</code>
+its state machine (vt_0x1F9DFB8), <code>+0x180</code> the trigger and <code>+0x188</code> the <code>Quest/Quests</code> record; the
+trigger's <code>+0x198</code> is its navigation marker.</p>
+<p>The state is the pending state (<code>+0x12C</code>) unless that is -1, otherwise the current state
+(<code>+0x128</code>); <code>SetState</code> 0x159DE4 parks the current state at -1 during a transition. The dispatcher
+0x1162D8 sends five events: 0 CanEnter, 1 CanExit, 2 Enter, 3 Update, 4 Exit.</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Inactive</td>
+</tr>
+<tr>
+<td>1</td>
+<td>SimEventEval</td>
+</tr>
+<tr>
+<td>2</td>
+<td>PreActivate</td>
+</tr>
+<tr>
+<td>3</td>
+<td>DirectActivate</td>
+</tr>
+<tr>
+<td>4</td>
+<td>FadeOut</td>
+</tr>
+<tr>
+<td>10</td>
+<td>TimeOfDay</td>
+</tr>
+<tr>
+<td>11-15</td>
+<td>Load*</td>
+</tr>
+<tr>
+<td>16</td>
+<td>InstantiateBundles</td>
+</tr>
+<tr>
+<td>17</td>
+<td><strong>Active</strong> (CanEnter = its bundles loaded; Update = the fail-distance check)</td>
+</tr>
+<tr>
+<td>19</td>
+<td>PostActive</td>
+</tr>
+<tr>
+<td>20 / 21 / 22</td>
+<td>Completed / Failed / Cancelled</td>
+</tr>
+<tr>
+<td>25</td>
+<td>Cleanup</td>
+</tr>
+</tbody>
+</table>
+<p><code>ActivateBypassTrigger</code> (body 0x19F060C) moves a quest in state 2 or lower to state 3; its handlers
+run synchronously, so it belongs on the main thread. Tribe missions fail beyond 120 m of their relay
+(the prefab script sets <code>QR:SetFailObject(QR, 15000)</code> and <code>RequestDistanceToObjectEvents(QR, 12000)</code>).</p>
+<p><strong>Teleports are queued.</strong> <code>CCharacter.TeleportToObject</code> for the player (0x658C30) pushes 0x659884
+onto the queue at <code>[base+0x2A86880]</code> and sets the character's byte <code>+0x2C21</code> until the engine
+performs it; the AI version is 0x658B5C. The character vtable's slot 109 (<code>+0x368</code>) is
+TeleportToObject and slot 110 (<code>+0x370</code>) TeleportToPoint (coordinates in xmm1-xmm3).
+<code>CCharacter.TeleportToLastKnowNavMeshPos</code> 0x19B7AA0 is the engine's own "unstuck", also queued.</p>
+<h2 id="story-characters">Story characters</h2>
+<p>A story character is a <code>Faction/PresetMembers</code> record (203 exist); a built orc carries it at
+<code>FM+0x190</code> (FactionMember; see The Nemesis system). Two paths build them: army initialisation
+(<code>Faction/Definition.PresetMembers</code>, 0xFDAC54) and quests, whose <code>PrefetchPresetFactionMembers</code> are
+built fresh at the quest's LoadFactionBundles state (0x625D98 -&gt; 0x62662C -&gt; the army of the
+current region -&gt; 0x62666C). The build sequence:</p>
+<ol>
+<li><code>ctx = 0x18DE04(FS+0x98, army)</code> (asserts on a record that is not an army: an army context is a
+   0x290-byte entry whose <code>+0x18</code> matches the army category);</li>
+<li><code>fm = 0x1C1D378(ctx, preset)</code>;</li>
+<li>if <code>0x1C1C638([ctx+0xD8], preset)</code> (the preset belongs to that army), <code>0x1BD2300([ctx+0x20], fm)</code>.</li>
+</ol>
+<p>A character created without a row starts at level <code>NoRowXPLevel - 1</code>. The build copies
+<code>GlobalVarToSetOnDeath</code> to <code>FM+0x398</code>; <code>SetDead</code> 0x626E38 sets bit 2 of <code>FM+0x508</code> and sets that
+campaign variable (for example the Bruz brothers' death variables, which gate the next brother's
+ambush). After his story ambush the character becomes a captain of the current region (row, tribe,
+role, rarity) and <code>FM+0x190</code> is cleared. A built copy is saved.</p>
+<p>A queued ambush fires only in its own region: the request's <code>+0x18</code> must equal the current
+region's faction <code>[FS+0x1B8]</code> (0x6DD92C, "The faction has changed"); otherwise it is retried.</p>
+<h2 id="betrayal-and-region-ownership">Betrayal and region ownership</h2>
+<p>The shipped data never lets the player's Overlord betray: all 18 betrayal ambush definitions list
+Overlord in <code>ExcludedRowRanks</code> (91 of 100 ambush definitions do), the betrayal job
+<code>General_Betrayal</code> picks only captain and warchief rows, and the hit-your-follower betrayal
+(<code>ImmediateBetrayal_Predicate</code>: 3 hits in 3 s, then 5 in 6 s) requires <code>IsOverlord_Not</code>. No
+Overlord-specific betrayal voice exists; a forced betrayal plays the Overlord's own personality line.
+<code>AI_BecomeHighestLevelFollower_Betrayal</code> takes a provided ambusher (<code>NeverPickAmbusherWithJob</code>),
+and <code>TriggerAmbush</code> is 0x6DDCB8.</p>
+<p><strong>Region ownership is the Overlord's follower bit.</strong> <code>Faction:GetFactionPlayerOwned</code> (stub 0x7A2800)
+calls 0x1E484C(FS, faction), which finds the region's Overlord and returns bit 27 of his <code>FM+0x508</code>,
+nothing else. An Overlord who betrays therefore takes the fortress with him. The fort-defence script
+(<code>OwnerNamedOnSpawn</code>) converts any named defender, the Overlord included, to the attackers on a
+<code>FA_FollowerBetraysPlayer</code> event.</p>
+<h2 id="army-transforms">Army transforms</h2>
+<p><code>Faction/Transforms</code> holds four records (AddOlogs, AddBerserkers, AddDefenders, AddSpearmen). The
+game applies them once, when the Shelob mission in Cirith Ungol completes (<code>mtnpass/shelob1</code>
+QuestComplete), to the Minas Ithil and Cirith Ungol factions. A transform's <code>ClassInjections</code> name a
+<code>_StructuresFactionTransformClass</code> record (OldFactionMemberJob
+<code>Quest/Jobs/Definition::PlayerKiller_Duel_Other</code>, a ChanceArray <code>[0,1,2,4,1]</code>, and
+<code>PossibleSimEvents</code> <code>Transform_IntoCaptain_&lt;class&gt;</code>); AddOlogs runs the Berserker event, because no
+Olog event ships. The binding 0x1B755EC leads to the injection 0x1C261A4 -&gt; 0x1BD2A54 -&gt; the job
+filler 0x1BD40C4, which builds a new orc only when the job names a <code>FactionMemberBuilder</code>
+(0x1BD42F1). This job names none, so it picks existing members (0xF9A320, matcher 0xF9BB20: alive,
+captain rank, no species, faction or identity filter) and seats them.</p>
+<p><strong>Return packages.</strong> The 23 <code>WillResurrect_&lt;death&gt;</code> events are the package applied to a captain who
+came back from that kind of death: <code>LevelsToAdd</code> 1, 15 actions, <code>KeepPriority</code> 30, reward lists
+<code>MaybeNewRole_CheatDeath_&lt;death&gt;</code>, <code>CheatDeath_Ambush</code> and <code>Betrayal_CheatDeath_Ambush</code>, the
+ambusher flag and the resurrected gear tag. The 31 <code>Contract_*</code> training orders mostly add a level
+and the trait, gang or mount, plus <code>Upgrade_CommonOrcToEpic</code> and <code>Contract_RemoveAnEpicTrait</code>; the
+element orders add only the element.</p>
+<h2 id="presentations-scripted-scenes">Presentations: scripted scenes</h2>
+<p>A scripted scene is a presentation. The scripts queue a <strong>relay</strong> on the player:
+<code>System:GetPlayer():QueuePresentation(DBPresentationRelay.FortAssault_Intro, overlord)</code>. The native
+call is <code>CPlayerObj::QueuePresentation</code> 0x734C30(player, relay, target) -&gt; 0x734C7C(the player's
+scene component <code>[player+0x2FC0]</code>, relay, target), which builds a message holding the relay's
+<code>Event</code>, the target handle (0x18D888) and a camera type (message <code>+0x78</code>).</p>
+<p>The chain is relay -&gt; event -&gt; sequence pool -&gt; the first sequence whose predicate passes -&gt;
+elements. Each element sets a camera, a duration or an advance hook, script keys, voice and actions;
+an action is <code>{source actor, target actor, AnimType or AudioKey}</code>. A sequence plays only if every
+predicate passes; <code>WarchiefIntro_EVT</code>, for example, tries the mounted betrayal, the betrayal, the
+failed spy chief and finally the default.</p>
+<h3 id="who-plays-which-actor">Who plays which actor</h3>
+<ul>
+<li>The target actor (<code>Target_ACT</code>, <code>Overlord_ACT</code>) is the relay's target, tested by the
+  <code>AssumedTargetPredicate</code>.</li>
+<li>Extra actors (a failed spy chief, a betrayer, a beast) come from <code>ExtraTargetPredicates</code>. The
+  binder 0x4303E4 takes the first character in a candidate list that passes its object predicate and
+  is not already bound. 0x6FD134 picks the list: relay messages (types 14 / 15) use
+  <code>[base+0x27265B0]</code>, every spawned character (it keeps corpses too: about 60 of 120 entries in a
+  battle); other messages use <code>[base+0x2728EE8]</code>, a subset of about 12.</li>
+<li>Object predicates bind actors mostly by <strong>inventory items</strong>, which the scene scripts hand out
+  (<code>AddInventoryItem</code>).</li>
+</ul>
+<p><strong>The sequence evaluator</strong> 0x3650B4 (called per pool entry by the start routine 0x43E6B8; the
+queued message is its context: subject at <code>ctx+0x88</code>, source at <code>ctx+0x80</code>) tests, in order: the
+player predicate; the source predicate (a source, when present, must pass the object predicate and
+is bound to its actor by 0x43EE28; a failure fails the branch); the assumed-target predicate (the
+subject; none fails the branch); the player's-target predicate (0x182B5F0 -&gt; 0x523B0C(<code>[player+0x2FA0]</code>)
+= the player's own combat object's current target; null while idle, which fails the branch); and
+the AI-spawn predicate last, so a spawn anchored on the target sees a source-bound victim. Field
+reads go through a per-category slot table (<code>[base+0x2645720]</code> -&gt; static slots at 0x2892A70, 0x48
+bytes each). The evaluator does not check that the target is still alive: the target test reaches
+the held-item test 0x24DF7C(<code>[char+0x2348]</code>, item) through 0x365882 -&gt; 0x2F1768 -&gt; 0x275BE0, so a
+character being removed (inventory component already cleared) faults there.</p>
+<h3 id="cameras">Cameras</h3>
+<p>The camera filter 0x4328DC compares each pool entry's <code>CameraType</code> and <code>CameraVariantRequireAny</code>
+with the active type <code>[ctx+0x38]</code> and variant <code>[ctx+0x40]</code>. The type is decided when the relay is
+queued (0x734E1C): the relay's own <code>CameraType</code> (at <code>+0x20</code> in every relay, a link to
+<code>Presentation/Predicates/Types/Camera</code>), otherwise, when <code>QuestCameraType</code> is set, the
+<code>PresentationCameraType</code> of the first running quest. Siege quests carry <code>&lt;Region&gt;_FortAssault_CT</code>,
+so the fixed fortress shots exist only inside a siege. The variant (A or B, the two sides an assault
+can start from) comes from the sequence's <code>CameraVariance</code> picker. Fixed frames are absolute world
+positions in cm (<code>Presentation/WorldFrame</code>, 694 records with <code>CameraPos</code> and <code>LookAtPos</code>); their
+prefixes name the regions: DS Lithlad, IS Nurnen, MP Cirith Ungol, SM Seregost, VC Gorgoroth.</p>
+<h3 id="the-scene-clock-and-slow-motion">The scene clock and slow motion</h3>
+<p>Every element duration is a timer at <code>+0x288</code> of the running presentation, on the clock
+<code>[base+0x2702578]</code> (0x37B784 -&gt; 0x37BCE4; expiry is bit 1 of <code>pres+0x6C</code>). The engine keeps five
+scaled clocks, which slow motion drives as channels (0x5CF888): 0 the world <code>[base+0x2702598]</code>, 1
+the player <code>[base+0x2702548]</code>, 2 the combat companion <code>[base+0x2702570]</code>, 3 the world UI
+<code>[base+0x2702558]</code> and 4 presentations <code>[base+0x2702578]</code>. 0x5CF834 writes a clock's numerator,
+denominator and scale at <code>[clock+8]+0x28 / +0x2C / +0x30</code>; 0x5CEBB4 resets it to 1/1. A slow-motion
+instance stores channel c as <code>{+0x44 enabled, +0x48 scale} + c * 0xC</code>. Period and ramp-up timers run
+on <code>[base+0x2702550]</code> (UI: <code>[base+0x2702588]</code>), which slow motion never scales.</p>
+<p>The <strong>slow-motion manager</strong> is <code>MainScene+0x7A8</code> (ticked by the scene tick): requested instances at
+<code>+0x00 / +0x08</code>, the running one at <code>+0x38</code> (the update 0x5CF55C picks the lowest priority at
+<code>instance+0x80</code>; requests go through 0x5D08B8). An instance copies its <code>SlowMo</code> record's scales at
+Start (0x5CEC10), and the manager re-runs Start whenever its current instance changes. A <code>SlowMo</code>
+record's enum pair (1, N) means N times slower (332 records; <code>KillCam_13x_SM</code> = (1, 13)).</p>
+<p>Advance hooks (<code>Presentation/AdvanceHook</code>, 122 records) are <code>{Actor, Hook}</code> with hook 0 FacialEnd,
+1 DialogEnd, 2 AttackEnd and 5 AttackStart. They are raised by 0x42DA2C (via 0x42DA18 and the
+attacker's presentation link <code>[obj+0x100]</code>, from the attack path 0x2E0520) and matched by
+0x42FFEC(pres, type, actor) against the element's copied hook (<code>pres+0x1C0</code>). <code>AdvanceOnTargetDeath</code>
+(0x37B6C4) advances when the target actor's binding returns null; a victim's dead flag and binding
+drop as the execution starts. Element camera definitions, durations and slow motion are copied when
+the presentation starts (0x5D0AB4).</p>
+<p>A presentation can take the camera and hold the player (<code>CommandSet PresentationDisablePlayer</code>);
+0x17A13AC stops the player's scene component.</p>
+<h3 id="execution-variants">Execution variants</h3>
+<p>Which animation a sync kill plays is a variant table: <code>AnimationData.AnimOverridePicker</code> /
+<code>AnimOverrides</code> -&gt; <code>Combat/AttackAnimOverride</code> -&gt; an entry chosen by the attacker's weapon class
+(0x2D5430, which checks the source's character type <code>[combat+0x60]</code> and weapon type per entry) -&gt;
+<code>_StructuresCombatAttackAnimOverride</code> variants (Weight, source and target animations, the source's
+weapon animation, PresentationCameraType, SeverActionTarget and <code>Pred_*</code> gates). The chooser 0x2D5828
+keeps variants with weight &gt; 0 that pass every gate, then picks at random by weight (0x1B3B90) among
+those not played within <code>RecentAttackWindow</code>; when all are recent it plays the oldest, so one passing
+variant always plays. Olog entries are selected only by weapon type (<code>SourceRequiredWeaponType =
+WeaponTypeList/Olog_All</code>), so an olog holding an orc-typed weapon item draws an orc animation.</p>
+<p><code>Combat/Sync</code> sets both characters' scale (0x11498C8) to <code>SourceModelScaleOverride</code> /
+<code>ModelScaleOverride</code>; with <code>UseMinimalScaling</code> it keeps only their difference, split half each
+(0x202E8F8).</p>
+<h2 id="fortress-scenes">Fortress scenes</h2>
+<p>A siege is staged by the fortress layers' scripts with presentations and animate tasks.</p>
+<table>
+<thead>
+<tr>
+<th>Scene</th>
+<th>Relay</th>
+<th>Cameras</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Warchief walk-out intro (<code>WarchiefIntro_EVT</code>)</td>
+<td><code>WarchiefIntro_RL</code></td>
+<td>follow the actor</td>
+</tr>
+<tr>
+<td>Fort defence: the Overlord arrives (<code>FortDefense_OverlordArrival_EVT</code>)</td>
+<td><code>FortDefense_Overlord</code></td>
+<td>follow the actor; the voice line rides the presentation, so any orc delivers it</td>
+</tr>
+<tr>
+<td>Talion's victory walk-out (<code>FortOutro_TalionBalcony_EVT</code>)</td>
+<td><code>FortAssault_Outro</code> (<code>_Conquest</code> without the speech)</td>
+<td>a rig on Talion's clip</td>
+</tr>
+<tr>
+<td>Keep throne showdown (<code>Overlord_Showdown_EVT</code>)</td>
+<td><code>FortAssault_OverlordKeep</code></td>
+<td>a fixed throne view per fortress, then follow</td>
+</tr>
+<tr>
+<td>Keep-top intro: the Overlord executes the failed spy chief (<code>FortAssault_Intro_Overlord_EVT</code>)</td>
+<td>none (only the <code>NextEvent</code> of the walk-out)</td>
+<td>fixed fortress frames</td>
+</tr>
+<tr>
+<td>The Witch-king makes an Overlord kill himself (<code>She3_OverlordSuicide_EVT</code>)</td>
+<td>its relay has no event</td>
+<td>follow the actor</td>
+</tr>
+<tr>
+<td>Spy-chief reveal explosion (<code>SpychiefExplosion_0x_EVT</code>)</td>
+<td><code>FA_RevealSpy_0x</code></td>
+<td>look at the target</td>
+</tr>
+<tr>
+<td>E3 demo fortress scenes (<code>DEMO_*</code>)</td>
+<td><code>FAD_*</code></td>
+<td>E3 rigs (cut content)</td>
+</tr>
+</tbody>
+</table>
+<p>85 of the 860 <code>Presentation/Events</code> belong to fortress assaults and defences, with 103 relays.
+Script keys (<code>FA_Intro_UnhideOverlord_SK</code>, <code>FD_OV_Arrive_DoorOpen_SK</code> ...) do not stop a scene;
+they are signals the siege layer's scripts listen to.</p>
+<p><strong>The keep-top execution</strong> (<code>FortAssault_Intro_Overlord_EVT</code>, sequence "Spychief Failed"): a fort
+shot and a keep shot; scale set on both actors; the attack <code>FA_OV_Spychief_Walkout_AN</code> (clip
+<code>OrcOV_Orc_Sync_Spyfail_A</code>, sync <code>Sync_FA_Intro_OV_Spychief_Fail</code>: the victim is aligned to the
+Overlord, off-navmesh movement allowed, <code>DmgForm_All_Instakill</code>); the voice
+<code>PR_FA_Intro_Ov1_SpyFound_Bundled</code>, a kill camera, the crowd speech; then <code>NextEvent</code> to the
+followers' scene. The siege script dismounts and hides the Overlord, teleports him and the spy chief
+to the balcony markers, gives the spy chief <code>ScriptItem_DoNotExplodeOnDeath</code> and
+<code>SetNeverSimulate(true)</code>, and queues the relay when the player arrives.</p>
+<p>Actor items and their save flags:</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Saved</th>
+<th>Binds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FortIntro_Overlord</code></td>
+<td>no</td>
+<td>the Overlord (intro, keep showdown)</td>
+</tr>
+<tr>
+<td><code>FA_SpyChiefFail_IT</code></td>
+<td>yes</td>
+<td>the failed spy chief</td>
+</tr>
+<tr>
+<td><code>Warchief_Betrayed_IT</code></td>
+<td>yes</td>
+<td>the betrayed warchief</td>
+</tr>
+<tr>
+<td><code>Warchief_SpychiefBetrayer_IT</code></td>
+<td>yes</td>
+<td>the betrayer</td>
+</tr>
+<tr>
+<td><code>ScriptItem_DoNotExplodeOnDeath</code></td>
+<td>yes</td>
+<td>(spy-chief safety)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Markers</strong> (cm, from the fortress layers):</p>
+<table>
+<thead>
+<tr>
+<th>Fortress</th>
+<th>Balcony <code>pBalcony.tpOverWithSC</code></th>
+<th>Throne <code>RZKeepLayout.tpOverKeep</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gorgoroth</td>
+<td>851.0, 6636.5, 7065.0</td>
+<td>849, 2395, -798.5</td>
+</tr>
+<tr>
+<td>Nurnen</td>
+<td>-28927.0, 5028.5, 64966.0</td>
+<td>-28938, 798, 72818</td>
+</tr>
+<tr>
+<td>Cirith Ungol</td>
+<td>-1786.0, 44887.5, 37240.0</td>
+<td>-1808, 40665, 45081</td>
+</tr>
+<tr>
+<td>Seregost</td>
+<td>-1795.0, 6178.5, 13446.0</td>
+<td>-1789, 1952, 21298</td>
+</tr>
+<tr>
+<td>Lithlad</td>
+<td>-784.0, 10614.5, 14543.0</td>
+<td>-799, 6345, 22398</td>
+</tr>
+</tbody>
+</table>
+<p>The throne is an AI node in the fortress layer (<code>RZKeepLayout.nKeep</code>, smart object
+<code>SO_OvrlrdSitting</code>, tag <code>FA_Overlord</code>); the Overlord's spawn job walks to it and sits. Each throne
+lies 47-57 m down the hall from its fortress's throne-view camera, on its axis.</p>
+<h3 id="animate-tasks">Animate tasks</h3>
+<p>The scripts animate any NPC through smart objects, without a presentation or a camera:</p>
+<table>
+<thead>
+<tr>
+<th>Binding</th>
+<th>Native</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AnimateSmartObject</code></td>
+<td>0x1A8AC48</td>
+<td>(npc, <code>AI/SmartObjects</code> record)</td>
+</tr>
+<tr>
+<td><code>AnimateSmartObjectWithTarget</code></td>
+<td>0x1A8AE68</td>
+<td>(npc, smart object, target)</td>
+</tr>
+<tr>
+<td><code>AnimateSmartObjectPickerWithTarget</code></td>
+<td>0x1A8ACE4</td>
+<td>(npc, <code>AI/SmartObjectPicker</code>, target)</td>
+</tr>
+<tr>
+<td><code>AnimateSmartObjectPickerLooping</code></td>
+<td>0x1A8AC8C</td>
+<td></td>
+</tr>
+<tr>
+<td><code>AnimateClear</code></td>
+<td>0x757F50</td>
+<td>(npc, check dead)</td>
+</tr>
+<tr>
+<td><code>Ambient*</code> variants</td>
+<td>0x1A8AA20 - 0x1A8ABCC</td>
+<td>interruptible versions</td>
+</tr>
+</tbody>
+</table>
+<p>Each refuses a dead NPC and creates an AI animate task. Useful smart objects:
+<code>Bip_Prisoner_Hostage_Kneeling_Looping</code> (kneel as a hostage); <code>Bip_KillHostage_Single</code> (attack type
+<code>KillHostage_Single</code>: head chop, head rip, neck break, gut stab or a shot, chosen by weapon; each a
+sync where the executioner walks to the victim, victim filter <code>P0070_BipedsExceptSlaves</code>; a Nazgul
+variant exists); <code>Picker_Bip_HostageExecute_(Un)Sheathed</code> (executions by species and weapon);
+<code>SO_OvrlrdSitting</code> (the throne), <code>SO_ChantLoop</code> (the siege chant), <code>Bip_Cheer_Looping</code>,
+<code>TrlCave_Sitting_Looping</code> and <code>DEMO_Overlord_SitChair</code>. Both characters of an execution must share a
+walkable surface.</p>
+<p><code>CCharacter::AddInventoryItem</code> 0x1E6B88(char, item) gives an item (0x1C01E0(<code>[char+0x2348]</code>, item, 1)
+plus a refresh 0x114E0C8); <code>RemoveInventoryItem</code> is 0x4F12B4. <code>FM+0x48</code> is a FactionMember's spawned
+character.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>The flag bytes at <code>+0x30..+0x3F</code> of a quest-table entry.</li>
+<li>Whether the warchief intro's lines are personality dialogue (they did not play on a plain grunt).</li>
+<li>What the 56 placeholder movies of the third story DLC stand in for at run time (see Audio and video).</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
