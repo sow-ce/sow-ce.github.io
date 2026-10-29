@@ -1685,7 +1685,14 @@ eliminated: the henchmen link effects 0x18316FC / 0x183191C skip such a member.<
   member.</li>
 <li>Whether <code>FS+0x21C</code>, the cheat-death mark counter, is a running total and who reads it (it read 375 with
   two returns pending).</li>
-<li>What triggers the cancel pass 0xF9BA70 that strips bit 4 from dead members.</li>
+<li>When exactly the cancel pass 0xF9BA70 runs relative to a save and a load. Its caller 0xFA0D30 is
+  reached from two places: the faction manager's part of the game document (0x1B5D254, keys
+  <code>TimeStamp</code>, <code>Resurrected</code>, <code>FactionPool</code>, <code>FactionRecord</code>, <code>FactionRole</code>, <code>AmbushMgr</code>,
+  <code>GauntletMgr</code>, <code>MonumentMgr</code>), which the document routine 0x1C5B4C4 runs together with the quest
+  manager, the game variables and the inventory, and the online-fortress setup's finalisation
+  (0x1B40CAC -&gt; 0x1B5D368, stage <code>SETUP_FINALIZE_VALIDATE_DATA_INTEGRITY</code>). The direction of the
+  document routine (write, read or both) is not traced; the second caller 0xF665F0 has no direct
+  caller.</li>
 <li>Whether a queued ambush request's retry count survives a save and reload.</li>
 <li>Which loading screens rebuild the army contexts and members: values changed in the mercenary army's
   context and records survived two region changes.</li>
