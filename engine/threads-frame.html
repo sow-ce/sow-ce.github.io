@@ -1,0 +1,485 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Threads and the frame - Shadow of War engine reference</title><meta name="description" content="Every engine thread and its routine, how a thread is started, what the main thread does each frame and in what order, and how the render thread consumes the main thread&#x27;s commands, renders the scene and presents."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" class="cur" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="threads-and-the-frame">Threads and the frame</h1><p class=\"lede\">Every engine thread and its routine, how a thread is started, what the main thread does each frame and in what order, and how the render thread consumes the main thread&#x27;s commands, renders the scene and presents.</p>
+<h2 id="the-threads">The threads</h2>
+<p>The game runs about 94 threads in the world. 35 belong to the executable, about 33 to the graphics
+driver, and the rest to the C runtime, the OS, Bink (5), XAudio2 and the input stack. The engine
+names its threads (<code>GetThreadDescription</code> returns the name); 28 carry a name.</p>
+<table>
+<thead>
+<tr>
+<th>Thread</th>
+<th>Routine (RVA)</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MainThread</td>
+<td>starts at 0x73D1310, loop 0xC24DB0</td>
+<td>the game frame</td>
+</tr>
+<tr>
+<td>RenderThread</td>
+<td>0x1C8F158</td>
+<td>consumes the render command ring, renders, presents</td>
+</tr>
+<tr>
+<td>FXBackgroundThread</td>
+<td>0x116B11C</td>
+<td>effect work</td>
+</tr>
+<tr>
+<td>GameAudioMgrThread</td>
+<td>0x181F638</td>
+<td>the engine's audio manager</td>
+</tr>
+<tr>
+<td>HavokWorkerThread1-3</td>
+<td>0x11AFE58 (shared)</td>
+<td>Havok task workers</td>
+</tr>
+<tr>
+<td>EngineAnimationJobThread1-3</td>
+<td>0x114CBA8 (shared)</td>
+<td>animation pose jobs</td>
+</tr>
+<tr>
+<td>ResourceOpenThread / LoaderThread / ParserThread</td>
+<td>0x11AECC8 / 0x11AEE50 / 0x11AEF58</td>
+<td>the three resource stages (see Resource streaming)</td>
+</tr>
+<tr>
+<td>ZLibDecompressTask x2, ZLibDecompressThread</td>
+<td>0x11AD438, 0x11AD440</td>
+<td>decompression</td>
+</tr>
+<tr>
+<td>StorageRequestThread</td>
+<td>0x11C6DB0</td>
+<td>storage requests</td>
+</tr>
+<tr>
+<td>VideoClipRequestThread</td>
+<td>0x11C7488</td>
+<td>video clip requests</td>
+</tr>
+<tr>
+<td>DLCPackageMountingThread</td>
+<td>0x11ABCF8</td>
+<td>mounting DLC packages</td>
+</tr>
+<tr>
+<td>PathSystemRegionThread, PathFindingThread</td>
+<td>0x114AEF0, 0x11E1EA8</td>
+<td>navigation</td>
+</tr>
+<tr>
+<td>AIThread</td>
+<td>0x116A3BC</td>
+<td>AI background work</td>
+</tr>
+<tr>
+<td>FireSim</td>
+<td>0x1A3D998</td>
+<td>fire simulation</td>
+</tr>
+<tr>
+<td>MotionSystem</td>
+<td>0x114B018</td>
+<td>motion</td>
+</tr>
+<tr>
+<td>ContextActionBuilderThread</td>
+<td>0x116C430</td>
+<td>builds traversal context-action lines (see World)</td>
+</tr>
+<tr>
+<td>GamepadBufferThread</td>
+<td>0x11537D8</td>
+<td>XInput polling</td>
+</tr>
+<tr>
+<td>OnlineServiceThread, MovieIOThread</td>
+<td>-</td>
+<td>online services, movie I/O</td>
+</tr>
+</tbody>
+</table>
+<p>Seven engine threads carry no name; the strings next to their creation identify them: Wwise's
+<code>AK::EventManager</code> (0x1157C74), <code>AK::IOThread</code>, <code>AK::BankManager</code> and <code>AK Suspended</code>, the
+<code>AsyncFunctionCallerThread</code> of the online API layer (0xA02CB0), a start-up helper (0x116BBF0) and one
+thread created from the protected code region.</p>
+<p>In the world, in combat, the render thread uses about one full core (970-1000 ms of CPU per
+second), the main thread about half a core, and the two busiest driver threads about 360 and 200 ms
+per second. The FX background thread, the audio thread, Havok worker 3 and the Wwise event manager
+each use 16-80 ms per second; the rest are idle.</p>
+<h3 id="how-a-thread-is-started">How a thread is started</h3>
+<p>An engine thread is an object of a small class with 11 virtual methods: vf0 the destructor, vf1 the
+shared <code>Start</code> 0x529500, vf8 the thread's name, vf9 its start stub and vf10 its stack size (the AI
+thread, vt_0x22FF668: "AIThread", 0x1AEA674, 0x10000). <code>Start(this, routine, arg)</code> stores the
+routine at <code>+0x18</code>, the argument at <code>+0x20</code> and the name at <code>+0x28</code>, creates the OS thread suspended
+on the stub (handle at <code>+0x08</code>), applies priority and affinity settings and resumes it. Every stub
+is a jump to the trampoline 0x797DD4, which names the OS thread and calls <code>routine(arg)</code>. Every
+engine thread's stack therefore ends at 0x797DD4.</p>
+<h2 id="the-main-thread">The main thread</h2>
+<p>The main loop is 0xC24DB0. Each iteration either does the frame's work under 0x2D47E0 or waits in
+0x3807E8 -&gt; 0x380FAC -&gt; 0x38105C (<code>MsgWaitForMultipleObjectsEx</code>).</p>
+<h3 id="where-the-time-goes">Where the time goes</h3>
+<p>Sampled during play (4,000 samples at 400 Hz, every walk unwound to the thread's root 0x8C3E5C):</p>
+<table>
+<thead>
+<tr>
+<th>Share</th>
+<th>Frame</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>83.6%</td>
+<td>0x2D47E0 -&gt; 0x1F68D8</td>
+<td>the frame's work</td>
+</tr>
+<tr>
+<td>51.4%</td>
+<td>0x1A864C</td>
+<td><code>CGameClientShell</code> vf1, the per-frame client update</td>
+</tr>
+<tr>
+<td>16.8%</td>
+<td>0x6B31DC -&gt; 0x2FA064 -&gt; 0x2F94F0</td>
+<td>the object update scheduler running each NPC's update (<code>NPC</code> vf18; below)</td>
+</tr>
+<tr>
+<td>14.9%</td>
+<td>0x1F6928 -&gt; 0x1F6958</td>
+<td><code>MainScene</code> vf10, the scene tick (below)</td>
+</tr>
+<tr>
+<td>12.0%</td>
+<td>0x3807E8</td>
+<td>waiting</td>
+</tr>
+<tr>
+<td>6.1%</td>
+<td>0x1F7304</td>
+<td>the AI world tick (inside the scene tick)</td>
+</tr>
+<tr>
+<td>5.4%</td>
+<td>0x3365A4</td>
+<td><code>MainScene</code> vf1, render submission (the HUD's <code>CUIMgr::Render</code> inside it)</td>
+</tr>
+<tr>
+<td>5.0%</td>
+<td>0x6528B8</td>
+<td>Havok physics (<code>TtPhysics</code>)</td>
+</tr>
+<tr>
+<td>2.7%</td>
+<td>0x1B0EE4</td>
+<td>animation pose jobs drained on the main thread</td>
+</tr>
+</tbody>
+</table>
+<p>The children of <code>CGameClientShell</code> vf1 run in this order (775 frames, 601 with at least two
+children sampled): 0x300CFC (vt_0x22C0BB0::vf1), 0x1A83AC -&gt; vt_0x2301178::vf14 0x1A8490 -&gt;
+0x187A38 (a per-frame client update that fans out to many systems, the animation clip trackers among
+them), 0x1776B30, 0x1609AC, 0x47C1D4, 0x51C40C, 0x427B74, then Havok memory upkeep 0x709FC8.</p>
+<p>When the game window loses focus the simulation pauses: the world clock stops, the per-character
+update disappears, the scene tick drops to 5.8% of samples and the main thread spends 64-68% of
+its time waiting, while the renderer keeps drawing the paused scene at full frame rate.</p>
+<h3 id="the-object-update-scheduler">The object update scheduler</h3>
+<p>Game objects are updated by a per-object countdown, not by a character loop. 0x2D47E0 passes
+<code>[base+0x26FF050]</code> to 0x1F68D8, which skips the walk while the object server <code>[base+0x26FF058]</code>
+reports itself busy, then calls 0x6B31DC on the update manager <code>U = [base+0x26FF050]+0x3E0</code>
+(vt_0x22C0050). 0x6B31DC drains a queue at <code>U+0x690</code> (0x4CA9F8) and then calls <strong>0x2FA064</strong>:</p>
+<ul>
+<li>0x2FA064 walks the object sets linked from <code>U+0x18</code> (node at <code>set+0x18</code>, next at <code>node+0x08</code>;
+  130 sets in a loaded region). For each set it takes the set's due list <code>set+0xE8</code> and hands every
+  object on it to 0x2FA10C.</li>
+<li>0x2FA10C subtracts the object's time-domain step <code>[[obj+0x88]+0x14]</code> from its countdown
+  <code>obj+0xD0</code>. If the countdown is still above zero the object goes back on the list; otherwise it
+  <strong>tail-jumps to the object's vf18, its Update</strong> (vtable <code>+0x90</code>), which is why vf18 appears directly
+  under 0x2FA064 in an unwound stack.</li>
+<li><code>SetNextUpdate</code> 0x59AB3C(object, delay) stores the delay in <code>obj+0xD0</code> and links the object into
+  its set's due list (<code>[obj+0x58]+0xE8</code>). It has 119 callers and 36 tail calls, many of them other
+  classes' Update methods.</li>
+</ul>
+<p>The <strong>NPC class</strong> is vt_0x1FB3640 (the engine's class descriptor <code>[[obj+0x78]]+0</code> reads <code>NPC</code> on 98 of
+98 objects; vt_0x1FB3AA8 is the same object's secondary vtable). Its Update 0x2F94F0 first re-arms
+itself with a delay of 1e-7 s (the constant at 0x202EA30), meaning "again next frame", then calls
+0x2F9478, shared with the player's Update 0x6E92F8. That runs one of: vf121 for a dead body (the
+ragdoll and body-cleanup path), vf122 in a special client state, or <strong>vf119 0x2F79A4, the AI update</strong>.</p>
+<p>One object set holds every character in the spawn manager (101 of 101, 98 of 98, 124 of 124 and 163
+of 163 in four reads), and every one is re-armed at 1e-7 every frame, at distances from 0 to 467 m.
+Nothing on the path reads a position or a distance: <strong>there is no distance-based update rate for
+NPCs</strong>. Pausing works through the time source: while the game is paused its step is 0.0 (102 of 102
+characters), so no countdown reaches zero and no NPC Update runs. The time source <code>[obj+0x88]</code> is
+the state of one of the engine's scaled clocks: NPCs use the world clock and the player the player
+clock (see Engine core), which is also how slow motion reaches their updates. The other objects on due lists (spawn closets, look-at and quest triggers,
+scenario-override volumes, quests, birds, spiders, script timers) together take under 0.3% of the
+main thread.</p>
+<p><strong>Cost in play</strong> (three runs of 15, 15 and 20 s at 400 Hz, 1,220-1,857 presented frames, each sample
+attributed to the object whose Update was on the stack): the scheduler takes 16.3-17.3% of the main
+thread and the NPC Update 1.52-1.89 ms per frame, <strong>12-14 µs per NPC per frame</strong>. The cost does not
+fall with distance (beyond 200 m: 10.7-11.4 µs per NPC); it follows what the NPC is doing (idle 9.9
+µs, following a route 12.7, attacking 26.4, recoiling 20.8). Inside vf119, in call order:</p>
+<table>
+<thead>
+<tr>
+<th>Share of the NPC update</th>
+<th>Call</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>26%</td>
+<td>vf113 -&gt; 0x11B230</td>
+<td>target selection: combat-threat scoring 0x2FA99C (about 7%) and a scan of the 27 target-select pickers in the table <code>[base+0x26FFCC0]</code> (0x11BF60, 9-12%)</td>
+</tr>
+<tr>
+<td>10-12%</td>
+<td>vf112 -&gt; 0x11AEB8</td>
+<td>aim and look-at trackers</td>
+</tr>
+<tr>
+<td>4.5-7%</td>
+<td>0x2F5E6C</td>
+<td>movement and path following</td>
+</tr>
+<tr>
+<td>33-38%</td>
+<td>0x1919C8</td>
+<td>the plan tree tick (see AI): selection 4-5%, running steps 29-33%, of which the Attack step's attack picking 0x4612D8 alone takes 5-12%</td>
+</tr>
+<tr>
+<td>2%</td>
+<td>0x2F5EB4</td>
+<td>collision avoidance radius</td>
+</tr>
+<tr>
+<td>3-4%</td>
+<td>0x2FD960</td>
+<td>the NPC's services, each on its own timer against the world time</td>
+</tr>
+<tr>
+<td>4%</td>
+<td>0x2F6420 (tail)</td>
+<td>context actions, perception target overrides, post-update state</td>
+</tr>
+</tbody>
+</table>
+<p>Morale, talk, awareness markers and the rest take under 3% each.</p>
+<h3 id="the-scene-tick">The scene tick</h3>
+<p><code>MainScene</code> is a static singleton <code>[base+0x26FFAB0]</code> (vt_0x1F68920). Its vf10 0x1F6958 is the scene
+tick; it calls, in this order (each call with the object it runs on; <code>scene</code> = the MainScene object,
+<code>GM</code> = the GameManager <code>[base+0x26FFAA8]</code>):</p>
+<ol>
+<li><code>scene+0x778</code> AI pre-tick 0x1F73DC, then the <strong>AI world tick</strong> 0x1F7304</li>
+<li><code>scene+0x788</code> 0x1F7240</li>
+<li><code>scene+0x798</code>: game mode 0x11FA58, projectiles that stick or fly 0x1F721C, weapon-mode item
+   givers 0x1F6EC4, and 0x4C6050, the list of synchronised / attached characters (it clears each
+   NPC's AI-suspend byte <code>npc+0x2C21</code>)</li>
+<li><code>scene+0x7D8</code> render restart 0x4E1538</li>
+<li><code>GM+0x6C68</code> the faction system's fort-assault composition 0x1E2BC4, then <code>GM+0x6CC8</code>
+   fort-assault setup 0x4F4BDC</li>
+<li><code>GM+0x6D30</code> loading progress 0x1E3E78 (it reports <code>ENTER_WORLD_HANG_DETECTED</code>)</li>
+<li><code>scene+0x7E8</code> bundle unloads and world UI 0x16D9CC, <code>scene+0x868</code> the character bundle manager
+   0x4B4FFC, <code>scene+0x7E0</code> presentation bundles 0x5211DC</li>
+<li>the collision global 0x2FD3B8, <code>scene+0x7A8</code> slow motion 0x5CF55C, <code>scene+0x7B0</code> dynamic object
+   groups 0x5AC9AC, <code>scene+0x7D0</code> resurrection and ambient areas 0x6978C8</li>
+<li><code>GM+0x6D28</code> gifts and world items 0x6EBE70, <code>GM+0x6C60</code> the quest system 0x4A859C, <code>GM+0x6D98</code>
+   weather 0x43C574</li>
+<li>world reset 0x1789F0C, then <code>GM+0x6D90</code> 0x179F64 (it walks a vector of objects and calls
+    0x179F98 on each one whose byte <code>+0x252</code> is set)</li>
+<li><code>GM+0x6D08</code> the script system 0x6D19B4</li>
+</ol>
+<p>The tick makes 52 calls in all, with <code>QueryPerformanceCounter</code> timing around the AI world.</p>
+<p>The <strong>AI world tick</strong> 0x1F7304 runs on <code>W = scene+0x778</code>: battle-node capture <code>W+0x88</code> 0x6546E8,
+smart objects <code>W+0x10</code> 0x6B5258, AI core <code>W+0x18</code> 0x6EE15C, NPC summon and dismiss <code>W+0x08</code>
+0x1234EC, <strong>fight circles</strong> <code>W+0x28</code> 0x6DE538, transient alarms <code>W+0x38</code> 0x607838, AI core
+<code>W+0x40</code> / <code>+0x48</code> 0x48C7E0 / 0x6870FC, find-player <code>W+0x70</code> 0x404EEC, the buddy / follower system
+<code>W+0xB0</code> 0x3608C8, AI core <code>W+0xB8</code> 0x6D5394, the spawn-scenario module <code>W+0xA8</code> 0x378404 and AI
+core <code>W+0x90</code> / <code>+0x98</code> 0x72ABE4 / 0x1F5C94. The AI world also holds the spawn manager (<code>W+0x30</code>)
+and the alarm system (<code>W+0x38</code>); see AI.</p>
+<h2 id="the-render-thread">The render thread</h2>
+<p>The render thread is a static object at 0x267E338 (thread class vt_0x1FFD4D0: vf8 name
+0x7F9AE0, vf9 stub 0x7F9AF0). Its routine 0x1C8F158 runs a one-time initialisation 0x1C8ECB8 (it
+registers the world-mesh, world-client, texture-animation and CPU-texture resource types and the fog
+overlay material), signals that it is ready, then loops <code>while (0x1C8EDE0(queue)) {}</code>: it is a
+command processor.</p>
+<h3 id="the-command-ring">The command ring</h3>
+<p>The queue lives at 0x272E8D8; its state block at <code>+0x38</code> holds:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x08</td>
+<td>ring begin</td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td>ring end (a 2 MB ring)</td>
+</tr>
+<tr>
+<td>+0xD0</td>
+<td>read cursor</td>
+</tr>
+<tr>
+<td>+0xD8</td>
+<td>write cursor</td>
+</tr>
+<tr>
+<td>+0x120</td>
+<td>non-zero stops the loop</td>
+</tr>
+<tr>
+<td>+0x128, +0x130</td>
+<td>counters</td>
+</tr>
+</tbody>
+</table>
+<p>A command is a bound call <code>{+0x00 thunk, +0x08 object, +0x10 method, +0x18 arguments}</code>. The
+executor 0x188E08 calls the qword at the read cursor with <code>rdx = &amp;cursor</code>; the thunk advances the
+cursor by its own fixed size (<code>mov r8,[rdx]; lea rax,[r8+N]; mov [rdx],rax</code>, 35 sizes in use) and
+tail-calls <code>method(object, arguments)</code>; the executor then aligns the cursor to 8 bytes. The ring can
+therefore be walked exactly from its start to the write cursor.</p>
+<p>A frame is 360-371 commands from 44 distinct methods. Across two snapshots (24,944 commands / 68
+frames and 18,169 / 49 frames) every frame issued its 22-23 once-per-frame commands in the same
+order. In order: setup 0x485420; 0x258720 (28 per frame); 0x177D7C (53 per frame, shader-constant
+uploads); three calls on the surface-overlay renderable (vt_0x1FFECD8: 0x70C0E0, 0x7146A0, 0x72FDE0;
+the rain / fire overlay pass); 0x5E9448 (53); a once-per-frame block with terrain 0x484844; a long
+interleave of per-view work on objects of vt_0x1DAADB8; weather material overrides 0x1B7A40 /
+0x1B7A94; the <strong>scene command</strong> (below); light-volume instancing 0x6C74A8
+(<code>DrawIcosahedronInstancesIndirect</code>); 13 tiled-lighting tile updates (0x1791CC <code>BufferTileIndices</code>
+with 0x247108); texture bindings 0x33651C; exposure 0x1E8150 (<code>Lith.ExposureAdjustSpeed</code>,
+<code>Lith.BlowOutWeight</code>); frame timing 0x6D5908; <strong>Present</strong> 0x38052C; Bink video 0x3322BC (it walks
+the live-video list 0x267E400); 0x4C32E8 (a call into the engine interface's render service); and
+high-resolution texture streaming 0x3807E4.</p>
+<h3 id="where-the-render-thread-s-time-goes">Where the render thread's time goes</h3>
+<p>Sampled during play (4,000 samples at 500 Hz; every stack unwound to the thread trampoline):</p>
+<pre><code>0x797DD4 trampoline -&gt; 0x1C8F158 render routine -&gt; 0x188DB0 -&gt; 0x188E08 executor   (99.8%)
+  0x1EE210 scene command                                                          79-85%
+    0x6EC61C -&gt; 0x116B694 -&gt; 0x1EAA54 (k_fSampleScale) -&gt; 0x1EABC4
+      0x1EAF30 (animation-side work), 0x255CF8, 0x1EB038      first, in this order
+      0x33BCB8 scene passes                                                       69-78%
+        0x33CD60 main pass list                                                   56-63%
+          0x66E93C -&gt; 0x1EE4F8 -&gt; 0x387858   mesh pass A                          24-30%
+          0x255920, 0x185410
+          0x33783C  GPU particles                                                  4-4.5%
+          0x384640  light accumulation (point-light compute 0x4D951C runs here)
+          0x1F02E8 -&gt; 0x1EE3E4 / 0x25619C    mesh pass B                          19-20%
+        0x1021250   vegetation displacement and grouped GPU particles             3-4.5%
+        0x33740C    post-processing (motion blur, depth of field, blur, vignette)
+        0x339D6C    colour-grading LUT
+        0x1EDE58    object-colour compute                                         6-7%
+  0x38052C Present                                                                 7-10%
+</code></pre>
+<p>The order inside each node was recovered by sampling: within one frame (one ring position), the
+children that appear first are the ones that run first. For <code>0x33CD60</code>, 805 frames (every one with at
+least two children sampled) give: 0x66E93C first, then 0x255920, 0x185410, the GPU particles
+0x33783C, the light accumulation 0x384640, and 0x1F02E8 last. In <code>0x33BCB8</code>, 0x33CD60 runs first,
+0x1021250 next and the object-colour compute 0x1EDE58 last. In <code>0x1EABC4</code>, the three small
+children run before 0x33BCB8 in all 303 frames where two were sampled. The tree and the order are the
+same whether the world is playing or paused.</p>
+<p>What identifies each branch: the GPU particle branch references
+<code>StandardGPUParticle.Compute</code>, <code>StandardGPUParticle_ParticleBuffer0/1</code> and
+<code>CustomGPUParticle_DrawIndirect / ParticleSource / ParticleDest</code>; the vegetation branch
+<code>VegetationPatch_InstanceBuffer_DisplaceInstances</code> and <code>GroupedGPUParticle_Source / DestDrawIndirect</code>;
+the post-processing branch <code>tNeighborVelocityBuffer</code>, <code>tMaxVelocityBuffer</code>, <code>k_fNearDOFParams</code>,
+<code>k_fFarDOFParams</code>, <code>k_fBoxBlurParams</code> and <code>k_fVignetteParams</code>. Both mesh passes draw through the
+same indexed-draw path (input assembly 0x17F1B0, <code>DrawIndexed</code> 0x17F5A4, the indirect mesh draw
+0x17DC48).</p>
+<h3 id="present">Present</h3>
+<p>0x38052C calls 0x38057C with the engine's static D3D block at 0x272D1C0 as <code>this</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Offset in the block</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>the <code>ID3D11Device</code></td>
+</tr>
+<tr>
+<td>+0x28</td>
+<td>the immediate device context the engine draws through (<code>[base+0x272D1E8]</code>)</td>
+</tr>
+<tr>
+<td>+0x88</td>
+<td>the <code>IDXGISwapChain</code></td>
+</tr>
+<tr>
+<td>+0xA8</td>
+<td><strong>presented-frame counter</strong> (<code>[base+0x272D268]</code>)</td>
+</tr>
+<tr>
+<td>+0xE0</td>
+<td>flags (bit 0x800: tearing allowed)</td>
+</tr>
+<tr>
+<td>+0x7D0</td>
+<td>the display refresh rate</td>
+</tr>
+<tr>
+<td>+0xA80</td>
+<td>set when the window is occluded</td>
+</tr>
+</tbody>
+</table>
+<p>It flushes the context (<code>ID3D11DeviceContext::Flush</code>, vtable slot 111), then calls
+<code>IDXGISwapChain::Present</code> (slot 8). The sync interval is 0 unless the caller asks for vertical
+sync, in which case it is the refresh rate divided by the frame-rate cap <code>[base+0x2A371A4]</code>, clamped
+to 1-4; the flags add <code>DXGI_PRESENT_ALLOW_TEARING</code> when the swap chain supports it.
+<code>DXGI_STATUS_OCCLUDED</code> sets the occluded byte, device-removed and device-reset errors go to the error
+reporter 0x1C8AD0C, and every successful present increments the counter at <code>+0xA8</code>. The byte
+<code>[base+0x267E006]</code> enables presenting. On a 240 Hz display the counter advanced 86 times per second.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Which of the two mesh passes is the deferred G-buffer pass and which draws after lighting
+  (translucent / forward)? Reading the render targets bound during each would settle it.</li>
+<li>Where the shadow-map passes sit in the frame: their entry points (0x33B644 and the dispatches
+  0x337964, 0x33DA28, 0x337EB8) were too rarely sampled to place.</li>
+<li>What the main thread waits for in 0x38105C (the handles passed to <code>MsgWaitForMultipleObjectsEx</code>).</li>
+<li>What the queue at <code>U+0x690</code> that the update manager drains before the walk (0x4CA9F8) holds.</li>
+<li>Whether a longer countdown written into <code>obj+0xD0</code> after an NPC's Update would thin out distant
+  NPCs safely: it depends on whether the skipped systems use the frame step or elapsed time.</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
