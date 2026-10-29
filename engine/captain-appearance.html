@@ -88,6 +88,12 @@ Nemesis system). It is built by the SimpleModel builder 0x4C5194, written piece 
 </table>
 <p>A spawned character's visual carries a structure of the same layout at <code>[visual+0xB8]</code> (see
 Characters).</p>
+<p>The object is 0x1C0 bytes. The FactionMember constructor 0x1BB4C1C creates it through 0x2EB490
+(<code>malloc(0x1C0)</code>, constructor 0x2EB4B8) and moves it into <code>FM+0x2D8</code> (0x2EB56C); the heap block header
+in front of it reads 0x1CB on 60 of 60 seated captains. Nothing past <code>+0x1C0</code> belongs to it: the next
+heap block starts there (an inventory item instance, vt_0x1FDABF8, in 20 of those 60 cases). The head
+category <code>Model/SimpleModelHeads</code> is held in the category-cache slot 0x26FFDC8 (see GameDB), which
+0x1C05970, 0x1C0546C and 0x1C0606C read.</p>
 <h3 id="piece-slots-and-armour-slots">Piece slots and armour slots</h3>
 <p>Every design (<code>Inventory/ArmorData</code>, 1,349 records) names an <code>ArmorSlot</code>. 0x36B700 maps it to a piece
 slot and 0x4C63F4 maps a piece slot back to its design cell, so the design cell index is the armour
