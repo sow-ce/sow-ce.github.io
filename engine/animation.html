@@ -512,15 +512,37 @@ four <code>WritheOnGroundController</code> (one entered from <code>FallForwardBr
 <code>COLLISION_CHECK_WORLD_ONLY</code>, <code>COLLISION_CHECK_ALL</code>, <code>GROUNDCHECK</code>, <code>RAGDOLL_STIFFNESS</code>,
 <code>NEVER_RAGDOLL</code>, <code>FREEZERAGDOLL</code>, <code>BEHAVIOR_HINT</code>) and at 0x1F9FC40 for sync actions
 (<code>SYNCACTION_ALLOWDEATH</code>, <code>SYNCACTION_DELAYDEATH</code>, <code>RESUMERAGDOLL</code>, <code>ALLOWRAGDOLL</code>, <code>RAGDOLL</code>,
-<code>DELAYRAGDOLL</code>, <code>STOP_ALIGN</code>), each entry a 32-bit hash and the name. In a sample of 40 clip files
+<code>DELAYRAGDOLL</code>, <code>STOP_ALIGN</code>), each entry a 32-bit hash and the name (the second table has no
+terminator; its seven entries run into a string). The hash is the multiply-by-31 string hash over the
+upper-cased, sign-extended bytes: 0x569FF8(rest of the string, seed) computes <code>seed * 31 + c</code> per
+character, recursively, and its callers seed it with the upper-cased first character, so a keyword
+matches in any case (17 of 17 table entries reproduce). The same hash has 18 callers, among them the
+slot-19 method of four classes.</p>
+<p>The keywords are not turned into flags when a clip loads: the dead-body step asks the clip at run time.
+0x75BB34(character, attack) copies the <code>RAGDOLL</code> and <code>RESUMERAGDOLL</code> entries to the stack and
+0x2C5DD8(character, attack) uses the <code>DESTROY</code> entry; both pass the key set to 0x4CAB0C, which walks
+the events of the clip the character is playing (when <code>[[char+0x26A8]+0x114]</code> is not -1) and compares
+each event name's hash with the keys, or else to 0x2C5E10, which checks the attack's own animation:
+the clip named by <code>AnimationData.Name</code> (looked up in the character's set by 0x4C8A0C) or, without one,
+the <code>AnimationData.BehaviorNode</code>, where each key is tested by name (0x1BDEA50). The dead-body step
+0x2F8460 is the only caller of 0x75BB34 and one of two callers of 0x2C5DD8 (the other is 0x19B6D1C).
+It calls 0x75BB34 only while the state byte <code>+0x35A</code> is set, then clears that byte without testing the
+result. The <code>DESTROY</code> query gates the step's flags: while <code>+0x353</code> is set and the killing attack shows
+no <code>DESTROY</code>, the step can enter phase 5 (after further checks, among them the attack's
+<code>AttackPostData.SuppressDeathAnimGroundCheck</code>) and sets <code>+0x356</code> when a second query, on the record
+0x190E80 returns (a wrapper of the <code>Combat/Attack.MultiHitRecords</code> accessor), finds <code>DESTROY</code>; in
+another branch, no <code>DESTROY</code> sets <code>+0x35C</code> and <code>+0x35D</code>. The other entries of both tables have no
+direct reader in the code (checked for four of them).</p>
+<p>In a sample of 40 clip files
 (302 clips, 4,192 events) the ragdoll events are <code>DELAYRAGDOLL</code> 23, <code>RAGDOLL</code> 22 (one with argument
 0.25), <code>ALLOWRAGDOLL</code> 15 and <code>RESUMERAGDOLL</code> 14, spelled in any case. <code>Combat/Sync</code> records can start
 the source or the target with a delayed ragdoll (<code>StartWithDelayRagdollSource</code> 1 of 1,507,
 <code>StartWithDelayRagdollTarget</code> 98).</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>Which code turns the clip keywords into the dead-body state's flags, and which hash the keyword
-  tables use (not the plain name hash).</li>
+<li>Which code reads the clip keywords that have no direct reader (<code>DISALLOWRAGDOLL</code>, <code>DELAYRAGDOLL</code>,
+  <code>FREEZERAGDOLL</code>, <code>BEHAVIOR_HINT</code> and the sync-action table), and why the dead-body step calls the
+  <code>RAGDOLL</code> query without testing its result.</li>
 <li>Which Havok objects stand behind a joint object (it points to objects of vt_0x1DABE88 and
   vt_0x22C2EE0), and whether they own the live <code>hkpRagdollConstraintData</code> instances; the
   <code>hknpRagdoll</code> and <code>hknpRagdollKeyFrameHierarchyUtility</code> classes ship, with no use traced.</li>
