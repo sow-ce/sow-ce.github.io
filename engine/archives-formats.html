@@ -1208,8 +1208,10 @@ English table has 68,547 keys. A key is <code>StringHash</code> of the key name 
   sits below its container would settle it.</li>
 <li>Whether the engine reads more than one copy of <code>database\game\game.gamedb</code>; the GameDB loader's use
   of the archives would settle it.</li>
-<li>How <code>Blade.arch06</code> and <code>Lithlad.arch06</code> are used: neither is in the config list or the live mount
-  vector; the third caller of <code>Mount</code>, vt_0x22BF9C8 vf2, is the place to look.</li>
+<li>Whether anything outside the executable reads <code>Blade.arch06</code> and <code>Lithlad.arch06</code>. Inside it,
+  nothing does: neither archive is in the config list or the live mount vector, no string in the
+  executable names either archive or <code>dlc\blade.txt</code> / <code>dlc\lithlad.txt</code>, and the third caller of
+  <code>Mount</code>, vt_0x22BF9C8 vf2 0x11ACD04, is a generic "mount this path and report success" method.</li>
 <li>Whether the folder binary search can miss a folder in the seven archives whose folder order differs
   from plain case-insensitive order (the compare length used by 0x3DDB90 is not traced).</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
