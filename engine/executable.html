@@ -161,9 +161,10 @@ in <code>.xtext</code>.</p>
 <p><strong>Live census.</strong> Walking the allocators of a running game (Minas Ithil) and testing each
 allocation's first qword against every known vtable finds <strong>2.51 million objects of 2,518
 classes</strong>, about two thirds of them of classes without type information. The most instantiated
-class is vt_0x1DBC010 (176,706 objects, 0x38 bytes each). Consecutive instances repeat at a fixed
-stride equal to the object size: an inventory item is 0x118 bytes, a <code>CResourceBundle</code> 0x180 and an
-AI character 0x3188.</p>
+class is vt_0x1DBC010 (176,706 objects at a stride of 0x38). Consecutive instances repeat at a fixed
+stride, which bounds the object's size from above: inventory items repeat every 0x118 bytes, a
+<code>CResourceBundle</code> (0x178 bytes) every 0x180 and an <code>NPC</code> (0x3180 bytes by its class descriptor) every
+0x3188.</p>
 <p>A class's runtime implementation of a GameDB record type can be recognised from what its methods
 read: a class whose methods read fields of one category (at least three reads, at least 60% of them)
 implements that record type. 195 classes are named this way, 184 of them without type information,
@@ -231,6 +232,12 @@ confirmed), <strong>13,886 functions belong to linked libraries</strong>:</p>
 </tr>
 </tbody>
 </table>
+<p><strong>Exports.</strong> The executable exports 286 named symbols with their full C++ signatures: 263 belong
+to Wwise (the <code>AK::SoundEngine</code> API and its <code>Query</code>, <code>MemoryMgr</code>, <code>StreamMgr</code>, <code>DynamicSequence</code>,
+<code>Monitor</code>, <code>MotionEngine</code>, <code>MusicEngine</code> and <code>DynamicDialogue</code> namespaces, and globals such as
+<code>g_pRegistryMgr</code> and <code>g_pRTPCMgr</code>; see Audio and video), the rest are Scaleform's system and
+matrix functions, two memory pool ids and an assert hook. With the run-time type information they
+are the binary's only exact symbol names.</p>
 <p>The online layer also links the Apache Avro C library (<code>avro_record_set</code>, <code>src\Core\avFloatType.cpp</code>).
 Small routines were identified by running them in an emulator against reference implementations:
 37 functions behave as <code>strcpy</code>, 13 as <code>memcpy</code>, 5 as <code>strlen</code>, plus CRC32, FNV-1a and the engine's
@@ -374,6 +381,16 @@ constant buffer!").</p>
 <td><code>ret 0</code></td>
 </tr>
 <tr>
+<td>Havok array growth 0x13F79C</td>
+<td>903</td>
+<td>the shape of <code>hkArrayUtil::_reserveMore</code>: array <code>{data, u32 size, u32 capacity}</code> with bit 31 of the capacity marking storage the array does not own and <code>0x3FFFFFFF</code> masking the count; grows to twice the size (at least 1) through the allocator's buffer reallocation (vtable <code>+0x28</code>), or for storage it does not own its buffer allocation (<code>+0x18</code>) plus a copy</td>
+</tr>
+<tr>
+<td><code>GetStaticLock</code> 0x816D68</td>
+<td>355</td>
+<td>returns the critical section at 0x2A58C40, created once under a thread-safe static guard (0x2A58C38) with an <code>atexit</code> delete</td>
+</tr>
+<tr>
 <td><code>IsNullOrEmptyStr</code> 0x188C80 / <code>StrNotEmpty</code> 0x185FE0</td>
 <td>767 / 873</td>
 <td>C-string tests</td>
@@ -393,7 +410,4 @@ live memory) shows why.</p>
   0x390.</li>
 <li>What the value at <code>+0x2C</code> of an arena entry is (it looks like a name hash, but none of the 18 values
   matches a known name).</li>
-<li>0x13F79C (903 callers) has the shape of Havok's array reserve (capacity masked with 0x3FFFFFFF,
-  the sign bit meaning "not owned", the allocator's vtable <code>+0x28</code> realloc / <code>+0x18</code> alloc); 0x816D68
-  (355 callers) is a lock-guarded static getter using thread-local storage. Neither is named.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
