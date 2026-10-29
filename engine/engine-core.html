@@ -164,6 +164,48 @@ the slots do not.</p>
 <td>664 reads</td>
 <td>see The executable</td>
 </tr>
+<tr>
+<td><code>[base+0x26FEF80]</code></td>
+<td>a second pointer to the default heap</td>
+<td>456 / 430</td>
+<td>written by the lazy initialisation inlined into 69 allocation functions</td>
+</tr>
+<tr>
+<td><code>[base+0x26FFC28]</code></td>
+<td>the fight-circle participant manager</td>
+<td>8 / 1</td>
+<td>its constructor 0x1AA2664 stores <code>this</code>; the readers use <code>Combat/FightCircle/Participant</code> (ring weights) and <code>Combat/Cooldown</code></td>
+</tr>
+<tr>
+<td><code>[base+0x26FFC58]</code></td>
+<td>the exit-combat-space manager</td>
+<td>7 / 1</td>
+<td>its constructor 0x1AA852C stores <code>this</code>; the readers use <code>Combat/ExitCombatSpace</code> (<code>RepulsionRange</code>, <code>AttackDecayTime</code>, <code>MaximumTargetRange</code>)</td>
+</tr>
+<tr>
+<td><code>[base+0x2703710]</code></td>
+<td>the first object of the navigation-mesh list</td>
+<td>8 / 3</td>
+<td>the next object is at <code>+0x80</code> and the count at 0x2703700; the shutdown 0x12FC900 walks the list and destroys each object</td>
+</tr>
+<tr>
+<td><code>[base+0x26FFB78]</code></td>
+<td>movie playback state</td>
+<td>5 / 2</td>
+<td>written by 0x1A13AD8 and 0x1A1355C (which use <code>Interface/Movies.CommandSet</code>), read by the movie-complete and movie-cancel script handlers; null while no movie plays</td>
+</tr>
+<tr>
+<td><code>[base+0x26FFB40]</code></td>
+<td>the last object of class vt_0x1DA9640</td>
+<td>2 / 3</td>
+<td>its destructor 0x1097F0 clears the slot when it holds <code>this</code></td>
+</tr>
+<tr>
+<td>u32 at 0x26FFB48</td>
+<td>the serial counter of timed UI events</td>
+<td>1 / 1</td>
+<td>0x32E4DC initialises a timed UI event on the UI clock (used by the HUD's event queues, <code>CUIHUDEvent&lt;...&gt;::AddEvent</code>) and gives it the next number, stored at <code>+0x10</code></td>
+</tr>
 </tbody>
 </table>
 <p>Some engine objects are static objects in the image rather than pointers: the render thread at
@@ -390,12 +432,15 @@ capacity, +0x14 u8 owned}</code> of <code>CPlayerObj</code> (vt_0x1F96818). The 
 </tbody>
 </table>
 <p><strong>The clocks.</strong> The engine keeps a family of scaled clocks, each a holder object with its own vtable
-(vt_0x22F2E90 to vt_0x22F2F10) whose <code>+0x08</code> is the clock state: <code>+0x14</code> the current step, <code>+0x18</code>
-u32 milliseconds, <code>+0x20</code> f64 seconds, <code>+0x28 / +0x2C</code> the rate's numerator and denominator,
+(vt_0x22F2E90 to vt_0x22F2F10) whose <code>+0x08</code> is the clock state (vt_0x22C2570): <code>+0x10</code> the current
+step in milliseconds (u32) and <code>+0x14</code> the same step in seconds (f32), <code>+0x18</code> the time in u32
+milliseconds and <code>+0x20</code> in f64 seconds, <code>+0x28 / +0x2C</code> the rate's numerator and denominator,
 <code>+0x30</code> the scale. The slots are the world <code>[base+0x2702598]</code>, the player <code>[base+0x2702548]</code>, the
 combat companion <code>[base+0x2702570]</code>, the world UI <code>[base+0x2702558]</code>, presentations
-<code>[base+0x2702578]</code>, an unscaled clock <code>[base+0x2702550]</code>, the UI <code>[base+0x2702588]</code> and
-<code>[base+0x2702590]</code>. Slow motion scales the first five as channels (see Quests, story and scenes).</p>
+<code>[base+0x2702578]</code>, an unscaled clock <code>[base+0x2702550]</code>, the UI <code>[base+0x2702588]</code> and a
+<strong>real-time clock</strong> <code>[base+0x2702590]</code>. Every clock but the real-time one stops while the game is
+paused: with the game paused, the real-time clock advanced 1,015 ms in one second and the other seven
+not at all. Slow motion scales the first five as channels (see Quests, story and scenes).</p>
 <p>A character's time source <code>[char+0x88]</code> is the state of one of these clocks: 114 of 115 characters
 in the spawn manager use the world clock and the player uses the player clock. The object update
 scheduler subtracts that clock's step from each object's countdown (see Threads and the frame), so
@@ -425,11 +470,7 @@ frame). Engine asserts are a write to a null address at 0x819113 with the messag
 (<code>EngineAssert</code> 0x819104).</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>What the remaining frequently-touched slots near the managers hold: <code>[base+0x26FFC28]</code> (8 reads),
-  <code>[base+0x26FFC58]</code> (7 reads), <code>[base+0x2703710]</code> (8 reads, 3 writes; the live object's vtable is
-  0x1DB3480, a 142-slot class), <code>[base+0x26FFB40]</code> and <code>[base+0x26FFB78]</code> (null while a world is
-  loaded) and <code>[base+0x26FFB48]</code> (a small integer, one read and one write).</li>
-<li>What the clock state's remaining fields mean (<code>+0x08</code>, <code>+0x38</code>), and what <code>[base+0x2702590]</code> clocks.</li>
-<li>0x26FEF80 holds the same default-heap pointer as 0x26FEF88 and is read 456 times and written 430
-  times: which allocation paths use the second copy.</li>
+<li>Which class vt_0x1DA9640 is (<code>[base+0x26FFB40]</code>; its only constructor is 0x108BB0, called from 0x1081AC).</li>
+<li>What the clock state's remaining fields mean (<code>+0x08</code>, and <code>+0x38 .. +0x40</code>, which hold 1, 100 and 1 on
+  most clocks and 1, -1 and 1 on the unscaled one).</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
