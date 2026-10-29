@@ -304,6 +304,18 @@ header points back to the database at <code>+0x18</code>.</p>
 </tr>
 </tbody>
 </table>
+<p><strong>Other copies and the patch database.</strong> Four patch archives, <code>Patch_01</code> to <code>Patch_04</code> and their
+<code>_LC</code> twins, also ship a complete <code>database\game\game.gamedb</code> (58.08-58.10 MB against the HotChunk
+copy's 56.76 MB). Their headers name older builds: 2,435 to 2,438 categories against 2,742, and
+different build tags. The running game has 2,742 categories, so it loads the HotChunk copy and the
+older copies are shadowed by the archive search order, not merged. The loaders do merge one kind of
+database: unless the database being loaded is itself named <code>gamedb_patch</code>, they look for a patch
+database (0x1C3FF20 tries the resource system, then a loose file named after the database with
+<code>gamedb_patch</code> appended), keep it only when its build tag (<code>+0x2C</code>) equals the base's, and add its
+record and data sizes to the base allocation so its records load with the base's. The switch byte
+0x266CD70 that gates this is 1 in the shipped executable and nothing writes it. Of the 488,679
+entries in the shipped archives, the only game databases are the nine copies above, and none is a
+patch database.</p>
 <p>The descriptor array ends exactly where the database object begins; the category array follows the
 object, and after it come each category's primaries and secondaries, in file order. Two rules place
 everything else, and both hold for the running game:</p>
@@ -1331,8 +1343,8 @@ after the next copy. When a copy is refreshed depends on what runs the copier:</
 <li>Do loads rebuild record instances from the file? A changed cell can return to the file's value
   after a loading screen, yet changed cells can also survive a region change; whether a load re-reads
   the instance block, and on which path, is not traced.</li>
-<li>The loader tests a <code>gamedb_patch</code> path and the byte 0x266CD70. Several other archives also carry a
-  game database; does any of them apply over the <code>hotchunk.arch06</code> copy, and how?</li>
+<li>How a merged patch database's records combine with the base's when both define the same record
+  (replace, or append under the same name); the merge sizes are traced, the per-record rule is not.</li>
 <li>What record flag 0x08 means (set on every secondary; the file's flag byte is 8 for secondaries), and
   which container sets flag 0x01 (runs sorted by their own hashes).</li>
 <li>The meaning of the database's <code>+0x58</code> / <code>+0x60</code>, the type entry's <code>+0x38</code> flags, and whether
