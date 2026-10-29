@@ -785,7 +785,9 @@ the base class's descriptor, <code>+0x10</code> flags, <code>+0x18</code> the co
 the instance size and <code>+0x30</code> the alignment. A shape-validated sweep of the image finds 433
 descriptors with 433 distinct names (431 in <code>.idata</code>, 2 in <code>.xtext</code>; 121 constructors lie outside
 <code>.arch</code>). 320 classes descend from <code>BaseClass</code>, 256 of them from <code>GameBase</code> (0x120 bytes, constructor
-0x7DCC78), and 64 from <code>BrushBase</code>.</p>
+0x7DCC78), and 64 from <code>BrushBase</code>.
+The image also lists the static descriptors in one place: the leaf function 0x19CBDFC stores 435
+descriptor pointers, one after another, into the array 0x2A61A30 .. 0x2A627C0 (stride 8).</p>
 <table>
 <thead>
 <tr>
