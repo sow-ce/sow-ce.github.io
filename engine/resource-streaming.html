@@ -1,0 +1,424 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Resource streaming, bundles and the file system - Shadow of War engine reference</title><meta name="description" content="How a path becomes loaded data: the file system&#x27;s mount vector, the resource table, the open / load / parse stages and their request object, bundles and their reference contract, and the creature-bundle manager that decides which creature models exist in a region."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" class="cur" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="resource-streaming-bundles-and-the-file-system">Resource streaming, bundles and the file system</h1><p class=\"lede\">How a path becomes loaded data: the file system&#x27;s mount vector, the resource table, the open / load / parse stages and their request object, bundles and their reference contract, and the creature-bundle manager that decides which creature models exist in a region.</p>
+<h2 id="the-file-system">The file system</h2>
+<p>Every asset path is resolved through one priority vector on the file system object, a static at
+0x2A54600 (a function-local static returned by 0x3DDD34). Entry 0 is consulted first.</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td><code>SRWLOCK</code> (resolvers take it shared, mounting takes it exclusive)</td>
+</tr>
+<tr>
+<td>+0x68 / +0x70</td>
+<td>the mount vector: 16-byte entries <code>{u32 kind, Source*}</code></td>
+</tr>
+<tr>
+<td>+0x78</td>
+<td>u32 capacity</td>
+</tr>
+<tr>
+<td>+0x80</td>
+<td>a hash -&gt; path table <code>{u32 hash, char* path}</code>; <code>+0xC0</code> its generation</td>
+</tr>
+<tr>
+<td>+0xE0</td>
+<td>the archive-scan bound: the index of the last archive entry + 1</td>
+</tr>
+</tbody>
+</table>
+<p>Kind 0 is an archive tree (<code>CArchiveTree</code>, vt_0x22C21B8); kind 1 a directory source
+(<code>DirectorySource</code>, vt_0x22C21C8, with its directory string at <code>+0x10</code>). A directory source answers
+with <code>GetFileAttributesW(directory + path)</code>; a hit stops the archive search, and the loader opens the
+loose file itself (0x529BF8 -&gt; <code>GetLooseFilePath</code> 0x52A2F8). The retail game already mounts its
+<code>Game\</code> folder as the last entry; that is how the cinematic <code>.vib</code> movies ship as loose files.</p>
+<p><code>Mount(fs, Source** out, path, unused, index)</code> is 0xC28560, the function behind the <code>-arch</code> command
+line option and the run-time DLC mounter. There is no unmount method. A mount affects the next load
+of a path only; an asset already resident keeps its data until it is streamed again.</p>
+<h2 id="hashing-names">Hashing names</h2>
+<p>Paths and names are hashed with <code>StringHash</code> 0x423E70: <code>h = h * 919 + LUT[c]</code> over the bytes, with
+the 256-byte table at 0x1DB50D0 (it folds case, so the hash is case-insensitive). The same hash names
+GameDB records, fields, animation clips, bones and world objects throughout the engine.</p>
+<h2 id="the-resource-table">The resource table</h2>
+<p>Every resource the engine knows is a node in a hash table owned by the resource system
+<code>[base+0x2A86758]</code>: 0x800 buckets of 0x18 bytes, bucket = <code>hash &amp; 0x7FF</code>, list head at <code>+0x08</code>. A
+node is <code>resource + 0x10</code> (<code>+0x08</code> next, <code>+0x10</code> hash).</p>
+<table>
+<thead>
+<tr>
+<th>Resource offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x08</td>
+<td>the loaded data (null = not resident)</td>
+</tr>
+<tr>
+<td>+0x28</td>
+<td><code>char*</code> path</td>
+</tr>
+<tr>
+<td>+0x30</td>
+<td>reference count</td>
+</tr>
+<tr>
+<td>+0x38</td>
+<td>u32 byte size (the engine's own accounting)</td>
+</tr>
+<tr>
+<td>+0x52</td>
+<td>type (27 bundle, 48 effect <code>.fxp</code>, 20 material <code>.mat</code>, ...)</td>
+</tr>
+</tbody>
+</table>
+<p>A resource whose count reaches zero is not freed: 0x1BEAAC unlinks it from an unused list (<code>+0x10</code>)
+and keeps it for reuse. "Released" therefore does not mean "gone"; residency is decided by the data
+pointer.</p>
+<h2 id="the-i-o-pipeline">The I/O pipeline</h2>
+<p><code>[base+0x2A86750]</code> holds the I/O core (<code>core</code>, the bundle owner + 0x30; the owner, vt_0x22C0FF8, is
+built by 0x119E5D4 and its stages by 0x1183E8C). Three stages run on three threads, each thread
+receiving its own stage as its argument:</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Address</th>
+<th>Thread (routine)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>open</td>
+<td><code>core+0x20</code></td>
+<td>ResourceOpenThread (0x11AECC8, loop 0x1153AA4)</td>
+</tr>
+<tr>
+<td>load</td>
+<td><code>core+0xF8</code></td>
+<td>ResourceLoaderThread (0x11AEE50, loop 0x1153A00)</td>
+</tr>
+<tr>
+<td>parse</td>
+<td><code>core+0x1F0</code></td>
+<td>ResourceParserThread (0x11AEF58, loop 0x1153560)</td>
+</tr>
+</tbody>
+</table>
+<p>The open and load stages each hold two queues of 0x38 bytes at <code>+0x00</code> and <code>+0x38</code>, the thread
+object at <code>+0x70</code>, a <code>CRITICAL_SECTION</code> at <code>+0xA0</code>, a work event at <code>+0xC8</code> and a stop event at
+<code>+0xD0</code>. A queue is a double-buffered vector of 16-byte <code>{object, control block}</code> handles:</p>
+<table>
+<thead>
+<tr>
+<th>Queue offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00 / +0x08 / +0x10</td>
+<td>input vector: begin, end, u32 capacity (10,240)</td>
+</tr>
+<tr>
+<td>+0x18 / +0x20 / +0x28</td>
+<td>output vector: begin, end, capacity</td>
+</tr>
+<tr>
+<td>+0x30</td>
+<td>u32 high-water mark (the largest count ever reached)</td>
+</tr>
+<tr>
+<td>+0x34</td>
+<td>u32 current count</td>
+</tr>
+</tbody>
+</table>
+<p>The consumer swaps the two vectors when the output is empty and reverses the run, so service is
+first-in first-out, and the stage runner always takes the first non-empty queue: queue 0 drains
+before queue 1 is touched. The parse stage has a request vector at <code>+0x00</code>, a second work vector at
+<code>+0x18</code> (capacity 128, consumed by 0x3DC654), its thread object at <code>+0x30</code>, locks at <code>+0x60</code> and
+<code>+0x88</code>, and events at <code>+0xB0</code> / <code>+0xB8</code>. Bytes <code>[base+0x262B520 / 521 / 522]</code> switch the open,
+load and parse threads on; when one is 0 that stage's work runs inline in the caller. All three are
+on in the shipped game.</p>
+<h3 id="the-request-object">The request object</h3>
+<p>A request (<code>SResourceLoadRequest</code>, the name in its destructor 0x3DD77C) is allocated together with
+its reference count (a <code>make_shared</code> layout) and has no vtable:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>the opened file (vf0 closes it); null until the open stage has run</td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>u8 cancelled: every stage skips a cancelled request</td>
+</tr>
+<tr>
+<td>+0x10</td>
+<td>the resource being loaded (its path at <code>+0x28</code>)</td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td>streaming detail (set by 0x3DD548 from the texture streamer)</td>
+</tr>
+<tr>
+<td>+0x20</td>
+<td>u32 queue index</td>
+</tr>
+<tr>
+<td>+0x28</td>
+<td>the resource data being built (<code>+0x18</code> u32 state; 3 = finalized)</td>
+</tr>
+<tr>
+<td>+0x30</td>
+<td>a bundle, for a bundle content load (the <code>.embb</code> path at bundle <code>+0x70</code>)</td>
+</tr>
+<tr>
+<td>+0x38 / +0x40</td>
+<td>the bundle load's output slot and argument</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-flow">The flow</h3>
+<ol>
+<li><strong>Submit</strong> 0x3DDDEC queues the request on the open stage (or straight on the load stage when the
+   open thread is off). Producers include the texture streamer 0x3DD45C and the bundle content job
+   0x3DB5E4.</li>
+<li><strong>Open</strong> 0x3DD588: picks the path (resource <code>+0x28</code>, or the bundle's <code>.embb</code>), waits on a
+   semaphore at <code>core+0x7B8</code> that bounds how many files are open at once, opens the file through the
+   file system and passes the request to the load stage.</li>
+<li><strong>Load</strong> 0x2D3444: a resource is read into new resource data (0x3DCFDC, 0x3DCF80) and passed to
+   the parse stage (0x3DD248); a bundle content request goes to the bundle loader 0x3DBE50 with the
+   path table below.</li>
+<li><strong>Parse</strong> 0x3DD2A8: releases the semaphore slot (0x3DD424), parses the data (0x3DD3C4) and hands
+   it to its resource type (0x3DD310).</li>
+</ol>
+<p><strong>Texture tiers wait.</strong> The texture streamer puts any request whose path contains <code>tex0</code> or
+<code>texuhd</code> (the higher-resolution texture tiers) in queue 1 and everything else in queue 0. Because the
+runners drain queue 0 first, base textures, meshes and bundle content always open before the
+high-resolution tiers.</p>
+<p>In a long play period the open queues' high-water marks reached 1,812 (queue 0) and 1,567 (queue 1)
+against 33 and 32 for the load queues: the backlog builds in front of the file open.</p>
+<h3 id="the-path-table">The path table</h3>
+<p>The load stage carries the engine's global name table at <code>+0xD8</code> (<code>core+0x1D0</code>): a vector of
+<code>{u32 hash, u32 0, char* path}</code> sorted by hash, 30,639 rows in a loaded region. 503 of 503 sampled
+keys equal the hash of their path, and every row is in order. It names every kind of streamed file
+(<code>.fxp</code>, <code>.tex</code>, <code>.bnk</code>, <code>.bndl</code>, <code>.anix</code>, <code>.vol.inst</code>, presentation bundles in every language). The
+load stage passes it to the bundle content loader. It is a row-for-row copy of the file system's
+hash -&gt; path table (<code>fs+0x80</code>), which <code>Mount</code> builds from the path index file each archive may carry
+(0x1182428 merges every index into it, sorted); see Archives and file formats.</p>
+<h2 id="bundles">Bundles</h2>
+<p>A bundle is a manifest (<code>.bndl</code>) plus a container of its contents (<code>.embb</code>); see Archives and file
+formats. The bundle registry belongs to the owner (vt_0x22C0FF8): vtable slot 24 0x3DC538 gets a
+bundle forcing the <code>.bndl</code> extension, slot 25 0x119F1E8 takes a raw path, and the registry at
+<code>owner+0x718</code> keeps 0x18-byte rows <code>{u64 hash, CResourceBundle*, u64}</code> (get-or-create 0x1B5DC0).</p>
+<p><code>CResourceBundle</code> (vt_0x1E6E678, 0x178 bytes):</p>
+<table>
+<thead>
+<tr>
+<th>Offset / slot</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vf0 / vf1</td>
+<td>AddRef 0x3DEDA0 / Release 0x3DEA38</td>
+</tr>
+<tr>
+<td>vf2 / vf3</td>
+<td>Prefetch 0x3DECC8 / Discard 0x3DEAEC</td>
+</tr>
+<tr>
+<td>vf6</td>
+<td>memory accounting 0x6E001C: {loaded, total, bytes}, cached at <code>+0x60..+0x6C</code> once complete</td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td><code>char*</code> path</td>
+</tr>
+<tr>
+<td>+0x14</td>
+<td>reference count</td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td>the loaded content (a vector of resource handles; null = not resident)</td>
+</tr>
+<tr>
+<td>+0x20</td>
+<td>the manifest resource (its data is null when the <code>.bndl</code> does not exist)</td>
+</tr>
+<tr>
+<td>+0x28</td>
+<td>u16 prefetch count</td>
+</tr>
+<tr>
+<td>+0x2A</td>
+<td>u8 generation, incremented by every load and every discard</td>
+</tr>
+<tr>
+<td>+0x70</td>
+<td><code>char[0x104]</code> the paired <code>.embb</code> path</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The reference contract.</strong> A registry row holds no reference. Prefetch (0 -&gt; 1) references the
+manifest, requests it and, once its data is present, queues the <code>.embb</code> content load as a job on the
+bundle system (0x3DB574 -&gt; 0x3DB5E4). Discard is the exact reverse and asserts it is never the final
+reference. Release at zero unregisters and destroys the bundle (0x1B5C9C), detouring to 0x10DD00A if
+the prefetch count is still non-zero. A holder therefore keeps a handle and a prefetch, and lets go
+by discarding first and releasing second. A missing path is benign: the registry keeps an entry
+whose manifest has no data (ten such rows exist in a normal game).</p>
+<p>Loading a region's layer bundle does not place it in the world: its resources become resident, but
+world contexts and placed objects are unchanged. In a loaded region the registry holds about 544
+bundles, and every character bundle the region uses is already resident.</p>
+<p><strong>Gear needs two bundles.</strong> An armour piece's geometry lives in <code>&lt;piece&gt;_g.bndl</code> (<code>.mesh</code>, <code>.skel</code>,
+<code>.anix</code>) and its material and textures in a set-wide <code>&lt;set&gt;_&lt;slot&gt;_m.bndl</code> named by the design
+record (<code>Inventory/ArmorData</code> field <code>DynamicBundle</code>). The engine loads both through a gear load
+request (vt_0x1DB4F78, constructor 0x400AB8) that is created only for an equipped item (give path
+0x355474 -&gt; 0x61B868 -&gt; 0x4B4C7C, item equip 0x40136C -&gt; 0x401680, re-skin 0x645890). A piece
+placed into an appearance without an item gets no request: its mesh is in memory but its <code>.mat</code> is a
+registered resource with no data. The save loader 0x1C112F8 restores non-item pieces
+(<code>smc_nonequipment_record_list</code> -&gt; 0x1162D40) without a request as well. A bundle that is resident
+only because another character's item requested it is released when that item goes away.</p>
+<p><strong>Effects only load through bundles.</strong> An effect reference (for example an attack's <code>AOEFX</code> path)
+never loads anything; the effect system finds resident effects by name, and only a bundle (or
+start-up) makes one resident.</p>
+<p><strong>A malformed effect stalls the loader.</strong> Every <code>.fxp</code> ends with a u32: the count of the
+database's (u32, u32) pair table (<code>db+0x68</code>; 0 in 968 of 968 shipped effects). A file without it makes
+the database body reader 0x4B9B50 read 4 bytes past the end of the file (0x4B9C60); on the raw
+asynchronous stream (vt_0x1E71010) that read does not return, and every later load waits behind it
+until the game restarts. A missing file, by contrast, is harmless. The effect database's categories
+are sorted by the hash of their path (371 of 371), and the loader binary-searches them (0x115B4D4).</p>
+<h2 id="creature-bundles">Creature bundles</h2>
+<p><code>CharacterBundleMgr</code> (<code>CharacterBundleMgr.cpp</code>) is <code>MainScene+0x868</code> (<code>[base+0x26FFAB0]+0x868</code>). It
+decides which creature models are in memory.</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00 / +0x08</td>
+<td>entries and their count (146 = the <code>Server/NPCBundle</code> records); an entry is 0x30 bytes: <code>+0x00</code> the NPCBundle record, <code>+0x08/+0x10</code> a vector of <code>CResourceBundle*</code> (the same objects as the registry's), <code>+0x28</code> loaded</td>
+</tr>
+<tr>
+<td>+0x18 / +0x20 / +0x28</td>
+<td>the load / unload queue <code>{record, u8 unload}</code></td>
+</tr>
+<tr>
+<td>+0x30</td>
+<td>the current <code>WorldInfo</code> record</td>
+</tr>
+<tr>
+<td>+0x38</td>
+<td>the always-loaded set (<code>Nemesis</code>, <code>Playerskin_Talion</code>)</td>
+</tr>
+<tr>
+<td>+0x50 / +0x68 / +0x80</td>
+<td>the world set, the override set, an extra set (<code>Playerskin_DarkTalion</code>)</td>
+</tr>
+<tr>
+<td>+0x98 / +0xA0</td>
+<td>two override list slots</td>
+</tr>
+<tr>
+<td>+0xA8</td>
+<td>the provider (<code>_StructuresWorldInfoBundleData</code> primary record)</td>
+</tr>
+<tr>
+<td>+0xB0</td>
+<td>dirty byte</td>
+</tr>
+</tbody>
+</table>
+<p>The update 0x4B4FFC runs when the dirty byte is set: wanted = the first override list (or the
+default list) plus the always and extra sets; world set = the provider's list. The reconcile 0xE9F360
+requests what is new (<code>RequestBundleLoad</code> 0x4B6204), queues what dropped out for unloading, then
+drains the queue, firing loaded / unloaded events through the global script agent (<code>GM+0x6CF0</code>).</p>
+<p>A list's length is its field descriptor's element count (read by 0xE9EA30): every
+<code>Server/NPCBundle/Lists</code> record has two fields (the bundle array, hash 0x7AB8B862, and an empty
+second array). <code>World_Island_Day</code> holds six bundles (Goblin, Spider, Warg_Base, Fellbeast,
+Troll_Base, Troll_Poison) and <code>World_MinasIthil_Day</code> nine. A region keeps its whole creature set
+loaded for the visit; there is no per-encounter picker.</p>
+<p>A region change resets everything: every set and every loaded creature bundle is cleared, including
+loads requested on demand, and the region's sets are rebuilt (skins first, then the world set, about
+3 seconds to resident). Loads requested directly with <code>RequestBundleLoad</code> persist within a region,
+because no set owns them.</p>
+<p><strong>The spawn gate</strong> 0x16652C (template -&gt; model -&gt; NPCBundle -&gt; <code>IsBundleLoaded</code> 0x1665B4) requests a
+missing bundle only when the region's <code>WorldInfo.IsTestWorld</code> is set (0x5B85B4); retail regions have
+it clear, so a spawn whose bundle is not loaded is rejected (<code>[AI|SPAWNAMBIENT|REJECT] ... doesn't
+have character bundle loaded</code>). The descriptor 0x166878 reads only the template and the spawn
+manager (<code>SM+0x78</code> the per-template override table, <code>+0x80</code> its count, <code>+0x88</code> the <code>AI/Templates</code>
+category); the model and bundle are plain field reads (0x16680C, 0x166680). A null bundle allows the
+spawn: 94 of 177 templates have none (every orc and olog class, tamed wargs, the fellbeast), because
+their data is always resident. The chain from a spawn channel to its bundle is plain data:
+<code>AITypes.Entries[]</code> -&gt; <code>_StructuresAISpawnAmbientTypeEntry.AITemplate</code> -&gt; <code>AI/Templates.CharacterModel</code>
+-&gt; <code>Character/Models.Bundle</code>.</p>
+<p>Scripts and the console reach the manager through <code>System:LoadOverrideNPCBundleList(list, slot)</code> /
+<code>LoadDefaultNPCBundleList</code> and the console commands <code>CharacterBundleMgr.Dump</code>,
+<code>LoadOverrideBundle</code> and <code>LoadDefaultBundleList</code> (command table at 0x2674408); quests unload their
+overrides when they end.</p>
+<h3 id="memory">Memory</h3>
+<p>The engine's own byte count understates the real cost of a single bundle and overstates a burst:
+<code>Nazgul_base</code> (36.0 MB by the engine's count) added 120 MB of committed memory and 120 MB of video
+memory, while 129 bundles requested at once (622 -&gt; 4,337 MB by the engine's count) added only 571 MB of
+video memory and 665 MB of commit, because they share resources. Bundle loads do not consume the
+scarce low (below 4 GB) address space. A fast travel releases everything a region loaded; nothing
+accumulates across regions. <code>WorldInfo.MaxBundleSizePC</code> (1096 on PC, 548 on consoles) is checked
+only when content is packed; no run-time code reads it.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>The maximum count of the open-file semaphore at <code>core+0x7B8</code> (its creator is not traced).</li>
+<li>The meaning of the resource-data states other than 3 (finalized), and what the parse stage's second
+  work vector carries.</li>
+<li>Why the global path table's second field is 0 while the per-bundle name arrays carry 1.</li>
+<li>Which other code submits I/O requests: only two callers of the submit function exist, so the
+  resource system may queue some loads elsewhere.</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
