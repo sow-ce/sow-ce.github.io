@@ -1,0 +1,912 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Combat: attacks, targeting, predicates and resources - Shadow of War engine reference</title><meta name="description" content="How combat is decided and executed: combat objects, the compiled attack cache and its 105 predicate evaluators, targeting and the three copies of a lock range, the player&#x27;s input tree, ranged shots, cooldowns, Might and ammunition, the fight circle that decides who attacks, combat actions and states, area attacks and the player&#x27;s execution companions."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" class="cur" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="combat-attacks-targeting-predicates-and-resources">Combat: attacks, targeting, predicates and resources</h1><p class=\"lede\">How combat is decided and executed: combat objects, the compiled attack cache and its 105 predicate evaluators, targeting and the three copies of a lock range, the player&#x27;s input tree, ranged shots, cooldowns, Might and ammunition, the fight circle that decides who attacks, combat actions and states, area attacks and the player&#x27;s execution companions.</p>
+<h2 id="combat-objects">Combat objects</h2>
+<p>Every combatant has a <strong>combat object</strong> (vt_0x1F995E0) at <code>CCharacter+0x26A8</code> (mirrored at
+<code>+0x2978</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x28 / +0x38 / +0x48</td>
+<td>the owner character (AI characters have vt_0x1FB3640)</td>
+</tr>
+<tr>
+<td>+0x50</td>
+<td>the combat component (player only)</td>
+</tr>
+<tr>
+<td>+0x58</td>
+<td>the AI class record (for example <code>AI_Easterling_Defender</code>)</td>
+</tr>
+<tr>
+<td>+0x60</td>
+<td>the character type (<code>Easterling_Defender</code>)</td>
+</tr>
+<tr>
+<td>+0x68</td>
+<td>race / model</td>
+</tr>
+<tr>
+<td>+0xA8</td>
+<td>its own current target</td>
+</tr>
+<tr>
+<td>+0x2F0</td>
+<td>the combat state machine (below)</td>
+</tr>
+<tr>
+<td>+0x2F8</td>
+<td>the ammunition object (player only)</td>
+</tr>
+<tr>
+<td>+0x318</td>
+<td>the stat table</td>
+</tr>
+<tr>
+<td>+0x338 / +0x340</td>
+<td>the Might meter / the Wrath meter</td>
+</tr>
+<tr>
+<td>+0x4A0</td>
+<td>dead: <code>CCharacter.IsDead</code> (0x190F1C) tests this byte</td>
+</tr>
+<tr>
+<td>+0x5A0</td>
+<td>the cooldown table</td>
+</tr>
+</tbody>
+</table>
+<p><code>CCharacter+0x2410</code> (mirror <code>+0x2EF0</code>) is the character's <code>Character/Alignments</code> record (52:
+<code>Player</code>, <code>PlayerFollower</code>, <code>BuddyFollower</code>, <code>Orc_FactionA</code>, <code>Troll_Cave</code>, <code>Warg_Brown</code> ...) and
+<code>+0x23B8</code> its follower byte. Dead characters leave the spawn manager's array, so its count is a count
+of the living. Destructible props (for example <code>Env_Destroy_FirePit</code>) are combat objects too and can
+be targeted.</p>
+<p>The player's combat component is <code>[player+0x2FA0]</code> (<code>comp+0x08</code> = the player). It holds FreeAim at
+<code>+0x668</code>, the targeter container at <code>+0x5C0</code>, the companion manager at <code>+0xC68</code>, the active attack
+record at <code>+0xF00</code> and a list of hostile types at <code>+0xEF0</code>.</p>
+<h2 id="attacks-and-their-compiled-cache">Attacks and their compiled cache</h2>
+<p><code>Combat/Attack</code> has 16,976 records. An attack names its <code>AnimationData</code> (clip, playback rate as an
+enum pair read at attack start, sync, overrides), <code>AttackData</code> (target selector, area attack,
+teleport, translation scaling, item slot to draw, ranged overrides) and <code>AttackPostData</code>.</p>
+<p><strong>The targeting cache</strong> <code>[GM+0x6CD8]</code> is compiled at world start:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x08 / +0x10</td>
+<td>the <code>Combat/Attack</code> entries (16,976 x 0x58 bytes, in database order)</td>
+</tr>
+<tr>
+<td>+0x8058</td>
+<td>the <code>Combat/Target</code> entries (0x1B8 each, built by 0x1B69838)</td>
+</tr>
+<tr>
+<td>+0x8088</td>
+<td>the compiled <code>Combat/Pool</code> entries (0x48 per pool record index)</td>
+</tr>
+</tbody>
+</table>
+<p>An <strong>attack entry</strong>: <code>+0x00</code> the <code>Combat/Attack</code> record, <code>+0x18</code> the damage formula (a plain pointer
+to a <code>Combat/Stat/Formula/Damage</code> record: <code>DmgForm_All_Instakill</code> 1,681 entries, <code>DmgForm_ZERO</code>
+1,563, <code>DmgForm_AI_Melee</code> 809; null in 8,879 attacks that ship no formula), and <code>+0x40 .. +0x48</code> the
+compiled predicate pairs <code>{evaluator, record}</code> (0x10 each). A change to a predicate record's value is
+seen at the next test; linking an attack to a different predicate record takes effect only when the
+compiled pair changes too.</p>
+<p><strong>A compiled pool entry</strong> (<code>[[GM+0x6CD8]+0x8088] + recordIndex * 0x48</code>, data at <code>+0x08</code>): <code>+0x00</code>
+an attack-type restriction and its vector (0x3FC280), <code>+0x20</code> a combat-state restriction and its
+vector (0x3FC254, tested against the current state <code>[[0x2F5288(component)]+0x2F0]+0x58</code>). They are
+compiled at load from the pool's original attacks.</p>
+<h2 id="attack-predicates">Attack predicates</h2>
+<p><code>Combat/AttackPredicates/*</code> holds 124 predicate types with 9,311 records (one or two fields each;
+<code>PredicateAttackTypeIncluded</code> alone has 5,806). 14,593 attacks carry predicates, compiled into 95,979
+pairs. <strong>The 105 predicate types in use map one to one onto 105 evaluator functions</strong>, a contiguous
+library at 0xECF9E0 - 0xEE4FB0; the other 19 types are used by no attack. An evaluator takes the
+record in <code>rcx</code> and the test context in <code>rdx</code>. By number of uses:</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Evaluator</th>
+<th>Uses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TargetRequired</td>
+<td>0xEE3070</td>
+<td>7,008</td>
+</tr>
+<tr>
+<td>DirectionAttackerToTarget</td>
+<td>0xED79A0</td>
+<td>6,557</td>
+</tr>
+<tr>
+<td>AttackTypeIncluded</td>
+<td>0xED2310</td>
+<td>6,189</td>
+</tr>
+<tr>
+<td>CharacterTypeTargetIncluded</td>
+<td>0xED59A0</td>
+<td>5,093</td>
+</tr>
+<tr>
+<td>BehaviorStateAttackerExcluded</td>
+<td>0xED2880</td>
+<td>4,862</td>
+</tr>
+<tr>
+<td>ActiveWeaponAttackerIncluded</td>
+<td>0xED04C0</td>
+<td>4,497</td>
+</tr>
+<tr>
+<td>HasCategoryTargetExcluded</td>
+<td>0xEDB8E0</td>
+<td>4,270</td>
+</tr>
+<tr>
+<td>StatPredicateAttacker</td>
+<td>0xEE2E40</td>
+<td>4,170</td>
+</tr>
+<tr>
+<td>DistanceToTarget</td>
+<td>0xED89E0</td>
+<td>4,087</td>
+</tr>
+<tr>
+<td>CombatStateTargetIncluded</td>
+<td>0xED6DC0</td>
+<td>3,942</td>
+</tr>
+<tr>
+<td>InventoryItemAttackerIncluded</td>
+<td>0xEDECA0</td>
+<td>3,710</td>
+</tr>
+<tr>
+<td>DirectionTargetToAttacker</td>
+<td>0xED7A50</td>
+<td>3,177</td>
+</tr>
+<tr>
+<td>VerticalOffsetAttackerToTarget</td>
+<td>0xEE38B0</td>
+<td>3,151</td>
+</tr>
+<tr>
+<td>BehaviorStateTargetExcluded</td>
+<td>0xED3440</td>
+<td>2,697</td>
+</tr>
+<tr>
+<td>InventoryItemTargetExcluded</td>
+<td>0xEDF3E0</td>
+<td>2,140</td>
+</tr>
+<tr>
+<td>StatPredicateTarget</td>
+<td>0xEE2F70</td>
+<td>2,085</td>
+</tr>
+<tr>
+<td>CombatStateAttackerIncluded</td>
+<td>0xED61A0</td>
+<td>1,869</td>
+</tr>
+<tr>
+<td>IsRiderAttacker</td>
+<td>0xEDFE30</td>
+<td>1,525</td>
+</tr>
+<tr>
+<td>InventoryItemAttackerExcluded</td>
+<td>0xEDE950</td>
+<td>1,406</td>
+</tr>
+<tr>
+<td>InventoryItemTargetIncluded</td>
+<td>0xEDF470</td>
+<td>1,381</td>
+</tr>
+<tr>
+<td>HeightAttackerIncluded</td>
+<td>0xEDD5F0</td>
+<td>1,322</td>
+</tr>
+<tr>
+<td>HasBrandTarget</td>
+<td>0xED9F90</td>
+<td>1,216</td>
+</tr>
+<tr>
+<td>FootStanceAttackerIncluded</td>
+<td>0xED9AD0</td>
+<td>1,170</td>
+</tr>
+<tr>
+<td>AIIsAwareOfPlayer</td>
+<td>0xED0060</td>
+<td>1,068</td>
+</tr>
+<tr>
+<td>HasRiderAttacker</td>
+<td>0xEDC7F0</td>
+<td>1,010</td>
+</tr>
+<tr>
+<td>BehaviorStateAttackerIncluded</td>
+<td>0xED2B80</td>
+<td>977</td>
+</tr>
+<tr>
+<td>HasCategoryAttackerExcluded</td>
+<td>0xEDA300</td>
+<td>921</td>
+</tr>
+<tr>
+<td>CanPathAttackerToTarget</td>
+<td>0xED5000</td>
+<td>897</td>
+</tr>
+<tr>
+<td>BuffAttackerExcluded</td>
+<td>0xED4080</td>
+<td>846</td>
+</tr>
+<tr>
+<td>CooldownAvailableAttacker</td>
+<td>0xED73E0</td>
+<td>834</td>
+</tr>
+<tr>
+<td>BehaviorStateAttackerMountExcluded</td>
+<td>0xED2E80</td>
+<td>829</td>
+</tr>
+<tr>
+<td>AttackStanceAttacker</td>
+<td>0xED1600</td>
+<td>828</td>
+</tr>
+<tr>
+<td>CharacterTypeTargetExcluded</td>
+<td>0xED5190</td>
+<td>710</td>
+</tr>
+<tr>
+<td>WeaponTypeAttackerIncluded</td>
+<td>0xEE4250</td>
+<td>703</td>
+</tr>
+<tr>
+<td>IsRiderTarget</td>
+<td>0xEDFFD0</td>
+<td>641</td>
+</tr>
+<tr>
+<td>DamageFormulaWillKill</td>
+<td>0xED78B0</td>
+<td>579</td>
+</tr>
+<tr>
+<td>CombatStatePreviousAttackerIncluded</td>
+<td>0xED67B0</td>
+<td>509</td>
+</tr>
+<tr>
+<td>MountCharacterTypeAttackerIncluded</td>
+<td>0xEE0200</td>
+<td>431</td>
+</tr>
+<tr>
+<td>HasRiderTarget</td>
+<td>0xEDC990</td>
+<td>424</td>
+</tr>
+<tr>
+<td>AIMustSeeAttackerTarget</td>
+<td>0xED0290</td>
+<td>420</td>
+</tr>
+<tr>
+<td>DirectionMountToTarget</td>
+<td>0xED79F0</td>
+<td>407</td>
+</tr>
+<tr>
+<td>BuffTargetExcluded</td>
+<td>0xED4CF0</td>
+<td>371</td>
+</tr>
+<tr>
+<td>HealthRangeTarget</td>
+<td>0xEDD260</td>
+<td>362</td>
+</tr>
+<tr>
+<td>DistanceFromMount</td>
+<td>0xED7AB0</td>
+<td>315</td>
+</tr>
+<tr>
+<td>BehaviorEditPredicateAttackerFalse</td>
+<td>0xED26C0</td>
+<td>312</td>
+</tr>
+<tr>
+<td>WeaponTypeTargetIncluded</td>
+<td>0xEE4FB0</td>
+<td>308</td>
+</tr>
+<tr>
+<td>ActiveWeaponModeAttacker</td>
+<td>0xED0AD0</td>
+<td>306</td>
+</tr>
+<tr>
+<td>CooldownAvailableTarget</td>
+<td>0xED7420</td>
+<td>274</td>
+</tr>
+<tr>
+<td>HitCounterRangeAttacker</td>
+<td>0xEDDB50</td>
+<td>252</td>
+</tr>
+<tr>
+<td>BehaviorEditPredicateAttackerTrue</td>
+<td>0xED27A0</td>
+<td>228</td>
+</tr>
+<tr>
+<td>HasCategoryTargetIncluded</td>
+<td>0xEDC270</td>
+<td>213</td>
+</tr>
+<tr>
+<td>HitCounterChargeAttacker</td>
+<td>0xEDD970</td>
+<td>185</td>
+</tr>
+<tr>
+<td>BuffAttackerIncluded</td>
+<td>0xED4120</td>
+<td>177</td>
+</tr>
+<tr>
+<td>AttackTypeExcluded</td>
+<td>0xED22A0</td>
+<td>162</td>
+</tr>
+<tr>
+<td>ParryTypeTargetIncluded</td>
+<td>0xEE18E0</td>
+<td>159</td>
+</tr>
+<tr>
+<td>WeaponSheathedAttacker</td>
+<td>0xEE40A0</td>
+<td>148</td>
+</tr>
+<tr>
+<td>BehaviorStateTargetMountExcluded</td>
+<td>0xED3A00</td>
+<td>122</td>
+</tr>
+<tr>
+<td>BehaviorStateAttackerMountIncluded</td>
+<td>0xED3160</td>
+<td>113</td>
+</tr>
+<tr>
+<td>RecoilCounterRangeAttacker</td>
+<td>0xEE23D0</td>
+<td>110</td>
+</tr>
+<tr>
+<td>SpatialQueryAttacker</td>
+<td>0xEE2D30</td>
+<td>107</td>
+</tr>
+<tr>
+<td>DirectionAttackerToInput</td>
+<td>0xED7950</td>
+<td>103</td>
+</tr>
+<tr>
+<td>ImportanceListTarget</td>
+<td>0xEDE900</td>
+<td>76</td>
+</tr>
+<tr>
+<td>AlarmLevelAttackerIncluded</td>
+<td>0xED0FD0</td>
+<td>74</td>
+</tr>
+<tr>
+<td>BehaviorStateTargetIncluded</td>
+<td>0xED3720</td>
+<td>72</td>
+</tr>
+<tr>
+<td>HitNodeAttacker</td>
+<td>0xEDE890</td>
+<td>71</td>
+</tr>
+<tr>
+<td>HasCategoryAttackerIncluded</td>
+<td>0xEDADF0</td>
+<td>67</td>
+</tr>
+<tr>
+<td>FactionMemberTarget</td>
+<td>0xED94A0</td>
+<td>57</td>
+</tr>
+<tr>
+<td>SpatialQueryTarget</td>
+<td>0xEE2DB0</td>
+<td>55</td>
+</tr>
+<tr>
+<td>AIPostureAttackerIncluded</td>
+<td>0xED0430</td>
+<td>54</td>
+</tr>
+<tr>
+<td>BuffTargetIncluded</td>
+<td>0xED4DB0</td>
+<td>54</td>
+</tr>
+<tr>
+<td>HasLOSNullToNullAttackerToTarget</td>
+<td>0xEDC660</td>
+<td>50</td>
+</tr>
+<tr>
+<td>HealthPctAttacker</td>
+<td>0xEDCB40</td>
+<td>49</td>
+</tr>
+<tr>
+<td>ActiveWeaponTargetIncluded</td>
+<td>0xED0F30</td>
+<td>46</td>
+</tr>
+<tr>
+<td>HasBrandAttacker</td>
+<td>0xED9E00</td>
+<td>45</td>
+</tr>
+<tr>
+<td>OnNavMeshTarget</td>
+<td>0xEE1520</td>
+<td>42</td>
+</tr>
+<tr>
+<td>DistanceToTargetXZ</td>
+<td>0xED8D70</td>
+<td>34</td>
+</tr>
+<tr>
+<td>DistanceToPlayer</td>
+<td>0xED8670</td>
+<td>32</td>
+</tr>
+<tr>
+<td>StatPredicateAttackerMount</td>
+<td>0xEE2ED0</td>
+<td>21</td>
+</tr>
+<tr>
+<td>PreviousAttackHit</td>
+<td>0xEE2250</td>
+<td>18</td>
+</tr>
+<tr>
+<td>VisionModeActiveAttacker</td>
+<td>0xEE3D50</td>
+<td>17</td>
+</tr>
+<tr>
+<td>OnScreenAttacker</td>
+<td>0xEE1740</td>
+<td>16</td>
+</tr>
+<tr>
+<td>MountCharacterTypeTargetIncluded</td>
+<td>0xEE09E0</td>
+<td>16</td>
+</tr>
+<tr>
+<td>MoraleRangeAttacker</td>
+<td>0xEE0180</td>
+<td>15</td>
+</tr>
+<tr>
+<td>CooldownNotAvailableAttacker</td>
+<td>0xED7470</td>
+<td>14</td>
+</tr>
+<tr>
+<td>BuffCounterRangeAttacker</td>
+<td>0xED41C0</td>
+<td>13</td>
+</tr>
+<tr>
+<td>HealthPctTarget</td>
+<td>0xEDCEC0</td>
+<td>12</td>
+</tr>
+<tr>
+<td>DamageCounterChargeAttacker</td>
+<td>0xED7730</td>
+<td>8</td>
+</tr>
+<tr>
+<td>AIIsAnyAwareOfPlayer</td>
+<td>0xECFEF0</td>
+<td>7</td>
+</tr>
+<tr>
+<td>CanAttachAttackerToTarget</td>
+<td>0xED4E70</td>
+<td>7</td>
+</tr>
+<tr>
+<td>BehaviorStateTargetMountIncluded</td>
+<td>0xED3D40</td>
+<td>6</td>
+</tr>
+<tr>
+<td>EnergyRangeAttacker</td>
+<td>0xED9100</td>
+<td>6</td>
+</tr>
+<tr>
+<td>AIMustBeOnlyAttacker</td>
+<td>0xED0220</td>
+<td>6</td>
+</tr>
+<tr>
+<td>AICanAttackNow</td>
+<td>0xECF9E0</td>
+<td>6</td>
+</tr>
+<tr>
+<td>VerticalAngleAttackerToTarget</td>
+<td>0xEE34B0</td>
+<td>5</td>
+</tr>
+<tr>
+<td>WeaponTypeSecondaryTargetIncluded</td>
+<td>0xEE4F20</td>
+<td>4</td>
+</tr>
+<tr>
+<td>DOTTargetExcluded</td>
+<td>0xED7620</td>
+<td>4</td>
+</tr>
+<tr>
+<td>FlyingPathClearAttackerToTarget</td>
+<td>0xED9A50</td>
+<td>3</td>
+</tr>
+<tr>
+<td>FightCircleCountTarget</td>
+<td>0xED9960</td>
+<td>3</td>
+</tr>
+<tr>
+<td>TeleportQueryDestinationAttacker</td>
+<td>0xEE3100</td>
+<td>2</td>
+</tr>
+<tr>
+<td>FlyingLandingPositionAttacker</td>
+<td>0xED9A10</td>
+<td>2</td>
+</tr>
+<tr>
+<td>MustBeTargetingNavMeshAttacker</td>
+<td>0xEE13A0</td>
+<td>1</td>
+</tr>
+<tr>
+<td>MustBeInTeleportBrushAttacker</td>
+<td>0xEE1210</td>
+<td>1</td>
+</tr>
+<tr>
+<td>DistanceToAnyTrapAttackerMin</td>
+<td>0xED81D0</td>
+<td>1</td>
+</tr>
+<tr>
+<td>AIChasingAttackerTarget</td>
+<td>0xECFB90</td>
+<td>1</td>
+</tr>
+<tr>
+<td>HitCounterRangeTarget</td>
+<td>0xEDE1F0</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p><code>TargetRequired</code> 0xEE3070 reads only the context, never its record.</p>
+<h2 id="targeting">Targeting</h2>
+<p>A lock range exists in three copies, and only the third gates acquisition:</p>
+<ol>
+<li>the GameDB value <code>Combat/Target.WeightData.DistanceRange</code> (a pair in the shared float pool);</li>
+<li>the compiled <code>Combat/Target</code> entry in the targeting cache (compiler 0x1C0B634): <code>+0x0C</code> maximum
+   range, <code>+0x14</code> maximum range without input, <code>+0x168</code> maximum angle, <code>+0x20</code> / <code>+0x24</code> screen width
+   and height, compiled boolean pairs <code>{present, value}</code> from <code>+0x194</code>; <code>+0x190</code> holds
+   <code>MaxDistance_PlayerAlly</code> x 100 (the field is authored in metres) and the byte <code>+0x1B5</code> enables it;
+   <code>+0x195</code> RequireLOS; <code>+0x1A0</code> the outside-screen test (off for every player selector);
+   <code>+0x1B0</code> / <code>+0x1B1</code> RequireStraightPath;</li>
+<li><strong>the player's live targeters</strong>: the container at <code>comp+0x5C0</code> keeps a pool at <code>+0x18 / +0x20</code> of
+   0x80-byte targeters (vt_0x1DB1040; <code>+0x28</code> the current target, <code>+0x30</code> the <code>Combat/Target</code>
+   record, <strong><code>+0x38</code> the range</strong>; 114 in the player's pool) and lists at <code>+0x48 / +0x50</code> (0x20-byte
+   <code>{key, begin, end, capacity}</code>, 192 lists keyed by candidate character type). Every list is sorted
+   by range, longest first, and acquisition (0x18D06C) returns at the first targeter whose range is
+   below the candidate's distance; keeping a target (0x18CDD4) checks <code>+0x38</code> too. Membership in a
+   list is the type filter.</li>
+</ol>
+<p>The candidate filter 0x18626C has 38 logged rejection reasons (<code>[COMBAT|TARGET]</code>); a follower is
+rejected (0x366B88) when the ally byte is set and its distance exceeds the ally maximum. The scorer
+is 0x30B2D4. <code>RequireStraightPath</code> rejects any target without a straight walkable path (sword
+selectors set it, the bow does not), which excludes enemies below a rooftop. The compiled ally byte
+is set exactly when the authored maximum is above zero, so the data cannot express "reject allies at
+any distance".</p>
+<h2 id="the-player-s-input-tree">The player's input tree</h2>
+<p><code>Combat/Node</code> = {Type, Predicate -&gt; a primary {Input, Chord}, Pools[] -&gt; <code>Combat/Pool.Attacks[]</code>,
+Links[], RequiredTransitionType, KBMNode}. 0x310C00(node, isGamepad) returns the node's keyboard and
+mouse variant (KBMNode, field 16; node slot array at 0x2650EE0) and its six callers resolve every node
+of a list through it. The player's tree (<code>Combat/Tree::Player_Character</code>) has 146 roots (192 <code>PC_*</code>
+nodes in all).</p>
+<ul>
+<li><strong>Input records:</strong> the <code>ActionID</code> cell is the action id itself (Light 0xA247C387, Heavy ...388,
+  Stun ...389, Dash ...38A; keyboard-only actions 0xE8C05C0x); <code>InputType</code> 0 press, 1 release, 2 held,
+  3 held for the previous node. <code>GameChanger_WraithDash_HeldPrev</code> (Light + mode 3) is a shipped
+  hold-to-chain.</li>
+<li><strong>Holds:</strong> <code>MinHeldDuration</code> (0x6FEF14) passes on a released button only when the release time
+  equals the current time, which never happens in practice; every shipped hold therefore uses
+  InputType 2 plus <code>MinHeldDuration</code> (for example <code>Tackle_Attempt</code>, <code>Riding_KillMount</code>). An input
+  entry is <code>{u32 press, u32 release, u16 action}</code> (0x19B488).</li>
+<li>The input-driven node runner 0x30FD80 is reached only from the player tick (0x162560 &lt;-
+  0x43B8F4); AI combat has no virtual controller. It picks an attack with <code>PickAttack</code> 0x275730,
+  which runs <code>PoolCheck</code> 0x3FBA8C on each of the node's pools: the pool's predicate
+  (<code>_StructuresCombatPoolPredicate</code>) can require an item - typically a skill item - tested by
+  0x276E1C(inventory, list), and a pool that fails is rejected before any attack predicate runs (a
+  null item skips the test). The pool rejection log 0x19C83AC is an empty <code>ret</code> in the shipped build.</li>
+<li>AI attacks carry no target selector (<code>AttackData.Target</code> is null): an AI's target comes from its
+  perception and threat picker.</li>
+</ul>
+<p><strong>Synchronised attacks.</strong> <code>Combat/Sync.InitialAlignment</code> decides who moves: 0 moves the attacker to
+the victim (EnableAlignment), 1 with <code>TeleportDuringInterpolation</code> moves the victim to the attacker.
+Any synchronised kill therefore closes the distance itself. <code>AttackData.Teleport</code> -&gt;
+<code>Combat/AttackTeleport</code> (11 records) teleports at attack start without a sync. <code>AttackData.AOE</code> -&gt;
+<code>Combat/AOE</code> spawns an area attack (1,840 attacks set it); <code>AttackData.AOEOnStart</code> fires it at the
+start, otherwise only a clip event (such as <code>PL_WraithAOE</code>) fires it. The Shadow Strike kills already
+sever the head (<code>SeverActionTarget</code> Head, <code>SeverTargetOnKill</code>). A swapped animation changes what
+plays; the attack record keeps what it applies (its categories and actions).</p>
+<h2 id="ranged-attacks">Ranged attacks</h2>
+<p>The attack's target comes from 0x76A890(component, attack) in two lanes: when the attack's selector
+equals FreeAim's <code>+0x88</code> (the draw mode's <code>TargetOverride</code>), FreeAim's ray-cast targeter <code>[fa+0xB0]</code>
+- what the reticle is on; otherwise the selector's live targeter in <code>comp+0x5C0</code> - the lock. A
+targeted projectile never ray-casts: the shot (0x4CDE54 -&gt; 0x2E8994 -&gt; 0xFC15A0) and the projectile
+update (0x116E64 -&gt; 0x11734B) find the target alive (0x1A4F2F0) and apply the hit at its node
+(0x4EBED0), so walls do not stop a locked arrow.</p>
+<p>The reticle colour is FreeAim's state byte <code>fa+0x4CA</code>, set by 0x1A0EE8 from the target in FreeAim's
+weak handle (<code>fa+0x30</code>): 0 hidden, 1 nothing, 2 neutral, 3 hostile, 4 ally, 5 a world point; 0x114C588
+passes it to the HUD crosshair. Each frame 0x379578 ray-casts: a character hit goes to
+0xFA640 -&gt; 0xFA788(fa, player, combat object, hit), anything else to 0xFA788(fa, player, 0, 0), which
+clears FreeAim's targeter through its vf1 (0x18D298). The draw-snap aim assist (0x19F9E0 -&gt; 0x19E73C,
+<code>CP_RangedAutoTarget</code>) does not steer the shot and expires after about 0.4 s.</p>
+<h2 id="resources">Resources</h2>
+<p><strong>Cooldowns are one latched end time.</strong> <code>CheckCooldown</code> 0x493320 returns <code>[obj+0x10] - now</code>,
+floored at 0. <code>StartCooldown</code> 0x1A78B34 draws <code>rand(MinTime .. MaxTime)</code> through the stat-value
+evaluator 0x30F42C when the cooldown starts, converts it at 170.0 ticks per second (the float at
+0x202E64C) and stores <code>now + ticks</code>, so a duration change applies at the next use. The time source
+0xF23310 reads one of four global clocks chosen by <code>Combat/Cooldown.TimerType</code> (<code>obj+0x14</code>;
+0x2702550, 0x2702598, 0x2702590, 0x2702548). Every combat character owns a cooldown table at
+<code>[combat+0x5A0]</code>: <code>+0x00</code> slots (stride 0x20: <code>+0x00</code> key, <code>+0x08</code> record, <code>+0x18</code> the u32 end
+time, <code>+0x1C</code> the clock id), <code>+0x08</code> count (356 = the whole <code>Combat/Cooldown</code> category), <code>+0x10</code> the
+category; the start path 0xF13920 indexes it by record index. Of the 356 cooldown records 342 use a
+raw value, 8 a formula (the summon wheel: mounts and followers, through <code>MountCoolDown</code> and
+<code>FollowerCoolDown</code>) and 6 a variable.</p>
+<p><strong>Might</strong> is a charge meter at <code>combat+0x338</code> (vt_0x1DAA9C0: owner <code>+0x20</code>, value <code>+0x2D0</code>, maximum
+<code>+0x3A8</code> = 200, two chunks of <code>+0x348</code> = 100); Wrath is the same class at <code>combat+0x340</code>. A hit's
+gain is not a <code>Combat/ResourceGain</code> record: <code>IncrementHitCounter</code> 0x2DC668 -&gt; <code>AddCharge</code> 0xFFA8C
+takes the amount from a table compiled into the meter at <code>+0x28 / +0x30</code> (the player's: 62 entries of
+0x18 bytes, <code>{Combat/Category, item list, stat value option}</code>, first category match wins, the last
+entry is the default). <code>Combat/ResourceGain</code> is the other path (<code>ApplyResourceChange</code> 0x59CD94, used
+by executions and abilities). <code>FillToMax</code> 0x19D37B0(combat object) -&gt; <code>SetValue</code> 0x44FCD0 fills the
+meter; its only caller is the buff system (<code>Combat/Buffs.FillChargeMeterOnRemoveBuff</code>, 0x451EF0), and
+the path allocates from the engine heap, so it belongs on the main thread.</p>
+<p><strong>Ammunition</strong> is the object at <code>combat+0x2F8</code> (player only): <code>+0x20</code> owner, <code>+0x28</code> six slots of
+0x90 for ammunition types 2-7 (slot 0 = arrows; <code>AddResource</code> 0x19D24F8): slot <code>+0x54</code> maximum,
+<code>+0x60</code> / <code>+0x68</code> / <code>+0x70</code> the stat variables <code>Int_AmmoCount</code>, <code>Int_AmmoCount1..6</code> and
+<code>HasFullAmmo</code>, <code>+0x88</code> the stored count, <code>+0x8C</code> HUD slot; <code>+0x38C</code> the reference count of the
+<code>Combat/Buffs.UnlimitedAmmo</code> buff. The setter 0xEE9D40(slot, count, owner) clamps to the maximum,
+returns when the count equals the stored one, stores it, updates the stat variables (0xEE9FC0), the
+quiver visual (0xEE9F20) and the HUD. Refills: 0xEE5BE0 (all) and 0xEE5CD0 (one type), both gated on
+<code>GameModes.CanRefillAmmo</code>, and 0xEE5CB0 (ungated). The ammunition tick 0x45144C refills every frame
+when the byte <code>[base+0x2A34D6C]</code> is set or the unlimited-ammo buff is active: the engine's own
+infinite-ammunition switch, written nowhere in the shipped code. Arrows are spent by
+<code>Combat/ResourceGain</code> records with a negative additive value (<code>SniperShot_Spend</code>,
+<code>NormalShot_Spend</code>, <code>ShadowStrike_ToNav_Spend</code> -1, <code>ShadowStep_Spend</code> -2, <code>AllAmmo_Spend</code> -50).</p>
+<h2 id="the-fight-circle">The fight circle</h2>
+<p>The fight circle decides which NPCs attack a target, how many at once and when.</p>
+<p><strong>Data</strong> (27 categories under <code>Combat/FightCircle/*</code> and <code>_StructuresCombatCircle*</code>):</p>
+<ul>
+<li><code>Circle</code> (15, one per target kind: Player, Player_Eltariel, AI_Talion, Troll, Warg, FellBeast,
+  Balrog, Cage, Barrel ...): ArcAngle, BucketRays (8 for the player), PreDeathAttackerLock (6 s for the
+  player), <code>DefaultPlaybook[]</code>.</li>
+<li><code>PlayBook</code> (41) -&gt; <code>PlaySets[]</code> -&gt; <code>Plays[]</code>. A <code>Play</code> has a <code>SelectionWeight</code> (a weighted pick; 0 =
+  never), difficulty weights, a predicate, delays on hit / miss / counter / abort, global cooldowns and
+  <code>Stages[]</code> -&gt; <code>StageNodes</code> (a small state machine with next-stage links) -&gt; <code>Stage</code>.</li>
+<li><code>Stage</code> (201): <strong>NumAttackersMin / NumAttackersMax</strong> (1-16), AttackType, MultiAttackerDelay, Role
+  (distance, camera, off-screen and last-attacker weights, stat predicates). (min, max) pairs: (1,1)
+  160, (1,5) 6, (1,3) 5, (8,8) 5, (5,5) 5, (2,2) 3, (1,4) 3, (4,4) 3, (16,16) 3, (1,16) 2, (1,6) 1,
+  (5,10) 1.</li>
+<li><code>Participant</code> (59, per attacker kind: RequireLOSToAttack, FarDistance, RunDistance ...), <code>Setup</code>
+  (11), <code>Rings</code> (28 radius bands), <code>CirclePolicy</code> (16).</li>
+</ul>
+<p><strong>Against the player</strong> (<code>VS_Player_Default</code>, 42 plays): melee is <code>PC_BaseMelee</code> (weight 0.1) -&gt; stage
+<code>PC_Melee_Single</code> with one attacker; <code>PC_DoubleMelee</code> (two attackers) has weight 0.0, so two-orc
+melee plays never start; <code>PC_BaseMeleeAndRanged</code> and <code>PC_BaseRange</code> add <code>PC_Ranged_Single</code> (1-3
+archers). The mass stages belong to the Nazgul (5 melee with a 1.2 s stagger, 5 or 4 ranged), the
+no-path case (<code>PC_Ranged_Multi</code> 2-6, <code>PC_Melee_NoPath</code> 5-10), goblins (6, 1-16) and the fellbeast
+(5). Pre-death: <code>PC_BasePredeath</code>, weight 100,000, one attacker.</p>
+<p><strong>Runtime.</strong> The fight-circle manager is the AI world's <code>+0x28</code> (<code>MainScene+0x778</code>); its <code>+0x48</code> is
+an intrusive list of circles (the list node is the circle object, about 0x200 bytes). The tick: the
+scene tick -&gt; AI world tick 0x1F7304 -&gt; 0x6DE538(manager) -&gt; 0x377528 (walk the circles) -&gt;
+0x3775A4(circle, now) -&gt; 0x377744 (only while the byte 0x267358C is set) -&gt; 0x377830 -&gt; 0x3778D4 /
+0x4259A0 -&gt; 0x425B60 -&gt; 0x425C3C, which reads the stage's NumAttackersMin and Max on every stage start,
+then <code>count = min + rand(max - min)</code> (0x426840), clamped to the role's candidates (0x11D89C), and
+assigns attackers one by one with the stage's delay. Statics: 0x2673584 = 500 ms, 0x2673588 = 100 ms
+(the play re-evaluation interval). A circle: <code>+0x38</code> the target's combat object, <code>+0x1A0</code> the current
+attacker's, <code>+0x1E4</code> / <code>+0x1E8</code> world-clock timestamps (the 100 ms and 500 ms checks), <code>+0x1F4</code> the
+number of participants. An NPC joins when its target changes (0x37CA3C "Target just changed." -&gt;
+0x37CAA4 -&gt; 0x2C1004 -&gt; 0x2C0FCC -&gt; 0x2C0144 -&gt; 0x2C0280, the circle's playbook accessor 0x2C0C6C)
+and from planner steps; the planner's <code>CircleTarget</code> / <code>CircleAlly</code> steps are the NPCs waiting their
+turn (see AI).</p>
+<h2 id="combat-actions">Combat actions</h2>
+<p><code>Combat/Actions/*</code> holds 60 action types with 938 records (InventoryItemAdd 245, AudioKey 187,
+InventoryItemRemove 145, NPCSummon 50, BuffRemove 34, CreateTrapAtSource 33, CombatMeterAdjustment
+30, FactionEventAdd 30, ResourceGain 26, AOERemove 18 ...). 0x1A6E090 registers one handler per type
+through 0xF17060 as <code>{category, handler}</code> pairs; most handlers lie in 0xF12810 - 0xF16F60.</p>
+<p>StartCooldown 0xF13920, CreateTrapAtSource 0x1A6ED34, CreateTrapAtTarget 0x1A6EE6C,
+CombatMeterAdjustment 0x1A6EFB0, CombatMeterClearSource 0xF15E00, PauseStateTimer 0x1A6F02C, SetBrand
+0x1A6F080, SetPlayerFollower 0x1A6F0B8, SeverFactionMember 0x1A6F1F8, StartRangedDrawTimer 0x1A6F25C,
+StartConeSequence 0xF169B0, SetVisible 0x1A6F1A4, TeleportToRangedTargetLocation 0x1A6F264,
+ConsumeDamageCounterCharge 0xF13820, ConsumeHitCounterCharge 0xF13870, NPCSummon 0xF15EE0, NPCDismiss
+0xF15EC0, StopAISlowMo 0xF16DD0, ResetStruggleCount 0xF16840, ClearAllDOTBuffs 0xF137B0,
+DifficultyIncrementKillCount 0xF13A80, ClearGruntTrait 0xF137C0, InventoryItemAdd 0xF14220,
+InventoryItemRemove 0xF15C60, FactionEventAdd 0xF13BF0, FactionAmbushTrigger 0xF13BB0,
+ConditionalResourceGain 0xF137E0, AOERemove 0xF128C0, BehaviorStateAddTemporary 0xF13280,
+CreateNavMarkerAttack 0xF13A10, ResourceGain 0xF16930, AudioKey 0xF12960, BuffRemove 0xF13340,
+MeleeFX 0xF15DC0, DespawnNPC 0xF13A60, DespawnNPCOffscreen 0xF13A70, CancelAttackMount 0xF13750,
+CancelAttackRider 0xF13760, UIProgressMeterStart 0xF16F00, UIProgressMeterStop 0xF16F30,
+SheatheWeapon 0xF16980, QuestStartAmbient 0xF167C0, StateFlagRemove 0xF169E0, StateTagVolumeAttach
+0xF16A00, StateTagVolumeClear 0xF16DA0, InventoryItemSlotVisible 0xF15CF0, AOECreate 0xF12810,
+AOEPickerCreate 0xF12870, ProfileStatIncrement 0xF16660, ModelString 0xF15E60, ChainCreate 0xF13770,
+ChainReturn 0xF13790, RemoveAttachedProjectiles 0xF167D0, AmmoResourceTypeActivate 0xF12930,
+CooldownReset 0xF138C0, WeaponAnimStart 0xF16F60, BuddyMarkTarget 0xF132F0, BuddyClearTarget
+0xF132D0, InventoryItemDropLoot 0xF14FA0, InventoryItemConvertToResource 0xF14E20.</p>
+<h2 id="combat-states">Combat states</h2>
+<p><code>Combat/States/*</code> (8 categories, 846 records):</p>
+<ul>
+<li><strong>Definitions</strong> (112 states, 30 fields) say what a state permits: InterruptOnHit,
+  EnableCollisionCapsule, AICanSeeThrough, EnemyAICanTarget, CanPlayerTarget, AllowHealthRegen,
+  AllowPlayerDetection, DisableSenses, AllowFleeing, ForceFall, DisableAllTraitCatalysts,
+  ReplanOnRemove, fail and pre-death conditions, health adjustment and an attack on exit, a buff, a
+  command set (the player's inputs while in it), a presentation event, a struggle pool, an animation
+  rate controller and the transition graph (TransitionIntoFlags, RemainInStateFlags, included and
+  excluded transitions). States include KnockDown, Stunned, Blinded, OnFire, Grabbed, Vulnerable,
+  Raised, Cursed, RuneFeared, SmokeScreen, WraithPinned / SpiderPinned, Bip_BleedOut, Player_Death,
+  the bosses' pre-death states, ambient states (Caged, Kneeling, Sitting, Mourning) and boss phases.</li>
+<li><strong>AppliedState</strong> (364): how a state is applied (base chance, chance formula, buff chance, duration
+  and overrides, flags, a HUD prompt).</li>
+<li><strong>Flag</strong> (113), <strong>Setup</strong> (31, per character type: valid states, overrides, buff replacements).</li>
+<li><strong>Auto</strong> (36): health-triggered states - activation and remain ranges, filters, health clamps: the
+  boss phases (<code>AI_Balrog_ClampHealth_50Pct</code> / <code>_75Pct</code>, <code>AI_ArPharazon_Phase2_35PctHealth</code> /
+  <code>_65PctHealth</code>, <code>AI_FellBeast_HealthAdjust</code> ...).</li>
+</ul>
+<p><code>CCharacter::ApplyCombatState</code> 0x19B3230 -&gt; the combat object -&gt; 0x19D2834 -&gt; 0x105704(the state
+machine <code>[combat+0x2F0]</code>, state, 0, <code>[combat+0xE0]</code>). The script binding <code>ApplyCombatState</code> 0x1B751F4
+resolves its record through the cached-category slot 0x27008D0 (<code>Combat/States/AppliedState</code>).</p>
+<h2 id="area-attacks-and-ragdolls">Area attacks and ragdolls</h2>
+<p><strong><code>Combat/AOE</code></strong> (627 records: Tick, Timer, TickDelay, MaxAOELength, StartNode (a bone), Alignment,
+UseTargetLocation, UseRayCast, RecalcStartEachTick, CanHitSource, HitOncePerSpecialAttack ...) and
+<strong><code>Combat/AOE/Tick</code></strong> (752 records, 56 fields: Radius, Angle, dynamic radius, MaxAIToHit (-1 =
+unlimited), HitAllAI, CanHitMainWorld, attack overrides ...), plus <code>Combat/AOE/Picker</code> (33),
+<code>ProjectileTarget</code> (5) and <code>ProjectileSpray</code> (2). Area ticks apply damage through tick attacks whose
+compiled predicates decide who may be hit.</p>
+<p><strong>Ragdolls</strong> (14 categories): <code>Ragdoll</code> has two bodies (Orc_Base, OlogHai_Base), each a brain and 19
+joint constraints (38 <code>Ragdoll/Constraints</code> records); <code>Ragdoll/Behaviors</code> (18: strength and stiffness
+ranges and masks, sequences), <code>Sequences</code> (16), <code>TargetPoses</code> (32), <code>ConstraintTargetPose</code> (112),
+<code>BehaviorControllers</code> (13), float ranges, masks and audio tables: the Havok active-ragdoll tuning.</p>
+<h2 id="the-player-s-execution-companions">The player's execution companions</h2>
+<p><code>Combat/PlayerCompanion/*</code> defines the spectral companions that execute for the player:
+<code>Setup::Player</code> -&gt; groups <code>Execution_Lvl1/2/3</code> (Quantity 20, a combat prop with its own tree, 68
+<code>CB_*</code> execution attacks, selector <code>CB_Duel_Instakill</code>), triggered while the parent attack carries
+an included category, on input or at a hit-counter value. The groups are compiled when the player's
+model is set (build 0x1881264, called from 0x183C0B8, which sits under the player's model and skin
+setters); changing the records later has no effect until then.</p>
+<p>A compiled group (vt_0x1F7A188, stride 0x2B0): <code>+0x18</code> the group record, <code>+0x40</code> owner, <code>+0xA0 /
++0xA8</code> included categories, <code>+0xB8 / +0xC0</code> excluded, <code>+0xD0</code> companion type, <code>+0xD8</code> prop, <code>+0xF8</code>
+effect sequence, <code>+0x104</code> auto-trigger hit count, <code>+0x13D</code> can evaluate input, <code>+0x13E</code> swallow
+input, <code>+0x13F</code> parent must have an active attack, <code>+0x140</code> parent must reject input, <code>+0x142</code>
+auto-pick on an enemy's counter window, <code>+0x143</code> auto-trigger on the hit counter, <code>+0x120 / +0x128</code>
+required item / buff. The manager is <code>[comp+0xC68]</code>, its groups at <code>+0x58 / +0x60</code>.</p>
+<ul>
+<li>At every player attack start, 0x2C3D68 -&gt; 0x4E8B54 -&gt; per group 0x4E9094 latches the group when the
+  attack has an included category and no excluded one.</li>
+<li>Input goes through 0x4E85D0: first a swallow pass over a separate vector (<code>mgr+0x70</code>, holding only
+  <code>Counter_FromGTD</code>), then the player's own tree, then the normal pass 0x4E8B94 over the groups.
+  A group passes its gates (swallow flag clear, can evaluate input, latched, the item-slot mask, the
+  parent's input decision, the event id - small command ids such as 0x6B attack, 0x6C, 0x85 - and its
+  required buff and item), gets an instance (0x65A990: one per latch with a budget, otherwise up to
+  Quantity), then <code>EvalNodes</code> 0x795E7C picks an attack (<code>PickAttack</code>) and a target (0x76A890 with the
+  player's component), places the companion (0x18800FC) and starts it (0x1888918).</li>
+<li><code>EvalNodes</code> evaluates every attack with the player as the attacker, so attacker-side predicates
+  (Focus, distance, direction) are measured from the player.</li>
+<li>Two launches happen without input, both with mode 5 (no input match): 0x6D27D0 from the hit counter
+  (every multiple of the group's auto count) and 0x76EE08(component, enemy combat object), raised when
+  an enemy opens a counter window, with an explicit target.</li>
+<li>The execution pools require the wraith-execution skill item (<code>CSP_Chord_InstaK_Child1</code> -&gt;
+  <code>PS_Execution_Child1_WraithExecution_SKILL</code>): without it every pool is rejected before any attack
+  predicate runs.</li>
+</ul>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>The live layout of the combat state machine: <code>+0x28</code> holds the character's <code>Setup</code> record and
+  <code>+0x58</code> / <code>+0x60</code> a <code>Definitions</code> record while a state is active (seen on 5 characters); a larger
+  sample would confirm <code>+0x58</code> as the current state.</li>
+<li>What the fight circle's <code>+0x188</code> / <code>+0x190</code> pointers hold.</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
