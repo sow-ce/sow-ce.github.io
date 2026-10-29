@@ -1,176 +1,199 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Captain traits: slots, the resolver, custom slots, the card&#x27;s text - Shadow of War engine reference</title><meta name="description" content="trait slot word = re-roll mask, the rebuild loop, custom slots (`fm forcetrait`), exclusive groups, the card&#x27;s text markup and colour aliases"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
-<a href="https://sow-ce.github.io/">SoW:CE home</a>
-<h2>Topics</h2>
-<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
-<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
-<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
-<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
-<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
-<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
-<a href="army-menu.html" data-p="army-menu">Army menu</a>
-<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
-<a href="audio-video.html" data-p="audio-video">Audio and video</a>
-<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
-<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
-<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
-<a href="captain-traits.html" class="cur" data-p="captain-traits">Captain traits</a>
-<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
-<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
-<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
-<a href="factionmember.html" data-p="factionmember">FactionMember</a>
-<a href="forge.html" data-p="forge">Forge</a>
-<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
-<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
-<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
-<a href="identity-graph.html" data-p="identity-graph">Identity</a>
-<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
-<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
-<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
-<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
-<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
-<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
-<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
-<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
-<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
-<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
-<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="captain-traits-slots-the-resolver-custom-slots-the-card-s-text">Captain traits: slots, the resolver, custom slots, the card's text</h1>
-<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Started 2026-10-28.
-Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
-<p><strong>Covers:</strong>
-- the slot word +0x18 as the re-roll mask, slot +0x10, the rebuild loop and its sort
-- custom slots (gate word 0): the Traits menu's custom route <code>fm forcetrait</code>
-- the 51 exclusive groups: contradictions vs design limits
-- why a trait is refused although his slot "gives" it (Decoys / Decoys (Elite))
-- the card's text: markup in the localization strings, colour aliases, card names shared by several traits</p>
-<p><strong>Already known elsewhere (read, do not re-derive):</strong>
-- slot / active-set / marker layout, add and remove engine functions, saves keep only the pickers,
-  exclusive groups first census, trait items, icons: memory <code>captain-trait-system</code>
-- the Traits menu, the resolver's gate bits and the oracle (7,111 / 7,118 slots), add / remove verbs,
-  look-carrying traits (Quirk_Undead): memory <code>army-grid-traits-menu</code>,
-  <a href="../framework/sowframework/sdk/sow_trait_editor.hpp">sow_trait_editor.hpp</a> header
-- the advanced class and the class bonus as trait slots: <code>kb/captain-looks.md</code> "Captain CLASS and ADVANCED CLASS"</p>
-<p><strong>Sections:</strong>
-- The slot word is the re-roll mask (MEASURED static 2026-10-28)
-- Custom slots and <code>fm forcetrait</code> (BUILT, NOT RUN 2026-10-28)
-- Exclusive groups: contradictions and design limits (MEASURED 2026-10-28)
-- Decoys: the first option he qualifies for wins (MEASURED 2026-10-28)
-- The card's text: markup and colour aliases (MEASURED 2026-10-28)</p>
-<hr />
-<h2 id="the-slot-word-is-the-re-roll-mask-measured-static-2026-10-28">The slot word is the re-roll mask (MEASURED static 2026-10-28)</h2>
-<p>Slot entry (FM+0x1E0, 0x20 each): <code>+0 picker, +8 trait, +0x10 unlocked trait, +0x18 u16 flags,
-+0x1A i16 option</code>. The u16 at +0x18 (copied from FactionSystem+0xE0 per picker when the slot is
-added) is two things at once:</p>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Captain traits, classes and personalities - Shadow of War engine reference</title><meta name="description" content="How a captain&#x27;s traits are stored, rolled and re-rolled: trait slots and their gate word, the resolver and the rebuild loop, exclusive groups, what a save keeps, the trait card&#x27;s rows and text markup, and how class, advanced class and personality are represented."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" class="cur" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="captain-traits-classes-and-personalities">Captain traits, classes and personalities</h1><p class=\"lede\">How a captain&#x27;s traits are stored, rolled and re-rolled: trait slots and their gate word, the resolver and the rebuild loop, exclusive groups, what a save keeps, the trait card&#x27;s rows and text markup, and how class, advanced class and personality are represented.</p>
+<p>Captains are <code>FactionMember</code> objects (see The Nemesis system). Their strengths, weaknesses, class
+bonus, advanced class, gangs and quirks are all traits, held in trait slots and resolved by the
+engine from data.</p>
+<h2 id="storage">Storage</h2>
+<table>
+<thead>
+<tr>
+<th>FactionMember offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x1E0</td>
+<td>the trait slot vector <code>{begin, end, u32 capacity at +0x10, u8 owned at +0x14}</code>; a slot is 0x20 bytes (below)</td>
+</tr>
+<tr>
+<td>+0x198</td>
+<td>the active trait set, a vector of 8-byte <code>Faction/Traits/Definitions</code> pointers (it equals the set of slot traits in 528 of 531 captains)</td>
+</tr>
+<tr>
+<td>+0x1B0</td>
+<td>the marker vector (<code>Marker_*</code> records)</td>
+</tr>
+<tr>
+<td>+0x378</td>
+<td>a cache: the first active trait with <code>GangLeader</code> (0x1BC3CB4)</td>
+</tr>
+<tr>
+<td>+0x508</td>
+<td>derived bits: 14 any <code>CanBypassRequiredDataLevelToSpawn</code>, 19 any NPC summon / gang, 43 a trait that forbids sim events with a boss, 34 the slot list needs sorting, 38 the engine refuses trait edits (0x114B55C)</td>
+</tr>
+</tbody>
+</table>
+<p>A <strong>slot</strong> is <code>+0x00</code> the <code>Faction/Traits/Picker</code>, <code>+0x08</code> the trait it resolved to (null = nothing),
+<code>+0x10</code> the trait a story mission unlocked for it, <code>+0x18</code> a u16 flag word, <code>+0x1A</code> an i16 option
+index (-1 = none). A picker's options are <code>Picker.Traits</code> -&gt; <code>_StructuresFactionTraitPickerEntry</code>
+records (<code>.Trait</code>). 493 pickers exist.</p>
+<h2 id="the-flag-word-is-the-gate-list-and-the-re-roll-mask">The flag word is the gate list and the re-roll mask</h2>
+<p>When a slot is added, its u16 at <code>+0x18</code> is copied from the faction system's table <code>FS+0xE0</code>
+(indexed by the picker's record index; 18,508 of 18,508 entries match). It is two things at once:</p>
 <ul>
-<li><strong>the gate list</strong> - <code>0x1234E0(&amp;slot+0x18, bit)</code> (<code>bt</code>) decides which tests the resolver runs:
-  bit 1 level, 2 row rank, 3 follower, 4 required traits, 6 intel, 7 campaign predicate, 8 difficulty;</li>
-<li><strong>the re-roll mask</strong> - the resolver <code>0x3528C4</code> first ANDs the rebuild's reason mask with it and,
-  when the result is 0, returns <code>slot+8</code> untouched: <code>0x352AB8</code> is <code>xor eax,eax; cmp word [rcx],ax;
-  sete al</code>. So a slot is re-decided only by the events whose bit it carries.</li>
+<li><strong>the gate list</strong> - 0x1234E0(&amp;slot+0x18, bit) (<code>bt</code>) decides which tests the resolver runs: bit 1
+  minimum level, 2 required row rank, 3 player follower, 4 required other traits, 6 intel level, 7 a
+  campaign predicate, 8 difficulty;</li>
+<li><strong>the re-roll mask</strong> - the resolver 0x3528C4 first ANDs the rebuild's reason mask with it and,
+  when the result is 0, returns <code>slot+0x08</code> unchanged (0x352AB8: <code>xor eax,eax; cmp word [rcx],ax;
+  sete al</code>). A slot is re-decided only by the events whose bit it carries.</li>
 </ul>
-<p>The rebuild <code>0xF88230</code> (UpdateTraits <code>0x3528A0(fm, reason)</code>):</p>
-<pre><code>mask = 1 &lt;&lt; reason                                   (0xF885E3 bts)
-if FM+0x508 bit 34: sort the slots, clear bit 34     comparator 0x7127A8: Picker.SortPriority,
-                                                      higher first, ties by address
-reason 0: active set emptied (FM+0x1A0 = FM+0x198), FM+0x378 = 0, FM+0x508 bits 14 / 19 cleared,
+<p>Every picker carries bit 0 (493 of 493), so reason 0 re-rolls every slot. No live slot has a flag
+word of 0 (19,713 slots), so a zero word marks a slot that the engine will never re-roll: the
+resolver returns its trait for every reason.</p>
+<p><strong>The resolver</strong> returns the first option whose flagged gates all pass. Options with
+<code>MissionUnlock_MinXPLevel</code> set additionally require the level to reach the remapped <code>MissionUnlock -
+1</code> (0x352DB8) and the option's trait to equal <code>slot+0x10</code> (0x3529A3); <code>+0x10</code> is 0 on every live
+slot. Its option walk: 0x352BB8(&amp;iterator, picker) over <code>Picker.Traits</code> (a 0x30-byte iterator:
+<code>+0x28</code> index, <code>+0x2C</code> count), 0x352B2C the entry at the index, 0x352AC4 the entry's trait, 0x2774A8
+"at end".</p>
+<h2 id="adding-removing-and-rebuilding">Adding, removing and rebuilding</h2>
+<ul>
+<li><strong>UpdateTraits</strong> 0x3528A0(fm, reason) runs the rebuild 0xF88230:</li>
+</ul>
+<pre><code>mask = 1 &lt;&lt; reason
+if FM+0x508 bit 34: sort the slots (comparator 0x7127A8: Picker.SortPriority, higher first,
+                    ties by address), clear bit 34
+reason 0: active set emptied (FM+0x1A0 = FM+0x198), FM+0x378 = 0, FM+0x508 bits 14 and 19 cleared,
           byte FM+0x51C = 1
-per slot: new = 0x3528C4(slot, &amp;mask, &amp;ctx)
+per slot: new = resolver(slot, &amp;mask, &amp;ctx)
           if new == old and reason != 0: skip
-          mask |= bit 4 (a trait changed: required-trait gates of later slots re-run)
-          0x353454(fm, old) deactivate, 0x3566B0(fm, new) activate
+          mask |= bit 4              (a trait changed: later slots' required-trait gates re-run)
+          deactivate old (0x353454), activate new (0x3566B0)
 </code></pre>
-<p>Every picker of the live table has bit 0 (MEASURED 2026-10-28: 493 / 493, none with flags 0), so
-reason 0 (every reward, every save load) re-rolls every slot, as recorded before; reason 1 / 6 / ...
-re-roll only slots gated on that event. Live control (553 pool entries, 19,713 slots, one save):
-no slot has +0x18 == 0, so "flags 0" marks a custom slot with no false positive.</p>
-<p><strong>Slot +0x10 (CORRECTS the memory's "forced-trait filter" reading, 2026-10-28):</strong> it is read only for
-options with <code>MissionUnlock_MinXPLevel != 0</code>: such an option passes when his level is at least the
-remapped <code>MissionUnlock - 1</code> (<code>0x352DB8</code>) AND its trait equals <code>slot+0x10</code> (<code>0x3529A3</code>). It is the
-trait a story mission unlocked for that slot. The planner treats MissionUnlock options as failing,
-which holds while +0x10 is 0 (MEASURED: 0 of 19,713 live slots have it set).</p>
-<p>Option walk the resolver uses (also callable for a lookup): <code>0x352BB8(&amp;iter, picker)</code> (Picker.Traits,
-iterator 0x30 bytes: +0x28 index, +0x2C count), <code>0x352B2C(&amp;iter)</code> = the entry at the index (through
-System::ApplyFactionTransform), <code>0x352AC4(entry)</code> = its Trait, <code>0x2774A8</code> = at end.</p>
-<p><strong>Evidence:</strong> listings of 0x3528C4, 0x352AB8, 0x1234E0, 0xF88230 (the loop at 0xF88610), 0x7127A8,
-0x352BB8, 0x2774A8, 0x352AC4. Static only.</p>
-<h2 id="custom-slots-and-fm-forcetrait-built-not-run-2026-10-28">Custom slots and <code>fm forcetrait</code> (BUILT, NOT RUN 2026-10-28)</h2>
-<p>A slot <code>{picker, trait, +0x18 = 0, option}</code> is never re-rolled: the resolver hands back its trait
-for every reason, and the reason-0 rebuild deactivates and re-activates it like every slot, so the
-engine's own activation gives everything the trait gives (items, gang cache, derived FM+0x508 bits,
-spawner hijack). It lasts until a save load: the loader re-adds the picker through <code>0x7CD03C</code>, which
-copies the table flags back, and rolls it the game's way. A custom slot = flags 0 on a picker whose
-table flags are not 0.</p>
-<p>User request 2026-10-28 ("anything can be given ... minus the beast contradiction etc."). The
-Army Grid &gt; Traits menu has a <strong>Custom traits</strong> switch (on by default, session only). Verb
-<code>fm forcetrait &lt;fm&gt; &lt;trait&gt; &lt;picker&gt; &lt;replace picker&gt; &lt;replace trait&gt;</code>
-(<a href="../framework/sowframework/sdk/sow_main_native.cpp">sow_main_native.cpp</a> <code>RunFmForceTrait</code>):</p>
-<ol>
-<li>the slot it contradicts (or his own slot of that picker) out: <code>0x353454</code> + erase <code>0x7A7378</code>;</li>
-<li>the slot in through the loader's own add <code>0x7CD03C</code> (no group / marker test), sort bit 34,
-   UpdateTraits(fm, 0); if the game's roll gives the trait, done (a normal slot the save keeps);</li>
-<li>else the rolled trait deactivated, the slot written <code>{+8 trait, +0x18 0, +0x1A option}</code> (option =
-   the trait's index from the resolver's own walk, which also proves the trait is that picker's
-   option), UpdateTraits(fm, 0) again;</li>
-<li>kept only when the slot holds the trait AND it is active; otherwise the slot goes, the replaced
-   slot is put back through <code>0x7CD03C</code>, nothing changes.</li>
-</ol>
-<p>Planner (<a href="../framework/sowframework/sdk/sow_trait_planner.hpp">sow_trait_planner.hpp</a>): the game's route
-first when it is sure and replaces nothing; custom otherwise. Hard refusals on every route: class /
-advanced class / rarity slots, Quirk_Undead while he is in the world, 64 active traits, FM+0x508 bit 38.</p>
-<p><strong>Planner twin, read-only (MEASURED 2026-10-28, 30 seated captains, Difficulty_5Bloody):</strong> of 5,790
-(captain, non-DLC card trait he lacks) pairs, the game's route gives 4,526; custom where the game's
-roll then gives it (only a marker or group stood in the way; the save keeps it) 391; custom forced
-837; still refused 36 (27 Quirk_Undead counted as never addable by the twin, 9 "contradicts 2 of his
-traits").</p>
-<p><strong>Not checked in game:</strong> the activation of a forced trait, a forced gang / summon / hijack trait on a
-captain in the world, a forced trait whose items need a character type (<code>0x355474</code> refuses the item),
-traits gated on a marker (Raise_Dead wants Marker_StatusEffect_Curse) doing anything, what a save
-load leaves.</p>
-<h2 id="exclusive-groups-contradictions-and-design-limits-measured-2026-10-28">Exclusive groups: contradictions and design limits (MEASURED 2026-10-28)</h2>
-<p>All 51 <code>PickerGroup_*</code> records (Picker.ExclusiveGroup) with their pickers' options, read live:</p>
 <ul>
-<li><strong>design limits (relaxed for custom traits):</strong> DLC4_Ultimate (10 pickers), DLC4_Opener (3),
-  BodySlamThroatGrab (2), Mannerisms_Pool (23 audio mannerisms, not on the card);</li>
-<li><strong>one of a kind the engine keeps:</strong> GangOrPet (13; FM+0x378 caches the first gang leader),
-  HasMount (2), ElementalWeapon (5);</li>
-<li><strong>a strength and its own opposite:</strong> Resist_Fire / Stealth / Poison / Ranged / Beasts / Combat /
-  Grab (immune or resistant vs vulnerable or mortal, one element), every <em>_Fear_Hate / </em>_FearHate
-  (fear vs hate of one thing; Caragor_Fear_Hate also holds Summoner_Caragors, PetCaragor_FearHate the
-  caragor pets), BeastSlayerOrDismount (Monster Slayer vs Dismount Rider), AggressiveUnAgressive,
-  LastChanceModifiers (Humiliator vs No Last Chance), RepositionMoveAway, VaultBreaker,
-  BodyguardDefeat, HateBossDefeat, KillOtherCaptain, WeakByHate_PinningShot, Alone_Fear, Blocks.</li>
+<li><strong>ApplyReward</strong> 0x3511F4 -&gt; 0x351AF8 and five other callers rebuild with reason 0, so every reward
+  re-rolls every slot.</li>
+<li><strong>Add</strong> = 0x7CD03C pushes <code>{picker}</code> (constructors 0x7CD150 / 0x7CD184, push 0x7CD0CC, growth
+  0x1144628), then UpdateTraits.</li>
+<li><strong>Remove</strong> = find the slot by picker, 0x353454 (drop it from the active set and re-derive only the
+  bits that trait set; unregister its spawner hijack or catalyst; remove its items from a live body),
+  then erase it (0x7A7378).</li>
+<li><strong>Activate</strong> 0x3566B0: gives the trait's items (0x355400 -&gt; 0x355474 per item), registers a spawner
+  hijack (0x1A32D88) for captains of the current region, and starts a catalyst only when he has a
+  body. Item 0x355474 checks <code>RequiredCharacterType</code> against the type of his combat tree
+  (<code>FM+0x188</code>; 0x30CF30, exclusion 0x36686C) before giving a weapon item (olog flamethrower or
+  harpoon, the power-shot crossbow, grenades). The first loop of 0x355400 writes flair colours into
+  the list at <code>FM+0x118</code> (<code>{u8, u32 channel at +4, ARGB at +8}</code> via 0x1C10E54 / 0x1C11A74, seeded by
+  <code>FM+0x168</code>).</li>
 </ul>
-<p>The custom route still replaces the slot of a non-relaxed group (<code>RelaxedGroup()</code> in
-<a href="../framework/sowframework/sdk/sow_trait_editor.hpp">sow_trait_editor.hpp</a>).</p>
-<h2 id="decoys-the-first-option-he-qualifies-for-wins-measured-2026-10-28">Decoys: the first option he qualifies for wins (MEASURED 2026-10-28)</h2>
-<p>User report: Decoys greyed with "that slot gives Decoys instead". Not a class rule:</p>
-<pre><code>Picker_GangOfDoppelgangers   flags 0x83 (level, campaign), group GangOrPet,
-                             ExcludedMarker Marker_SpecialButterfly, Marker_Deranged
-  opt0 Quirk_HasGang_Doppelgangers_Elite   MinXPLevel 35   UIGroup_Bonuses
-  opt1 Quirk_HasGang_Doppelgangers         MinXPLevel 15   UIGroup_Classes
-Picker_D4RES_GangOfDoppelgangers  flags 0x3, opt0 Quirk_D4RES_HasGang_Doppelgangers_Six (level 1)
-</code></pre>
-<p>All three share Summary <code>IntRes_Gang_Doppelgangers</code> ("Decoys"). From level 35 the slot always rolls
-the Elite one, so the plain one cannot come from the game's route on a high-level captain. The menu
-now names variants and says "from level 35 the game gives him Decoys (Elite) from that slot first".</p>
-<h2 id="the-card-s-text-markup-and-colour-aliases-measured-2026-10-28">The card's text: markup and colour aliases (MEASURED 2026-10-28)</h2>
-<p>The localization strings carry the Scaleform card's markup (63,493 strings of the shipped table,
-aire <code>MasterStringDB</code>, read-only):</p>
+<p><strong>Exclusive groups.</strong> 51 <code>PickerGroup_*</code> records cover 207 of the 493 pickers
+(<code>Picker.ExclusiveGroup</code>). 0x19F66C collects the groups of every slot a captain has, rolled or not,
+and 0x7DABFC refuses a picker that shares one. They are of three kinds: design limits
+(<code>DLC4_Ultimate</code> 10 pickers, <code>DLC4_Opener</code> 3, <code>BodySlamThroatGrab</code> 2, <code>Mannerisms_Pool</code> 23 audio
+mannerisms that never appear on the card); one-of-a-kind features (<code>GangOrPet</code> 13, <code>HasMount</code> 2,
+<code>ElementalWeapon</code> 5); and a strength paired with its own opposite (<code>Resist_&lt;element&gt;</code> - immune or
+resistant against vulnerable or mortal to one element; every <code>&lt;X&gt;_Fear_Hate</code>; <code>BeastSlayerOrDismount</code>;
+<code>AggressiveUnAgressive</code>; <code>LastChanceModifiers</code>; <code>RepositionMoveAway</code>; <code>VaultBreaker</code>;
+<code>BodyguardDefeat</code>; <code>HateBossDefeat</code>; <code>KillOtherCaptain</code>; <code>WeakByHate_PinningShot</code>; <code>Alone_Fear</code>;
+<code>Blocks</code>).</p>
+<p><strong>The first option he qualifies for wins.</strong> <code>Picker_GangOfDoppelgangers</code> (flags 0x83: level and a
+campaign gate; group <code>GangOrPet</code>; excluded markers <code>Marker_SpecialButterfly</code>, <code>Marker_Deranged</code>)
+lists <code>Quirk_HasGang_Doppelgangers_Elite</code> (minimum level 35) before
+<code>Quirk_HasGang_Doppelgangers</code> (minimum level 15); both share the card name "Decoys". From level 35
+that slot always rolls the Elite trait.</p>
+<h2 id="what-a-save-keeps">What a save keeps</h2>
+<p>A save keeps only the slots. The FactionMember loader 0x1BC159C (a keyed tree: Identity ...
+Inventory, Traits, PickerLevelRemap) clears <code>FM+0x1E0</code> (0x1BB9068), re-adds each saved picker
+through 0x1BB255C -&gt; 0x7CD03C with no trait, then calls UpdateTraits(fm, 0) unconditionally
+(0x1BC3554). Every load therefore re-rolls every slot: only single-option, level-only slots come
+back identical, and gated slots are decided again. The loader bypasses the exclusive-group test,
+so a state that breaks a group persists. (0x1C12224 is the serializer of the online "searchable"
+index, not the save.)</p>
+<h2 id="class-advanced-class-and-personality">Class, advanced class and personality</h2>
+<p><strong>Class</strong> = <code>FM+0x278</code> (a <code>Character/Models</code> record) + <code>FM+0x188</code> (that model's own combat tree) +
+one class-bonus slot <code>Picker_BaseStrength_&lt;Infantry | Defender | Archer | Hunter | Savage | Olog&gt;</code>. Six
+pairs exist (Orc_Infantry, Orc_Defender, Orc_Archer, Orc_Spearman, Orc_Berserker, OlogHai_Infantry,
+each with its <code>AI_&lt;same&gt;</code> tree); the spearman's bonus is Hunter and the berserker's Savage (156 of 156
+living row captains follow this).</p>
+<p><strong>Advanced class</strong> = one slot <code>Picker_BaseStrength_&lt;Assassin | BeastMaster | Berserker | CombatMaster |
+Commander | Destroyer | Marksman | Tank | Tracker | Trickster&gt;</code> (155 of 156). All 16
+<code>BaseStrength</code> pickers have table flags 1, one option and no exclusive group, so the slot's picker
+alone decides it, and it survives a save. <code>AdvancedClass_*</code> and <code>OriginDeathTaunt_*</code> are
+<code>Faction/Rewards/Types</code> weight records that no captain holds; <code>*Champion&lt;X&gt;</code> rewards are the
+Legendary promotion (rarity picker, an epic trait, a kit, a level and a new role).</p>
+<p><strong>Personality is the voice.</strong> <code>FM+0x270</code> is a <code>Faction/Personalities</code> record (120 records; their
+<code>ShortName</code> is the voice set: pr, br, tw, wh, cv for orcs, ws, ze, bs for ologs, ea for Easterlings;
+empty for nonverbal and undead characters). Base tables live in <code>Faction/PersonalityTable</code> (11 orc, 3
+olog, 4 mercenary). The engine's setter 0x1BC60A0(fm, record) (used by the reward <code>SetPersonality</code>
+0x3523EB and by role changes that force a personality) removes the old personality's marker traits
+(0x79A1D4), writes <code>FM+0x270</code>, re-registers a captain in the world with the new voice (0x73D548:
+<code>CCharacter+0x2B28</code> and <code>AudioHooks/List.CharacterSpawns</code> on <code>[char+0x2808]</code>), then adds the new marker
+traits (0x7D3EA4), skipping markers while bit 38 is set. 0x7D3EA4 refuses a marker whose exclusive
+group is already held (every <code>PersonalityMarker_*</code> is in <code>MarkerGroup_Personality</code>), and the setter
+removes only the markers of the personality it replaces.</p>
+<h2 id="the-trait-card">The trait card</h2>
+<p>The card's rows are <code>Interface/Menu/MenuTreeNode/TraitGroup</code> records (<code>.TraitGroups</code>, the UI
+groups; TraitType 0 / 1 = strengths / weaknesses): Immunities; Hates; Class traits = Classes;
+Bonuses = Bonuses + Epics; Mortal weaknesses = MortalVulnerabilities + Terrors; Vulnerabilities;
+"Dazed by" = WeakenedBy + Fears; and a hint row of the resistances (MaxVisTraits 3). Miscellaneous
+passives and rarity are not drawn. The number under each row's icon is the captain's trait count in
+that row.</p>
+<p><strong>Icons</strong> are <code>Icon</code> strings (<code>interface\textures\hud\traits\enemy\...\x.tex</code>); base icons ship in
+<code>interface\bundles\ingame_navmarkers.bndl</code>. A trait's <code>PreviewBundle</code> holds only its preview movie.
+43 Easterling trait icons of the fourth DLC live in a single patch bundle; when it is not loaded the
+card's request is registered with no data and draws a placeholder.</p>
+<p><strong>Text.</strong> The localization strings carry the card's markup (63,493 strings):</p>
 <ul>
-<li>colour runs <code>{Color_&lt;Alias&gt;}text&lt;/font&gt;</code>: Enemy 593, Player 498, Objective 305, Broken 46, Intel 43,
-  Epic 35, Follower 16, Reward 6, Weakened 5, Green 2, Red 2, Hate 1. In trait NAMES only Epic
-  (35 names, wholly wrapped: <code>{Color_Epic}Epic Trait: Slayer Counter&lt;/font&gt;</code>; 36 of 484 trait
-  records' Summary strings carry markup);</li>
-<li>font runs <code>&lt;font face="$INTHUD"&gt;...&lt;/font&gt;</code> (51); glyphs / button prompts <code>{Poison}</code>,
-  <code>{CombatPrimary03}</code>, <code>{EpicSkull}</code>; format arguments <code>{1!s}</code> <code>{2!d}</code>; voice cues <code>&lt;laugh&gt;</code> (dialogue).</li>
+<li>colour runs <code>{Color_&lt;Alias&gt;}text&lt;/font&gt;</code> (Enemy 593, Player 498, Objective 305, Broken 46, Intel 43,
+  Epic 35, Follower 16 ...); among trait names only Epic, which wraps 35 names whole
+  (<code>{Color_Epic}Epic Trait: Slayer Counter&lt;/font&gt;</code>);</li>
+<li>font runs <code>&lt;font face="$INTHUD"&gt;...&lt;/font&gt;</code>, glyph and button tokens (<code>{Poison}</code>, <code>{CombatPrimary03}</code>,
+  <code>{EpicSkull}</code>), format arguments (<code>{1!s}</code>, <code>{2!d}</code>) and voice cues (<code>&lt;laugh&gt;</code>).</li>
 </ul>
-<p>A colour alias is a <strong>Profile/ActionAlias</strong> record (<code>Color_Epic</code>; GamepadString / KBMString /
-FontColor) whose FontColor links an <strong>Interface/Color</strong> record; its <code>Color</code> Int is ARGB, live:
-Epic 0xFFE24E2C, Red 0xFFA42E06, Green 0xFF359737 (Red / Green confirm the byte order).
-<code>Color_Enemy</code> / <code>Color_Player</code> also carry strings <code>UI_Color_Enemy</code> / <code>UI_Color_Player</code>.</p>
-<p><strong>Shared card names:</strong> 21 card names belong to 2-3 card traits each. Their record names' family
-words tell all 21 apart: Easterling / East, D4RES / DLC*, DEMO, Elite, Rare, Six, Archer, CMT
-(Combat Master), Perm, ET. Examples: Agile / Agile (Easterling), Decoys / Decoys (Elite) / Decoys (DLC
-six), Damaged by Executions (Combat Master), Immune to Curse (demo), Trapper (Easterling) vs the
-Tracker one.</p>
-<p>Reader: <a href="../framework/sowframework/sdk/sow_trait_text.hpp">sow_trait_text.hpp</a> (<code>ParseMarkup</code>,
-<code>ColorAliases</code>); display names <code>Catalog::Show</code> in sow_trait_editor.hpp.</p><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
+<p>A colour alias is a <code>Profile/ActionAlias</code> record (<code>Color_Epic</code>; GamepadString, KBMString, FontColor)
+whose <code>FontColor</code> links an <code>Interface/Color</code> record with an ARGB <code>Color</code> (Epic 0xFFE24E2C, Red
+0xFFA42E06, Green 0xFF359737).</p>
+<p>21 card names belong to two or three traits each; the record names' family words tell them apart
+(Easterling / East, D4RES / DLC, DEMO, Elite, Rare, Six, Archer, CMT for Combat Master, Perm, ET):
+"Decoys" / "Decoys (Elite)" / the DLC's six-decoy version, "Agile" and its Easterling twin, and so on.</p>
+<p><strong>Looks from traits.</strong> Of 334 addable traits, none sets <code>ModelHide</code>, <code>BodyModelChange</code> or
+<code>AppearanceTags</code>. Only <code>Quirk_Undead</code> changes the body and colours: <code>Body_Scar_BodyReplacement</code> -&gt;
+<code>IB_Body_Scar</code> -&gt; <code>AD_Body_Scar.ModelPicker</code> (the scarred orc and olog bodies) plus
+<code>I_Am_Undead_Appearance(_OLOG)</code> (flair colours, cataract-eye material overrides, material-set variants
+and the undead effect).</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>What a slot with a zero flag word does across every trait type in play (gang, summon and spawner
+  hijack traits on a captain who is in the world).</li>
+<li>Traits gated on a marker (for example a curse marker) and whether they act when forced.</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
