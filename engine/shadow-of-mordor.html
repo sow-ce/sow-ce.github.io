@@ -179,25 +179,93 @@ placed in the world as objects <code>Hier.Faction_&lt;row&gt;_&lt;column&gt;</co
 <code>.Cam</code> and about 20 points of interest each. The screen's movie is
 <code>interface\flash\widgets\hierarchy.gfx</code>, which holds no logic.</p>
 <h2 id="the-mordor-importer-in-shadow-of-war">The Mordor importer in Shadow of War</h2>
-<p>Shadow of War ships an importer for Mordor nemeses, compiled from
-<code>...\KRAKEN_CODE_STREAM\source\Game\Shared\NemesisForgeUtils.cpp</code> (log tag <code>[NEMESISFORGE]:</code>). Its
-GameDB schema declares conversion tables keyed by Firebird (Mordor) records:</p>
-<ul>
-<li><code>NemesisForge/FirebirdFactionPersonality</code>, <code>FirebirdFactionRole</code>, <code>FirebirdFactionTrait</code>,
-  <code>FirebirdModelScarType</code>;</li>
-<li><code>NemesisForge/FirebirdSimpleModel</code> with <code>FirebirdSimpleModelHead</code>, <code>FirebirdSimpleModelPiece</code>,
-  <code>FirebirdSimpleModelColorId</code> and <code>FirebirdSimpleModelColorSetup</code>;</li>
-<li>script functions <code>NemesisForge.CreateNemesis</code>, <code>NemesisForge.CreateFollower</code> and
-  <code>NemesisForge.Override.ClearAll</code>, the events <code>Events_NemesisForgeImportEnabled</code> and
-  <code>Events_NemesisForgeImportSampled</code>, a <code>FirebirdProfileID</code> and a user property
-  <code>User.OwnsShadowOfMordor</code>.</li>
-</ul>
-<p>So a Mordor captain is described to War by Mordor's own personality, role, trait, scar and model
-record identifiers, which War maps to its own records to build a captain or a follower.</p>
+<p>Shadow of War ships an importer that rebuilds a player's Shadow of Mordor nemesis as a War captain or
+follower, compiled from <code>...\KRAKEN_CODE_STREAM\source\Game\Shared\NemesisForgeUtils.cpp</code> (log tag
+<code>[NEMESISFORGE]:</code>; the logger is compiled out of the shipping build).</p>
+<p><strong>The check.</strong> The loading-progress tick 0x1E3E78 (<code>[GM+0x6D30]</code>) calls 0x1B3ABFC. It returns without
+checking when either of two state bytes of its object (<code>+0x38</code>, <code>+0x80</code>) is set, or when the predicate
+<code>Invasion/Settings.HaltNemesisForgeCheckPredicate</code> (the settings record at <code>+0x468</code>) evaluates true.
+Otherwise it tail-jumps to 0x1B3AA94, which builds an online request carrying the player's
+<code>FirebirdProfileID</code> and platform and registers 0x1B32CD0 as its completion handler. The data therefore
+comes from the publisher's online service, not from Mordor's local save.</p>
+<p><strong>The conversion.</strong> When an army's pool is filled (0xFD51A0, the <code>Faction/Definition.Pool</code> consumer)
+an imported nemesis goes through 0x1BC05D0, which logs its name and faction and calls 0x1C6369C. That
+maps each Mordor value to a War record through the conversion tables: combat tree, personality, role,
+the minimum level (<code>MinXPLevel</code>), whether it becomes the player's follower, its scar type, its traits
+and its trait markers. 0x1BC05D0 then builds the captain with the ordinary FactionMember builder
+0x1BBF928 (see The Nemesis system). The builder's model step 0x1C04F20 converts the look: the base
+model (<code>NemesisForge/FirebirdSimpleModel.Base</code>), body and body type, armour, head
+(<code>FirebirdSimpleModelHead.KrakenHead</code>), helmet, hair (<code>CanApplyHair</code>), legs and accessories, then nine
+colour channels (skin, eyes, clothing, tattoo, paint, hair, two armour colours and leg leather). Each
+colour goes through 0x1C7664C: the Mordor colour id is looked up in a War colour setup's entries by
+their <code>FirebirdColorId</code>, with the entry's <code>HueDeltaRange</code> and <code>NumRandomCalls</code> applied. The record's
+<code>CreationSimEventPicker</code> chooses the sim event that introduces the captain, and quest jobs can ask for
+the imported captain through <code>Quest/Jobs/Definition.UseNemesisForgeNemesis</code> and <code>UseNemesisForgeAlly</code>.</p>
+<p><strong>The tables</strong> in the shipped GameDB:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Records</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NemesisForge/FirebirdSimpleModel</code></td>
+<td>5</td>
+<td>the Mordor orc classes <code>AI_Spearman</code>, <code>AI_Infantry</code>, <code>AI_Berserker</code>, <code>AI_Defender</code>, <code>AI_Archer</code></td>
+</tr>
+<tr>
+<td><code>NemesisForge/FirebirdFactionRole</code></td>
+<td>131</td>
+<td><code>Role_LimpLeg</code>, <code>Role_GrogBurner</code>, <code>Role_NeckSnapper</code>, <code>Role_Massive_DLC2</code></td>
+</tr>
+<tr>
+<td><code>NemesisForge/FirebirdFactionTrait</code></td>
+<td>83</td>
+<td><code>Ground_Pound</code>, <code>Flaming_Weapon_Spearman</code>, <code>Monster_Slayer</code>, <code>Quirk_Aggressive</code></td>
+</tr>
+<tr>
+<td><code>NemesisForge/FirebirdFactionPersonality</code></td>
+<td>12</td>
+<td><code>Clever_Sniveling</code>, <code>Psychotic</code>, <code>Commanding_1</code></td>
+</tr>
+<tr>
+<td><code>NemesisForge/FirebirdModelScarType</code></td>
+<td>6</td>
+<td><code>Wraith</code>, <code>Burn</code>, <code>Pin_Cusion</code>, <code>Sack_Head</code>, <code>Eyepatch</code>, <code>Melee</code></td>
+</tr>
+<tr>
+<td><code>NemesisForge/FirebirdSimpleModelHead</code></td>
+<td>30</td>
+<td><code>OrcStk03</code> ...</td>
+</tr>
+<tr>
+<td><code>NemesisForge/FirebirdSimpleModelPiece</code></td>
+<td>76</td>
+<td><code>Smp_Orc_Buff_Hair01_Head03_01</code> ...</td>
+</tr>
+<tr>
+<td><code>NemesisForge/FirebirdSimpleModelColorId</code></td>
+<td>15</td>
+<td><code>Red</code>, <code>White</code>, <code>Fleshtone</code>, <code>Grey</code>, <code>Black</code>, <code>Blue</code></td>
+</tr>
+<tr>
+<td><code>NemesisForge/FirebirdSimpleModelColorSetup</code></td>
+<td>11</td>
+<td><code>Orc_Infantry_Skin_Color</code>, <code>Orc_Hair_Color</code>, <code>Armor_Color_01_Grey</code></td>
+</tr>
+</tbody>
+</table>
+<p>The executable also names the console commands <code>NemesisForge.CreateNemesis</code>,
+<code>NemesisForge.CreateFollower</code> and <code>NemesisForge.Override.ClearAll</code>, the events
+<code>Events_NemesisForgeImportEnabled</code> and <code>Events_NemesisForgeImportSampled</code>, and a user property
+<code>User.OwnsShadowOfMordor</code>.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>How the importer obtains a Mordor nemesis (the profile identified by <code>FirebirdProfileID</code>) and
-  which code consumes the <code>NemesisForge/Firebird*</code> tables.</li>
+<li>What the online request's completion handler 0x1B32CD0 stores, and where the imported nemesis waits
+  until a pool fill picks it up.</li>
 <li>Whether some of War's orc geometry is Mordor geometry carried over (the broom and the Beheader
   helmet have identical level-of-detail counts in both games).</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
