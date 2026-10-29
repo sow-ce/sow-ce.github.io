@@ -1,0 +1,321 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Characters, the player and the camera - Shadow of War engine reference</title><meta name="description" content="The character object and its key fields, the player, the camera pipeline and what the screen actually reads, near-camera dissolve, the character controller with its collision layers and trigger volumes, Wraith World and the wraith companion model, weapons and holders, runtime material slots, render IDs, mounts, and Talion&#x27;s material controller."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" class="cur" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="characters-the-player-and-the-camera">Characters, the player and the camera</h1><p class=\"lede\">The character object and its key fields, the player, the camera pipeline and what the screen actually reads, near-camera dissolve, the character controller with its collision layers and trigger volumes, Wraith World and the wraith companion model, weapons and holders, runtime material slots, render IDs, mounts, and Talion&#x27;s material controller.</p>
+<h2 id="the-character-object">The character object</h2>
+<p>Every character - the player, NPCs, creatures - is a <code>CCharacter</code>. AI characters have vt_0x1FB3640;
+the player is a <code>CPlayerObj</code> (vt_0x1F96818).</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x48 (FactionMember)</td>
+<td>a captain's spawned character is <code>FM+0x48</code></td>
+</tr>
+<tr>
+<td>+0xA0</td>
+<td>the body pose</td>
+</tr>
+<tr>
+<td>+0xAC</td>
+<td>position, 3 floats in cm (Y up)</td>
+</tr>
+<tr>
+<td>+0xB8</td>
+<td>rotation, a unit quaternion (x, y, z, w); forward = q * (0, 0, 1)</td>
+</tr>
+<tr>
+<td>+0xC8</td>
+<td>scale</td>
+</tr>
+<tr>
+<td>+0xE2</td>
+<td>bit 0: visible</td>
+</tr>
+<tr>
+<td>+0x110</td>
+<td>the skeleton object; <code>[[char+0x110]+0x1C0]</code> is its model animation instance (see Animation)</td>
+</tr>
+<tr>
+<td>+0x120</td>
+<td>the behaviour-interface base subobject</td>
+</tr>
+<tr>
+<td>+0x22E0</td>
+<td>the face (<code>[[[char+0x22E0]+0x60]+0x60]+0xA0</code> = the face pose)</td>
+</tr>
+<tr>
+<td>+0x2340</td>
+<td>the visual</td>
+</tr>
+<tr>
+<td>+0x2348</td>
+<td>the visual component, which holds the inventory</td>
+</tr>
+<tr>
+<td>+0x23B8</td>
+<td>follower byte</td>
+</tr>
+<tr>
+<td>+0x2410</td>
+<td>the alignment (<code>Character/Alignments</code>)</td>
+</tr>
+<tr>
+<td>+0x26A8</td>
+<td>the combat object (see Combat)</td>
+</tr>
+<tr>
+<td>+0x2BF8</td>
+<td>u32 index into the sighting matrix (see AI)</td>
+</tr>
+<tr>
+<td>+0x2C21</td>
+<td>set while a queued teleport is pending</td>
+</tr>
+<tr>
+<td>+0x294C</td>
+<td>forced dissolve mode; <code>+0x298C</code> / <code>+0x29A0</code> target and smoothed dissolve</td>
+</tr>
+</tbody>
+</table>
+<p>The player is <code>[base+0x2797808]</code>, the first entry of the player list <code>[base+0x2A34C68]</code>; the client
+shell <code>[base+0x26FFA98]</code> holds it at <code>+0x888</code>. Player-only fields: <code>+0x2F10</code> AI-spectator
+invisibility, <code>+0x2F88</code> the movement chain, <code>+0x2F90</code> the camera / dissolve object, <code>+0x2FA0</code> the
+combat component, <code>+0x2FA8</code> vision mode, <code>+0x2FC0</code> the scene component, <code>+0x3420</code> the screen camera
+copy, <code>+0x2578</code> the mount being ridden. A bone's world position comes from the pose and the bone
+hashes: a skeleton object's runtime skeleton <code>[[[skel+0x10]+0x18]+0x10]</code> holds <code>+0x40</code> the bone count
+and <code>+0x78</code> the bones' name hashes in pose order (Talion 128 bones, the face rig 241).</p>
+<h2 id="the-camera">The camera</h2>
+<pre><code>owner = [[[base+0x26FFAA8]+0x6CB0]+0x6728 + i*8]   (vt_0x1FD99F8; the local player's entry has +0xDEA8 set)
+owner+0xDEA8 -&gt; the camera modifier data (md)
+owner+0x5F0  -&gt; the modifier list (sentinel; +0x5F8 first node; node = modifier + 0x10, next = node + 8;
+                modifier +0x08 owner, +0x20 its GameDB record, +0x28 state, 2 = finished or skipped)
+md+0x66C position, +0x678 rotation quaternion, +0x690 / +0x694 horizontal / vertical FOV (radians)
+md+0x650 / +0x688 the previous frame's transform / lens
+</code></pre>
+<p>A frame (0x2FC6B8): 0x51BF3C(md, dt) prepares from the previous camera and the focus; 0x51BCA8 runs
+each modifier's vf7 on md, validating after each; the finalizer 0x51BE7C stores the result into the
+output object <code>md+0x768</code> (<code>+0x3A4</code> transform, <code>+0x3C0</code> start transform, <code>+0x3F4</code> / <code>+0x3F8</code> lens).
+<strong>The screen reads that stored copy, not the live md:</strong> 0x2FEA2C -&gt; 0x51AC00 -&gt; 0x51AC30 -&gt; 0x4E0CFC
+copies it to <code>player+0x3420</code>, which drives the view, camera transitions and the lens. The live md is
+the camera's state for the next frame. The gameplay camera <code>Camera/Behavior::Camera_Primary</code> has 12
+modifiers (Adjustables, Lens, SetRoot, SmootherBegin, Distance, OrbitControl, AvoidObstacles, Pitch,
+Yaw, Roll, Smoother, Collide); only the collision modifier (vt_0x1DB5FE0) calls <code>SetCameraPos</code>
+0x51C394. Presentation cameras are the <code>*_BS</code> / <code>*_BR</code> modifier families.</p>
+<p>The debug camera manager <code>[base+0x2A86860]</code> (vt_0x22F4A90, a state machine; built at client start by
+0x17CD2EC, read by the screen copy 0x4E0CFC) takes a mode from <code>DebugCamera.FreeCamControls</code>
+(handler 0x17CFF54: "Cinematic", "ClipMode" or "Marketing" stored as 0 / 1 / 2 at <code>+0x118</code>).
+<code>DebugCamera.Track</code> (0x17D0074) follows a named object.</p>
+<p><strong>Near-camera dissolve.</strong> <code>Camera/CharacterDissolve</code> (34 records: hide and fade radii and lerps) is
+set by camera behaviours (setter 0x1567E8, controller <code>+0x240</code>) and by presentation elements (1,380 of
+3,548 set <code>Dissolve.Settings</code>, controller <code>+0x248</code>). 0x6C4E60 builds two capsules from the camera
+along its forward axis; the classifier 0x30A368 -&gt; 0x309128 -&gt; 0x308BE0 returns show, fade or hide
+from the capsules against each body's capsules (a camera inside a body forces hide), unless the
+character's forced mode overrides it (3 volume decides, 0 always show, 2 always hide; set by
+presentations' HideActors / ExcludeActors and <code>HideAllCharacters</code> 0x19B43B4). The result drives the
+material constant <code>k_fDissolve</code> (0x3093F4); at 1.0 the visible bit clears. Every result reads one
+table on <code>[player+0x2F90]</code> (vt_0x1F67370): <code>+0x258</code> show {0.0, 0.2}, <code>+0x260</code> hide {1.0, 0.1}, <code>+0x268</code>
+fade {0.76, 0.2}, copied once when the player is initialised.</p>
+<h2 id="the-character-controller">The character controller</h2>
+<p><code>ctrl = [[[player+0x2F88]+0x08]+0x28]</code> (the movement object vt_0x22F7738 sits on the way; one
+controller per character, 94 live in one scene). The controller is vt_0x1DB4DE0: <code>+0x38</code> owner,
+<code>+0x40</code> the <code>hknpCharacterProxy</code> (vt_0x1DBDA20: <code>+0x3C</code> filter info, <code>+0x80</code> position in metres,
+<code>+0xB0</code> velocity in m/s), <code>+0x81</code> support state (2 = standing), <code>+0xE4</code> collision filter, <code>+0xEC</code>
+gravity on. Slots: 5 SetPosition (cm), 6 SetVelocity, 8 Step (-&gt; 0x399F18 integrate), 11
+SetGravityEnabled 0x3F1900, 12 IsGravityEnabled, 13 refresh support, 20 SetCollisionFilter 0x3F14B4
+(writes the controller's and the proxy's filter), 24 CopyFrom. <strong>The controller object is replaced
+during play</strong> (across a death or respawn), so it is reached through the chain on every use. The
+character controller's gravity (<code>Client/PlayerMovement</code>: -2000 at the movement object's <code>+0x54</code>) is
+separate from the rigid-body world's.</p>
+<p><strong>Collision layers.</strong> The world's collision filter is the object at <code>[hknpWorld+0x480]</code> (vt_0x22C2530,
+an engine subclass of <code>hknpGroupCollisionFilter</code>): two bodies collide when <code>table[layerA] &amp; (1 &lt;&lt;
+layerB)</code> (table at filter <code>+0x24</code>, symmetric). The player's proxy is on layer 7 (row 0x0030003D);
+every AI proxy is on layer 1 (row 0x00000001, the world only). Hit capsules use layer 6. Every
+character also carries a <strong>sensor body</strong> on layer 28 (filter 0x1C) exactly at its position. Trigger
+rows: 27 = 0x10000001 (layers 0 and 28), 28 = 0x48000001 (0, 27, 30), 30 = 0x10000001 (0, 28). The
+world's body array is <code>[hknpWorld+0x28]</code> (15,360 entries of 0xB0: <code>+0x30</code> position in metres,
+<code>+0x60</code> shape, <code>+0x6C</code> filter info with the layer in bits 0-4, <code>+0x70</code> id); about 4,300 bodies are
+live in a region.</p>
+<p><strong>Trigger volumes.</strong> Script triggers are Havok trigger bodies: the trigger class table at 0x2A61E48
+(<code>TriggerSpatialBase</code> constructor 0x1A52C88, <code>TriggerSpatialShape</code> 0x65575C / vt_0x1DC1228,
+<code>TriggerSpatialDims</code> 0x65599C / vt_0x1DC1660). <code>TriggerSpatialDims</code> vf45 0x3DAD68 creates the trigger
+through the physics system on layer 27 (31 for corpse triggers); <code>TriggerSpatialBase</code> vf21 0x3DA8AC
+filters by script tags, the player, excluded character types, mount and rider. Layer 27 meets only
+layers 0 and 28, so triggers react to characters' sensor bodies. The levels place out-of-environment
+kill and teleport volumes this way (for example <code>OOEKillVolumes</code> / <code>OOEKV_*</code> under Minas Ithil and
+the fortress walls' <code>*.OOETSS</code> / <code>*.OOE_SO</code> script objects, which teleport the player back): a
+character under the world dies by trigger, not by height. The kill itself is <code>CCharacter::Die</code>
+0x19B3EE0 (100,000 damage, the float at 0x202ECBC; <code>ApplyDamageInternal</code> 0x2E4BE8). The engine's
+own world extents (+-5 km / +-3 km at 0x26C6588) only assert.</p>
+<p><strong>Height predicates.</strong> <code>PredicateHeightAttackerIncluded</code> (evaluator 0xEDD5F0) measures the height
+above ground with a ray cast from the character's position down to 100,000 cm (0x77A6D0) and tests it
+against a <code>Combat/Predicates/Height</code> range (<code>On_Ground</code> 0 - 50 cm, <code>Jumping</code> 40 - 5,000 cm). Every
+ground ranged attack carries <code>On_Ground</code>; 1,320 compiled attacks use it, 318 of them AI. An attack's
+<code>AnimationData.EnableCollision</code> / <code>EnableGravity</code> (combat <code>+0x683</code> / <code>+0x686</code>) override the movement
+component's collision scale (0x41BEB4) and gravity (0x41C558) while it runs. The engine also has a
+native spectator movement state (<code>NativeState.SpectatingState</code>, <code>SpectatorSpeedMultiplier1/2</code> 10 and
+0.1).</p>
+<p>The player clock <code>[[base+0x2702548]+8]+0x18</code> stops in the pause menu and while the game is
+unfocused; <code>[base+0x2702590]</code> keeps running.</p>
+<h2 id="wraith-world-and-the-wraith-companion">Wraith World and the wraith companion</h2>
+<p><strong>Wraith World</strong> is a weapon mode: <code>Combat/PlayerWeaponModes/VisionMode</code> -&gt; <code>Client/VisionMode::VM_Wraith</code>;
+0x6A6CE4 -&gt; 0x6A7E90(vision = <code>[player+0x2FA8]</code>, mode): <code>+0x28</code> the mode record, <code>+0x44</code> active, an
+amount that eases from <code>+0x48</code> to the target <code>+0x4C</code> over the mode's 1 s ramp (<code>ShaderVisionMode</code>,
+read by 0x115EF98). The game changes nothing on the player's own pieces: Talion's solid shaders cut
+his body away with the same reveal map the wraith draws with (<code>tRevealMapArray</code>, <code>k_fRevealValue</code>).
+Orc and human shaders carry only <code>k_fDissolve</code>.</p>
+<p><strong>The wraith form</strong> is the player's companion model (<code>Combat/CompanionModel</code>): a copy of the player
+(<code>CombatCompanionModelInstance</code> vt_0x1DBD198; manager vt_0x1DCC8F8 at <code>[[player+0x26A8]+0x80]</code>: <code>+0x38</code>
+body instance, <code>+0x60</code> head instance, <code>+0x68</code> companion record) built from a <code>SimpleModel</code>. Wraith
+moves add echoes that clone it (<code>Combat/Echo::QuickThrow</code> = three <code>PC_Echo</code> with
+<code>CopyPlayerCompanion</code>, material set Echo). Monolith's wraith pieces carry a default set of
+translucent wraith materials (<code>wraith_game.fxo</code>, fed the character's own textures) plus depth proxies
+(<code>wraith_proxy.fxo</code>) and an Echo set (<code>wraith_riddick.fxo</code>).</p>
+<p><strong>Material sets are compiled.</strong> 0x1B6190C builds a cache at start-up at <code>[GM+0x6DD0]+0x18</code>: one
+entry per <code>Model</code> record of 0x48-byte compiled sets. Editing a record later changes nothing there, and
+asking for a set index past an entry's count returns null.</p>
+<h2 id="visuals-pieces-and-weapons">Visuals, pieces and weapons</h2>
+<p>A visual (vt_0x1DA9610) has a spec at <code>[visual+0xB8]</code> (23 piece slots at <code>+0x28</code>) and a skeleton at
+<code>[visual+0x90]</code>. <code>SetPieceSlot</code> 0x4C62EC(spec, slot, piece, armour design, visual) swaps one slot live
+(the engine's live armour equip). A <code>SimpleModel</code> builder (0x4C5194) sets body, head, hair,
+accessories, flair and helmet from its entry; piece slots 8-12 come only from items. Pieces follow the
+host's pose through 0xF5A290 (pieces at <code>skel+0x108</code> into the host's pose list); visibility 0x1BEE8C
+(skeleton, flag) is the engine's "hide the base model" (the material controller's <code>HideBaseModel</code>
+transform calls exactly that); 0x58BCF0 sets the material-set type.</p>
+<p><strong>Weapons</strong> are separate objects (vt_0x1DAA9D0: wielder <code>+0x20</code>, material controller <code>+0x60</code>, an
+inline mesh at <code>+0xB0</code>) drawn by per-slot <strong>holders</strong> <code>[vc + 0x38 + slot * 0x28]</code> (vt_0x1DB1F68:
+<code>+0x140</code> the item, <code>+0x148</code> / <code>+0x150</code> the built models, <code>+0x1F1</code> shown). A weapon skeleton has three
+bones (root, handle, tip). 0x3FD228 builds only an empty holder; an equipped, drawn weapon is rebuilt
+by the engine's refresh 0x45ABE4 per holder: 0x3FD21C (hide: destroys every model) then 0x3FD204
+(show: builds from the item as it is now); the equip setup (vf35 0x3FCF70) does the same pair. The
+weapon's look chain: <code>Inventory/EquippedWeaponData.Model</code> -&gt; <code>_StructuresInventoryItemModel.Models</code> -&gt;
+<code>_StructuresInventoryModel.ModelRecord</code> -&gt; a <code>Model</code> -&gt; its default material set. Equipped weapon slots
+are vectors at <code>vc+0x4D0 + i * 0x18</code> (0 sword, 1 dagger, 2 bow); an item's <code>+0xA9</code> is "equipped",
+<code>+0x40</code> its equipped-weapon data and <code>+0x2C</code> its holder index. The weapon TYPE comes from the item's
+<code>Inventory/Items.WeaponType</code>, copied into the built weapon object (<code>+0x188</code>, by 0x3FCF70): the active
+weapon is <code>[char+0x2348]</code> -&gt; slot <code>[vc+0x728]</code> -&gt; <code>[vc + idx * 0x28 + 0x38]</code> -&gt; <code>+0x188</code>.</p>
+<p><strong>Runtime material slots.</strong> A piece's material object (<code>piece+0x48</code>, vt_0x1FFE3E8) has one table of 48
+slots of 0x18 bytes from <code>+0x1E8</code>: slots 0-15 solid, 16-31 translucent (<code>+0x368</code>), 32-47 depth proxy
+(<code>+0x4E8</code>); a slot's first field is the <code>.mat</code> resource. The setter is the object's vtable slot 47,
+0x17AF0C(object, kind, index, resource): <strong>kind 0 solid, 1 translucent, 2 depth proxy</strong>; it references
+the resource and posts to the render command ring, so it belongs on the main thread.
+<code>SetMaterialSet</code> 0x4DC938(skeleton, type) re-applies a set's solid entries.</p>
+<p><strong>Render IDs</strong> (<code>SetRenderID</code> 0x1BF144(visual, id), through the skeleton's vf4 0x1BF3AC onto body,
+head, pieces and attachments): the player 255, his wraith copy 254, a player-aligned mount 212,
+followers 210, enemies 220. In-world characters stay in material-set type <code>Wraith</code> permanently (the
+type's override is the pale vision glow); no shipped <code>Model</code> carries a Wraith-typed set (set types in
+use: default 2,644, GhostWeapon 133, Echo 78, HierarchyUnknown 65, PlayerCompanion 17, Death 11).</p>
+<p><strong>Mounts.</strong> The ridden mount is <code>[player+0x2578]</code>, its rider <code>[mount+0x25A0]</code>, its visual
+<code>[mount+0x2340]</code>. A mount has no material controller (its combat object's <code>+0x390</code> is 0).</p>
+<h2 id="talion-s-material-controller">Talion's material controller</h2>
+<p><code>ctrl = [[player+0x26A8]+0x390]</code> (no vtable). It animates the shader parameters of Talion and of his
+wraith double; no other character has one (0 of 43 spawned characters).</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00 / +0x08</td>
+<td>its link in the global list of animating controllers (<code>mgr+0x1370</code>, walked by 0x58B44C from the world tick 0x1F6EC4)</td>
+</tr>
+<tr>
+<td>+0x30</td>
+<td>owner</td>
+</tr>
+<tr>
+<td>+0x60</td>
+<td>the <code>Combat/FX/MaterialController/Setup</code> record (<code>Setup::Player</code>)</td>
+</tr>
+<tr>
+<td>+0x80</td>
+<td>an attack-linked state</td>
+</tr>
+<tr>
+<td>+0x88 / +0x90</td>
+<td>handle references to Talion's parameter block (self) and the double's (child) (vt_0x1DC47B8)</td>
+</tr>
+<tr>
+<td>+0x98 / +0xB0</td>
+<td>the parameter entries (0x40 each)</td>
+</tr>
+<tr>
+<td>+0x100</td>
+<td>the active state nodes (node: <code>+0x00</code> state record, <code>+0x10</code> expiry)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>A parameter entry</strong>: <code>+0x00</code> the parameter name's hash, <code>+0x04</code> the priority of its driving state,
+<code>+0x08</code> an easing object (only while easing), <code>+0x10</code> / <code>+0x14</code> start and end time, <code>+0x18</code> the
+transform driving it, <code>+0x20</code> default, <code>+0x28</code> current, <code>+0x30</code> from, <code>+0x38</code> to. Value objects (float
+vt_0x1DC8930, int vt_0x1F9FF30, ARGB vt_0x1F9FE70; value at <code>+0x08</code>) push through their slot 2 to the
+handle's setter (<code>SetParamFloat</code> 0x3094FC, int 0x57AC84, <code>SetParamVector</code> 0x47E4540), each posting one
+render command.</p>
+<ul>
+<li><code>SetSetup</code> 0x739BC0(ctrl, setup) builds the entries (0x73A5E8: the <code>RestoreDefaultTransform</code> value
+  if a transform names the parameter, else its initial value) and returns immediately when the setup is
+  already current, so the setup record is read only when it changes.</li>
+<li>The update 0x58B488 -&gt; 0x58B850 eases entries (current = lerp(from, to)) and pushes; an idle entry
+  pushes nothing.</li>
+<li><code>AddState</code> 0x58E320(ctrl, state, ...) is refused when the state's tag is in the setup's
+  <code>StateTagRestrictions</code> (0x58BAFC); an entry follows a state only when its priority is at least the
+  current driver's. <code>RemoveState</code> 0x58B370 removes every node of a record; each parameter it drove eases
+  to the next remaining state's value, or to its default. A state that drives a parameter the setup
+  does not list creates an entry whose default is that state's value. The script bindings are
+  <code>CPlayerObj::AddMaterialState</code> 0x19BB020 / <code>RemMaterialState</code> 0x19BEF8C.</li>
+<li>After every equip the engine re-attaches the blocks (0x7A7738: the self block to the player and the
+  held weapon, the child block to the double), because a piece added later is set up by 0x4C6EFC
+  without them.</li>
+</ul>
+<p>The 168 material states are parameter states; none hides a model or swaps cloth. WraithRadiance,
+Vanish, WraithPing, Domination, Tower and GameChanger set Talion's <code>k_fRevealValue</code> 0 and the double's
+<code>k_fRevealArm</code> 1 and <code>k_fOpacity</code> 1 (the body cut away, the double shown); TalionDeathSwitch shows
+both; HandOfGod and Stealth draw a fainter double; <code>_Curse</code> sets <code>k_fCurse</code> 1; Player_Eltariel,
+TalionWraith and DarkTalion are colour sets.</p>
+<p><strong>The wraith shader</strong> (<code>wraith_game.fxo</code>, skeletal pixel shader): the material constant buffer cb3
+follows the <code>.mat</code> parameter order (<code>cb3[9]</code> fixed-reveal width and active, reveal width and arm;
+<code>cb3[10]</code> fixed-reveal arm, reveal map index, dissolve, fresnel minimum; <code>cb3[11]</code> fresnel maximum,
+alpha floor, opacity, opacity minimum; <code>cb3[12].x</code> bloom scale). Reveal = saturate((sample + (W + 1) x
+Arm - 1) / W) x (1 - Dissolve) with W the reveal width; alpha is roughly fresnel x reveal x
+<code>k_vObjectColor.w</code> x opacity x diffuse alpha. <code>k_vObjectColor</code> is a global shader-constant object
+(0x2A39FA0, value at <code>+0x40</code>) filled per draw (0x254B80) from a packed colour at draw item <code>+0x4C</code>.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>The class of the per-character update vt_0x1FB3640 vf18 that dominates the main thread in play (see
+  Threads and the frame).</li>
+<li><code>Presentation/Settings.HideCharacterRadius</code> and its sphere query 0xF4DD50.</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
