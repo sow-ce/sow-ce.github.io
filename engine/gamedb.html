@@ -103,7 +103,9 @@ every effect file (see Visual effects).</p>
 </table>
 <p>The <strong>string block</strong> follows. Its offset 0 is the root type name (<code>GameDatabase\0</code>), and every offset
 in the file is measured from there: names, string values, and the binary values the file stores once
-and shares (float pairs, vectors, 64-bit integers). Then come the field descriptors, 15 bytes each:</p>
+and shares (float pairs, vectors, 64-bit integers). Names are stored whole, never as the tail of a
+longer string: of the 181,736 distinct record-name offsets, 179,567 follow a NUL and the other 2,169
+follow binary values of the block. Then come the field descriptors, 15 bytes each:</p>
 <table>
 <thead>
 <tr>
@@ -452,7 +454,8 @@ the pointers in its cells have a zero high dword (166,606 of 166,606 float-pair 
 </table>
 <p>The <code>_Structures*</code> categories hold the inline structure arrays: every primary lives in one of 736 of
 them, and no other category has primaries. 777 of the 799 also carry exactly one secondary, a
-placeholder named <code>DEFAULT_RECORD_NAME&lt;Type&gt;</code>; 22 carry none.</p>
+placeholder named <code>DEFAULT_RECORD_NAME&lt;Type&gt;</code>; 22 carry none. Over the whole file 921 categories carry
+such a placeholder, always as their record 0 (921 of 921).</p>
 <p><strong>The category cache.</strong> At start-up 0x1B09BBC (vt_0x1FBD460 vf3) fills the static slots
 0x26FFCE8..0x2701FD8, and 0x1BFDC4C 34 more past them, 1,260 slots in all: for each category name,
 <code>StringHash(name)</code> -&gt; FindCategory -&gt; <code>mov [slot], rax</code> (its first two stores go to 0x27019B8
@@ -1048,7 +1051,8 @@ builder 0x843EDC calls the stubs of <code>FallDamageMinHeight</code>, <code>Fall
 annotation <code>min=0.0</code>, default read from 0x202E5A0, and 0x1631698 registers <code>AimingRadiusScale</code> with
 <code>min=1.0</code>. Some builders call PropRegister inline, and some registration code inlines PropRegister
 itself: 0xC75150 hashes and stores a group marker (<code>BeginThermalVent</code>, annotation
-<code>GROUP_BEGIN=ThermalVent</code>) without calling it.</p>
+<code>GROUP_BEGIN=ThermalVent</code>) without calling it. Range and type annotations are rare: the executable
+holds 325 strings that begin with <code>type=</code>, 161 that begin with <code>min=</code> and 5 that begin with <code>max=</code>.</p>
 <p><strong>PropRegister</strong> 0xC6DA00(slot, name, type, &amp;default, annotation, arg6, flags, accessor) fills the
 slot and calls the accessor:</p>
 <table>
