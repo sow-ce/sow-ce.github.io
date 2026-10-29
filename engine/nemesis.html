@@ -56,12 +56,40 @@ the ambush update 0x6DDBA8.</p>
 <td>the pools: one 0xC0-byte entry per <code>Faction/Pool</code> record</td>
 </tr>
 <tr>
+<td>+0x70</td>
+<td>u32 the pool count (9)</td>
+</tr>
+<tr>
+<td>+0x80 / +0x88</td>
+<td>an array of 16-byte entries, one per <code>Faction/Definition</code> record (entry+0 the record); u32 count 38</td>
+</tr>
+<tr>
 <td>+0x98</td>
 <td>the army contexts: a map <code>{+0x00 entries, +0x08 u32 count (38), +0x10 the Faction/Definition category}</code></td>
 </tr>
 <tr>
+<td>+0xB0 / +0xB8</td>
+<td>an array of 16-byte entries, one per <code>Faction/Roles/Definitions</code> record; u32 count 914</td>
+</tr>
+<tr>
+<td>+0xC8 / +0xD0</td>
+<td>an array that starts with the <code>Faction/NameTable</code> records; u32 count 4</td>
+</tr>
+<tr>
 <td>+0xE0</td>
 <td>the trait flag table (see Captain traits)</td>
+</tr>
+<tr>
+<td>+0xE8</td>
+<td>u32 the trait flag table's count: 493, one 16-byte entry per <code>Faction/Traits/Picker</code> record</td>
+</tr>
+<tr>
+<td>+0xF8 / +0x100</td>
+<td>an array that starts with the <code>Faction/Traits/PickerLevelRemap</code> records; u32 count 5</td>
+</tr>
+<tr>
+<td>+0x128 / +0x130</td>
+<td>an array naming the <code>Combat/Scar/Type</code> records; u32 count 24</td>
 </tr>
 <tr>
 <td>+0x1B0</td>
@@ -89,7 +117,9 @@ the ambush update 0x6DDBA8.</p>
 <p>Members live in pools, one per game mode, not per region: the MainGame pool holds every captain of
 every region. A pool entry's first qword is its <code>Faction/Pool</code> record; the pool object starts at
 entry+8 (vt_0x1FD8310) and holds its member vector at <code>+0x18 / +0x20</code>. <code>FM+0x174</code> is the member's
-index in that vector (500 of 500 members).</p>
+index in that vector (500 of 500 members). The entries follow the <code>Faction/Pool</code> record order (9 of 9:
+Player, QuestReplay, QuestReplay_Ratbag2, InvasionGame, Test, Demo, DLC3, DLC4, MainGame), so MainGame
+is entry 8; entry+0xB0 repeats the record and entry+0xB8 holds its <code>MaxMembersToTrack</code> (9 of 9).</p>
 <table>
 <thead>
 <tr>
@@ -599,7 +629,10 @@ once per initialisation (0x185FE0).</p>
 (0x19ED468: <code>mov ecx,0x528</code> -&gt; allocator 0x3DE238 -&gt; constructor 0x1BB4C1C; 0xF99FF0 likewise) and
 the constructor's last store is <code>+0x520</code>. Everything at <code>+0x530</code> and above belongs to other
 allocations: the appearance object is a separate object at <code>[FM+0x2D8]</code> (it sat directly after the
-member for 0 of 206 row captains), and the traits live in vectors (see Captain traits).</p>
+member for 0 of 206 row captains), and the traits live in vectors (see Captain traits). The constructor
+allocates that object itself, right after the member (see Captain appearance), so whether it sits at
+<code>FM+0x530</code> depends on the heap's history: in another running game it did for 55 of the first 60 seated
+captains.</p>
 <p><strong>Valid member test:</strong> <code>[FM+0x178]</code> is a GameDB record (526 of 526 members pass, 0 of 53 other
 pointers do). <code>FM+0x174</code> is not a validity flag: the MainGame and DLC pools both hold a member at
 index 0.</p>
@@ -739,6 +772,30 @@ through the flag setter 0x1156740(fm, bit, value).</p>
 <td>his purpose</td>
 </tr>
 <tr>
+<td>+0x298</td>
+<td>key</td>
+<td></td>
+<td>16 bytes {an army record, u32 pool index}: the KILLER's member key, opening the last-death block; the constructor sets the index to -1. In one world, 207 of 207 captains killed by the player held -1; of 62 killed by orcs, 23 resolved to a living member of that army (mostly of the killing character type) and 39 to no current member (the killer since removed)</td>
+</tr>
+<tr>
+<td>+0x2A8</td>
+<td>record</td>
+<td></td>
+<td>document key <code>LastDeathCharacterType</code>: the <code>Combat/CharacterType</code> that last killed him (<code>Player_Character</code> on 3 of 40, null on 37)</td>
+</tr>
+<tr>
+<td>+0x2B0</td>
+<td>record</td>
+<td></td>
+<td>document key <code>LastDeathAttack</code>: the <code>Combat/Attack</code> that killed him</td>
+</tr>
+<tr>
+<td>+0x2B8 / +0x2B9</td>
+<td>u8 / u8</td>
+<td></td>
+<td>document keys <code>ExitNavMesh</code>, <code>LastDeathPlayerKiller</code> (1 on the same 3 of 40)</td>
+</tr>
+<tr>
 <td>+0x2C0</td>
 <td>record</td>
 <td><code>last_deathtype_record</code></td>
@@ -785,6 +842,12 @@ through the flag setter 0x1156740(fm, bit, value).</p>
 <td>record</td>
 <td><code>location_record</code></td>
 <td>his location</td>
+</tr>
+<tr>
+<td>+0x338</td>
+<td>record</td>
+<td></td>
+<td>document key <code>LocationArea</code>: an <code>AI/SpawnAmbient/Areas</code> record (26 of 40 seated captains)</td>
 </tr>
 <tr>
 <td>+0x348</td>
@@ -847,6 +910,12 @@ through the flag setter 0x1156740(fm, bit, value).</p>
 <td>the level, 0-based</td>
 </tr>
 <tr>
+<td>+0x4BC</td>
+<td>i32</td>
+<td></td>
+<td>document key <code>LockedXPLevel</code>; the preset build 0x1BC06C0 copies <code>Faction/PresetMembers.LockedXPLevel</code> here (0 on 39 of 40 seated captains)</td>
+</tr>
+<tr>
 <td>+0x4C0</td>
 <td>i32</td>
 <td><code>trait_level</code></td>
@@ -857,6 +926,18 @@ through the flag setter 0x1156740(fm, bit, value).</p>
 <td>i32</td>
 <td><code>player_kills</code></td>
 <td>how many times he killed the player</td>
+</tr>
+<tr>
+<td>+0x4C8</td>
+<td>u32</td>
+<td></td>
+<td>document key <code>PlayerFleeCount</code></td>
+</tr>
+<tr>
+<td>+0x4D0</td>
+<td>object</td>
+<td></td>
+<td>a 0x28-byte object built by 0x40F2A0 (vt_0x1DB4FE0, a list head at its +0x08)</td>
 </tr>
 <tr>
 <td>+0x4F0</td>
@@ -926,6 +1007,14 @@ through the flag setter 0x1156740(fm, bit, value).</p>
 </tr>
 </tbody>
 </table>
+<p><strong>The document form.</strong> Besides the binary save, a member is written and read as a key-named document
+tree: the writer 0x1BC45A8 (its callers include the console commands <code>FactionMember.Save</code> and
+<code>FactionMember.Save.Pos</code> and presentation code) and the reader 0x1BC159C (used by the member factory
+0xF99FF0 and presentation code). The "document key" names in the table come from this pair; it also
+names <code>+0x278</code> <code>CharacterModel</code>, <code>+0x2D8</code> <code>SMCStorage</code>, <code>+0x500</code> <code>ResurrectionCount</code> and <code>+0x520</code>
+<code>InitializationType</code>. The last-death block is written by 0x1BC4FCC and read by 0x1BC1F50 with
+<code>FM+0x298</code> as the base: +0x10 <code>LastDeathCharacterType</code>, +0x18 <code>LastDeathAttack</code>, +0x20 <code>ExitNavMesh</code>,
++0x21 <code>LastDeathPlayerKiller</code>.</p>
 <h3 id="names">Names</h3>
 <p>The name is a string id, <code>FM+0x170</code>. 0x1BC6040(fm, id) stores it, looks up the localized UTF-16
 string, converts it with <code>WideCharToMultiByte</code> on the system ANSI code page (<code>CodePage</code> 0, Windows-1252
@@ -1080,6 +1169,12 @@ bit 2 (dead). The loader's keys name most bits:</p>
 </tr>
 </tbody>
 </table>
+<p>The document writer 0x1BC45A8 and reader 0x1BC159C name more bits (getter 0x114B55C and setter
+0x1156740 with the bit number next to each key): 9 <code>HasEverSpawned</code> (also set by 0x356370), 10
+<code>IgnorePlayerLevelRestriction</code>, 32 <code>Builder_CanNotSave</code>, 33 <code>Builder_DisableSimEvents</code>, 36 <code>Prisoner</code>,
+38 <code>DisableTraitChanges</code>, 39 <code>DisableRelationships</code>, 40 <code>CanNotDropLoot</code>, 41 <code>CanNotChangeXPLevel</code>, 42
+<code>CanNotApplyContract</code> and 44 <code>CalcXPLevelOnAssignToRow</code>. <code>FM+0x50C</code> is no separate field: it is the
+word's upper half (the constructor stores <code>+0x508</code> as one qword; 40 of 40 seated captains agree).</p>
 <p>The engine's setters do more than the bit, so a direct write to the word skips their side effects:</p>
 <ul>
 <li><strong>SetDead</strong> 0x626E38(fm, dead) sets bit 2 and, when <code>FM+0x398</code> names a campaign variable, sets that
@@ -1377,7 +1472,8 @@ captain free and no events, refused 204 of 221 attempts; every power-struggle an
 <p>Other readers of bit 4: the seat predicate 0xFDC350, the cancel pass 0xF9BA70 (from 0xF665F0 and
 0xFA0D30: a dead member with bit 4 that fails 0xFF3D30 loses bits 4, 0 and 16), the sever abort
 0x6DE30C ("Aborting Resurrection, Faction member was severed after death", only while the corpse is
-in the world), SetDead, the writer 0x1BC5044 and the script property <code>CanResurrect</code> 0x1BC45A8.</p>
+in the world), SetDead, the writer 0x1BC5044 and the FactionMember document writer 0x1BC45A8 (whose keys include
+<code>CanResurrect</code>).</p>
 <p><strong>The data.</strong> <code>Faction/Resurrection</code> has 34 death types. Each names an <code>OddsTable</code>
 (<code>Faction/Resurrection/Tables</code>: Base, Bleedout, BodyCleaved_Uruk, Death_from_Fall, HeadRemoved_Olog,
 over 14 <code>Faction/Resurrection/Chance</code> records), a <code>ScarType</code>, a <code>SecondScarChance</code> and
@@ -1549,8 +1645,8 @@ eliminated: the henchmen link effects 0x18316FC / 0x183191C skip such a member.<
 <ul>
 <li>What <code>FM+0x4F8</code> and flag bits 16, 35 and 37 mean (the seat function tests <code>+0x4F8</code>; the builder
   build sets bit 37; the un-death sets bit 16).</li>
-<li>Whether the runtime row's seat count at <code>+0x20</code> is always the record's <code>ColumnMax</code>, and whether pools
-  are indexed by their record index as the army contexts are.</li>
+<li>Whether the runtime row's seat count at <code>+0x20</code> is always the record's <code>ColumnMax</code>.</li>
+<li>What the <code>FS+0x80</code>, <code>+0xB0</code>, <code>+0xC8</code>, <code>+0xF8</code> and <code>+0x128</code> arrays store per record.</li>
 <li>Whether the pool's <code>ImpC_*</code> coefficients are the importance score used when a full pool recycles a
   member.</li>
 <li>Whether <code>FS+0x21C</code>, the cheat-death mark counter, is a running total and who reads it (it read 375 with
