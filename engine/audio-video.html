@@ -1,102 +1,58 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Audio and video: Wwise behind the sound manager, Bink behind WBMovieMgr - Shadow of War engine reference</title><meta name="description" content="Wwise integration (sound manager, game objects, post chain, banks, external-source dialogue), Bink movies (WBMovieMgr, the 743 .vib files)"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
-<a href="https://sow-ce.github.io/">SoW:CE home</a>
-<h2>Topics</h2>
-<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
-<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
-<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
-<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
-<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
-<a href="archives-formats.html" data-p="archives-formats">Archives and disk formats</a>
-<a href="army-menu.html" data-p="army-menu">Army menu</a>
-<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
-<a href="audio-video.html" class="cur" data-p="audio-video">Audio and video</a>
-<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
-<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
-<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
-<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
-<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
-<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
-<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
-<a href="factionmember.html" data-p="factionmember">FactionMember</a>
-<a href="forge.html" data-p="forge">Forge</a>
-<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
-<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
-<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
-<a href="identity-graph.html" data-p="identity-graph">Identity</a>
-<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
-<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
-<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
-<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
-<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
-<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
-<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
-<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
-<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
-<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
-<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="audio-and-video-wwise-behind-the-sound-manager-bink-behind-wbmoviemgr">Audio and video: Wwise behind the sound manager, Bink behind WBMovieMgr</h1>
-<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Created 2026-10-28 from a
-read-only session (disassembly + live reads in the desert, game running; no live writes).
-Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.
-The AudioHooks dialogue graph (keys, hooks, conditions, the compiled cache) is NOT repeated here: see
-memory <code>nemesis-death-memory-dialogue.md</code>, <code>sword-breaker-steal.md</code>, <code>playable-sauron-audio-input.md</code>
-and <code>aire/pipeline/audio_hooks_live.py</code>.</p>
-<p><strong>Sections:</strong>
-- The stack in one picture (MEASURED 2026-10-28)
-- Threads (MEASURED 2026-10-28)
-- The engine interface and its two media services (MEASURED 2026-10-28, live + code)
-- The sound manager and its sound objects = Wwise game objects (MEASURED 2026-10-28, live)
-- Posting a sound, end to end (MEASURED 2026-10-28, code + live counter)
-- The Wwise library inside the exe: globals, queue, message types (MEASURED / LEAD 2026-10-28)
-- Banks: disk, streaming data, the load path, the live bank list (MEASURED 2026-10-28)
-- GameAudioMgrThread (MEASURED 2026-10-28, code)
-- Video: WBMovieMgr, video resources, the Bink player (MEASURED 2026-10-28, live + code)
-- Movies: the data and the files (MEASURED 2026-10-28)
-- Who starts a movie (LEAD 2026-10-28)
-- Mod routes and traps (LEAD 2026-10-28)
-- Corrections to other files (2026-10-28)
-- Open leads
-- AIRE actions</p>
-<hr />
-<h2 id="the-stack-in-one-picture-measured-2026-10-28">The stack in one picture (MEASURED 2026-10-28)</h2>
-<pre><code>gameplay / AudioHooks / presentations           UI (UIVideoPlayer.cpp), presentations, UI.PlayVideo
-        |                                                  |
-emitter play 0x3AD6A8 -&gt; 0x3AD7AC                  play-movie-record 0x32F3AC (Interface/Movies)
-        |                                                  |
-engine interface [base+0x26FEFD0] (vt_0x1E6AEC0)   engine interface [base+0x26FEFD0]
-   vf10 -&gt; [+0x98] sound manager vt_0x1E6D5F8         vf27 -&gt; [+0x88] WBMovieMgr vt_0x230B308
-        |                                                  |  vf2 create (&quot;.vid&quot; -&gt; resource type 0x10)
-   vf13 PostEvent / vf32 LoadBank                  video resource vt_0x2005158 (0x168 B), list 0x267E400
-        |                                                  |
-Wwise 2016 (static, in the exe): AK::SoundEngine   Bink player vt_0x1DB1740 (0x3F0 B) -&gt; bink2w64.dll
-   message queue -&gt; AK::EventManager thread           decoded every frame on the RENDER thread (0x3322BC)
-        |                                              drawn with drawprimvideobink*.fxo
-xaudio2_9.dll (1 thread)                           movie sound = Wwise (738 / 739 files have no audio track)
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Audio (Wwise) and video (Bink) - Shadow of War engine reference</title><meta name="description" content="How the engine plays sound through a statically linked Wwise 2016 and video through Bink 2: the engine interface, the sound manager and its game objects, posting an event end to end, banks, the AudioHooks dialogue graph, and the movie manager, video resources and the movie data."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" class="cur" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="audio-wwise-and-video-bink">Audio (Wwise) and video (Bink)</h1><p class=\"lede\">How the engine plays sound through a statically linked Wwise 2016 and video through Bink 2: the engine interface, the sound manager and its game objects, posting an event end to end, banks, the AudioHooks dialogue graph, and the movie manager, video resources and the movie data.</p>
+<h2 id="the-stack">The stack</h2>
+<pre><code>gameplay / AudioHooks / presentations              UI, presentations, the UI.PlayVideo command
+        |                                                   |
+emitter play 0x3AD6A8 -&gt; 0x3AD7AC                   play-movie-record 0x32F3AC (Interface/Movies)
+        |                                                   |
+engine interface [base+0x26FEFD0] (vt_0x1E6AEC0)    engine interface [base+0x26FEFD0]
+   vf10 -&gt; [+0x98] sound manager vt_0x1E6D5F8          vf27 -&gt; [+0x88] WBMovieMgr vt_0x230B308
+        |                                                   |  vf2 create (&quot;.vid&quot; -&gt; resource type 0x10)
+   vf13 PostEvent / vf32 LoadBank                   video resource vt_0x2005158 (0x168 bytes), list 0x267E400
+        |                                                   |
+Wwise (static, inside the executable)               Bink player vt_0x1DB1740 (0x3F0 bytes) -&gt; bink2w64.dll
+   message queue -&gt; AK::EventManager thread            decoded every frame on the render thread (0x3322BC)
+        |                                               drawn with drawprimvideobink*.fxo
+xaudio2_9.dll                                       movie sound is Wwise (738 of 739 files have no audio track)
 </code></pre>
-<h2 id="threads-measured-2026-10-28">Threads (MEASURED 2026-10-28)</h2>
-<p>From kb/live-runtime.md "Threads and the frame" (not re-measured): Wwise threads have no engine name;
-AK::EventManager (creator 0x1310C10, the audio render thread), AK::BankManager (vt_0x22D65D8 vf1
-0x1312008), AK::IOThread (0x132E474, streaming), "AK Suspended" (0x1309C78). GameAudioMgrThread is a
-KRAKEN thread (routine 0x181F638, below). Bink: 5 threads inside bink2w64.dll, started by
-BinkStartAsyncThread from the render-side init 0x1CB60C0 (via 0x1CD21A0; BinkSetMemory there too); Bink's
-own audio output is set up there as well (BinkSetSoundSystem2 + BinkOpenXAudio2, 0x1CD22AC); 0x1CB6194
-stops the async threads and frees the Bink globals (BinkRequestStop / WaitStopAsyncThreadsMulti,
-BinkFreeGlobals). VideoClipRequestThread (routine
-0x11C7488 -&gt; 0x11C7274) is an event-driven request loop whose purpose is NOT established (Open leads).</p>
-<h2 id="the-engine-interface-and-its-two-media-services-measured-2026-10-28-live-code">The engine interface and its two media services (MEASURED 2026-10-28, live + code)</h2>
-<p><code>[base+0x26FEFD0]</code> = the KRAKEN engine interface (vt_0x1E6AEC0, 0xD8 B, built by 0x117F8B0 via
-0x1178778). resolver.db names this global "VideoClipRequestMgr": that is a MISNAME (already noted in
-<code>aire/formats/clientfx_engine_check.py</code>), so every <code>uses:VideoClipRequestMgr</code> label in the atlas means
-"reads the engine interface", not video. Why resolver.db got it wrong (MEASURED 2026-10-28): the interface's
-vf3 0x11811D4 is the GETTER of the real VideoClipRequestMgr and carries its assert string "VideoClipRequestMgr
-not initialized!"; the manager itself is <code>[[base+0x26FF050]+0xB50]</code> (live vt 0x22C0DD0). The labeller now
-names 0x26FEFD0 <code>EngineInterface</code> (933 labels) and 0x26FFAB0 <code>MainScene</code> (242). Its getters (vtable slot = field):</p>
+<h2 id="the-engine-interface">The engine interface</h2>
+<p><code>[base+0x26FEFD0]</code> is the engine interface (vt_0x1E6AEC0, 0xD8 bytes, built by 0x117F8B0 via
+0x1178778). Neither media service has a global of its own; both are reached through it:</p>
 <table>
 <thead>
 <tr>
-<th>slot</th>
-<th>getter</th>
-<th>field</th>
-<th>service (live vtable)</th>
+<th>Slot</th>
+<th>Getter</th>
+<th>Field</th>
+<th>Service</th>
 </tr>
 </thead>
 <tbody>
@@ -104,193 +60,226 @@ names 0x26FEFD0 <code>EngineInterface</code> (933 labels) and 0x26FFAB0 <code>Ma
 <td>vf10</td>
 <td>0x3AD870</td>
 <td>+0x98</td>
-<td>sound manager vt_0x1E6D5F8 (factory 0x117F64C, ctor 0x11ABF38, 0x110 B)</td>
+<td>the sound manager (vt_0x1E6D5F8; factory 0x117F64C, constructor 0x11ABF38, 0x110 bytes)</td>
 </tr>
 <tr>
 <td>vf27</td>
 <td>0x32F9B0</td>
 <td>+0x88</td>
-<td>movie manager WBMovieMgr vt_0x230B308 (ctor 0x1CA0480)</td>
+<td>the movie manager <code>WBMovieMgr</code> (vt_0x230B308; constructor 0x1CA0480)</td>
 </tr>
 <tr>
 <td>vf26</td>
 <td>0x4C3310</td>
 <td>+0x90</td>
-<td>render interface vt_0x1FFD5E8</td>
+<td>the render interface (vt_0x1FFD5E8)</td>
+</tr>
+<tr>
+<td>vf3</td>
+<td>0x11811D4</td>
+<td>-</td>
+<td>the video-clip request manager <code>[[base+0x26FF050]+0xB50]</code> (vt_0x22C0DD0; asserts "VideoClipRequestMgr not initialized!")</td>
 </tr>
 </tbody>
 </table>
-<p>Live 2026-10-28: interface 0x517FCA0, sound manager 0x9DFFE18, movie manager 0x77D8D38 (heap, session
-only). Neither service has its own global: always go through the interface.</p>
-<h2 id="the-sound-manager-and-its-sound-objects-wwise-game-objects-measured-2026-10-28-l">The sound manager and its sound objects = Wwise game objects (MEASURED 2026-10-28, live)</h2>
-<p><strong>Sound manager</strong> (vt_0x1E6D5F8, 47 methods; nearly every method starts <code>cmp byte [rcx+9], 0</code>):</p>
+<h2 id="threads">Threads</h2>
+<p>Wwise's threads carry no engine name: <code>AK::EventManager</code> (created by 0x1310C10; the audio render
+thread), <code>AK::BankManager</code> (vt_0x22D65D8 vf1 0x1312008), <code>AK::IOThread</code> (0x132E474, streaming) and
+<code>AK Suspended</code> (0x1309C78). <code>GameAudioMgrThread</code> is an engine thread (routine 0x181F638). Bink runs
+five threads inside <code>bink2w64.dll</code>, started by <code>BinkStartAsyncThread</code> from the render-side
+initialisation 0x1CB60C0 (via 0x1CD21A0, which also calls <code>BinkSetMemory</code>); Bink's own audio output
+is set up there too (<code>BinkSetSoundSystem2</code> + <code>BinkOpenXAudio2</code>, 0x1CD22AC), and 0x1CB6194 stops the
+threads and frees Bink's globals.</p>
+<p><code>GameAudioMgrThread</code> is started by 0x178C98C when byte <code>[base+0x266D9D9]</code> is set. Its routine
+registers with an engine service, then runs a job loop (0x6AB618) until its stop flag is set. Its
+first job (0x181F704 -&gt; 0x181ED58) builds the AudioHooks compiled cache (below).</p>
+<h2 id="the-sound-manager">The sound manager</h2>
+<p>The sound manager (vt_0x1E6D5F8, 47 methods) tests its enabled byte at <code>+0x09</code> at the start of nearly
+every method.</p>
 <table>
 <thead>
 <tr>
-<th>offset</th>
-<th>meaning</th>
-<th>evidence</th>
+<th>Offset</th>
+<th>Meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>+0x09</td>
-<td>enabled</td>
-<td>every method tests it; Shutdown vf2 0x11AC608 clears it; live 1</td>
+<td>enabled (cleared by Shutdown, vf2 0x11AC608)</td>
 </tr>
 <tr>
 <td>+0x0B</td>
-<td>init.bnk loaded</td>
-<td>LoadBank vf32 0x54FF78 sets it after init.bnk; live 1</td>
+<td><code>init.bnk</code> loaded</td>
 </tr>
 <tr>
 <td>+0x0C</td>
-<td>listener game object id (LEAD)</td>
-<td>Shutdown passes it to 0x116A86C (message 0xC); live 1</td>
+<td>the listener's game-object id (passed to the unregister message at shutdown)</td>
 </tr>
 <tr>
 <td>+0x10</td>
-<td>game object id counter (LEAD: last issued)</td>
-<td>live 352 while ids ran 69..353</td>
+<td>the game-object id counter</td>
 </tr>
 <tr>
 <td>+0x20</td>
-<td>sound object pool</td>
-<td>0x686374 allocates from it</td>
+<td>the sound-object pool</td>
 </tr>
 <tr>
 <td>+0x30 / +0x38</td>
-<td>sound object vector (begin, end)</td>
-<td>vf40 0x686220 = count</td>
+<td>the sound-object vector (vf40 0x686220 returns the count)</td>
 </tr>
 <tr>
 <td>+0x48</td>
-<td>bank lock (CRITICAL_SECTION)</td>
-<td>vf32 / vf33</td>
+<td>the bank lock (<code>CRITICAL_SECTION</code>)</td>
 </tr>
 <tr>
 <td>+0x70 / +0x78</td>
-<td>banks parked until init.bnk arrives</td>
-<td>vf32 pushes there, flushes after init.bnk; live 0</td>
+<td>banks that arrived before <code>init.bnk</code>, parked until it loads</td>
 </tr>
 <tr>
 <td>+0x88</td>
-<td>language folder, char[]</td>
-<td>live "englishus"; vf5 0x7E1ED0 returns &amp;mgr+0x88</td>
+<td>the language folder, <code>char[]</code> (e.g. <code>englishus</code>; vf5 0x7E1ED0 returns its address)</td>
 </tr>
 <tr>
 <td>+0xB8</td>
-<td>end-of-event queue (+0xD0 its lock)</td>
-<td>[0x2703490] = mgr+0xB8; filled by the Wwise callback 0x3AE47C</td>
+<td>the end-of-event queue (<code>+0xD0</code> its lock), filled by the Wwise callback 0x3AE47C</td>
 </tr>
 </tbody>
 </table>
-<p>Methods named so far: vf1 Init 0x11AC2E4 (registers "SoundManagerGlobalEmitter"), vf2 Shutdown
-0x11AC608, vf5 language, vf8 0x3AD880 IsEnabled, vf12 0x74ED6C PostEvent without emitter (2D),
-vf13 0x3ADC1C PostEvent on an emitter, vf17 0x49BFBC SetSwitch by name (-&gt; 0x6C278C hash -&gt;
-0x6C27CC), vf18/vf19 SetRTPCValue by name (-&gt; 0x3AEC6C -&gt; 0x3AEB8C -&gt; 0x3AEBCC), vf20 0x5D7FFC0 hashes a
-name -&gt; message 7 (SetState, LEAD), vf32 0x54FF78 LoadBank(handle), vf33 0x551618 UnloadBank,
-vf39 0x47CF6C name -&gt; id, vf40 0x686220 object count, vf41 object by index (GUESS). The other slots are
-not named.</p>
-<p><strong>Sound object</strong> (vt_0x1DC35E8, pool stride 0x48), one per Wwise game object:</p>
+<p>Methods identified: vf1 Init 0x11AC2E4 (registers the "SoundManagerGlobalEmitter"), vf2 Shutdown,
+vf5 language, vf8 0x3AD880 IsEnabled, vf12 0x74ED6C PostEvent without an emitter (2D), vf13
+0x3ADC1C PostEvent on an emitter, vf17 0x49BFBC SetSwitch by name, vf18 / vf19 SetRTPCValue by name
+(0x3AEC6C -&gt; 0x3AEB8C -&gt; 0x3AEBCC), vf20 0x5D7FFC0 (hashes a name and queues message 7), vf32
+0x54FF78 LoadBank, vf33 0x551618 UnloadBank, vf39 0x47CF6C name -&gt; id.</p>
+<h3 id="sound-objects-and-emitters">Sound objects and emitters</h3>
+<p>A <strong>sound object</strong> (vt_0x1DC35E8, pool stride 0x48) is one Wwise game object:</p>
 <table>
 <thead>
 <tr>
-<th>offset</th>
-<th>meaning</th>
+<th>Offset</th>
+<th>Meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>+0x08</td>
-<td>position, 3 floats, cm (FLT_MAX until the first position message)</td>
+<td>position, 3 floats in cm (FLT_MAX until the first position message)</td>
 </tr>
 <tr>
 <td>+0x14</td>
-<td>orientation / front vector, 3 floats</td>
+<td>orientation (front vector)</td>
 </tr>
 <tr>
 <td>+0x20</td>
-<td>AkGameObjectID (u32; Wwise sees it zero-extended, -1 = none)</td>
+<td>the u32 game-object id (<code>AkGameObjectID</code>, zero-extended; -1 = none)</td>
 </tr>
 <tr>
 <td>+0x28</td>
-<td>its EMITTER (engine side): emitter +0x00 u32 = the same id, emitter +0x08 = this object</td>
+<td>its emitter (emitter <code>+0x00</code> = the same id, emitter <code>+0x08</code> = this object)</td>
 </tr>
 <tr>
 <td>+0x30</td>
-<td>events playing on it; PostEvent refuses at 50 (0x3ADC5B), the end-of-event callback counts down</td>
+<td>events playing on it</td>
 </tr>
 <tr>
 <td>+0x39</td>
-<td>registered byte</td>
+<td>registered</td>
 </tr>
 </tbody>
 </table>
-<p>Created on demand by 0x6861A4 (when emitter+8 is NULL) up to <strong>725</strong> objects (<code>cmp eax, 0x2D5</code>
-0x6861C2), initialised by 0x686230 which registers the id with Wwise (0x686278 -&gt; messages 0xB and 0xE)
-and sends the position (0x3AE0BC).
-<strong>Emitter</strong> (the engine struct the sound object points back to): +0x00 u32 id, +0x08 sound object,
-+0x10 position, +0x1C orientation, +0x28 registered, +0x29 enabled, +0x2B has-position, +0x34 last
-playing id, +0x38 last event id, +0x3C time, +0x60 name, +0x90 / +0xC8 / +0x100 last event names
-(set by 0x3AD6A8). Who OWNS the emitters (character, prop, world object) is not traced.</p>
-<p><strong>Live census (desert, 2026-10-28, two reads minutes apart):</strong> 52 then 121 sound objects; 121 / 121
-passed the back-link check (emitter+8 == object AND emitter+0 == object id); ids 69..353, unique; 94 / 121
-positioned; 44 / 121 with an event playing; two objects (ids 181, 195) sat exactly on the player's
-position (-41956.5, 23154.2, -29369.6 cm, distance 0.00 m) = the player's emitters.</p>
-<h2 id="posting-a-sound-end-to-end-measured-2026-10-28-code-live-counter">Posting a sound, end to end (MEASURED 2026-10-28, code + live counter)</h2>
+<p>Sound objects are created on demand by 0x6861A4 when an emitter has none, up to <strong>725</strong> in all
+(<code>cmp eax, 0x2D5</code> at 0x6861C2), and initialised by 0x686230, which registers the id with Wwise
+(messages 0xB and 0xE) and sends the position (0x3AE0BC). PostEvent refuses a 51st event on one
+object (0x3ADC5B); the end-of-event callback counts the events down.</p>
+<p>The <strong>emitter</strong> is the engine-side structure: <code>+0x00</code> u32 id, <code>+0x08</code> sound object, <code>+0x10</code>
+position, <code>+0x1C</code> orientation, <code>+0x28</code> registered, <code>+0x29</code> enabled, <code>+0x2B</code> has a position, <code>+0x34</code>
+last playing id, <code>+0x38</code> last event id, <code>+0x3C</code> time, <code>+0x60</code> name, <code>+0x90</code> / <code>+0xC8</code> / <code>+0x100</code>
+the last event names (set by 0x3AD6A8).</p>
+<p>In an open-world scene the vector held 52 and then 121 sound objects a few minutes apart; 121 of
+121 passed the back-link check (emitter <code>+0x08</code> equals the object and emitter <code>+0x00</code> its id); ids
+were unique; 94 were positioned and 44 had an event playing. Two sat exactly at the player's
+position: the player's emitters.</p>
+<h2 id="posting-a-sound">Posting a sound</h2>
 <pre><code>caller (dialogue 0x54D7E0, audio-key job 0x17A210, ...)
- -&gt; 0x3AD6A8 emitter PlayEvent(emitter, event name, external file, flags): emitter+0x29 must be set
+ -&gt; 0x3AD6A8 emitter PlayEvent(emitter, event name, external file, flags); emitter +0x29 must be set
  -&gt; 0x3AD7AC(audio context = [[CGameClientShell]+0xA28]+0xCBA48, emitter, name, file, flags)
-      sound manager vf8 IsEnabled; 0x3AD888 pre-check (streaming bank resolver, LEAD)
-      emitter -&gt; sound manager vf13 0x3ADC1C ; no emitter -&gt; vf12 0x74ED6C
- -&gt; vf13: sound object = emitter+8 or create (0x3AE2F0 / 0x6861A4); push position (0x3AE0BC);
-      refuse if object+0x30 &gt;= 50; 0x3AD358(id, object, name, file, flags); on success object+0x30 += 1
- -&gt; 0x3AD358: flags = AK_EndOfEvent | ((flags &amp; 4) &lt;&lt; 18); callback 0x3AE47C, cookie = sound object;
+      vf8 IsEnabled; a pre-check 0x3AD888 against the streaming-bank data
+      with an emitter -&gt; vf13 0x3ADC1C; without -&gt; vf12 0x74ED6C
+ -&gt; vf13: sound object = emitter+8, or create one (0x3AE2F0 / 0x6861A4); push the position (0x3AE0BC);
+      refuse at 50 events playing; 0x3AD358(id, object, name, file, flags); on success object+0x30 += 1
+ -&gt; 0x3AD358: flags = AK_EndOfEvent | ((flags &amp; 4) &lt;&lt; 18); callback 0x3AE47C, cookie = the sound object;
       with an external file: AkExternalSourceInfo {cookie 0x24DB9834 = FNV-1(&quot;External_Source&quot;),
-      codec 4 (Vorbis), file name widened by MultiByteToWideChar}
+      codec 4 (Vorbis), the file name widened with MultiByteToWideChar}
  -&gt; 0x3AD47C AK::SoundEngine::PostEvent(const char*, ...): copies the external sources (0x22F630)
- -&gt; 0x3ADBC0 AK::SoundEngine::GetIDFromString: FNV-1 32 (basis 0x811C9DC5, lower-cased)
- -&gt; 0x3AD54C AK::SoundEngine::PostEvent(AkUniqueID, ...): event = index [0x26FF998]+0xC0 lookup
-      (0x3AD664); reserve a queued message (0x114BDF8, type 1, 0x38 B); playing id = ++[0x26FF97C];
-      on failure the message becomes type 0x39 (no-op) and the event is released
- -&gt; AK::EventManager thread executes the queue; at the end Wwise calls 0x3AE47C (type 1 =
-      AK_EndOfEvent), which queues {cookie, playing id} in the sound manager's +0xB8 list
+ -&gt; 0x3ADBC0 GetIDFromString: 32-bit FNV-1 (basis 0x811C9DC5) of the lower-cased name
+ -&gt; 0x3AD54C PostEvent(AkUniqueID, ...): event = lookup in [base+0x26FF998]+0xC0 (0x3AD664);
+      reserve a queued message (0x114BDF8, type 1, 0x38 bytes); playing id = ++[base+0x26FF97C];
+      on failure the message becomes type 0x39 (no operation) and the event is released
+ -&gt; the AK::EventManager thread executes the queue; at the end of the event Wwise calls 0x3AE47C,
+      which queues {cookie, playing id} on the sound manager's +0xB8 list
 </code></pre>
-<p><strong>Dialogue lines are Wwise EXTERNAL SOURCES</strong> (MEASURED, code): the DialogEvents player 0x54D7E0
-(reads AudioHooks/DialogEvents DialogCategory, cooldowns, FacialAnimation, SubtitleBehavior) passes
-a line's file name as the external source of a generic event; the file is Vorbis, looked up through the
-IO hook in <code>sound\&lt;language&gt;\External*.pck</code> (the IO-hook side is LEAD, below). 0xD24F80 builds the event
-name with "%s%s" and asks CanPlay 0x66BC00 first.
-<strong>Live activity:</strong> the playing-id counter [0x26FF97C] rose 2021 -&gt; 2079 in 2 s and 37 ids / s in a
-later 1 s window (in game, focused): about 30-40 posted events per second in an idle desert scene.</p>
-<h2 id="the-wwise-library-inside-the-exe-globals-queue-message-types-measured-lead-2026-">The Wwise library inside the exe: globals, queue, message types (MEASURED / LEAD 2026-10-28)</h2>
-<p>Wwise is linked statically (code mostly 0x12E0000-0x1340000 plus the IO layer 0xC35060-0xC3BC90 and
-the integration 0x11A2000-0x11DC000); the exe EXPORTS <code>AK::GetWwiseXAudio2Interface</code>; xaudio2_9.dll is
-not imported (loaded at run time). Banks are BKHD <strong>version 118</strong> (6 / 6 sampled, init.bnk included) =
-Wwise 2016.1 (LEAD: version-to-release mapping from public bank tooling).
-Globals (live, Wwise pool memory 0xC51xxxxx): <code>[0x26FF960]</code> g_pAudioMgr (its +0xAC = reservation
-counter), <code>[0x26FF97C]</code> playing-id counter (u32), <code>[0x26FF998]</code> audio-library index (+0xC0 events),
-<code>[0x26FF9B0]</code> CAkBankMgr (vt_0x22D65D8), <code>[0x270347C]</code> current language id (live 12).</p>
-<p><strong>Queue reserve 0x114BDF8(&amp;msg, type, size)</strong> has 55 call sites. Message type -&gt; API function
-(type MEASURED from the immediate; NAME is LEAD unless marked):</p>
+<p>0x12F2194 is a second PostEvent entry by event id that copies external sources and calls the same
+core 0x3AD54C. In an idle open-world scene the playing-id counter advanced 30-40 times per second.</p>
+<p><strong>Dialogue lines are Wwise external sources.</strong> The dialogue-event player 0x54D7E0 (it reads the
+<code>AudioHooks/DialogEvents</code> category, cooldowns, facial animation and subtitle behaviour) passes a
+line's file name as the external source of a generic event; the file is Vorbis, looked up in
+<code>sound\&lt;language&gt;\External*.pck</code>. 0xD24F80 builds the event name (<code>"%s%s"</code>) and asks <code>CanPlay</code>
+0x66BC00 first.</p>
+<h2 id="wwise-inside-the-executable">Wwise inside the executable</h2>
+<p>Wwise is linked statically: its code lies mostly in 0x12E0000-0x1340000, its file layer in
+0xC35060-0xC3BC90 and the engine's integration in 0x11A2000-0x11DC000. The executable exports
+<code>AK::GetWwiseXAudio2Interface</code>; <code>xaudio2_9.dll</code> is loaded at run time, not imported. Banks are
+<code>BKHD</code> version 118 (six of six sampled, <code>init.bnk</code> included).</p>
 <table>
 <thead>
 <tr>
-<th>type</th>
-<th>function(s)</th>
-<th>name</th>
+<th>Global</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[base+0x26FF960]</code></td>
+<td>the audio manager (<code>+0xAC</code> its reservation counter)</td>
+</tr>
+<tr>
+<td><code>[base+0x26FF97C]</code></td>
+<td>the playing-id counter (u32)</td>
+</tr>
+<tr>
+<td><code>[base+0x26FF998]</code></td>
+<td>the audio library index (<code>+0xC0</code> events)</td>
+</tr>
+<tr>
+<td><code>[base+0x26FF9B0]</code></td>
+<td>the bank manager (vt_0x22D65D8)</td>
+</tr>
+<tr>
+<td><code>[base+0x270347C]</code></td>
+<td>the current language id</td>
+</tr>
+</tbody>
+</table>
+<p>Every API call reserves a message on Wwise's queue with 0x114BDF8(&amp;message, type, size) (55 call
+sites). The message types, with the API entry points that queue them (names from argument shapes and
+the string / wide-string overload pairs, except type 1, which is traced end to end):</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Functions</th>
+<th>API</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>1</td>
 <td>0x3AD54C</td>
-<td>PostEvent (MEASURED: playing id, event lookup, end callback)</td>
+<td>PostEvent</td>
 </tr>
 <tr>
 <td>2 / 3</td>
-<td>0x3AEBCC (char 0x12F4774, wchar 0x12F479C)</td>
+<td>0x3AEBCC (string 0x12F4774, wide 0x12F479C)</td>
 <td>SetRTPCValue / with transition</td>
 </tr>
 <tr>
@@ -315,175 +304,148 @@ counter), <code>[0x26FF97C]</code> playing-id counter (u32), <code>[0x26FF998]</
 </tr>
 <tr>
 <td>0xB</td>
-<td>0x686308 (from the sound-object init)</td>
+<td>0x686308, 0x12F38C8</td>
 <td>RegisterGameObj</td>
 </tr>
 <tr>
 <td>0xC</td>
-<td>0x6F1FF4, 0x12F56BC (shutdown paths)</td>
+<td>0x6F1FF4, 0x12F56BC</td>
 <td>UnregisterGameObj / UnregisterAll</td>
 </tr>
 <tr>
 <td>0xD</td>
-<td>0x3AE1F4 (via 0x3AE188 from the position check 0x3AE0BC)</td>
+<td>0x3AE1F4 (via 0x3AE188 from 0x3AE0BC)</td>
 <td>SetPosition</td>
 </tr>
 <tr>
 <td>0xE</td>
-<td>0x6862AC (from the sound-object init)</td>
+<td>0x6862AC</td>
 <td>SetActiveListeners</td>
 </tr>
 <tr>
-<td>0x20</td>
-<td>0x54FE08 (0x12F0FD8 / 0x12F0FF8, vf15 / vf16)</td>
-<td>not named</td>
+<td>0x14</td>
+<td>0x190B08</td>
+<td>obstruction and occlusion</td>
 </tr>
 <tr>
-<td>0x19, 0x1B-0x1F, 0x23, 0x24, 0x27-0x2E, 0x32-0x34, 0x37</td>
-<td>the rest of 0x12F05A8..0x12F5768</td>
-<td>not named</td>
+<td>0x20</td>
+<td>0x54FE08 (0x12F0FD8 / 0x12F0FF8)</td>
+<td>-</td>
 </tr>
 </tbody>
 </table>
-<p>The char / wchar_t pairs (0x12F0FD8 + 0x12F0FF8, 0x12F11C8 + 0x12F11E8, ...) are the string overloads:
-the char one hashes with 0x3ADBC0, the wchar_t one with 0x11A2B0C (also FNV-1).</p>
-<h2 id="banks-disk-streaming-data-the-load-path-the-live-bank-list-measured-2026-10-28">Banks: disk, streaming data, the load path, the live bank list (MEASURED 2026-10-28)</h2>
-<p><strong>On disk.</strong> Banks live INSIDE the archives: 6,974 loose <code>sound\...\*.bnk</code> entries (soundbundles,
-Patch_07/08/09, Patch_DLC<em>) plus 1,459 BKHD sections inside <code>snd_*.embb</code> bundles = 8,433 banks, 2,723
-distinct names, 12,747 distinct event ids (aire/data/engine/wwise_event_index.json, <code>wwise_index_build</code>).
-Language banks sit in <code>sound\&lt;language&gt;\</code> (spanishspain 957 ... englishus 354). Streamed media and VO are
-LOOSE Wwise packages under <code>game\sound\</code>: Streaming</em>.pck (8 files, ~1.16 GB) and per language
-<code>External*.pck</code> + <code>vo*.pck</code> (EnglishUS: 10 files). The IO hook formats <code>sound\%s\%u.bnk / .wem / .pck</code>
-and <code>sound\%u.wem / .pck</code> (0x11D2550) = files by id, language folder first (LEAD: lookup order).</p>
-<p><strong>Streaming bank data</strong> (<code>Sound/</code> namespace): <code>Sound/StreamingSoundBanks</code> 1,958 records {EventPrefixes,
-EventSubStrings, GlobalStateEvents, SoundEventPlaybackStrategy (e.g. PlayWhenLoaded), SoundBundleToLoad
-(<code>sound\bundles\snd_*.bndl</code>), Priority, StopEventsBeforeUnloading, AlwaysInUse,
-WaitSecondsBeforeUnloading, SoundBankGroup}, StreamingSoundBankGroups 13, StreamingSoundBankSubLists 19,
-StreamingSoundBankList 1 (GlobalMemoryBudgetMB), StreamingGlobalAssetLists 4, StreamingGlobalStateEvents
-11, DlcSuppressLists 2. An event name that matches a record's prefix loads that record's sound bundle (a
-bare BNDL manifest naming the .bnk - memory <code>playable-sauron-audio-input.md</code>). 0x3AD888, called before
-every emitter PostEvent, reads this machinery (LEAD: not traced to the prefix match).</p>
-<p><strong>Load path (MEASURED, code).</strong> A bank is a KRAKEN resource: the bank loader vt_0x22C3850 vf4 0x54FEA4
-gets the file bytes, builds a 0x18-byte handle {+0 u32 bank id (out), +4 u32 size, +8 data, +0x10 byte
-"not init.bnk", +0x11 byte "not _Metadata"} and calls sound manager vf32 0x54FF78. vf32: under the bank
-lock, banks that arrive before init.bnk are parked (+0x70); init.bnk loads, then the parked ones.
-0xC378A0 loads one: size &gt;= 0x14, BKHD +0x10 language id must be 0 or <code>[0x270347C]</code> (other-language banks
-are refused), then <code>0x12F1A00(data, size, pool [0x25D6F80], &amp;id)</code> (copy into a Wwise pool) or
-<code>0x550088(data, size, &amp;id)</code>; result 1 = AK_Success -&gt; handle+0 = bank id.</p>
-<p><strong>Live bank list (MEASURED 2026-10-28).</strong> CAkBankMgr <code>[0x26FF9B0]</code> +0x90 = hash table {buckets*, u32 n
-(97), u32 cap, u32 count (83)}; bucket entries point at bank slots (vt_0x1DBAA38): +0x10 u32 bank id,
-+0x18 data, +0x20 chain next, +0x38 u64 size. 83 / 83 bank ids named from the bank index; 210.2 MB
-(kb/binary-code.md's heap census: 70 BKHD allocations, 216 MB). Largest: global_ui 26.7 MB, wraith 25.9,
-cbt_insta_chordkills 13.2, wld_glb 13.0, mus_global 12.4, char_troll_glb 10.8, cbt_player 10.5.
-Control: 51 / 83 slots' data pointer still points at a BKHD whose id equals the slot id; the other 32
-point at reused memory (the source buffer is freed after a copy load) - never dereference +0x18.
-The other two tables in the bank manager: +0x78 (12,289 buckets, 8,775 items: media, LEAD) and +0xA8
-(29 buckets, 4 items, unknown).</p>
-<h2 id="gameaudiomgrthread-measured-2026-10-28-code">GameAudioMgrThread (MEASURED 2026-10-28, code)</h2>
-<p>Started by 0x178C98C when byte <code>[0x266D9D9]</code> != 0 (live 1): KRAKEN thread with routine 0x181F638 on the
-object at <code>[owner+0x127DB8]</code>. The routine registers with an engine service (engine vf15 -&gt; vf1), then
-loops <code>0x6AB618(worker [arg+0x38], &amp;worker+0x38)</code> - a JOB loop (runs queued jobs until worker+0x120 is
-set) - and unregisters. 0x178C98C also posts the first job, 0x181F704 -&gt; <strong>0x181ED58 = the AudioHooks
-compiled-cache rebuild</strong> (memory <code>nemesis-death-memory-dialogue.md</code>), then reads <code>AudioHookList</code>.
-Job 0x6AB6F4 -&gt; 0x18E778 (audio-key processing that ends in 0x17A210 -&gt; emitter play 0x3AD6A8) sits
-in the same job table (0x616C78) - LEAD that it runs on this thread.</p>
-<h2 id="video-wbmoviemgr-video-resources-the-bink-player-measured-2026-10-28-live-code">Video: WBMovieMgr, video resources, the Bink player (MEASURED 2026-10-28, live + code)</h2>
-<p><strong>WBMovieMgr</strong> (vt_0x230B308, 5 methods, source WBMovieMgr.cpp): vf2 0x32F930 Create(out, name,
-flags): a <code>.vid</code> name -&gt; 0x33048C (resource request type 0x10 through <code>[0x2A86758]</code>, malloc 0x168,
-ctor 0x3306A0, vf22 with <code>[0x272EC80]</code>); any other name -&gt; 0x1CA0538, which accepts only <code>.bk2</code>, <code>.bik</code>,
-<code>.mp4</code> and only while byte <code>[0x2A37714]</code> != 0 (live 0; LEAD: it is the value of the cvar object at
-0x2A37710 registered as "MainThread.WaitForRenderThread" by 0xCD520). vf3 0x1CA0608 calls vf5(bool) and
-vf4 0x331170 calls vf16(float) on every live video under the list lock (pause-all and volume-all: GUESS).</p>
-<p><strong>Video resource</strong> (vt_0x2005158, 0x168 B, base vt_0x1DB1800 ctor 0x33092C: +0x08 list node, +0x18 refs):
-+0x20 Bink player, +0x28 lock, +0x50 play-state copy, +0x58 / +0x60 state. vf22 0x33058C queues it to the
-render ring 0x272E8D8; 0x3305D0 links it into the <strong>global video list</strong> (head 0x267E400, node =
-resource+8, lock 0x2A37718). vf23 0x529BF8 opens (Bink player vf6), vf25 0x33232C = per-frame update
-(decode via 0x33236C, copy player+0x168 to +0x50), vf27 0x70CD5C0.
-<strong>Render command 0x3322BC</strong> (render thread, every frame, kb/render-fx.md) walks that list and calls vf25
-on each resource.</p>
-<p><strong>Bink player</strong> (vt_0x1DB1740, 0x3F0 B, ctor 0x330830): +0x08 HBINK, +0xF8 open state (0 ok, 3 failed),
-+0xFC byte, +0x168 play state (2 = failed open), +0x170 file name. vf14 0x331D78 Open(name, flags) -&gt;
-BinkOpenWithOptions with a custom file callback 0x7A9EA8 (reads through the KRAKEN file layer 0x1CD2194;
-"BINKFILEHANDLE is not supported!"), vf15 0x331358 Pause, vf7 0x331620 volume / speaker setup, vf11
-0x332420 frame-buffer registration. HBINK: +0x00 width, +0x04 height, +0x08 frames, +0x0C current frame.
-<strong>Live (Army screen, 2026-10-28):</strong> 1 video on the list, file
-<code>..\Game\interface\videos\kraken\traits\resistant_beast.vib</code>, open state 2, play state 1, HBINK 1024 x
-512, 239 frames, frame 124 then 33 (looping) = exactly the file header. Control: in the open world the
-list head was self-linked (0 videos) and the heap held 0 Bink players.
-<strong>Video.UHD</strong> (WBMovieMgr.cpp:72, handler 0x1CA04F8): "0 = Never, 1 = Always, 2 = Default" -&gt;
-<code>[0x272EC80]</code>, live 0.</p>
-<h2 id="movies-the-data-and-the-files-measured-2026-10-28">Movies: the data and the files (MEASURED 2026-10-28)</h2>
-<p><strong>Interface/Movies</strong> (950 records, 29 fields): Movie (path), AudioBundle, AdditionalAssetBundle, Loop,
-MenuBackgroundVideo, CanSkip, FullScreen, RenderGameInBackground, ScreenPosition, PauseGame, PauseAI,
-PauseMovieOnLastFrame, RenderBars, PlayCreditsOnFinish, FadeIn/FadeOut frames, SyncVideoToWwiseAudio,
-WwiseAudioKey, SkipSoundKey, GlobalBusKey, StopGlobalBusKey, CommandSet, Sounds, Events, OverlayVideos,
-OverlayMaterial, RequiredSubtitleEntries. Records name <code>.vid</code>; the engine opens the <code>.vib</code> beside it
-(live file above). 939 records have a path, 11 none; <strong>725 resolve to a shipped .vib (711 distinct
-files), 214 name movies that do not ship</strong> (skillvids progression / attributes, trait clips ...).
-Flags: SyncVideoToWwiseAudio 947, PauseGame 943, CanSkip 919, Loop 740, FullScreen 210, SkipSoundKey 152,
-GlobalBusKey 143, WwiseAudioKey 116, AudioBundle 17, MenuBackgroundVideo 13.
-Events: Interface/Movies/Events/{PresentationEvents 7, BossInfoEvent 16, UIVideoElementEvents 16,
-HUDWidgetConfig 4, GameEvents 2}. Also Client/SplashMovies, DemoSequence/Attribute/Movie, WorldInfo
-CinematicSection, Interface/Menu/MenuSelection/Action/Video (not decoded).</p>
-<p><strong>Files</strong> (<code>video_files</code>): 743 under <code>game\cinematics\videos</code> (10 GB) and <code>game\interface\videos</code> (2 GB),
-12.85 GB, 3.8 h. 668 Bink 2 (<code>KB2j</code> 661, <code>KB2i</code> 7) and 71 Bink 1 (<code>BIKi</code>), ALL named <code>.vib</code>; header
-+0x04 = file size - 8 on 739 / 739. Resolutions: 1024x512 479 (UI clips), 1920x1080 125 (cinematics),
-512x256 76, <strong>4x4 56 (dlc3 "realizations" placeholders)</strong>, 1280x720 2, 3840x2160 1. Audio tracks: 0 on
-738, 1 only on <code>interface\videos\intro.vib</code> -&gt; movie sound is Wwise. The 4 remaining files are
-<code>cinematics\videos\Realizations\gon3_gate\gon3_gate0{1,2}.{vid,vib}</code>, 512 B each, not Bink: the shell's
-startup check 0x119977C opens them ("NO FINGERPRINT FOUND", "Fingerprint data error, aborting!") - a
-fingerprint hidden as movie files (LEAD: what it fingerprints).</p>
-<h2 id="who-starts-a-movie-lead-2026-10-28">Who starts a movie (LEAD 2026-10-28)</h2>
-<p>0x32F3AC (1,353 B, reads Interface/Movies fields, <code>AP_MasterVolume</code>, CUIMgr cinematic begin) is the
-"play a movie record" routine; callers include the presentation element start 0x5D20C4 (via 0x32F3A0),
-the console command <code>UI.PlayVideo</code> (handler 0x17C0ADC, UIGameplayState.cpp:4070), a UI VideoRT path
-(0x335CF4), <code>AudioSkipPrompt</code> 0x17F0E48, vt_0x22F4FD0 vf2 0x17E85A4 and 4 sites that read
-CGameClientShell (0x115547C, 0x17C129C, 0x17C7BF0, 0x1A13AD8).
-UIVideoPlayer 0x17FC5C0 (Interface/Movies accessors; callers 0x177F500, 0x1A13684,
-<code>CacheLoadWorldVideo</code> 0x1B76988) and 0x17FC27C create through WBMovieMgr vf2.
-<code>Video.GotoFrame</code> handler 0x17FE1C8 (UIVideoPlayer.cpp:1401). CGameClientShell vf35-vf38 call WBMovieMgr
-vf3 (pause / resume on focus, GUESS).</p>
-<h2 id="mod-routes-and-traps-lead-2026-10-28">Mod routes and traps (LEAD 2026-10-28)</h2>
+<p>The string overloads hash with 0x3ADBC0 and the wide-string ones with 0x11A2B0C (also FNV-1).</p>
+<h2 id="banks">Banks</h2>
+<p><strong>On disk.</strong> Banks live inside the archives: 6,974 loose <code>sound\...\*.bnk</code> entries plus 1,459 <code>BKHD</code>
+sections inside <code>snd_*.embb</code> bundles, 8,433 banks with 2,723 distinct names and 12,747 distinct event
+ids. Language banks are in <code>sound\&lt;language&gt;\</code>. Streamed media and voice are loose Wwise packages
+under <code>game\sound\</code>: eight <code>Streaming*.pck</code> files (about 1.16 GB) and, per language,
+<code>External*.pck</code> and <code>vo*.pck</code>. The file layer formats <code>sound\%s\%u.bnk / .wem / .pck</code> and
+<code>sound\%u.wem / .pck</code> (0x11D2550): files by id, with a language folder.</p>
+<p><strong>Streaming bank data</strong> (<code>Sound/</code>): <code>Sound/StreamingSoundBanks</code> (1,958 records: EventPrefixes,
+EventSubStrings, GlobalStateEvents, SoundEventPlaybackStrategy such as PlayWhenLoaded,
+SoundBundleToLoad naming <code>sound\bundles\snd_*.bndl</code>, Priority, StopEventsBeforeUnloading,
+AlwaysInUse, WaitSecondsBeforeUnloading, SoundBankGroup), <code>StreamingSoundBankGroups</code> (13),
+<code>StreamingSoundBankSubLists</code> (19), <code>StreamingSoundBankList</code> (1, GlobalMemoryBudgetMB),
+<code>StreamingGlobalAssetLists</code> (4), <code>StreamingGlobalStateEvents</code> (11) and <code>DlcSuppressLists</code> (2). An
+event whose name matches a record's prefix loads that record's sound bundle, a bare <code>.bndl</code>
+manifest that names the <code>.bnk</code> with no container behind it.</p>
+<p><strong>Loading.</strong> A bank is an engine resource: the bank loader (vt_0x22C3850 vf4 0x54FEA4) gets the
+file's bytes, builds a 0x18-byte handle (<code>+0x00</code> the bank id, <code>+0x04</code> size, <code>+0x08</code> data, <code>+0x10</code>
+"not init.bnk", <code>+0x11</code> "not a _Metadata bank") and calls the sound manager's vf32 0x54FF78, which,
+under the bank lock, parks banks until <code>init.bnk</code> has loaded. 0xC378A0 loads one bank: the size
+must be at least 0x14 and the bank's language id (<code>BKHD+0x10</code>) must be 0 or the current language,
+so banks of another language are refused; then 0x12F1A00 copies it into a Wwise pool (or 0x550088
+loads it in place).</p>
+<p><strong>The live bank list.</strong> The bank manager <code>[base+0x26FF9B0]</code> keeps a hash table at <code>+0x90</code> (buckets,
+u32 count of buckets, capacity, item count); entries point at bank slots (vt_0x1DBAA38: <code>+0x10</code> u32
+bank id, <code>+0x18</code> data, <code>+0x20</code> next in the chain, <code>+0x38</code> u64 size). In an open-world scene 83 banks
+(210 MB) were loaded, all identified by id; the largest were <code>global_ui</code> (26.7 MB), <code>wraith</code> (25.9),
+<code>cbt_insta_chordkills</code> (13.2), <code>wld_glb</code> (13.0), <code>mus_global</code> (12.4), <code>char_troll_glb</code> (10.8) and
+<code>cbt_player</code> (10.5). Only 51 of the 83 data pointers still pointed at the bank: the source buffer of a
+copy-loaded bank is freed, so <code>+0x18</code> is not reliable. Two more tables exist at <code>+0x78</code> (12,289
+buckets, 8,775 items) and <code>+0xA8</code> (29 buckets, 4 items).</p>
+<h2 id="audiohooks-the-dialogue-graph">AudioHooks: the dialogue graph</h2>
+<p><code>AudioHooks</code> data (keys, hooks, conditions, game conditions, dialogue events) decides which line a
+character says. It is compiled into the audio cache at load by 0x1872B88 on the audio thread
+(builders 0x1871D7C, 0x1871C44 and 0x1872800); a change to the GameDB records afterwards has no
+effect. Fields read live instead: the dialogue-event priorities (0x66BCA0 / 0x66BD18),
+<code>DialogCooldowns.Duration</code>, <code>Faction/Events/Events.KeepPriority</code>, catalyst <code>RandomChance</code> and
+<code>Presentation/Cooldowns.Duration</code>.</p>
 <ul>
-<li><strong>Play any shipped event on any emitter:</strong> emitter play 0x3AD6A8 / sound manager vf13 on the MAIN
-  thread (string name, FNV-1 resolves it). The bank holding the event must be loaded (live list above;
-  <code>wwise_event_find</code> names the bank); the streaming bank system loads banks by event-name prefix.</li>
-<li><strong>Per-object cap 50, global object cap 725:</strong> a mod that spams events on one emitter is silently refused.</li>
-<li><strong>New VO = an external source:</strong> a dialogue line is a generic event + a Vorbis file name resolved by
-  the IO hook in External*.pck. A new line needs a file the IO hook can find (not attempted).</li>
-<li><strong>Banks of another language are refused</strong> at load (BKHD +0x10 vs <code>[0x270347C]</code>).</li>
-<li><strong>Movies:</strong> an Interface/Movies record's path points at <code>.vid</code>, the file is <code>.vib</code>; 214 records point
-  at files that do not ship (cut UI clips) - repointing such a record's Movie at a shipped clip is a
-  data-only lever (not tried). Loose <code>.bk2/.bik/.mp4</code> playback exists in code but is gated off (byte
-  0x2A37714 = 0).</li>
-<li>Every audio write lands on the Wwise thread's data: AudioHooks are compiled at load (CLAUDE.md law on
-  hot-thread GameDB domains), and bank memory is shared - read only.</li>
+<li>Condition types are a 146-value string enumeration (registrar 0x83BC8C; <code>CharacterEvent</code> = 95,
+  <code>CharacterEventCount</code> = 96), evaluated by the switch 0x189EC0 (case table 0x18B944). The
+  <code>CharacterEvent</code> matcher 0x74EC88 compares an event's age (now minus the event time) with the
+  condition's minimum and maximum.</li>
+<li><code>AddKey</code> 0x18E560 runs every hook of a key, without stopping at the first match. <code>CanPlay</code>
+  0x66BC00 lets a new line take over a talking character only if its <code>PriorityInterrupt</code> is strictly
+  greater than the current line's <code>PriorityContinue</code>; between equal priorities the first line wins.</li>
+<li>A <code>CharacterModel</code> game condition (type 121) compiles to one bit (the payload's u16 at <code>+0x62</code>),
+  tested against the speaker's audio-character bit set at <code>+0x188</code> (0x18A8BA -&gt; 0x18BBD8).
+  124 such conditions exist; the player's audio character is <code>[GameAudioManager+0xA5138]</code>.</li>
+<li>Audio characters (vt_0x1F797A8; a pool inside the audio manager at <code>+0x38</code>, stride 0x4F8) keep a
+  copy of their captain's event history at <code>+0x248</code>, taken when the character spawns.</li>
+<li><code>CCharacter.AddAudioHookKey</code> 0x2D9B1C(character, key) fires a key on a character directly; keys
+  without conditions (such as the per-line keys of scripted scenes) play whenever they are fired.</li>
 </ul>
-<h2 id="corrections-to-other-files-2026-10-28">Corrections to other files (2026-10-28)</h2>
+<h2 id="video">Video</h2>
+<p><strong><code>WBMovieMgr</code></strong> (vt_0x230B308, 5 methods, <code>WBMovieMgr.cpp</code>). vf2 0x32F930 <code>Create(out, name, flags)</code>:
+a <code>.vid</code> name goes to 0x33048C (a resource request of type 0x10 through the resource system,
+<code>malloc(0x168)</code>, constructor 0x3306A0, then vf22 with the UHD setting <code>[base+0x272EC80]</code>); any other
+name goes to 0x1CA0538, which accepts only <code>.bk2</code>, <code>.bik</code> and <code>.mp4</code>, and only while byte
+<code>[base+0x2A37714]</code> is set (it is clear in the shipped game). vf3 0x1CA0608 and vf4 0x331170 call
+vf5(bool) and vf16(float) on every live video under the list lock.</p>
+<p><strong>A video resource</strong> (vt_0x2005158, 0x168 bytes; base class vt_0x1DB1800, constructor 0x33092C:
+<code>+0x08</code> list node, <code>+0x18</code> reference count): <code>+0x20</code> the Bink player, <code>+0x28</code> a lock, <code>+0x50</code> a
+copy of the play state, <code>+0x58</code> / <code>+0x60</code> state. vf22 0x33058C queues it to the render ring;
+0x3305D0 links it into the global video list (head 0x267E400, node = resource + 8, lock 0x2A37718).
+vf23 0x529BF8 opens the file (Bink player vf6) and vf25 0x33232C is the per-frame update (decode via
+0x33236C, then copy player <code>+0x168</code> to <code>+0x50</code>). The render command 0x3322BC walks the list on the
+render thread every frame and calls vf25 on each video.</p>
+<p><strong>The Bink player</strong> (vt_0x1DB1740, 0x3F0 bytes, constructor 0x330830): <code>+0x08</code> the <code>HBINK</code>, <code>+0xF8</code>
+open state (0 open, 3 failed), <code>+0x168</code> play state (2 = failed to open), <code>+0x170</code> the file name.
+vf14 0x331D78 <code>Open(name, flags)</code> calls <code>BinkOpenWithOptions</code> with a custom file callback 0x7A9EA8
+that reads through the engine's file layer (0x1CD2194). vf15 0x331358 pauses, vf7 0x331620 sets
+volume and speakers, vf11 0x332420 registers frame buffers. <code>HBINK</code>: <code>+0x00</code> width, <code>+0x04</code>
+height, <code>+0x08</code> frames, <code>+0x0C</code> current frame. On the army screen one video was live
+(<code>interface\videos\kraken\traits\resistant_beast.vib</code>, 1024 x 512, 239 frames, looping); in the open
+world the list was empty and no Bink player existed.</p>
+<p>The console variable <code>Video.UHD</code> (<code>WBMovieMgr.cpp</code>, handler 0x1CA04F8: 0 never, 1 always, 2
+default) is stored in <code>[base+0x272EC80]</code>.</p>
+<h3 id="movie-data-and-files">Movie data and files</h3>
+<p><code>Interface/Movies</code> holds 950 records with 29 fields: Movie (the path), AudioBundle,
+AdditionalAssetBundle, Loop, MenuBackgroundVideo, CanSkip, FullScreen, RenderGameInBackground,
+ScreenPosition, PauseGame, PauseAI, PauseMovieOnLastFrame, RenderBars, PlayCreditsOnFinish, fade-in
+and fade-out frames, SyncVideoToWwiseAudio, WwiseAudioKey, SkipSoundKey, GlobalBusKey,
+StopGlobalBusKey, CommandSet, Sounds, Events, OverlayVideos, OverlayMaterial and
+RequiredSubtitleEntries. Records name a <code>.vid</code>; the engine opens the <code>.vib</code> beside it. 939 records
+carry a path: 725 resolve to a shipped movie (711 distinct files) and 214 name movies that do not
+ship (cut skill-progression, attribute and trait clips). Flag counts: SyncVideoToWwiseAudio 947,
+PauseGame 943, CanSkip 919, Loop 740, FullScreen 210. Event lists live in
+<code>Interface/Movies/Events/{PresentationEvents, BossInfoEvent, UIVideoElementEvents, HUDWidgetConfig,
+GameEvents}</code>.</p>
+<p>The game ships 743 movie files under <code>game\cinematics\videos</code> (about 10 GB) and
+<code>game\interface\videos</code> (about 2 GB): 12.85 GB and 3.8 hours in all. 668 are Bink 2 (<code>KB2j</code> 661,
+<code>KB2i</code> 7) and 71 Bink 1 (<code>BIKi</code>), all named <code>.vib</code>; the header word at <code>+0x04</code> is the file size
+minus 8 in 739 of 739. Resolutions: 1024 x 512 (479, the UI clips), 1920 x 1080 (125, the
+cinematics), 512 x 256 (76), 4 x 4 (56 placeholder clips of the third story DLC), 1280 x 720 (2) and
+3840 x 2160 (1). Only <code>interface\videos\intro.vib</code> has an audio track: movie sound comes from
+Wwise.</p>
+<p><strong>Who plays a movie.</strong> 0x32F3AC (it reads the <code>Interface/Movies</code> fields and the master volume and
+starts the interface's cinematic state) plays a movie record. Its callers include the presentation
+element start 0x5D20C4 (via 0x32F3A0), the console command <code>UI.PlayVideo</code> (handler 0x17C0ADC), a
+video render-target path 0x335CF4 and the skip prompt 0x17F0E48. The UI video player 0x17FC5C0
+(callers include <code>CacheLoadWorldVideo</code> 0x1B76988) creates videos through <code>WBMovieMgr</code> vf2;
+<code>Video.GotoFrame</code> is handled by 0x17FE1C8.</p>
+<h2 id="open-questions">Open questions</h2>
 <ul>
-<li>kb/render-fx.md "Render thread and the command ring" names render command <strong>0x4C32E8
-  "VideoClipRequestMgr"</strong>: 0x4C32E8 reads the engine interface (the misnamed global) and calls its vf26
-  (render interface, +0x90), then 0x4C3318 - nothing video-specific was found in it. The per-frame
-  VIDEO command is 0x3322BC only. (Not edited there: flagged for the user.)</li>
-</ul>
-<h2 id="open-leads">Open leads</h2>
-<ul>
-<li>Message-type NAMES above 1 are inferred from argument shapes and the char / wchar pairs; settle them
-  by emulating each API with known arguments (<code>emulate_live</code>) and reading the queued message.</li>
-<li>0x3AD888 (pre-PostEvent check): confirm it is the Sound/StreamingSoundBanks prefix match and what it
-  does when the bank is absent (PlayWhenLoaded vs drop).</li>
-<li>The IO hook (0xC35060..0xC3BC90 "WwiseFile" + 0x11D2550): the order of language / package / loose
-  lookup and whether the KRAKEN VFS (Live VFS lane) can serve a new .wem or .pck.</li>
-<li>VideoClipRequestThread (0x11C7274 loop, request at obj+0x100, +0x358 flag): purpose unknown
-  (<code>VideoUserContentFile</code> 0x9FA2B0 suggests capture / share).</li>
-<li>The emitter's owner (which engine objects carry emitters) and the per-frame position push.</li>
-<li>Wwise's own registered-object table (CAkRegistryMgr) was not located; the engine's sound-object vector
-  is the census used here.</li>
-<li>The 56 4x4 dlc3 "realization" movies: confirm they are timing placeholders for runtime cinematics.</li>
-</ul>
-<h2 id="aire-actions">AIRE actions</h2>
-<p><code>aire/pipeline/audio_video.py</code>, class <code>AudioVideoActions</code> (read-only):
-<code>audio_map(objects=True, banks=True, window_s=1.0, limit=40)</code>, <code>video_map(limit=16)</code>,
-<code>video_files(records=False, limit=20)</code> (offline; records=True needs the game). Tests:
-<code>tests/test_audio_video.py</code> (41 offline anchors). Related: <code>audio_hooks_status</code>, <code>audio_model_bits</code>
-(audio_hooks_live.py), <code>wwise_index_build</code>, <code>wwise_event_find</code> (formats/wwise_index.py), <code>thread_map</code>.</p><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
+<li>The names of Wwise message types other than PostEvent are inferred from argument shapes;
+  emulating each API with known arguments and reading the queued message would confirm them.</li>
+<li>Whether the pre-check 0x3AD888 is the streaming-bank prefix match, and what it does when the bank
+  is absent (wait until loaded, or drop the event).</li>
+<li>The order in which the Wwise file layer searches language folders, packages and loose files.</li>
+<li>The purpose of <code>VideoClipRequestThread</code> (loop 0x11C7274; a request at <code>+0x100</code>, a flag at
+  <code>+0x358</code>); a nearby <code>VideoUserContentFile</code> string suggests capture or sharing.</li>
+<li>Which engine objects own the emitters, and where positions are pushed each frame.</li>
+<li>Wwise's own registry of game objects (<code>CAkRegistryMgr</code>) was not located.</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
