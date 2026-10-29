@@ -120,14 +120,266 @@ in another region's source, and the same name means the same code (616 of 617 co
 match completely; a random other function matches 33 of 617).</p>
 <h2 id="the-bytecode">The bytecode</h2>
 <p><strong>The interpreter.</strong> The main loop 0x1D88000 fetches a u32 instruction, takes <code>op = insn &gt;&gt; 25</code>,
-refuses <code>op &gt; 0x5B</code> and jumps through a 92-entry table at 0x1D8B208; two more 61-case loops sit at
-0x1D8B378 and 0x1D8E188. Fields: A = bits 0-7 (a register, or a flag for EQ / LT / LE / TEST); C =
+refuses <code>op &gt; 0x5B</code> and jumps through a 92-entry table at 0x1D8B208. Two further interpreter functions
+start at 0x1D8B378 and 0x1D8E188, each with a 61-case dispatch of its own. The callers (0x6C8E38,
+0x406C94) pick one by the mode word of the VM's global state <code>[[L+0x10]+0x1C8]</code>: 0 runs the main
+loop, 1 runs 0x1D8B378 and 2 runs 0x1D8E188. The main VM runs in mode 0. Fields: A = bits 0-7 (a register, or a flag for EQ / LT / LE / TEST); C =
 bits 8-16 (RK: 256 and above = constant K[C - 256]); B = bits 17-24, with bit 25 set by the <code>*_BK</code>
 opcode of a pair (B is then a constant index); Bx = bits 8-24; sBx = Bx - 0xFFFF, relative to the next
 instruction. DATA (op 76) is a word the VM skips; several opcodes own a fixed number of DATA words
 after them (inline caches, structure ids, SETLIST counts). NEWSTRUCT's DATA word holds the structure id.
 <code>return f(x)</code> compiles to TAILCALL followed by an unreachable <code>RETURN A, 0</code>, and jumps are threaded (an
 inner <code>else</code> skip or a <code>break</code> lands directly on the enclosing construct's destination).</p>
+<p><strong>The opcodes.</strong> The executable carries HavokScript's opcode-name table (records of 0x30 bytes from
+0x26809C8, names <code>HKS_OPCODE_*</code>, in opcode order; entry 92 is <code>MAX</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Op</th>
+<th>Name</th>
+<th>Op</th>
+<th>Name</th>
+<th>Op</th>
+<th>Name</th>
+<th>Op</th>
+<th>Name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>GETFIELD</code></td>
+<td>1</td>
+<td><code>TEST</code></td>
+<td>2</td>
+<td><code>CALL_I</code></td>
+<td>3</td>
+<td><code>CALL_C</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>EQ</code></td>
+<td>5</td>
+<td><code>EQ_BK</code></td>
+<td>6</td>
+<td><code>GETGLOBAL</code></td>
+<td>7</td>
+<td><code>MOVE</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>SELF</code></td>
+<td>9</td>
+<td><code>RETURN</code></td>
+<td>10</td>
+<td><code>GETTABLE_S</code></td>
+<td>11</td>
+<td><code>GETTABLE_N</code></td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>GETTABLE</code></td>
+<td>13</td>
+<td><code>LOADBOOL</code></td>
+<td>14</td>
+<td><code>TFORLOOP</code></td>
+<td>15</td>
+<td><code>SETFIELD</code></td>
+</tr>
+<tr>
+<td>16</td>
+<td><code>SETTABLE_S</code></td>
+<td>17</td>
+<td><code>SETTABLE_S_BK</code></td>
+<td>18</td>
+<td><code>SETTABLE_N</code></td>
+<td>19</td>
+<td><code>SETTABLE_N_BK</code></td>
+</tr>
+<tr>
+<td>20</td>
+<td><code>SETTABLE</code></td>
+<td>21</td>
+<td><code>SETTABLE_BK</code></td>
+<td>22</td>
+<td><code>TAILCALL_I</code></td>
+<td>23</td>
+<td><code>TAILCALL_C</code></td>
+</tr>
+<tr>
+<td>24</td>
+<td><code>TAILCALL_M</code></td>
+<td>25</td>
+<td><code>LOADK</code></td>
+<td>26</td>
+<td><code>LOADNIL</code></td>
+<td>27</td>
+<td><code>SETGLOBAL</code></td>
+</tr>
+<tr>
+<td>28</td>
+<td><code>JMP</code></td>
+<td>29</td>
+<td><code>CALL_M</code></td>
+<td>30</td>
+<td><code>CALL</code></td>
+<td>31</td>
+<td><code>INTRINSIC_INDEX</code></td>
+</tr>
+<tr>
+<td>32</td>
+<td><code>INTRINSIC_NEWINDEX</code></td>
+<td>33</td>
+<td><code>INTRINSIC_SELF</code></td>
+<td>34</td>
+<td><code>INTRINSIC_INDEX_LITERAL</code></td>
+<td>35</td>
+<td><code>INTRINSIC_NEWINDEX_LITERAL</code></td>
+</tr>
+<tr>
+<td>36</td>
+<td><code>INTRINSIC_SELF_LITERAL</code></td>
+<td>37</td>
+<td><code>TAILCALL</code></td>
+<td>38</td>
+<td><code>GETUPVAL</code></td>
+<td>39</td>
+<td><code>SETUPVAL</code></td>
+</tr>
+<tr>
+<td>40</td>
+<td><code>ADD</code></td>
+<td>41</td>
+<td><code>ADD_BK</code></td>
+<td>42</td>
+<td><code>SUB</code></td>
+<td>43</td>
+<td><code>SUB_BK</code></td>
+</tr>
+<tr>
+<td>44</td>
+<td><code>MUL</code></td>
+<td>45</td>
+<td><code>MUL_BK</code></td>
+<td>46</td>
+<td><code>DIV</code></td>
+<td>47</td>
+<td><code>DIV_BK</code></td>
+</tr>
+<tr>
+<td>48</td>
+<td><code>MOD</code></td>
+<td>49</td>
+<td><code>MOD_BK</code></td>
+<td>50</td>
+<td><code>POW</code></td>
+<td>51</td>
+<td><code>POW_BK</code></td>
+</tr>
+<tr>
+<td>52</td>
+<td><code>NEWTABLE</code></td>
+<td>53</td>
+<td><code>UNM</code></td>
+<td>54</td>
+<td><code>NOT</code></td>
+<td>55</td>
+<td><code>LEN</code></td>
+</tr>
+<tr>
+<td>56</td>
+<td><code>LT</code></td>
+<td>57</td>
+<td><code>LT_BK</code></td>
+<td>58</td>
+<td><code>LE</code></td>
+<td>59</td>
+<td><code>LE_BK</code></td>
+</tr>
+<tr>
+<td>60</td>
+<td><code>CONCAT</code></td>
+<td>61</td>
+<td><code>TESTSET</code></td>
+<td>62</td>
+<td><code>FORPREP</code></td>
+<td>63</td>
+<td><code>FORLOOP</code></td>
+</tr>
+<tr>
+<td>64</td>
+<td><code>SETLIST</code></td>
+<td>65</td>
+<td><code>CLOSE</code></td>
+<td>66</td>
+<td><code>CLOSURE</code></td>
+<td>67</td>
+<td><code>VARARG</code></td>
+</tr>
+<tr>
+<td>68</td>
+<td><code>TAILCALL_I_R1</code></td>
+<td>69</td>
+<td><code>CALL_I_R1</code></td>
+<td>70</td>
+<td><code>SETUPVAL_R1</code></td>
+<td>71</td>
+<td><code>TEST_R1</code></td>
+</tr>
+<tr>
+<td>72</td>
+<td><code>NOT_R1</code></td>
+<td>73</td>
+<td><code>GETFIELD_R1</code></td>
+<td>74</td>
+<td><code>SETFIELD_R1</code></td>
+<td>75</td>
+<td><code>NEWSTRUCT</code></td>
+</tr>
+<tr>
+<td>76</td>
+<td><code>DATA</code></td>
+<td>77</td>
+<td><code>SETSLOTN</code></td>
+<td>78</td>
+<td><code>SETSLOTI</code></td>
+<td>79</td>
+<td><code>SETSLOT</code></td>
+</tr>
+<tr>
+<td>80</td>
+<td><code>SETSLOTS</code></td>
+<td>81</td>
+<td><code>SETSLOTMT</code></td>
+<td>82</td>
+<td><code>CHECKTYPE</code></td>
+<td>83</td>
+<td><code>CHECKTYPES</code></td>
+</tr>
+<tr>
+<td>84</td>
+<td><code>GETSLOT</code></td>
+<td>85</td>
+<td><code>GETSLOTMT</code></td>
+<td>86</td>
+<td><code>SELFSLOT</code></td>
+<td>87</td>
+<td><code>SELFSLOTMT</code></td>
+</tr>
+<tr>
+<td>88</td>
+<td><code>GETFIELD_MM</code></td>
+<td>89</td>
+<td><code>CHECKTYPE_D</code></td>
+<td>90</td>
+<td><code>GETSLOT_D</code></td>
+<td>91</td>
+<td><code>GETGLOBAL_MEM</code></td>
+</tr>
+</tbody>
+</table>
+<p>In the main loop's table, opcodes 31-36, the <code>INTRINSIC_*</code> family, and 76 (<code>DATA</code>) point at the dispatch
+loop itself: the main interpreter treats them as no-ops.</p>
 <p><strong>The chunk format</strong> (the engine's loader: <code>LoadHeader</code> 0x1D1A234, <code>LoadFunction</code> 0x1D1AFDC
 ("code too deep" past depth 128), <code>LoadConstants</code> 0x1D1AB48, <code>LoadDebug</code> 0x1D1AD68, <code>LoadStructures</code>
 0x1D1F048, <code>LoadString</code> 0x1D1B548, <code>Align4</code> 0x1D1A114 (to a multiple of 4 of the bytes read so far);
@@ -161,6 +413,6 @@ and pumps messages too (0x6EE5D0, dispatch 0x6EE670); both pumps share the re-en
 unlocked bump allocation, so only the main thread may post.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>The names of six opcodes whose handler is the dispatch loop itself (no-ops).</li>
-<li>Which opcode families the two 61-case loops serve.</li>
+<li>What sets interpreter modes 1 and 2 (<code>[[L+0x10]+0x1C8]</code>), and where the <code>INTRINSIC_*</code> opcodes are
+  executed.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
