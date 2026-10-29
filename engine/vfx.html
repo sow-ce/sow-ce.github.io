@@ -412,7 +412,11 @@ player rig <code>LeftHand</code> / <code>RightHand</code>; the player skeleton's
 <li><strong>Per effect group</strong> (<code>Client/ClientFXBudget</code>, 7 records: MaxSimultaneousFX / MaxNewFX): OnFire 30 /
   10, Blinded 25 / 10, BloodDecals 30 / 4, Poisoned 30 / 10, Footsteps 100 / 10,
   Easterling_SmokeScreen 2 / 2, OnFire_Balefire 30 / 10, with a budget-exceeded behaviour and pooling
-  rules.</li>
+  rules. They are copied once at start-up: 0x177BCE0 (from 0x1783DD0; skipped while the byte at
+  0x266D4F8 is set) builds one budget object per record - 0x177A3B4 copies <code>MaxSimultaneousFX</code> to
+  <code>+0x0C</code>, <code>MaxNewFX</code> to <code>+0x10</code>, the exceeded behaviour and the pooling rules (radius, capacity) - and
+  registers every path in the record's <code>FXList</code> by its <code>StringHash</code>. An effect is therefore assigned to
+  its group by the hash of its file path, and an edit to the records after start-up is not seen.</li>
 <li><strong>Distance:</strong> <code>MaxUpdateDistance</code>; creation is refused beyond the cull radius; visibility is
   decided per frame.</li>
 <li>Particle limits are node properties (MaxParticleCapacity, MaxParticleLifeSpan, MaxParticleMethod,
@@ -426,5 +430,6 @@ player rig <code>LeftHand</code> / <code>RightHand</code>; the player skeleton's
   renderer.</li>
 <li>How a pooled run-time object attaches to its instance, and what kinds of parent the instance
   handles at <code>+0x150</code> / <code>+0x1A8</code> point to.</li>
-<li>How the per-group budgets of <code>Client/ClientFXBudget</code> are enforced at creation.</li>
+<li>Where the per-group counts are checked when an effect is created, and what each budget-exceeded
+  behaviour does.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
