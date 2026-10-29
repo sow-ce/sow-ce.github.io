@@ -748,11 +748,13 @@ clears FreeAim's targeter through its vf1 (0x18D298). The draw-snap aim assist (
 <code>CP_RangedAutoTarget</code>) does not steer the shot and expires after about 0.4 s.</p>
 <h2 id="resources">Resources</h2>
 <p><strong>Cooldowns are one latched end time.</strong> <code>CheckCooldown</code> 0x493320 returns <code>[obj+0x10] - now</code>,
-floored at 0. <code>StartCooldown</code> 0x1A78B34 draws <code>rand(MinTime .. MaxTime)</code> through the stat-value
-evaluator 0x30F42C when the cooldown starts, converts it at 170.0 ticks per second (the float at
-0x202E64C) and stores <code>now + ticks</code>, so a duration change applies at the next use. The time source
-0xF23310 reads one of four global clocks chosen by <code>Combat/Cooldown.TimerType</code> (<code>obj+0x14</code>;
-0x2702550, 0x2702598, 0x2702590, 0x2702548). Every combat character owns a cooldown table at
+floored at 0. <code>StartCooldown</code> 0x1A78B34 evaluates <code>MinTime</code> and <code>MaxTime</code> through the stat-value
+evaluator 0x30F42C when the cooldown starts, takes MinTime plus a random fraction of the difference
+(0x1B3C6C; MinTime alone when MaxTime is not larger), multiplies by 1000.0 (the float at 0x202E644) and
+stores <code>now + milliseconds</code>, so a duration change applies at the next use. The time source 0xF23310
+reads one of four of the engine's clocks chosen by <code>Combat/Cooldown.TimerType</code> (<code>obj+0x14</code>; 0 the
+unscaled clock 0x2702550, 1 the world 0x2702598, 2 the real-time clock 0x2702590, 3 the player
+0x2702548; see Engine core). Every combat character owns a cooldown table at
 <code>[combat+0x5A0]</code>: <code>+0x00</code> slots (stride 0x20: <code>+0x00</code> key, <code>+0x08</code> record, <code>+0x18</code> the u32 end
 time, <code>+0x1C</code> the clock id), <code>+0x08</code> count (356 = the whole <code>Combat/Cooldown</code> category), <code>+0x10</code> the
 category; the start path 0xF13920 indexes it by record index. Of the 356 cooldown records 342 use a
@@ -903,10 +905,373 @@ required item / buff. The manager is <code>[comp+0xC68]</code>, its groups at <c
   <code>PS_Execution_Child1_WraithExecution_SKILL</code>): without it every pool is rejected before any attack
   predicate runs.</li>
 </ul>
+<h2 id="struggles">Struggles</h2>
+<p>A struggle is the player's input minigame inside a paired animation: the Last Chance ring before death,
+button mashes, holds, stick directions and aiming. Struggles run only for the player; the other
+participant just plays its half of the paired animation.</p>
+<h3 id="data">Data</h3>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Records</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Combat/Struggle/Types</code></td>
+<td>8</td>
+<td>a counter family: reset rules, reset cooldown, presentation events, an optional stat mirror</td>
+</tr>
+<tr>
+<td><code>Combat/Struggle/Pools</code></td>
+<td>49</td>
+<td>a type and an ordered list of options</td>
+</tr>
+<tr>
+<td><code>Combat/Struggle/Options</code></td>
+<td>131</td>
+<td>predicates and a list of struggles</td>
+</tr>
+<tr>
+<td><code>Combat/Struggle/Struggle</code></td>
+<td>132</td>
+<td>one minigame: input kind, buttons, timings, ring sizes, widget, audio, camera</td>
+</tr>
+<tr>
+<td><code>Combat/StruggleRemaining</code></td>
+<td>1</td>
+<td>maps the Last Chance count to the remaining chances shown on the HUD (3, 2, 2, 1, 1, 0)</td>
+</tr>
+</tbody>
+</table>
+<p>The types are FF_PC_RMT_Melee, BH3_Sequence, BIP_TribeAtk_Dark, BIP_TribeAtk_Warmo, Werewyrm_Struggle,
+PreDeath, PreDeath_Caragor and PC_PinnedState_ButtonMash. Only PreDeath mirrors its count into a stat
+(<code>Combat/Stat/Variable/Float.LastChanceCount</code>), and its reset cooldown of 1e10 seconds means the count
+never expires.</p>
+<p><code>InputType</code> is <code>ECombatStruggleInputType</code> (table 0x2A4DD00, built by 0x8629AC); the shipped struggles use
+each kind as follows:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Kind</th>
+<th>Struggles</th>
+<th>Data struct</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>QuickTime</td>
+<td>1</td>
+<td>QuickTimeData</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Aim</td>
+<td>13</td>
+<td>AimData (cursor speed and ramps, target scale, sequence length 2-8 s)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>PressCount</td>
+<td>19</td>
+<td>PressCountData (presses to win, branch on win, fail on a wrong button)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Hold</td>
+<td>4</td>
+<td>HoldData (required hold duration, prompt offset)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>InputDirection</td>
+<td>4</td>
+<td>DirectionData (direction, a 70-degree range on the warg domination records)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Ring</td>
+<td>91</td>
+<td>RingData (motion, win, perfect and lose ring scales, fail time, slow motion, can get perfect)</td>
+</tr>
+</tbody>
+</table>
+<p>Results are <code>ECombatStruggleResult</code> Fail 0, Success 1, Perfect 2 (0x862BDC); the widget position type is
+None 0, SourceNode 1, TargetNode 2 (0x862B00). The buttons are the actions <code>CombatStruggle01</code> to
+<code>CombatStruggle10</code>, enabled by the command set <code>Profile/CommandSets.CombatStruggle</code> (127 of 132 struggles).
+The Last Chance ring is drawn with three materials (<code>lastchance_red.mat</code> for the moving ring,
+<code>lastchance_blue.mat</code> for the win ring, <code>lastchance_white.mat</code> for the perfect ring) whose alpha reference
+parameters <code>Interface/UIMaterialOverride/Struggle.SharedStruggle</code> names.</p>
+<p>Struggles start from <code>Combat/Sync</code> records (paired animations): 49 of 1,507 carry a <code>StrugglePool</code>, with
+<code>StruggleWinSync</code> (46), <code>StrugglePerfectSync</code> (30) and <code>StruggleLoseSync</code> (10) naming the paired animation
+that follows each outcome and <code>PerfectStruggleRequiredItem</code> (23, all <code>PS_Struggle_Crit</code>) gating Perfect on a
+skill. <code>Combat/States/Definitions</code> also has a <code>StrugglePool</code> field, empty on all 112 shipped states. The
+shipped syncs reference 17 of the 49 pools.</p>
+<h3 id="who-can-struggle">Who can struggle</h3>
+<p>The struggle state lives on the player's combat component (<code>[player+0x2FA0]</code>, also the combat object's
+<code>+0x50</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x08</td>
+<td>the player</td>
+</tr>
+<tr>
+<td>+0xC70</td>
+<td>the struggle started by a paired animation</td>
+</tr>
+<tr>
+<td>+0xC78</td>
+<td>the struggle started by a combat state</td>
+</tr>
+<tr>
+<td>+0xE30</td>
+<td>the per-type count table (entries of 0x18 bytes); +0xE38 the entry count</td>
+</tr>
+<tr>
+<td>+0xE68</td>
+<td>the combat object</td>
+</tr>
+<tr>
+<td>+0xF5F / +0xF60</td>
+<td>can lose a struggle / can lose an aim struggle (<code>CCharacter.DEMO_SetPlayerCanLoseStruggle</code> 0x19B397C, <code>...Aim</code> 0x19B3998)</td>
+</tr>
+</tbody>
+</table>
+<p>The pool evaluator 0x1843E04 returns nothing unless the combat object has both <code>+0x40</code> and <code>+0x50</code>. On the
+player's combat object <code>+0x40</code> is the player; on 11 of 11 non-player characters sampled live both are 0.
+For a paired animation the engine takes the participant whose combat object has <code>+0x40</code>, or that
+participant's rider, so a mounted player struggles through the mount's paired animations.</p>
+<h3 id="choosing-a-struggle">Choosing a struggle</h3>
+<p>0x1843E04(pool, combat object, target, option out) reads the type's count, walks the pool's options in
+order and returns the first whose predicates pass (0x18464E4: count range or count formula, buff, the
+player's items, the target's items, stat predicates, the target's health range). From the passing option
+it takes the struggle at index <code>min(count, n - 1)</code> (0x18458F4), so an option's list is a difficulty ladder
+indexed by how many struggles of that type already happened, and its last entry repeats.</p>
+<p>Each count-table entry is {type record, u32 count, u32 expiry in ms, stat-variable link}; the live table
+holds one entry per type, in record order. Starting a struggle adds 1 (0x17B2858 -&gt; 0xCB03A0), sets the
+expiry to now + ResetCooldown x 1000 on the engine's millisecond clock (<code>[[0x2702598]+0x8]+0x18</code>) and mirrors
+the count into the type's stat. Reading an expired count zeroes it (0xCAF140). Entering a state with a fail
+condition resets every type marked ResetCountOnDeath (0x6EF838); Success / Perfect / Fail apply
+ResetCountOnPerfect and ResetCountOnLose (0x74B130); the combat action ResetStruggleCount 0xF16840 resets one
+type.</p>
+<h3 id="starting">Starting</h3>
+<ul>
+<li>From a paired animation: 0xFB268 -&gt; 0x6EF978 -&gt; 0x6EF9DC. From a combat state: the state change 0x2C14C8 -&gt;
+  0x6EF838 -&gt; 0x6EF908 -&gt; 0x6F0000, which requires the state machine's <code>+0x58</code> to equal the state being
+  entered and the state's timer to be running (0x6F03CC takes the largest remaining time over the 0x20-byte
+  timer entries at <code>[state machine+0x00]</code>, skipping paused ones). <code>+0x58</code> of the state machine is therefore
+  the current state.</li>
+<li>0x6EF9DC orders source and target by <code>TargetStruggle</code>, shows the option's HUD prompt, allows Perfect
+  only if the player owns the sync's required item, then builds one object per input kind: QuickTime
+  0x18421C0 (0x170 bytes, vt_0x1F76D28), Aim 0x1842120 (0x180, vt_0x1F76C80), PressCount 0x1842198 (0x178,
+  vt_0x1F76C28), Hold 0x1842148 (0x1B8, vt_0x1F76CF0), InputDirection 0x1842170 (0x150, vt_0x1F76D60) and
+  Ring 0x18421E8 (0x198, vt_0x1F76CB8), all on the base constructor 0x1842490 with seven virtual slots
+  (0 destructor, 1 update, 2 finish with a result, 4 done, 5 kind-specific start).</li>
+<li>The common start 0x1845C94 stores the player, source and target handles (<code>+0x08</code> / <code>+0x30</code> / <code>+0x58</code>,
+  pointers at <code>+0x28</code> / <code>+0x50</code> / <code>+0x78</code>), the struggle record (<code>+0x80</code>), the input window (<code>+0xF0</code> /
+  <code>+0xF4</code>), the result (<code>+0xFC</code>), the type's four presentation events (<code>+0x100</code> to <code>+0x118</code>), Perfect allowed
+  (<code>+0x138</code>) and can lose (<code>+0x139</code>). It then applies the command set, starts the camera presentation on the
+  player's presentation component (<code>[player+0x2FC0]</code>, 0x17A505C) and attaches the widget to the configured
+  bone.</li>
+</ul>
+<p><strong>The input window is animation data.</strong> 0x184340C reads the events <code>BSW</code> and <code>ESW</code> (0x227C894 /
+0x227C898) from both participants' paired clips (0x1847248) and keeps the earliest start and the latest end;
+without them the struggle ends at once. The struggle's clock (0x18431E4) is the playback time of the
+source's paired clip (0x1143C0), so slow motion and animation rate stretch the window with the scene.</p>
+<h3 id="running-and-resolving">Running and resolving</h3>
+<p>Every frame 0x162560 ticks both slots (0x6EFF54, 0x6EFF9C): update, then done, then the result 0x184531C. A
+Fail is reported as Success when the struggle's can-lose byte is 0 or the static byte 0x2671491 is 0 (it is
+1 in the executable and live, and no code writes it).</p>
+<ul>
+<li>After a paired animation: Fail plays <code>StruggleLoseSync</code>, Success <code>StruggleWinSync</code>, Perfect
+  <code>StrugglePerfectSync</code> (falling back to the win sync); the matching audio key plays (Perfect falls back to
+  Win); the next paired animation starts through 0x19D96B8; then the script event
+  <code>CCharacter.OnCombatStruggleEnd</code> (its P919 hash stored at 0x272911C by 0x42E6490) fires with won and perfect
+  flags.</li>
+<li>After a combat state: Success and Perfect clear the state (0x19D2834 with no state).</li>
+<li>The common finish 0x1847188 plays the type's OnFail / OnSuccess / OnPerfect presentation event with the
+  struggle's camera type.</li>
+</ul>
+<p><strong>Button mash (PressCount).</strong> Phase byte <code>+0x16E</code>: waiting, window open at <code>BSW</code>, counting, timed out, done.
+The required button (<code>+0x168</code>) is a weighted random pick over the struggle's input list (0x18451F4). Each
+right press increments <code>+0x16D</code>; reaching <code>+0x16C</code> wins (0x1846B38); a wrong press fails when
+FailOnIncorrectInput is set; passing <code>ESW</code> fails. Both counters are single bytes (the start stores
+<code>NumPressesForWin</code> with <code>mov [obj+0x16C], al</code> at 0x6B11216 and the input compares bytes at 0x1846B78), so the
+value is taken modulo 256: the "impossible" goblin mash with 999999 presses needs 63.</p>
+<p><strong>Last Chance ring (Ring).</strong> The start (0x6B12660) moves the effective end of the window earlier by
+<code>Interface/Shared.LastChanceInputLagBuffer</code> (ms, <code>+0xF8</code>), evaluates the three ring scales against the
+player's stats and converts them to alpha references: perfect <code>+0x170</code> = 0.025 x (1 - 0.2 x P / 50) +
+0.0075, win <code>+0x174</code> = 0.85 + 0.2 x (1 - 0.5 x W / 100), moving ring <code>+0x178</code> = 0.05 + 0.45 x (1 - M / 1500);
+<code>+0x184</code> = 1 - Lose / 100, <code>+0x188</code> FailTimeStart, <code>+0x18C</code> failure allowed (AllowFailure and 0x2671491),
+<code>+0x138</code> CanGetPerfect. The update 0x1848304 opens the window at <code>BSW</code> and starts the struggle's slow-motion
+record; at the shortened end it enters the failing phase when failure is allowed and resolves Fail at <code>ESW</code>.
+When failure is not allowed, 0x1847B20 instead saves the source's animation rate (<code>[combat
+object+0x260]+0xB0</code>) and sets it to 0, so the paired animation, and with it the struggle clock, holds until
+the player presses; resolving (0x18473D8) restores it, ends the slow motion and plays the cursor effect.</p>
+<h2 id="hit-categories">Hit categories</h2>
+<p>What a hit does to its target and its attacker is a <code>Combat/Category</code> record: 2,559 of them, with
+412 <code>Combat/Category/Lists</code> that group them for the category predicates (see the predicate table
+above). By name, 1,009 are the player's (<code>PC_*</code>), 755 the AI's (<code>AI_*</code>), 98 and 87 belong to the two
+story-DLC heroes (<code>PLBar_*</code>, <code>PLBoG_*</code>), and the rest cover the Wraith, dominations, resurrections,
+environment ignitions and kill cameras. Each record has 49 fields; how many of the 2,559 set each:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Set on</th>
+<th>Typical values</th>
+<th>Read by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ResurrectionSettings</code></td>
+<td>1,013</td>
+<td><code>Faction/Resurrection</code> <code>Resurrection_PlayerArrow</code> 245, <code>_PlayerSlash</code> 130, <code>_Generic</code> 124</td>
+<td>0x77EDA8 (console <code>ValidateResurrection</code>, 0x77EBB8)</td>
+</tr>
+<tr>
+<td><code>Threat</code></td>
+<td>803</td>
+<td><code>Combat/Threat</code> <code>PC_Ranged</code> 393, <code>PC_Base</code> 213, <code>AI_Base</code> 155</td>
+<td>0x644CA0</td>
+</tr>
+<tr>
+<td><code>AppliedState</code></td>
+<td>475</td>
+<td><code>Combat/States/AppliedState</code> (<code>KD_100PCT_ShortDur</code>, <code>PC_AltFire_Stun</code>, <code>PC_Ranged_Burn</code> ...)</td>
+<td>0x2DE270</td>
+</tr>
+<tr>
+<td><code>IncreaseStats</code></td>
+<td>351</td>
+<td>stat ids (18 on 229)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>HitFX</code></td>
+<td>341</td>
+<td><code>Combat/FX</code> <code>Hit_Medium</code> 86, <code>Hit_Large</code> 36</td>
+<td>0x666BE8 (0x6662A8)</td>
+</tr>
+<tr>
+<td><code>ExplicitHitFX</code> / <code>ExplicitCritHitFX</code> / <code>ExplicitBlockHitFX</code></td>
+<td>296 / 194 / 191</td>
+<td><code>Combat/FX/HitFX</code> records</td>
+<td></td>
+</tr>
+<tr>
+<td><code>HitFXOnBCOL</code></td>
+<td>173</td>
+<td><code>Hit_BloodDecal</code> 172</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ApplyBuffListOnHit</code></td>
+<td>152</td>
+<td><code>Combat/Buffs/BuffLists</code> (<code>PC_KillStealPrevention</code> 53, <code>Poison_BaleFire</code> 15)</td>
+<td>0x2EF724 (0x2EE394)</td>
+</tr>
+<tr>
+<td><code>PredicateHitCounterRange</code></td>
+<td>117</td>
+<td><code>HC_High</code> / <code>HC_Medium</code> / <code>HC_Low</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>ResourceGainOnStart</code> / <code>ResourceGainOnHit</code></td>
+<td>112 / 82</td>
+<td><code>Combat/ResourceGain</code> lists</td>
+<td>0x2DB030 (0x2DAC84)</td>
+</tr>
+<tr>
+<td><code>MoraleModifierTarget</code></td>
+<td>68</td>
+<td><code>AI/Morale/Modifiers</code> (<code>Player_HOG</code>, <code>Player_Wraith_Flee</code> ...)</td>
+<td>0x65E84C (0x2EE394)</td>
+</tr>
+<tr>
+<td><code>FireData</code></td>
+<td>58</td>
+<td><code>Fire/IgnitionTypes</code> (<code>FlameArrow</code>, <code>Explosion_Freeze</code> ...)</td>
+<td>0x4EB26C (0x4EA0A4, the area-effect code)</td>
+</tr>
+<tr>
+<td><code>ClearAllCombatState</code> / <code>...OnStart</code></td>
+<td>43 / 50</td>
+<td>true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ThreatInverted</code></td>
+<td>34</td>
+<td>threat reductions</td>
+<td></td>
+</tr>
+<tr>
+<td><code>AppliedStateSelf</code></td>
+<td>29</td>
+<td>states applied to the attacker</td>
+<td></td>
+</tr>
+<tr>
+<td><code>StateOverride</code></td>
+<td>27</td>
+<td><code>Combat/States/Definitions</code> (<code>WraithPinned_L</code>, <code>WraithStunned</code> ...)</td>
+<td>0x65387C</td>
+</tr>
+<tr>
+<td><code>PredicateHasItem</code></td>
+<td>22</td>
+<td><code>Inventory/Items</code> (<code>FlamingWeapon</code> ...)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>RagdollReaction</code></td>
+<td>11</td>
+<td><code>Combat/RagdollReaction</code> (<code>Bip_Reaction_Death_Generic</code> ...)</td>
+<td>0x65E990 (0x2F8460, the dead-body path)</td>
+</tr>
+<tr>
+<td><code>DamageData</code> / <code>DamageSelfData</code></td>
+<td>8 / 9</td>
+<td><code>Combat/Damage</code> (<code>KillSelf</code> ...)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ExitNavMesh</code></td>
+<td>6</td>
+<td><code>Combat/ExitNavMesh</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><code>ForceRecognitionWithThreat</code> (2,151), <code>ApplyStateOverrideAtStart</code> (2,556), <code>ClearAllCombatStateClearPrevious</code>
+(2,546), <code>ClearAllTargetCombatStateClearPrevious</code> (2,556) and <code>EnablePresentations</code> (2,553) are set almost
+everywhere. Six fields are set on no record - <code>PredicateEnergyLevel</code>, <code>NonLocalScreenShakeFX</code>,
+<code>ClearCooldownTargetOnStart</code>, <code>AddItems</code>, <code>RemoveItems</code> and <code>AddItemsOnBrand</code> - although the code reads
+at least four of them (accessors 0x2DDFAC, 0x666C58, 0x2DEC50, 0x2CAB30): supported, never used.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>The live layout of the combat state machine: <code>+0x28</code> holds the character's <code>Setup</code> record and
-  <code>+0x58</code> / <code>+0x60</code> a <code>Definitions</code> record while a state is active (seen on 5 characters); a larger
-  sample would confirm <code>+0x58</code> as the current state.</li>
+<li>What the combat state machine's <code>+0x60</code> holds next to the current state at <code>+0x58</code>.</li>
 <li>What the fight circle's <code>+0x188</code> / <code>+0x190</code> pointers hold.</li>
+<li>How the Last Chance press is judged: the ring's input listener (vt_0x1F76BE0 slot 1 -&gt; 0x1846974) and
+  where <code>LastChanceRingForgivenessBuffer</code> (read by 0x18434A8) enters the comparison.</li>
+<li>The update logic of the Aim, Hold, InputDirection and QuickTime struggles.</li>
+<li>Which records use the 32 pools no shipped paired animation references (the BH3 sequence, warg and troll
+  domination, the pinned-state mash and several boss pre-deaths): a later database layer, quest scripts, or
+  the combat-state path.</li>
+<li>What 0x6A3BE4 contributes on a Fail: it plays the current attack's presentation event on the player's
+  presentation component.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
