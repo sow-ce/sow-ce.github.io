@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Physics: Havok integration - Shadow of War engine reference</title><meta name="description" content="How the engine embeds Havok 2016.2: the new-pipeline (hknp) world with legacy-pipeline ragdolls, the engine&#x27;s handle to the world, the world&#x27;s layout and gravity, the material palette and its half-precision fields, what is live and what ships unused, the Havok heap, and the tagfiles that carry navigation meshes and collision shapes."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Physics: Havok integration - Shadow of War engine reference</title><meta name="description" content="How the engine embeds Havok 2016.2: the new-pipeline (hknp) world with legacy-pipeline ragdolls, the engine&#x27;s handle to the world, the world&#x27;s layout and gravity, the material palette and its half-precision fields, what is live and what ships unused, the Havok heap, the tagfiles that carry navigation meshes and collision shapes, and the surface types that decide footsteps, climbing, shooting through and impacts."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
@@ -27,7 +27,7 @@
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
-<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="physics-havok-integration">Physics: Havok integration</h1><p class=\"lede\">How the engine embeds Havok 2016.2: the new-pipeline (hknp) world with legacy-pipeline ragdolls, the engine&#x27;s handle to the world, the world&#x27;s layout and gravity, the material palette and its half-precision fields, what is live and what ships unused, the Havok heap, and the tagfiles that carry navigation meshes and collision shapes.</p>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="physics-havok-integration">Physics: Havok integration</h1><p class=\"lede\">How the engine embeds Havok 2016.2: the new-pipeline (hknp) world with legacy-pipeline ragdolls, the engine&#x27;s handle to the world, the world&#x27;s layout and gravity, the material palette and its half-precision fields, what is live and what ships unused, the Havok heap, the tagfiles that carry navigation meshes and collision shapes, and the surface types that decide footsteps, climbing, shooting through and impacts.</p>
 <h2 id="which-havok">Which Havok</h2>
 <p>Physics is Havok Physics 2016.2 (<code>hk2016_2_0_r1</code>) in its new pipeline: the <code>hknp*</code> classes, which
 replaced the older <code>hkp*</code> API. The build is a hybrid: rigid bodies are <code>hknp</code>, but ragdoll
@@ -273,9 +273,125 @@ plus 4,808 inside bundles (196 types).</p>
   <code>hknpConvexPolytopeShape</code> (boxes and capsules), <code>hknpSphereShape</code>, <code>hknpHeightFieldShape</code> and
   <code>hknpConvexShape</code>, in metres; an instance places a shape as <code>p' = R (p * scale) + t</code>.</li>
 </ul>
+<h2 id="surfaces">Surfaces</h2>
+<p>What a character, a projectile or a sound does when it meets geometry is decided by the surface it
+touched: one of the 78 <code>Surfaces/Surfaces</code> records (type <code>Surface.Surface</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Records with it set</th>
+<th>Read by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CanSeeThrough</code></td>
+<td>21</td>
+<td>0x274AA0 (0x272E48 tests it before <code>CanShootThrough</code>)</td>
+</tr>
+<tr>
+<td><code>CanShootThrough</code></td>
+<td>26</td>
+<td>0x405CC8 (four call sites)</td>
+</tr>
+<tr>
+<td><code>CanPlayerRangedTargetThrough</code></td>
+<td>23</td>
+<td>0x739490, which also requires <code>CanShootThrough</code></td>
+</tr>
+<tr>
+<td><code>CanDoFootsteps</code></td>
+<td>55</td>
+<td>footstep code</td>
+</tr>
+<tr>
+<td><code>FootPrintFX</code> / <code>FootPrintLifetime</code></td>
+<td></td>
+<td>0x10FBA8, 0x2DA0F8 (the feet: 0x2DA16C, <code>FrontRightFoot</code> ...); a list of <code>_StructuresSurfaceFootstepData</code></td>
+</tr>
+<tr>
+<td><code>WeaponFX</code></td>
+<td>59 link one</td>
+<td>0x15B0DC; <code>Surfaces/WeaponFX</code> (13: <code>default</code>, <code>Wood</code>, <code>Stone</code>, <code>Metal</code>, <code>Dirt</code>, <code>Water</code> ...)</td>
+</tr>
+<tr>
+<td><code>OcclusionFactor</code></td>
+<td></td>
+<td>0x405A64, through the audio occlusion query 0x383104</td>
+</tr>
+<tr>
+<td><code>CollisionProperty</code></td>
+<td>41 link one</td>
+<td>0x1B6D1D8; <code>Collisions/CollisionProperty</code></td>
+</tr>
+<tr>
+<td><code>CanWallClimb</code></td>
+<td>7</td>
+<td>0x1C71B44 (six call sites, 0x123E24 and 0x371708 among them)</td>
+</tr>
+<tr>
+<td><code>IsSlippery</code></td>
+<td>14</td>
+<td>0x652048, after a world query in 0x6518E4</td>
+</tr>
+<tr>
+<td><code>CanWargJump</code></td>
+<td>60</td>
+<td>0x1BE5ABC, in the warg's navigation jump test (<code>FoundNavMesh_JumpUp</code>, 0x449F90)</td>
+</tr>
+<tr>
+<td><code>IsFireProp</code></td>
+<td>12</td>
+<td>0x405B28</td>
+</tr>
+<tr>
+<td><code>CanSpiderCrawl</code></td>
+<td>73</td>
+<td>nothing</td>
+</tr>
+<tr>
+<td><code>CanMeleeThrough</code></td>
+<td>10</td>
+<td>nothing</td>
+</tr>
+<tr>
+<td><code>FXContextList</code></td>
+<td></td>
+<td>a string of effect contexts (<code>stone</code> ...)</td>
+</tr>
+</tbody>
+</table>
+<p>Every field but two has an accessor read by game code; <code>CanSpiderCrawl</code> and <code>CanMeleeThrough</code> are
+registered in the schema and filled in the data, but no code reads them. The sets are telling:
+wall-climbing is allowed only on <code>Air</code>, <code>AxeClimb</code>, <code>Can_Scramble</code>, <code>PlayerBlocker_Dust</code> and the three
+<code>No_WallRunPlusSlip*</code> surfaces; the 14 slippery surfaces are the <code>*_No_WallRun*</code> family, the player
+blockers, <code>Perimeter</code>, <code>Wood_Tree</code> and <code>Slippery</code>; the 12 fire props are the wood and cloth surfaces;
+warg jumps are refused on 18 surfaces, the five <code>Drake_*</code> collision surfaces among them, which are
+also the only five that refuse spider crawling.</p>
+<p><strong>Surface ids.</strong> Collision data does not name a surface by index but by a 16-bit id folded from the
+P919 hash of its record name: <code>id = (h + (h &gt;&gt; 16)) &amp; 0xFFFF</code> (78 of 78 surfaces, no two sharing an
+id). A table of 16-byte entries <code>{u16 id, ..., +0x08 the record}</code> between <code>[base+0x277C9E0]</code> and
+<code>[base+0x277C9E8]</code> (78 entries, in the category's record order) maps an id back to its record:
+0x2748F8 compares the id with the "no surface" value at 0x2A868F8 (0) and searches the table. A
+query result carries a surface reference <code>{u16 id, u8 valid}</code>, resolved by 0x2748E4 (null when the
+valid byte is 0). A world object can also carry its own surface: the u16 at <code>+0xCE</code> (0x274B5C;
+0x274B68 returns the u32 at <code>+0xCC</code>, whose high half it is). In one loaded world 107 of 105,842 placed
+objects set it (106 <code>metal_cage</code>, one <code>water_shallow</code>); every other object holds 0, no surface.</p>
+<p><strong>Impacts and collision properties.</strong> <code>Surfaces/Impacts</code> has 65 records, one per material and size
+(<code>Small</code>, <code>Medium</code>, <code>Large</code>, <code>Ambient</code>, <code>Explosion</code>, with <code>_OlogHai</code> variants, <code>Fist_*</code>,
+<code>Nazgul_Projectile</code>); <code>Surfaces/SurfaceFXType</code> names the eight impact kinds. <code>Collisions/CollisionProperty</code>
+has 52 records, of which the surfaces use nine (<code>Wood</code> 16 times, <code>Metal</code> 6, <code>water</code> 5, <code>Cloth</code> 4,
+<code>Stone</code> 3, <code>Footstep</code> 2, <code>Sand</code> 2, <code>Flesh</code> 2, <code>Orc_head</code> 1); the table also carries props of a
+contemporary setting that nothing in this game's surfaces refers to (<code>Office_Chair</code>, <code>Keyboard</code>,
+<code>ComputerCase</code>, <code>Radio</code>, <code>Deli_SignChains</code>, <code>CeilingTile</code>, <code>Duct</code>, <code>PropaneTank</code> ...).</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
 <li>What registers a new material slot during play.</li>
 <li>The meaning of the unnamed floats of a material (<code>+0x3C</code>, <code>+0x44</code>, <code>+0x48</code>) and of the solver
   values near the gravity vector.</li>
+<li>How collision geometry carries a surface per triangle or per shape: the query result's <code>{u16 id,
+  u8 valid}</code> reference is filled from somewhere in the collision data.</li>
+<li>What <code>CanWallClimb</code> permits, given that it is set on the <code>No_WallRunPlusSlip*</code> surfaces and clear on
+  <code>WallRun</code>.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
