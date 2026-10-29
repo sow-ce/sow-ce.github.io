@@ -1,0 +1,1329 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GameDB: schema, records and field bindings - Shadow of War engine reference</title><meta name="description" content="How the game&#x27;s data database is stored and used: the GADB file, the loaded tables of categories, records and field descriptors, the slot rule that places every value, the value types and RecordLinks, name hashing and lookups, and the code side - the type table, the schema slots, the field getters and the compiled copies that decide whether a changed value is seen."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" class="cur" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="gamedb-schema-records-and-field-bindings">GameDB: schema, records and field bindings</h1><p class=\"lede\">How the game&#x27;s data database is stored and used: the GADB file, the loaded tables of categories, records and field descriptors, the slot rule that places every value, the value types and RecordLinks, name hashing and lookups, and the code side - the type table, the schema slots, the field getters and the compiled copies that decide whether a changed value is seen.</p>
+<h2 id="the-database-file">The database file</h2>
+<p>The game's data lives in one database, <code>database\game\game.gamedb</code>, stored in <code>hotchunk.arch06</code>
+(56,759,100 bytes; see Archives and file formats). The running game's database is this copy: its
+2,742 categories, 278,865 named (secondary) records and 415,767 inline (primary) records match the
+file one for one, with the same names in the same order. The same container, GADB version 17, also
+carries the behaviour graphs (<code>.bvr</code>, root type <code>BlendDB</code>; see Animation) and the database inside
+every effect file (see Visual effects).</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Meaning (value in the game database)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x00</td>
+<td>char[4]</td>
+<td><code>GADB</code></td>
+</tr>
+<tr>
+<td>0x04</td>
+<td>u32</td>
+<td>version, 17</td>
+</tr>
+<tr>
+<td>0x08</td>
+<td>u32</td>
+<td>size of the string block, root type name included (10,412,928)</td>
+</tr>
+<tr>
+<td>0x0C</td>
+<td>u32</td>
+<td>category count (2,742)</td>
+</tr>
+<tr>
+<td>0x10</td>
+<td>u32</td>
+<td>secondary record count (278,865)</td>
+</tr>
+<tr>
+<td>0x14</td>
+<td>u32</td>
+<td>primary record count (415,767)</td>
+</tr>
+<tr>
+<td>0x18</td>
+<td>u32</td>
+<td>total cell count over all records (8,544,670)</td>
+</tr>
+<tr>
+<td>0x1C</td>
+<td>u32</td>
+<td>descriptor count (361,939)</td>
+</tr>
+<tr>
+<td>0x20</td>
+<td>u32</td>
+<td>build tag (copied to the loaded database, <code>+0x28</code>)</td>
+</tr>
+<tr>
+<td>0x24 / 0x28</td>
+<td>u32</td>
+<td>0 / 44</td>
+</tr>
+<tr>
+<td>0x2C</td>
+<td>u16 + chars</td>
+<td>the database path (<code>database\game\game.gamedb</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>string block</strong> follows. Its offset 0 is the root type name (<code>GameDatabase\0</code>), and every offset
+in the file is measured from there: names, string values, and the binary values the file stores once
+and shares (float pairs, vectors, 64-bit integers). Then come the field descriptors, 15 bytes each:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>u32</td>
+<td>P919 hash of the field name (see Names and hashing)</td>
+</tr>
+<tr>
+<td>+0x04</td>
+<td>u32</td>
+<td>the run's hashes in ascending order (entry k holds the k-th smallest)</td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>u8</td>
+<td>field index (declaration order)</td>
+</tr>
+<tr>
+<td>+0x09</td>
+<td>u8</td>
+<td>the run position of the descriptor that holds the k-th smallest hash</td>
+</tr>
+<tr>
+<td>+0x0A</td>
+<td>u8</td>
+<td>type code</td>
+</tr>
+<tr>
+<td>+0x0B</td>
+<td>u16</td>
+<td>element count</td>
+</tr>
+<tr>
+<td>+0x0D</td>
+<td>u16</td>
+<td>link: the record's first cell for this field</td>
+</tr>
+</tbody>
+</table>
+<p>The value section starts with u32 0 and the category count. Each category is a 24-byte entry
+followed by its primaries, then its secondaries:</p>
+<table>
+<thead>
+<tr>
+<th>Category entry</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>u32</td>
+<td>name (string offset): the path with <code>/</code> separators, <code>AI/Templates</code></td>
+</tr>
+<tr>
+<td>u32</td>
+<td>type name, dot-separated: <code>AI.Template</code></td>
+</tr>
+<tr>
+<td>u32</td>
+<td>source path (<code>\AI\Templates\gdb.category06</code>; empty for inline-structure categories)</td>
+</tr>
+<tr>
+<td>u32 / u32</td>
+<td>primary count / secondary count</td>
+</tr>
+<tr>
+<td>u32</td>
+<td>sort key = P919 of the name</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Record field</th>
+<th>Primary</th>
+<th>Secondary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>name</td>
+<td>-</td>
+<td>u32 string offset</td>
+</tr>
+<tr>
+<td>cell count</td>
+<td>u16</td>
+<td>u16</td>
+</tr>
+<tr>
+<td>descriptor count</td>
+<td>u8</td>
+<td>u8</td>
+</tr>
+<tr>
+<td>first descriptor (index into the descriptor array)</td>
+<td>u32</td>
+<td>u32</td>
+</tr>
+<tr>
+<td>flag byte</td>
+<td>0 (all 415,767)</td>
+<td>8 (all 278,865)</td>
+</tr>
+<tr>
+<td>cells</td>
+<td>cell count x 4 bytes</td>
+<td>cell count x 4 bytes</td>
+</tr>
+</tbody>
+</table>
+<p>Categories are stored in ascending sort-key order, and all 2,742 sort keys equal P919 of the name.
+Inside a category the secondaries are stored in ascending P919 of their names (1,371 of 1,371
+categories with two or more; no two names in one category share a hash). Both orders exist for the
+binary searches below. The file ends with a u32 count of a (u32, u32) pair table (the loaded
+database's <code>+0x68</code>); the game database's is 0, and the walk over the value section lands exactly on
+it.</p>
+<p>A file cell is 4 bytes: a word of Bools, a float, an integer, a string-block offset (string, enum
+name, 64-bit integer, float pair, vector) or an encoded RecordLink.</p>
+<h2 id="loading">Loading</h2>
+<p>The loader 0x503694 (called from 0x74CF10) reads the 0x2C-byte header, refuses anything but <code>GADB</code>
+version 17 and sizes two allocations from the counts: an arena of
+<code>categories x 0x58 + (descriptors + 2 x primaries) x 16 + secondaries x 0x28 + 0x88</code> bytes for the
+tables (30,491,600 for the game database), and an instance block of <code>cells x 8 + 0x88</code> bytes for the
+values (68,357,496). Descriptors widen from 15 to 16 bytes.</p>
+<p>The record reader 0x4BA1F0 reads each 4-byte cell into an 8-byte cell. For every field of type 4 to
+9 (strings, enums, 64-bit integers, float pairs, vectors; the type test 0x4BA364 also accepts 12 to
+16, which the game database does not use) it adds the string block's address to the cells, turning
+offsets into pointers into the block, which stays resident. A second pass, 0x4BAF6C, finishes two
+types:</p>
+<ul>
+<li><strong>StringEnum (5):</strong> the cell is replaced by <code>StringHash</code> of the string it points at.</li>
+<li><strong>RecordLink (10 and 11):</strong> the descriptor's type byte is rewritten to 10 (<code>and 0xCA; or 0x0A</code>,
+  flag bits kept), and each element is resolved. Category = value &gt;&gt; 20; a category past the table
+  gives null. Index = value &amp; 0xFFFFF: an index below the category's primary count selects that
+  primary, a larger one the secondary <code>index - primary count</code>, anything beyond both gives null.</li>
+</ul>
+<p>In the running game the string, 64-bit, float-pair and vector cells equal the block's address plus the
+file's offset (721,156 of 721,164 strings, 210 of 210, 166,606 of 166,606 and 50,734 of 50,734).</p>
+<h2 id="the-database-in-memory">The database in memory</h2>
+<p>A static object of class vt_0x1FBD460 at 0x2A68350 (constructed by 0x1B06B6C) owns the game
+database: <code>+0x18</code> the database object (<code>[base+0x2A68368]</code>), <code>+0x20</code> the path
+<code>database\game\game.gamedb</code>. Its vf3 0x1B09BBC fills the category cache (below). Every category
+header points back to the database at <code>+0x18</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Database offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>the string block (offset 0 = <code>GameDatabase</code>)</td>
+</tr>
+<tr>
+<td>+0x08, +0x40</td>
+<td>the descriptor array (16 bytes each, file order)</td>
+</tr>
+<tr>
+<td>+0x10</td>
+<td>the instance block</td>
+</tr>
+<tr>
+<td>+0x28</td>
+<td>u32 build tag (file header <code>+0x20</code>)</td>
+</tr>
+<tr>
+<td>+0x30 / +0x34</td>
+<td>u32 arena size / u32 instance block size</td>
+</tr>
+<tr>
+<td>+0x48</td>
+<td>u32 category count</td>
+</tr>
+<tr>
+<td>+0x4C</td>
+<td>u32 size of the descriptor array in bytes</td>
+</tr>
+<tr>
+<td>+0x50</td>
+<td>the category array (= database + 0x88)</td>
+</tr>
+<tr>
+<td>+0x68</td>
+<td>the (u32, u32) pair table (null in the game database)</td>
+</tr>
+</tbody>
+</table>
+<p>The descriptor array ends exactly where the database object begins; the category array follows the
+object, and after it come each category's primaries and secondaries, in file order. Two rules place
+everything else, and both hold for the running game:</p>
+<ul>
+<li>a record's descriptor run = <code>descriptor array + 16 x first-descriptor index</code> (686,399 of 686,401
+  records with fields);</li>
+<li>a record's instance = <code>instance block + 8 x (cells of all earlier records in file order)</code> (694,628
+  of 694,632).</li>
+</ul>
+<p>Instances are therefore packed back to back: a record owns exactly <code>cell count x 8</code> bytes, and
+reading past them reads the next record. In the running game the whole database lies below 4 GB, so
+the pointers in its cells have a zero high dword (166,606 of 166,606 float-pair cells).</p>
+<h3 id="categories">Categories</h3>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>char*</td>
+<td>name (<code>AI/Templates</code>)</td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>char*</td>
+<td>type name (<code>AI.Template</code>)</td>
+</tr>
+<tr>
+<td>+0x10</td>
+<td>char*</td>
+<td>source path</td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td>ptr</td>
+<td>the database</td>
+</tr>
+<tr>
+<td>+0x20</td>
+<td>ptr</td>
+<td>the type-table entry (null in 29 categories)</td>
+</tr>
+<tr>
+<td>+0x28</td>
+<td>u32</td>
+<td>secondary count</td>
+</tr>
+<tr>
+<td>+0x2C</td>
+<td>u32</td>
+<td>ordinal: the category's position in the table, the RecordLink category number</td>
+</tr>
+<tr>
+<td>+0x38</td>
+<td>ptr</td>
+<td>secondary array (0x28 per record)</td>
+</tr>
+<tr>
+<td>+0x40</td>
+<td>u32</td>
+<td>primary count</td>
+</tr>
+<tr>
+<td>+0x48</td>
+<td>ptr</td>
+<td>primary array (0x20 per record)</td>
+</tr>
+<tr>
+<td>+0x50</td>
+<td>u32</td>
+<td>P919 of the name, the lookup key (2,742 of 2,742)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>FindCategory</strong> 0x45A0E0(database, &amp;hash) tail-jumps to 0x115B4D4, a binary search over
+<code>database+0x50</code> (count <code>+0x48</code>, stride 0x58) on the key at <code>+0x50</code>.</p>
+<p>The 2,742 categories fall under 134 top-level names (counting the <code>_Structures*</code> family as one):</p>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th>Categories</th>
+<th>Records</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_Structures*</code></td>
+<td>799</td>
+<td>415,767 primaries, 777 secondaries</td>
+</tr>
+<tr>
+<td><code>Combat</code></td>
+<td>490</td>
+<td>66,615</td>
+</tr>
+<tr>
+<td><code>Interface</code></td>
+<td>392</td>
+<td>12,175</td>
+</tr>
+<tr>
+<td><code>Faction</code></td>
+<td>265</td>
+<td>27,542</td>
+</tr>
+<tr>
+<td><code>AI</code></td>
+<td>185</td>
+<td>5,203</td>
+</tr>
+<tr>
+<td><code>Inventory</code></td>
+<td>62</td>
+<td>16,108</td>
+</tr>
+<tr>
+<td><code>Presentation</code></td>
+<td>51</td>
+<td>10,347</td>
+</tr>
+<tr>
+<td><code>Quest</code></td>
+<td>41</td>
+<td>7,507</td>
+</tr>
+<tr>
+<td><code>Character</code></td>
+<td>31</td>
+<td>712</td>
+</tr>
+<tr>
+<td><code>Profile</code></td>
+<td>29</td>
+<td>1,111</td>
+</tr>
+<tr>
+<td><code>Weather</code></td>
+<td>23</td>
+<td>2,407</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>_Structures*</code> categories hold the inline structure arrays: every primary lives in one of 736 of
+them, and no other category has primaries. 777 of the 799 also carry exactly one secondary, a
+placeholder named <code>DEFAULT_RECORD_NAME&lt;Type&gt;</code>; 22 carry none.</p>
+<p><strong>The category cache.</strong> At start-up 0x1B09BBC (vt_0x1FBD460 vf3) fills the static slots
+0x26FFCE8..0x2701FD8, and 0x1BFDC4C 34 more past them, 1,260 slots in all: for each category name,
+<code>StringHash(name)</code> -&gt; FindCategory -&gt; <code>mov [slot], rax</code> (its first two stores go to 0x27019B8
+<code>AnimCurve</code> and 0x27019C0 <code>AnimatedExtras</code>; 0x2701BC8 holds <code>Client/PlayerMovement</code>). 1,027 slots
+are read by other code, so a function that reads slot X works with category X. The most read are
+<code>Interface/Shared</code> (80 functions), <code>Interface/ElementSetup</code> 53, <code>Faction/Definition</code> 51,
+<code>Inventory/Items</code> 41, <code>Quest/Quests</code> 39 and <code>Quest/Objectives</code> 32.
+Script record types and native record arguments go through these slots (see Scripting).</p>
+<h3 id="records">Records</h3>
+<table>
+<thead>
+<tr>
+<th>Secondary offset</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>u8</td>
+<td>descriptor (field) count; at most 167</td>
+</tr>
+<tr>
+<td>+0x01</td>
+<td>u8</td>
+<td>flags, 0x0A on all 278,865</td>
+</tr>
+<tr>
+<td>+0x02</td>
+<td>u16</td>
+<td>0</td>
+</tr>
+<tr>
+<td>+0x04</td>
+<td>u32</td>
+<td>P919 of the name, the lookup key (278,865 of 278,865)</td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>ptr</td>
+<td>descriptor run</td>
+</tr>
+<tr>
+<td>+0x10</td>
+<td>ptr</td>
+<td>instance (the cells)</td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td>ptr</td>
+<td>category</td>
+</tr>
+<tr>
+<td>+0x20</td>
+<td>char*</td>
+<td>name</td>
+</tr>
+</tbody>
+</table>
+<p>A primary is 0x20 bytes: <code>+0x00</code> the descriptor count (the rest of the first qword is 0, so it has
+no 0x0A byte), <code>+0x08</code> the run, <code>+0x10</code> the instance, <code>+0x18</code> its category (415,767 of 415,767).</p>
+<table>
+<thead>
+<tr>
+<th>Flag (<code>+0x01</code>)</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x02</td>
+<td>a secondary: RecordIndexOf 0x1898E8 tests it (0x189940) and returns <code>(record - [cat+0x38]) / 0x28</code>, else <code>(record - [cat+0x48]) &gt;&gt; 5</code>; -1 for null</td>
+</tr>
+<tr>
+<td>0x08</td>
+<td>set on every secondary</td>
+</tr>
+<tr>
+<td>0x01</td>
+<td>the run is sorted by its own hashes, so FindDescriptor searches <code>+0x00</code> directly; no game-database record sets it</td>
+</tr>
+<tr>
+<td>0x10</td>
+<td>a native-structure record (below); never set in the game database</td>
+</tr>
+</tbody>
+</table>
+<p><strong>FindRecord</strong> 0x278510(category, &amp;hash) passes <code>[cat+0x38]</code> and <code>[cat+0x28]</code> to the binary search
+0x278540, which compares the dword at <code>record+0x04</code> with stride 0x28 (20 callers; 0x4594AC, for
+example, finds the category <code>BehaviorSource</code> and then a record by its name hash). 0x618F7C(category,
+name) hashes the name first, then runs the same search. Script lookups use the same binary search (see
+Scripting).</p>
+<p><strong>A name identifies a record only together with its category.</strong> The 278,865 secondaries carry
+181,736 distinct names; 50,607 of them (27.85%) exist in more than one category, and 147,736 records
+carry such a name. The most shared are <code>Default</code> (95 categories), <code>Player</code> 45, <code>True</code> 35, <code>Balrog</code>
+35, <code>Warg</code> 25, <code>Troll</code> 25, <code>FellBeast</code> 24 and <code>False</code> 22.</p>
+<p><strong>Zero-field records.</strong> 8,231 records have a descriptor count of 0. All of them point at the same
+run, the first descriptor of the array, and own no cells; a walk of "their" run reads another
+type's fields.</p>
+<h2 id="descriptors-and-the-slot-rule">Descriptors and the slot rule</h2>
+<p>A loaded descriptor is 16 bytes, the file's 15 plus a pad:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>u32</td>
+<td>P919 of the field name</td>
+</tr>
+<tr>
+<td>+0x04</td>
+<td>u32</td>
+<td>the k-th smallest hash of the run</td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>u8</td>
+<td>field index (declaration order)</td>
+</tr>
+<tr>
+<td>+0x09</td>
+<td>u8</td>
+<td>run position of the descriptor with the k-th smallest hash</td>
+</tr>
+<tr>
+<td>+0x0A</td>
+<td>u8</td>
+<td>type code (low 6 bits) and flags (0x40, 0x80)</td>
+</tr>
+<tr>
+<td>+0x0B</td>
+<td>u8</td>
+<td>0</td>
+</tr>
+<tr>
+<td>+0x0C</td>
+<td>u16</td>
+<td>element count</td>
+</tr>
+<tr>
+<td>+0x0E</td>
+<td>u16</td>
+<td>link: the first cell (for a Bool, a bit index)</td>
+</tr>
+</tbody>
+</table>
+<p>A record's run lists its fields in declaration order. In all 13,612 distinct runs of the running game
+the field index ascends, the <code>+0x04</code> column ascends and the <code>+0x09</code> column is an exact permutation.
+<strong>FindDescriptor</strong> 0x25180C(record, &amp;hash) (693 callers) uses them: with record flag 0x01 clear it
+calls FindDescriptorPermuted 0x251BD0, which binary-searches the <code>+0x04</code> column and returns
+<code>run + 16 x byte [entry+0x09]</code>.</p>
+<p>Every record of a category declares the same fields in the same order (2,713 of 2,713 categories
+that hold records). What can differ per record is the element count of an array, and with it the
+links: 876 categories hold records with more than one layout (<code>Combat/Attack</code> has 1,898 layouts over
+16,976 records, <code>Faction/Roles/Definitions</code> 578 over 914). A cell is therefore found through the
+record's own run (<code>[rec+0x08]</code>), never through another record's. The links are part of the file:
+over 11,413,092 descriptor uses compared, the running game's descriptors equal the file's in hash,
+sorted column, field index, run position and type (11 read as 10) every time, in element count in all
+but 2 and in link in all but 1.</p>
+<p><strong>The slot rule.</strong> Element i of a field is the 8-byte cell <code>[rec+0x10] + (link + i) x 8</code>, for i below
+the element count; for any other i every getter returns the caller's default. A field with count 0
+therefore has no value in that record, a scalar has count 1 whether it is set or not (a null
+RecordLink still has count 1), and an array of n elements occupies n consecutive cells.
+GetIntFast 0x278758 is the rule:</p>
+<pre><code>movzx ecx, dl                 ; cached descriptor index
+shl   rcx, 4
+add   rcx, [r10+8]            ; descriptor = run + index * 16
+movzx eax, word [rcx+0Ch]     ; element count
+cmp   r8d, eax
+jae   default
+movzx ecx, word [rcx+0Eh]     ; link
+mov   rax, [r10+10h]          ; instance
+add   ecx, r8d
+mov   eax, [rax+rcx*8]        ; cell link + element
+</code></pre>
+<p><strong>Bools are bits.</strong> A Bool's link is a bit index: the value is bit <code>link &amp; 31</code> of the 32-bit word in
+cell <code>link &gt;&gt; 5</code> (GetBoolFast 0x274AE8; MakeFieldRef 0x2775C0 builds the same cell pointer and bit).
+In the 13,612 distinct loaded runs every Bool has count 1, and read this way none of them shares a
+cell with a non-Bool field of its run (52,003 of the 60,879 would if the link were a cell number). Up
+to 32 Bools share one word, so a Bool is changed as a single bit.</p>
+<p><strong>Live cell i is file cell i.</strong> Comparing every cell of every record with the file: integers equal in
+640,915 of 641,086 cells, floats in 900,372 of 900,436, Bools in 2,943,742 of 2,943,938 (the same bit
+rule applies to the file's 4-byte cells) and string values in 721,086 of 721,164.</p>
+<h3 id="example-an-ai-templates-record">Example: an <code>AI/Templates</code> record</h3>
+<p>The type <code>AI.Template</code> has six fields. The first record's run:</p>
+<table>
+<thead>
+<tr>
+<th>Run position</th>
+<th>Field</th>
+<th>+0x00 hash</th>
+<th>+0x04</th>
+<th>+0x08</th>
+<th>+0x09</th>
+<th>Type</th>
+<th>Count</th>
+<th>Link</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>GlobalVarUnlock</td>
+<td>0xF4D68BF0</td>
+<td>0x46700E92</td>
+<td>0</td>
+<td>5</td>
+<td>10</td>
+<td>1</td>
+<td>5</td>
+<td>cell <code>+0x28</code></td>
+</tr>
+<tr>
+<td>1</td>
+<td>CharacterModel</td>
+<td>0xB32EA6F8</td>
+<td>0x667502E3</td>
+<td>1</td>
+<td>3</td>
+<td>10</td>
+<td>1</td>
+<td>4</td>
+<td>cell <code>+0x20</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>CombatProp</td>
+<td>0x9CE11687</td>
+<td>0x7A604EB6</td>
+<td>2</td>
+<td>4</td>
+<td>10</td>
+<td>1</td>
+<td>3</td>
+<td>cell <code>+0x18</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Alignment</td>
+<td>0x667502E3</td>
+<td>0x9CE11687</td>
+<td>3</td>
+<td>2</td>
+<td>10</td>
+<td>1</td>
+<td>2</td>
+<td>cell <code>+0x10</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>DisplayInMenu</td>
+<td>0x7A604EB6</td>
+<td>0xB32EA6F8</td>
+<td>4</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td>bit 0 of cell <code>+0x00</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>DefaultAISetMountData</td>
+<td>0x46700E92</td>
+<td>0xF4D68BF0</td>
+<td>5</td>
+<td>0</td>
+<td>10</td>
+<td>1</td>
+<td>1</td>
+<td>cell <code>+0x08</code></td>
+</tr>
+</tbody>
+</table>
+<p>A lookup of <code>CombatProp</code> (0x9CE11687) finds it at position 3 of the <code>+0x04</code> column; that entry's
+<code>+0x09</code> is 2, the descriptor of <code>CombatProp</code>. Its value is the RecordLink in cell 3 of the instance.</p>
+<h2 id="value-types">Value types</h2>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Type</th>
+<th>Loaded cell (8 bytes)</th>
+<th>File cell (4 bytes)</th>
+<th>Fast getter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Bool</td>
+<td>bit <code>link &amp; 31</code> of the word in cell <code>link &gt;&gt; 5</code></td>
+<td>the same bit</td>
+<td>GetBoolFast 0x274AE8</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Float</td>
+<td>f32 in the low dword</td>
+<td>f32</td>
+<td>GetFloatFast 0x30E6B4</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Int</td>
+<td>i32 in the low dword</td>
+<td>i32</td>
+<td>GetIntFast 0x278758</td>
+</tr>
+<tr>
+<td>4</td>
+<td>String</td>
+<td><code>char*</code> into the string block, or 0</td>
+<td>string offset</td>
+<td>GetStringFast 0x1CB3B0</td>
+</tr>
+<tr>
+<td>5</td>
+<td>StringEnum</td>
+<td>P919 of the enum name, high dword 0</td>
+<td>offset of the name</td>
+<td>-</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Int64</td>
+<td>pointer to the 8-byte value in the string block</td>
+<td>offset</td>
+<td>-</td>
+</tr>
+<tr>
+<td>7</td>
+<td>float pair</td>
+<td>pointer to (min, max) in the string block</td>
+<td>offset</td>
+<td>GetFloatRangeFast 0x311320</td>
+</tr>
+<tr>
+<td>8 / 9</td>
+<td>Vector3 / Vector4</td>
+<td>pointer to 12 / 16 bytes of floats in the string block</td>
+<td>offset</td>
+<td>-</td>
+</tr>
+<tr>
+<td>10</td>
+<td>RecordLink</td>
+<td>pointer to the target record's header, or 0</td>
+<td>category &lt;&lt; 20, plus the index; 0xFFFFFFFF null</td>
+<td>GetLinkCellFast 0x30E7B4</td>
+</tr>
+<tr>
+<td>11</td>
+<td>RecordLink</td>
+<td>file only: becomes 10 at load</td>
+<td>as 10</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Descriptors in the file</th>
+<th>Value cells in the running game</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bool</td>
+<td>60,877</td>
+<td>2,943,938 bits</td>
+</tr>
+<tr>
+<td>Float</td>
+<td>12,952</td>
+<td>900,436</td>
+</tr>
+<tr>
+<td>Int</td>
+<td>21,867</td>
+<td>641,086</td>
+</tr>
+<tr>
+<td>String (4 / 0x44)</td>
+<td>15,172 / 3,565</td>
+<td>721,164 / 196,950</td>
+</tr>
+<tr>
+<td>StringEnum</td>
+<td>2,471</td>
+<td>336,338</td>
+</tr>
+<tr>
+<td>Int64</td>
+<td>6</td>
+<td>210</td>
+</tr>
+<tr>
+<td>float pair</td>
+<td>2,495</td>
+<td>166,606</td>
+</tr>
+<tr>
+<td>Vector3 / Vector4</td>
+<td>274 / 57</td>
+<td>34,428 / 16,306</td>
+</tr>
+<tr>
+<td>RecordLink (10 / 11)</td>
+<td>215,115 / 27,088</td>
+<td>5,204,006</td>
+</tr>
+</tbody>
+</table>
+<p>The low six bits of the type byte are the type; by-name getters compare <code>type &amp; 0x3F</code>. Flag 0x40
+appears only on Strings (code 0x44) and marks a resource path: of 196,950 such cells, 120,185 are
+empty and 73,591 of the other 76,765 name a file (<code>.bndl</code> 29,795, <code>.fxp</code> 16,814, <code>.mat</code> 14,642,
+<code>.tex</code> 7,788, <code>.skel</code> 3,197, <code>.vid</code> 940). Flag 0x80 is unused.</p>
+<p><strong>A StringEnum holds a hash, not a pointer.</strong> All 336,338 cells have a zero high dword, and 336,337
+equal P919 of the name the file stores. The hash folds case, so <code>HIGH</code> and <code>High</code> are one value. Read
+as an address, such a hash can land inside the database's own memory, which lies below 4 GB.</p>
+<p><strong>A float pair is a pointer.</strong> GetFloatRangeFast 0x311320 loads the qword in the cell and copies the
+8 bytes it points at; the pair is not stored in the cell.</p>
+<h3 id="shared-values">Shared values</h3>
+<p>The file stores each distinct string, float pair and vector once, and every cell that holds that value
+points at the same bytes; loading keeps the sharing. The 166,606 float-pair cells point at 3,071
+distinct pairs: (0, 0) is shared by 72,774 cells across the database, (1, 1) by 17,492, (100, 200) by
+13,591, (0.25, 0.25) by 13,257 and (0, 200) by 10,743. The 50,734 vector cells point at 2,596
+distinct vectors, one all-zero vector serving 25,616 cells. Writing the floats behind such a pointer
+changes every field that shares them; storing a different pointer in one cell changes that field
+alone.</p>
+<h3 id="recordlinks">RecordLinks</h3>
+<p>In the file a link is <code>(category ordinal &lt;&lt; 20) | index</code>, where the ordinal is the category's position
+in the hash-sorted table (the loaded header's <code>+0x2C</code>) and the index counts the category's primaries
+first, then its secondaries. 0xFFFFFFFF is null; 0 is a real link (category 0, primary 0). In memory
+the cell holds the target's header address.</p>
+<p>In the running game 5,204,006 link cells hold 3,471,923 nulls (0xFFFFFFFF in the file, every one),
+1,316,316 pointers to secondaries and 415,767 to primaries, and none point anywhere else. Every link
+to a primary targets a <code>_Structures*</code> category and every link to a secondary targets another
+category, so once both file types read 10, the target category tells which side a link addresses.
+1,732,055 of the 1,732,083 non-null cells hold exactly the record the file's link names.</p>
+<p><strong>Links carry no type.</strong> GetLinkCellFast 0x30E7B4 returns the cell as it is; GetLinkCellByName
+0x68BB08 checks only that the field is a RecordLink (<code>type &amp; 0x3F == 10</code>) and that the element
+exists. Which category a field should point into is recorded only in its registration (a
+<code>public &lt;Type&gt;</code> annotation, <code>Inventory.Item</code> for an item link). The code that follows a link treats
+the target as the declared type, so a link to a record of another category is read with the wrong
+layout.</p>
+<h3 id="native-structure-records">Native-structure records</h3>
+<p>A record with flag 0x10 is not addressed by the slot rule: its instance is a native structure laid
+out by its type's slots (SlotOffset 0x251C24, size step 0x251CAC), the by-name getters divert to the
+reflected path (GetLinkCellByName -&gt; ReadLinkReflected 0x16CE2E8 -&gt; ReadReflectedField 0x5DA158) and
+MakeFieldRef hands such records to 0x60B5FC. Every record of the loaded behaviour graphs carries 0x1A
+(see Animation); no record of the game database sets the bit.</p>
+<h2 id="names-and-hashing">Names and hashing</h2>
+<p><code>StringHash</code> 0x423E70 is the engine's name hash, written P919 in this reference:</p>
+<pre><code>h = seed                    ; r8, 0 for names (wrapper 0x115B52C)
+for each byte c:  h = h * 919 + (int8) LUT[c]     ; 32-bit wrap-around
+</code></pre>
+<p>The 256-byte table is at 0x1DB50D0 (95 non-zero entries):</p>
+<table>
+<thead>
+<tr>
+<th>Characters</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>a</code>-<code>z</code> and <code>A</code>-<code>Z</code></td>
+<td>1-26</td>
+</tr>
+<tr>
+<td><code>0</code>-<code>9</code></td>
+<td>27-36</td>
+</tr>
+<tr>
+<td>space, <code>_</code>, <code>-</code></td>
+<td>37, 38, 39</td>
+</tr>
+<tr>
+<td><code>\</code>, <code>/</code>, <code>.</code></td>
+<td>42, 52, 55</td>
+</tr>
+</tbody>
+</table>
+<p>Letters fold, so every name hash is case-insensitive. Inlined copies of the loop exist, among them
+PropRegister 0xC6DA00. The hash keys categories (<code>AI/Templates</code>, slash included), records, fields,
+enum values and resource paths (see Resource streaming). The database holds 11,756
+distinct field names over 18,554 (category, field) pairs, and a field name can start with a digit
+(<code>3DRotation</code>, 0xA37788CC).</p>
+<table>
+<thead>
+<tr>
+<th>Lookup</th>
+<th>Function</th>
+<th>Key</th>
+<th>Searched</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>category</td>
+<td>FindCategory 0x45A0E0 -&gt; 0x115B4D4</td>
+<td>P919(category name)</td>
+<td><code>database+0x50</code>, key at category <code>+0x50</code></td>
+</tr>
+<tr>
+<td>record</td>
+<td>FindRecord 0x278510 -&gt; 0x278540; by name 0x618F7C</td>
+<td>P919(record name)</td>
+<td><code>[cat+0x38]</code>, key at record <code>+0x04</code></td>
+</tr>
+<tr>
+<td>field</td>
+<td>FindDescriptor 0x25180C -&gt; 0x251BD0</td>
+<td>P919(field name)</td>
+<td>the record's run, <code>+0x04</code> column, then <code>+0x09</code></td>
+</tr>
+<tr>
+<td>record index</td>
+<td>RecordIndexOf 0x1898E8</td>
+<td>record pointer</td>
+<td>flag 0x02 picks the array</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-schema-in-code">The schema in code</h2>
+<h3 id="the-type-table">The type table</h3>
+<p>A category's type has a static 0x40-byte entry in a reflection type table (the file-backed part of
+<code>.idata</code>), and the category's <code>+0x20</code> points at it (2,713 of 2,742 categories; 29 have none). The
+same table describes the ClientFX node types.</p>
+<table>
+<thead>
+<tr>
+<th>Entry offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>the schema object (the type's slot array)</td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>slot count</td>
+</tr>
+<tr>
+<td>+0x10</td>
+<td>short name</td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td>description, or an empty sentinel</td>
+</tr>
+<tr>
+<td>+0x20</td>
+<td>type name</td>
+</tr>
+<tr>
+<td>+0x28</td>
+<td>parent entry (single inheritance)</td>
+</tr>
+<tr>
+<td>+0x38</td>
+<td>flags</td>
+</tr>
+</tbody>
+</table>
+<p><code>AI/Templates</code> points at 0x266CB70: schema object 0x2955C80, 6 slots, <code>Template</code>, <code>AI.Template</code>, no
+parent. The table holds 3,099 entries; 2,686 are linked by categories, 517 of those derive from
+another entry, and every parent pointer lands on an entry. The 2,742 categories carry 2,686 distinct
+type names; 42 names serve several categories (<code>Combat.Int</code> 7, <code>Combat.FloatRange</code> 7, <code>Profile.Analog</code>
+3 for the PC, Orbis and Durango input categories).</p>
+<h3 id="schema-objects-and-field-registration">Schema objects and field registration</h3>
+<p>A schema object is one 0x48-byte slot per field, zero at rest. A static initializer clears it and
+tail-jumps into the type's builder (0xA7EB0: <code>memset(0x2955C80, 0, 0x1B0)</code>, then a jump to the
+<code>AI/Templates</code> builder), so a builder has no direct caller. A builder registers each field in
+declaration order, usually by calling one small stub per field with the slot in <code>rcx</code>.
+<code>Client/PlayerMovement</code>'s
+builder 0x843EDC calls the stubs of <code>FallDamageMinHeight</code>, <code>FallDamageMaxHeight</code>, <code>FallDamageMin</code>
+... on slots 0x48 apart from 0x2871AA8; the stub 0x163580C registers <code>BaseSpeedMultiplier</code>, type 2,
+annotation <code>min=0.0</code>, default read from 0x202E5A0, and 0x1631698 registers <code>AimingRadiusScale</code> with
+<code>min=1.0</code>. Some builders call PropRegister inline, and some registration code inlines PropRegister
+itself: 0xC75150 hashes and stores a group marker (<code>BeginThermalVent</code>, annotation
+<code>GROUP_BEGIN=ThermalVent</code>) without calling it.</p>
+<p><strong>PropRegister</strong> 0xC6DA00(slot, name, type, &amp;default, annotation, arg6, flags, accessor) fills the
+slot and calls the accessor:</p>
+<table>
+<thead>
+<tr>
+<th>Slot offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>name</td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>annotation (<code>min=0.0</code>, <code>public &lt;Type&gt;</code>, <code>GROUP_BEGIN=&lt;group&gt;</code>)</td>
+</tr>
+<tr>
+<td>+0x10</td>
+<td>default value (16 bytes)</td>
+</tr>
+<tr>
+<td>+0x20</td>
+<td>P919 of the name</td>
+</tr>
+<tr>
+<td>+0x24</td>
+<td>type code</td>
+</tr>
+<tr>
+<td>+0x28</td>
+<td>arg 6 (1 for a scalar field)</td>
+</tr>
+<tr>
+<td>+0x2C</td>
+<td>flags; group markers 0x80000080 (begin) / 0x40000080 (end)</td>
+</tr>
+<tr>
+<td>+0x30</td>
+<td>state: 0 at registration, 2 or more once the descriptor index is cached</td>
+</tr>
+<tr>
+<td>+0x38</td>
+<td>the accessor, called once</td>
+</tr>
+<tr>
+<td>+0x40</td>
+<td>u8 the accessor's result: the field's descriptor index</td>
+</tr>
+</tbody>
+</table>
+<p>Slot k is field k (the descriptor's <code>+0x08</code>), except that a group marker takes a slot and no field
+index (<code>Combat/Node.KBMNode</code> is slot 16 and field 14, after two markers). The same PropRegister and
+slot size build the ClientFX node properties and the BlendDB node types: the three are one reflection
+system. Read in a running game, the schema objects hold 26,935 slots of 2,951 types, every name equal
+to the hash stored beside it, 2,463 of them group markers; two launches gave identical slots and the
+same cached index in all 22,630 slots cached in both. For every cached slot, the descriptor at that
+index in a record of the slot's category carries the slot's hash (14,558 of 14,558; the neighbouring
+slot's hash, as a control, 0 of 14,310).</p>
+<p>The six <code>AI.Template</code> slots in a running game:</p>
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Name</th>
+<th>Type</th>
+<th>Flags</th>
+<th>State</th>
+<th>Index</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>GlobalVarUnlock</td>
+<td>10</td>
+<td>0x2</td>
+<td>2</td>
+<td>0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>CharacterModel</td>
+<td>10</td>
+<td>0x2</td>
+<td>2</td>
+<td>1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>CombatProp</td>
+<td>10</td>
+<td>0x2</td>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Alignment</td>
+<td>10</td>
+<td>0x2</td>
+<td>2</td>
+<td>3</td>
+</tr>
+<tr>
+<td>4</td>
+<td>DisplayInMenu</td>
+<td>1</td>
+<td>0x6</td>
+<td>2</td>
+<td>4</td>
+</tr>
+<tr>
+<td>5</td>
+<td>DefaultAISetMountData</td>
+<td>10</td>
+<td>0x6</td>
+<td>2</td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+<h3 id="reading-a-field">Reading a field</h3>
+<p>A compiled field accessor names its field only through the slot. <code>AI/Templates.CharacterModel</code>
+(0x16680C) is the template every RecordLink accessor follows (5,215 of them):</p>
+<pre><code>if ([slot+0x30] &gt;= 2)   GetLinkCellFast 0x30E7B4(record, byte [slot+0x40], element, &amp;default)
+else                    GetLinkCellSlow 0x115AE24 -&gt; GetLinkCellByName 0x68BB08(record, &amp;[slot+0x20], ...)
+</code></pre>
+<p>The slot is reached through the type entry: 0x166858 tests <code>[[0x266CB70]+0x78] &gt;= 2</code> (slot 1's
+state), 0x166868 reads <code>[[0x266CB70]+0x88]</code> (its index), 0x1822494 returns <code>[0x266CB70]+0x68</code> (its
+hash). The fast path applies the cached index to any record of the type, which is sound because the
+field order is fixed per category. Every type has a fast and a by-name getter (callers are distinct
+functions):</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Fast</th>
+<th>By name</th>
+<th>Native-structure path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bool</td>
+<td>GetBoolFast 0x274AE8 (1,634)</td>
+<td>0x1157114 (1,850)</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Float</td>
+<td>GetFloatFast 0x30E6B4 (1,517)</td>
+<td>GetFloatByName 0x115B43C (1,539)</td>
+<td>0x5DA0FC</td>
+</tr>
+<tr>
+<td>Int</td>
+<td>GetIntFast 0x278758 (1,010)</td>
+<td>0x1169594 (1,015)</td>
+<td>0x176CE98</td>
+</tr>
+<tr>
+<td>String</td>
+<td>GetStringFast 0x1CB3B0 (1,165)</td>
+<td>0x115A54C (1,184); by hash 0x1152454 (537)</td>
+<td>0x16CE290</td>
+</tr>
+<tr>
+<td>float pair</td>
+<td>GetFloatRangeFast 0x311320 (354)</td>
+<td>not traced</td>
+<td>-</td>
+</tr>
+<tr>
+<td>RecordLink</td>
+<td>GetLinkCellFast 0x30E7B4 (5,215); copy 0x30E7A4 (537)</td>
+<td>0x115AE24 / 0x68BB08</td>
+<td>0x16CE2E8</td>
+</tr>
+</tbody>
+</table>
+<p>Writers and array walkers use field references: MakeFieldRef 0x2775C0(out, record, descriptor)
+(2,085 callers) builds <code>{+0x00 record, +0x08 cell pointer, +0x18 u16 type, +0x1A u16 count, +0x1C u8
+Bool bit, +0x20 hash}</code>; MakeFieldRefByName 0x1957C4 adds FindDescriptor. FieldIterBegin 0x465A78
+adds an index (<code>+0x28</code>) and the count (<code>+0x2C</code>), and FieldIterAtEnd 0x2774A8 compares them.</p>
+<h2 id="who-reads-a-field-and-when">Who reads a field, and when</h2>
+<p>Static analysis of the slots names the code that reads each field: 39,960 functions touch the slot of
+a GameDB field, and 13,425 call a one-field accessor. Following the value out of every read classifies
+12,789 fields:</p>
+<table>
+<thead>
+<tr>
+<th>Use</th>
+<th>Fields</th>
+<th>A changed cell takes effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>used where read (compared, computed with, passed on)</td>
+<td>8,685</td>
+<td>the next time the reader runs</td>
+</tr>
+<tr>
+<td>copied into an object or a global</td>
+<td>2,275</td>
+<td>when the copying code runs again</td>
+</tr>
+<tr>
+<td>both</td>
+<td>695</td>
+<td>partly at once, partly at the next copy</td>
+</tr>
+<tr>
+<td>stored into an unresolved container</td>
+<td>144</td>
+<td>not determined</td>
+</tr>
+<tr>
+<td>returned only / unclassified</td>
+<td>112 / 878</td>
+<td>not determined</td>
+</tr>
+</tbody>
+</table>
+<p>A copied pointer value (a float pair, a vector, a RecordLink) stays live for the values behind it:
+changing the pair's floats is seen through the copy, while pointing the cell elsewhere is seen only
+after the next copy. When a copy is refreshed depends on what runs the copier:</p>
+<ul>
+<li><strong>Movement values.</strong> 0x187F94C(object, movement record) copies <code>Client/PlayerMovement</code>
+  <code>BaseSpeedMultiplier</code> to <code>+0x550</code>, <code>FallMinHeight</code> to <code>+0x558</code> and <code>PlayerYawInterpolateTime</code>
+  (an integer, converted to float and scaled) to <code>+0x554</code>, and keeps the record at <code>+0x548</code>; given the
+  record it already holds, it returns without copying. 0x187F71C passes the record named
+  <code>PlayerMovement</code>, found by name in the cached <code>Client/PlayerMovement</code> category. A change to that
+  record's cells is therefore not seen by this consumer until a different movement record is applied
+  and the original is applied again.</li>
+<li><strong>Per-event copies</strong> refresh at every event: <code>_StructuresCombatAttackData.AOE</code> and <code>AOEOnStart</code>
+  are copied by 0x2DED44, which runs under every attack start, so a change applies to the next
+  attack.</li>
+<li><strong>Start-up and load compilers</strong> do not refresh on their own: the targeting cache 0x1C0B634 and the
+  attack cache (see Combat), the material-set cache 0x1B6190C (see Characters), item prompt links
+  (see Items) and the AudioHooks cache, which the audio thread compiles at load (see Audio and
+  video).</li>
+</ul>
+<h2 id="changing-values-in-a-running-game">Changing values in a running game</h2>
+<ul>
+<li>A cell is plain memory: the getters read it on every call, with no lock, checksum or cache in
+  between (the fast getters above are the whole read path). Whether a change is seen is decided by
+  the readers' copies above.</li>
+<li>Only the cells a record's own run claims belong to it: a field with count 0 has no cell, and an
+  element written past a field's count lands in another field of the same record, or past the
+  instance in the next record.</li>
+<li>A Bool shares its word with up to 31 others; a whole-cell write changes all of them.</li>
+<li>A StringEnum cell takes P919 of the enum name; a String, Int64, float-pair or vector cell takes a
+  pointer, and the bytes it points at are shared by every cell with the same value.</li>
+<li>A RecordLink cell accepts any record: neither the getters nor the cell know the declared target, so
+  nothing stops a link to a record of the wrong category, and its consumer reads that record with the
+  declared type's layout.</li>
+</ul>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Apart from the AudioHooks records, which the audio thread compiles at load, which categories are
+  read off the main thread (render, audio, input polling, animation jobs), so that a change can race
+  its reader? Camera, interface world-UI, audio control values, input profiles, native wildlife, AI
+  sensors and the weather and lighting structures are the candidates; sampling the field readers per
+  thread, or tracing their callers to the thread routines, would settle it.</li>
+<li>Do loads rebuild record instances from the file? A changed cell can return to the file's value
+  after a loading screen, yet changed cells can also survive a region change; whether a load re-reads
+  the instance block, and on which path, is not traced.</li>
+<li>The loader tests a <code>gamedb_patch</code> path and the byte 0x266CD70. Several other archives also carry a
+  game database; does any of them apply over the <code>hotchunk.arch06</code> copy, and how?</li>
+<li>What record flag 0x08 means (set on every secondary; the file's flag byte is 8 for secondaries), and
+  which container sets flag 0x01 (runs sorted by their own hashes).</li>
+<li>The meaning of the database's <code>+0x58</code> / <code>+0x60</code>, the type entry's <code>+0x38</code> flags, and whether
+  anything checks the build tag at <code>+0x28</code>.</li>
+<li>The loader's rebasing test accepts types 12 to 16; which container uses them?</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
