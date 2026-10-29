@@ -765,7 +765,10 @@ record at controller <code>+0x128</code>). A fast travel within the same region 
   bound render targets would settle it.</li>
 <li>Where the shadow-atlas passes run in the frame (their entry points were too rarely sampled to
   place) and how the sparse shadow tree and the screen-tile shadow classes divide the work.</li>
-<li>What the second writer of the shadow scale and move constants (0x1CC8DA0) projects.</li>
+<li>What the second writer of the shadow scale and move constants projects. 0x1CC8DA0 is called only
+  from mesh pass B (0x1F02E8) and writes values with a single cascade's component set (<code>(0, 0, 1346.9,
+  0)</code>), which would fit pass B rendering shadow casters one cascade at a time rather than translucent
+  objects; reading the render targets it binds would settle this together with the question above.</li>
 <li>What the "center lit" set is (<code>k_nCenterLitCount</code>, <code>k_nCenterLitID</code>, <code>CenterLitBuffer</code>; the ID
   changed 83 times in a paused sample).</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
