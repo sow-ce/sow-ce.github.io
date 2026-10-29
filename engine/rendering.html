@@ -311,9 +311,13 @@ world position (<code>k_mWorldToVolume</code>, <code>k_vStaticLightVolume_CellEx
 StencilOffset / PivotContrast</code>, <code>k_fStaticLightVolume_Mip</code>) with <code>BufferProbes</code>, and a <strong>sparse
 shadow tree</strong> (<code>SparseShadowTree</code>, <code>SSTCoarseLUT</code>, <code>SparseShadowTreeStartIndex / WriteIndex</code>,
 <code>k_mViewToSSTree</code>, <code>k_nTreeDepth</code>, <code>k_nCoarseLevelRes / Offset</code>, <code>k_fPeelingThreshold</code>,
-<code>k_nSharedEmptyTileLocation</code>, <code>TreeStatsBuffer</code>). Sun shadows are cascaded (<code>k_vShadowScaleX/Y/Z</code>,
-<code>k_vShadowMoveX/Y/Z</code>, <code>k_vShadowSplitDistSquared</code>, <code>k_vShadowSplitDistSelect</code>,
-<code>k_vShadowFalloffParams</code>); spot and point lights project through <code>k_mSpotProjector_LightTransform</code>
+<code>k_nSharedEmptyTileLocation</code>, <code>TreeStatsBuffer</code>). Sun shadows use <strong>four cascades</strong>, one per vector component of the shadow constants
+(<code>k_vShadowScaleX/Y/Z</code>, <code>k_vShadowMoveX/Y/Z</code>, <code>k_vShadowSplitDistSquared</code>, <code>k_vShadowSplitDistSelect</code>,
+<code>k_vShadowFalloffParams</code>, all written by 0x382484). In one live read the scales relative to the first
+cascade were 1, 0.335, 0.055 and 0.0066, and the squared split distances 864,076, 7,697,105,
+287,907,008 and 12,008,197,120 cm^2: the cascades end at about 9.3 m, 27.7 m, 170 m and 1,096 m.
+A second writer, 0x1CC8DA0, reuses the scale and move objects with another layout (about 2.5% of
+reads); spot and point lights project through <code>k_mSpotProjector_LightTransform</code>
 and <code>k_mCubeProjector_LightTransform</code>.</p>
 <p><strong>The per-view constant buffer.</strong> Every G-buffer pixel shader and the lighting share constant buffer
 <code>cb2</code>, the per-view buffer: <code>cb2[4..6]</code> are the camera-to-world rows (the lighting rebuilds a pixel's
@@ -761,8 +765,7 @@ record at controller <code>+0x128</code>). A fast travel within the same region 
   bound render targets would settle it.</li>
 <li>Where the shadow-atlas passes run in the frame (their entry points were too rarely sampled to
   place) and how the sparse shadow tree and the screen-tile shadow classes divide the work.</li>
-<li>The sun-shadow cascade count: <code>k_vShadowScale*</code> alternates between two values per frame with the
-  camera still, which fits two cascades, but the cascade setup code has not been read.</li>
+<li>What the second writer of the shadow scale and move constants (0x1CC8DA0) projects.</li>
 <li>What the "center lit" set is (<code>k_nCenterLitCount</code>, <code>k_nCenterLitID</code>, <code>CenterLitBuffer</code>; the ID
   changed 83 times in a paused sample).</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
