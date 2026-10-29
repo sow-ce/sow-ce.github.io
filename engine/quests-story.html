@@ -48,7 +48,7 @@ bool test (0x1DFF70) passes when the value equals <code>RequiredValue</code>; an
 OR fails. 330 of the 573 variables are read by no GameDB record (scripts may still read them).</p>
 <p><strong>Quests.</strong> The quest system is <code>[GM+0x6C60]</code>. Its table at <code>+0x18</code>: entries of 0x40 bytes,
 count at <code>+0x08</code>, category at <code>+0x10</code>; an entry is <code>+0x00</code> the <code>Quest/Quests</code> record, <code>+0x28</code> the
-placed quest object (null when its region is not loaded) and <code>+0x34</code> the completion counter
+placed quest object (null when its region is not loaded) and the byte <code>+0x34</code> the completion counter
 (<code>GetIsComplete</code> 0x19F4064 -&gt; 0x1B55008: counter &gt;= <code>NumCompletesForPreReq</code>, which is 1 for every
 quest). 2,256 quests exist. <code>GetIsActive</code> 0x171A20 tests the object's state for 17. The running
 quests are listed at <code>+0x3D8</code> of the quest system.</p>
@@ -456,7 +456,12 @@ plus a refresh 0x114E0C8); <code>RemoveInventoryItem</code> is 0x4F12B4. <code>F
 character.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>The flag bytes at <code>+0x30..+0x3F</code> of a quest-table entry.</li>
+<li>What the bytes at <code>+0x30..+0x3F</code> of a quest-table entry mean. The table lookup returns the entry's
+  value part at <code>+0x08</code>, and <code>GetIsComplete</code> reads the completion count as the byte at value <code>+0x2C</code>
+  (entry <code>+0x34</code>). In one late campaign (2,256 entries): the word at <code>+0x30</code> held 1 to 6 (3 on
+  1,953 entries, 1 on 255, 4 on 31, 6 on 6, 5 on 5, 2 on 4); <code>+0x31 .. +0x33</code> and <code>+0x35</code> were 0;
+  <code>+0x34</code> was 1 on 459; <code>+0x36 .. +0x3E</code> are 0 / 1 flags set on 80 to 1,975 entries each; <code>+0x3F</code>
+  held many different small values.</li>
 <li>Whether the warchief intro's lines are personality dialogue (they did not play on a plain grunt).</li>
 <li>What the 56 placeholder movies of the third story DLC stand in for at run time (see Audio and video).</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
