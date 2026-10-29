@@ -409,25 +409,28 @@ high-resolution texture streaming 0x3807E4.</p>
     0x6EC61C -&gt; 0x116B694 -&gt; 0x1EAA54 (k_fSampleScale) -&gt; 0x1EABC4
       0x1EAF30 (animation-side work), 0x255CF8, 0x1EB038      first, in this order
       0x33BCB8 scene passes                                                       69-78%
-        0x33CD60 main pass list                                                   56-63%
-          0x66E93C -&gt; 0x1EE4F8 -&gt; 0x387858   mesh pass A                          24-30%
-          0x255920, 0x185410
-          0x33783C  GPU particles                                                  4-4.5%
-          0x384640  light accumulation (point-light compute 0x4D951C runs here)
-          0x1F02E8 -&gt; 0x1EE3E4 / 0x25619C    mesh pass B                          19-20%
+        0x33CD60 main pass list                                                   56-67%
+          0x255920, 0x185410  G-buffer prelude (target set 7)
+          0x66E93C -&gt; 0x1EE4F8 -&gt; 0x387858   mesh pass A: the G-buffer            24-42%
+          0x33783C  GPU particles                                                  2-4.5%
+          0x1F02E8 -&gt; 0x1EE3E4 / 0x25619C    mesh pass B: the shadow atlas        10-20%
+          0x384640  light accumulation (point-light compute 0x4D951C runs here)  3-4%
         0x1021250   vegetation displacement and grouped GPU particles             3-4.5%
         0x33740C    post-processing (motion blur, depth of field, blur, vignette)
         0x339D6C    colour-grading LUT
         0x1EDE58    object-colour compute                                         6-7%
   0x38052C Present                                                                 7-10%
 </code></pre>
-<p>The order inside each node was recovered by sampling: within one frame (one ring position), the
-children that appear first are the ones that run first. For <code>0x33CD60</code>, 805 frames (every one with at
-least two children sampled) give: 0x66E93C first, then 0x255920, 0x185410, the GPU particles
-0x33783C, the light accumulation 0x384640, and 0x1F02E8 last. In <code>0x33BCB8</code>, 0x33CD60 runs first,
-0x1021250 next and the object-colour compute 0x1EDE58 last. In <code>0x1EABC4</code>, the three small
-children run before 0x33BCB8 in all 303 frames where two were sampled. The tree and the order are the
-same whether the world is playing or paused.</p>
+<p>The order inside <code>0x33CD60</code> comes from consecutive samples (taken 1.4 ms apart): when two
+consecutive samples sit in different children, the first child ran before the second. Over 8,370
+samples every such move went one way only: 0x255920 to mesh pass A 380 times (0 the other way),
+0x185410 to A 136 (0), A to the GPU particles 193 (0), the GPU particles to mesh pass B 89 (0), A to B
+685 (0), B to the light accumulation 0x384640 214 (0), and the light accumulation to the next frame's
+0x255920 18 times. The frame is therefore: G-buffer prelude, G-buffer (A), GPU particles, shadows (B),
+lighting. Which targets each pass draws into is in Rendering. In <code>0x33BCB8</code>, 0x33CD60 runs first,
+0x1021250 next and 0x1EDE58 last (a forward pass writing scene colour and motion). In <code>0x1EABC4</code>,
+the three small children run before 0x33BCB8 in all 303 frames where two were sampled. The tree is
+the same whether the world is playing or paused.</p>
 <p>What identifies each branch: the GPU particle branch references
 <code>StandardGPUParticle.Compute</code>, <code>StandardGPUParticle_ParticleBuffer0/1</code> and
 <code>CustomGPUParticle_DrawIndirect / ParticleSource / ParticleDest</code>; the vegetation branch
@@ -448,11 +451,11 @@ same indexed-draw path (input assembly 0x17F1B0, <code>DrawIndexed</code> 0x17F5
 <tbody>
 <tr>
 <td>+0x00</td>
-<td>the <code>ID3D11Device</code></td>
+<td>the device (<code>ID3D11Device1</code>)</td>
 </tr>
 <tr>
 <td>+0x28</td>
-<td>the immediate device context the engine draws through (<code>[base+0x272D1E8]</code>)</td>
+<td>the immediate context as <code>ID3D11DeviceContext1</code>, the handle the engine draws through (<code>[base+0x272D1E8]</code>)</td>
 </tr>
 <tr>
 <td>+0x88</td>
@@ -485,10 +488,6 @@ reporter 0x1C8AD0C, and every successful present increments the counter at <code
 <code>[base+0x267E006]</code> enables presenting. On a 240 Hz display the counter advanced 86 times per second.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>Which of the two mesh passes is the deferred G-buffer pass and which draws after lighting
-  (translucent / forward)? Reading the render targets bound during each would settle it.</li>
-<li>Where the shadow-map passes sit in the frame: their entry points (0x33B644 and the dispatches
-  0x337964, 0x33DA28, 0x337EB8) were too rarely sampled to place.</li>
 <li>What kinds of payload the deferred-delivery buffer at <code>U+0x690</code> carries, and who records them.</li>
 <li>Whether a longer countdown written into <code>obj+0xD0</code> after an NPC's Update would thin out distant
   NPCs safely: it depends on whether the skipped systems use the frame step or elapsed time.</li>
