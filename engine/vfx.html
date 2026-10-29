@@ -1,0 +1,430 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Visual effects: ClientFX data and runtime - Shadow of War engine reference</title><meta name="description" content="The ClientFX effect system end to end: the .fxp format and its loader, the 36 node types and their property schema, the five effect managers that own live instances per time domain, the instance and resource layouts, the per-frame tick split between the main thread and the FX background thread, the request path, GPU particles and budgets."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" class="cur" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="visual-effects-clientfx-data-and-runtime">Visual effects: ClientFX data and runtime</h1><p class=\"lede\">The ClientFX effect system end to end: the .fxp format and its loader, the 36 node types and their property schema, the five effect managers that own live instances per time domain, the instance and resource layouts, the per-frame tick split between the main thread and the FX background thread, the request path, GPU particles and budgets.</p>
+<p>Every visual effect - sparks, fire, blood, auras, light flares, screen effects, camera shakes and
+effect sounds - is a ClientFX effect: an <code>.fxp</code> file holding a small GameDB database of nodes, played
+by an effect manager as instances.</p>
+<h2 id="the-overview">The overview</h2>
+<pre><code>CGameClientShell [base+0x26FFA98]
+  +0xA98 Simulation  +0xAA0 RealTime  +0xAA8 PlayerTime  +0xAB0 CompanionTime  +0xAB8 WorldUI
+     |  (unique_ptr -&gt; manager wrapper, 0x18358 bytes, vt_0x22F3178; global list [base+0x26C6A98])
+     +-- +0x28 inner manager (vt_0x1F67400, 0x18330 bytes)
+           +0xB8 vector of 0x28-byte entries -- entry +0x18 --&gt; effect instance (vt_0x1DAB360, pool 0x2A3E9A8)
+                                                      +0x230 FxResource (0x60) -&gt; keys -&gt; node types
+                                                      +0x220 KeyData block -&gt; one object per node
+           +0x128 background work list --&gt; FXBackgroundThread
+GameManager +0x6DB0 = the FX thread object (routine 0x116B11C)
+GameManager +0x6DB8 = the FX performance / budget manager (ClientFxPerfMgr.cpp)
+</code></pre>
+<h2 id="the-fxp-file-and-its-loader">The <code>.fxp</code> file and its loader</h2>
+<p>An <code>.fxp</code> starts with <code>LTFX</code> and version 8, followed by a GameDB database (<code>FxGlobalProps</code> and one
+record per node). The magic occurs exactly once in the executable, in the loader 0x48FBB90: it reads 8
+bytes from a stream, checks <code>LTFX</code> and version 8, allocates the 0x60-byte <code>FxResource</code>, reads the
+database from the stream (0x74CF10) into <code>FxResource+0x48</code>, and fails with "Failed to load the
+database out of a stream." The loader is vf3 and the processor vf4 0x3E4540 of the effect resource
+handler (vt_0x2312410); path resolution happens upstream, so the loader only sees a stream.</p>
+<p>The file ends with a u32: the count of the database's (u32, u32) pair table (<code>db+0x68</code>), 0 in all 968
+shipped effects checked. A file without it makes the body reader 0x4B9B50 read 4 bytes past the end
+(0x4B9C60), which stalls the resource loader (see Resource streaming). The database's categories are
+sorted by the hash of their path, and the loader binary-searches them (0x115B4D4).</p>
+<p>Running the engine's own load and processing on every shipped effect in an emulator, 968 of 968 read
+to their last byte and 949 are accepted; the 19 others are placeholders with an empty key list, which
+the processor refuses by design. Most effects ship as <code>LTFX</code> sections inside <code>.embb</code> bundles rather
+than as loose files: a sweep of 190,407 bundle containers found 30,531 effect instances.</p>
+<h2 id="the-node-types-and-their-properties">The node types and their properties</h2>
+<p><strong>The registry</strong> is a static array of 36 pointers at 0x21DB460 (ParticleSystem first, VolumetricCloud
+last) to 36 separate 0x50-byte type entries in the data section (0x2681DD0 - 0x26829F0):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>the name <code>"ClientFX.&lt;Type&gt;"</code></td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>the type hash (u32, filled at start-up)</td>
+</tr>
+<tr>
+<td>+0x10 / +0x18</td>
+<td>create / destroy a pooled run-time object (16 types; per-type pools at 0x277CA08 + 0x10 * i, the tracer's at 0x2A3EA10)</td>
+</tr>
+<tr>
+<td>+0x20 / +0x28</td>
+<td>create / delete the node's KEY object (bump-allocated from the resource's buffer)</td>
+</tr>
+<tr>
+<td>+0x30</td>
+<td>destroy the key in place</td>
+</tr>
+<tr>
+<td>+0x38 / +0x40</td>
+<td>measure / construct the node's per-instance KeyData object (20 types)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Two families.</strong> The 20 <em>keydata</em> types keep one object per node inside each instance's KeyData
+block: ParticleSystem, GPUParticleSystem, StandardGPUParticleSystem, AnimatedModel,
+AnimatedPhysicsModel, AnimatedSkeleton, Beam, GPUCloth, MaterialController, Model, ParentedModel,
+PhysicsModel, PhysicsImpulseRadial, PolyTrail, DynaLight, DecalLight, Sprite, FlareSprite, LensFlare
+and VolumetricCloud. The 16 <em>pooled</em> types use run-time objects from per-type pools (base class
+vt_0x1DAA9D0): Sound, CameraShake, Create, CreateRay, Lightning, Tracer, DebrisSystem, Overlay, Rumble,
+Volumetric, SceneRender, ImpactDecal, Wind, VegetationDisp, PolyString and PolyCurve. Key objects
+derive from vt_0x1DB46A8 (sprites vt_0x1DCB558, GPU nodes vt_0x1DB46C8); KeyData objects from
+vt_0x1DAB2F0 (12 slots; vf6, vf7, vf8 and vf10 are the per-type overrides).</p>
+<p>Classes confirmed by exact counts (node-type count in the live instances' resources = count of the
+class's vtable inside their KeyData blocks, two snapshots):</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Key class</th>
+<th>Key size</th>
+<th>KeyData class</th>
+<th>Snapshot 1</th>
+<th>Snapshot 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>StandardGPUParticleSystem</td>
+<td>vt_0x1DCD848</td>
+<td>0x330</td>
+<td>vt_0x1DAB290</td>
+<td>969</td>
+<td>976</td>
+</tr>
+<tr>
+<td>ParticleSystem</td>
+<td>vt_0x1DCDA20</td>
+<td>0x2A0</td>
+<td>vt_0x1DAB3B0</td>
+<td>481</td>
+<td>562</td>
+</tr>
+<tr>
+<td>MaterialController</td>
+<td>vt_0x1DCC0A0</td>
+<td>0x5B8</td>
+<td>vt_0x1DC37A0</td>
+<td>257</td>
+<td>307</td>
+</tr>
+<tr>
+<td>Sprite</td>
+<td>vt_0x1DCB538</td>
+<td>-</td>
+<td>vt_0x1DC3CD8</td>
+<td>159</td>
+<td>283</td>
+</tr>
+<tr>
+<td>Model</td>
+<td>vt_0x1DC8910</td>
+<td>0x140</td>
+<td>vt_0x1DB4810</td>
+<td>170</td>
+<td>171</td>
+</tr>
+<tr>
+<td>DynaLight</td>
+<td>vt_0x1DCD358</td>
+<td>0x150</td>
+<td>vt_0x1DC6070</td>
+<td>154</td>
+<td>157</td>
+</tr>
+<tr>
+<td>GPUParticleSystem</td>
+<td>vt_0x1DB4680</td>
+<td>0x280</td>
+<td>vt_0x1DC5D40</td>
+<td>5</td>
+<td>103</td>
+</tr>
+<tr>
+<td>Beam</td>
+<td>vt_0x200B328</td>
+<td>0x138</td>
+<td>vt_0x1DCB9A0</td>
+<td>80</td>
+<td>80</td>
+</tr>
+<tr>
+<td>DecalLight</td>
+<td>vt_0x1DCD1A8</td>
+<td>0x100</td>
+<td>vt_0x1DC37C0</td>
+<td>23</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p>A key object belongs to the loaded effect, so it is shared by every instance of that effect. Counted
+over all resident effects: 9,100 ParticleSystem keys, 3,746 MaterialController, 1,874
+StandardGPUParticleSystem, 1,246 Sound and 1,235 Model.</p>
+<p><strong>The property schema</strong> is built at start-up into the uninitialised data section by per-type
+initialisers: each type's property array is cleared (<code>memset</code>, size = count x 0x48), then one
+registration call per property: <code>PropRegister(slot, "Name", type code, &amp;default, annotation, 1, sub,
+accessor)</code>, where the type code is the database's own field type (2 float, 5 string enum with an
+annotation such as <code>type=EImpulseFilter</code>, and so on). The descriptor table at 0x263F800 (stride
+0x40: <code>+0x00</code> property array, <code>+0x08</code> count, <code>+0x10</code> short name, <code>+0x20</code> <code>"ClientFX.&lt;Type&gt;"</code>,
+<code>+0x28</code> parent, <code>+0x38</code> flags) lists <strong>50 classes with 2,228 properties</strong> (2,227 named): the 36 node
+types plus their shared bases - <code>BaseFX</code> (15 properties, the common header of every visual node),
+<code>BaseSpriteFX</code> (41), <code>BaseCreateFX</code> (38), <code>LightningComponent</code> (6), <code>FlareComponent</code> (4),
+<code>DebrisType</code> (8), <code>OcclusionQueryFX</code> (19), <code>ReferenceFX</code> (2), <code>FxGlobalProps</code> (5) and five curve
+classes (<code>CurveFloat</code>, <code>Int</code>, <code>Vector</code>, <code>Color</code>, <code>File</code>). Per-type counts include the inherited ones.
+A node record carries only a subset of its type's properties, so the engine binds fields by hash,
+not by position.</p>
+<p>33 of the 36 node types are used by shipped effects. AnimatedPhysicsModel, Tracer and VolumetricCloud
+have full property schemas (76, 37 and 39 properties) but appear in no shipped effect.</p>
+<h2 id="the-managers">The managers</h2>
+<p><code>CGameClientShell::InitializeSubsystems</code> 0x1772E1C creates five managers, one per time domain
+("Could not init SimulationClientFXMgr!", RealTime, PlayerTime, CompanionTime, WorldUI): factories
+0x176DC70 (Simulation, a 1 MB arena) and 0x176DBF4 (the others, 512 KB); wrapper constructor
+0x1779A64, inner constructor 0x1779B20, initialisation 0x177BB44(manager, time source, flag). Three
+more managers exist outside the client shell (updated from 0x224430, vt_0x1FFAFF0 vf18 0x1C815B4,
+0x179AF98 and the <code>UI.Portrait</code> path 0x335E9C); eight in all are in the global list.</p>
+<p><strong>The wrapper</strong> (vt_0x22F3178): <code>+0x08</code> its link in the global list <code>[base+0x26C6A98]</code>, <code>+0x18</code> a
+<code>{vt_0x1DAA870, time source}</code> pair, <code>+0x28</code> the inner manager. Its vf1 0x482DE0 and vf2 0x482EB4
+receive resource events: the wrapper is a resource listener, so an effect resource that unloads
+removes its instances from every manager (0x482EC0 -&gt; 0x177C824 under the manager's lock).</p>
+<p><strong>The inner manager</strong> (vt_0x1F67400, 32 slots): <code>+0x08</code> the FX thread object, <code>+0x11</code> threaded (queue
+work to the FX thread, otherwise run it inline), <code>+0xB8</code> the <strong>instance vector</strong>, <code>+0x108</code>
+work-pending, <code>+0x110</code> / <code>+0x128</code> work lists (<code>+0x128</code> = background), <code>+0x148</code> the time-source pair,
+<code>+0x178</code> arena bytes, <code>+0x19C</code> / <code>+0x1A0</code> cost per key (128 / 64), <code>+0x1A4</code> budget left this frame,
+<code>+0x1B0</code> the per-frame arena, <code>+0x18268 .. +0x18320</code> six deferred queues, <code>+0x18328</code> the work-done
+event. vf2 0x3E9E30 is <code>CreateClientFX</code>.</p>
+<p>In an open-world scene the Simulation manager held 541-569 instances, RealTime 2, PlayerTime 1-2,
+CompanionTime 0 and WorldUI 4; with the world map open WorldUI rose to 85 (the map's forest-fire
+and smoke effects run in the WorldUI domain, as do the army screen's effects).</p>
+<h2 id="effect-instances">Effect instances</h2>
+<p><strong>Enumerate through the manager, not the heap.</strong> The vector at <code>inner+0xB8</code> holds 0x28-byte entries
+whose <code>+0x18</code> is the instance: 587 of 587 and 663 of 663 entries in two snapshots carried the
+instance vtable. A heap scan counts more objects with that vtable (927), because freed slots of the
+instance pool keep it.</p>
+<p><strong>The entry</strong>: <code>+0x00</code> byte, <code>+0x01</code> visible this frame, <code>+0x02</code> admitted by the budget, <code>+0x04</code> the
+cull position (3 floats, cm), <code>+0x10</code> / <code>+0x14</code> squared radii, <code>+0x18</code> the instance, <code>+0x20</code> the
+parent instance. Child effects live in the parent's own vector (<code>+0x18</code>), not in the manager's;
+0x1BAD70 picks the container and stores it at instance <code>+0x260</code> with the index at <code>+0x25C</code>.</p>
+<p><strong>The instance</strong> (vt_0x1DAB360, second vtable vt_0x1DAB350 at <code>+0x08</code>; constructor 0x1BB368,
+destructor 0x1BB79C):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x18</td>
+<td>vector of child-effect entries</td>
+</tr>
+<tr>
+<td>+0x40</td>
+<td>an intrusive list head</td>
+</tr>
+<tr>
+<td>+0x58</td>
+<td>flag word</td>
+</tr>
+<tr>
+<td>+0x5C</td>
+<td>the transform, copied from the create structure</td>
+</tr>
+<tr>
+<td>+0xB8</td>
+<td>the KeyData container (<code>+0xBC</code> time; flags 4 active, 1 looping, tested by 0x24EBB8)</td>
+</tr>
+<tr>
+<td>+0xD0</td>
+<td>the owning inner manager</td>
+</tr>
+<tr>
+<td>+0x150 / +0x1A8</td>
+<td>handles (vt_0x1DABE28) to the parent object</td>
+</tr>
+<tr>
+<td>+0x180 / +0x188</td>
+<td>create structure <code>+0x20</code> / the socket index</td>
+</tr>
+<tr>
+<td>+0x220</td>
+<td>the KeyData block (one 64-byte-aligned allocation: <code>+0x00</code> raw, <code>+0x08</code> size, then the node objects)</td>
+</tr>
+<tr>
+<td>+0x228</td>
+<td>the resource hash</td>
+</tr>
+<tr>
+<td>+0x230</td>
+<td>the FxResource</td>
+</tr>
+</tbody>
+</table>
+<p>The most common effects in a desert scene: torch caps (89 instances), collectible arrows (76),
+attached flies (69), forge fires (51), nest idles (43), night torches (34), dust (26), thermal vents
+(20).</p>
+<p><strong>The FxResource</strong> is built once per loaded effect by the processor 0x3E4540:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>length in seconds (<code>ResourceLenMS</code> / 1000)</td>
+</tr>
+<tr>
+<td>+0x04</td>
+<td><code>MaxUpdateDistance</code></td>
+</tr>
+<tr>
+<td>+0x08 / +0x10</td>
+<td>the key slot array / count (a slot is 0x18: <code>+0x00</code> type entry, <code>+0x08</code> key object, <code>+0x10</code> KeyName)</td>
+</tr>
+<tr>
+<td>+0x18 / +0x20 / +0x28</td>
+<td>the <code>fx\...\x.fxp</code> name, its hash, the short name</td>
+</tr>
+<tr>
+<td>+0x38 / +0x40</td>
+<td>the aligned buffer holding slots and key objects / its size</td>
+</tr>
+<tr>
+<td>+0x45</td>
+<td><code>PauseWhenNotVisible</code></td>
+</tr>
+<tr>
+<td>+0x48</td>
+<td>the effect's database - freed after processing (0x3E4765)</td>
+</tr>
+</tbody>
+</table>
+<p>For each key, 0x3E477C finds the node type by the record's type hash (FindFxType 0x3E451C searches the
+36 entries), builds the key object in the buffer through the entry's <code>+0x20</code>, lets the key's vf1 parse
+the record, and destroys it through <code>+0x30</code> on failure. An effect resource is resource type 48:
+<code>handle+0x52</code> = 0x30 and <code>[[handle+8]+8]</code> is the FxResource (0x1BBBD4).</p>
+<h2 id="the-per-frame-tick">The per-frame tick</h2>
+<ol>
+<li><strong>Main thread.</strong> <code>CGameClientShell</code> vf1 0x1A864C (after the performance manager's 0x69909C) calls
+   0x1AA1F8 for the five managers in slot order; it takes dt from the manager's time source (0 when
+   paused) and calls <code>ClientFXMgr::Update</code> 0x1AAAFC.</li>
+<li><strong>Update</strong> finishes last frame's work first when <code>+0x108</code> is set (0x1A9F20, 0x1AC584, 0x1AA000),
+   drains the deferred queues, resets the frame arena, reserves the work list at twice the instance
+   count, sets the budget to a quarter of the arena, runs the instance loop 0x24E040, then queues itself
+   to the FX thread (or runs 0x1AC638 inline) and sets <code>+0x108</code>.</li>
+<li><strong>The instance loop</strong> 0x24E040 computes visibility from the squared camera distance against the
+   entry's radii; charges the budget (keys x 128 the first time, keys x 64 for an admitted instance;
+   over budget goes to 0x177BFE8); advances KeyData timing (0x24F2F0); and pushes the container to the
+   background list (<code>+0x128</code>) or the two others.</li>
+<li><strong>Dispatch.</strong> <code>CGameClientShell</code> vf2 0x1F6928 (and vf3 0x177473C) -&gt; 0x1F6258(<code>[GM+0x6DB0]</code>) swaps
+   the front and back manager vectors and signals the thread.</li>
+<li><strong>The FX background thread</strong> (routine 0x116B11C) waits on its work event, then for each queued
+   manager runs 0x1AC638: under the manager's lock, every work item goes to 0x188CA4(KeyData container,
+   1, ...) - the per-node update of the instance's KeyData block - then it signals the manager's
+   done event and its own.</li>
+</ol>
+<p>The FX thread object (vt_0x22F3120, name "FXBackgroundThread"): <code>+0x08</code> handle, <code>+0x18</code> routine,
+<code>+0x20</code> argument (itself), <code>+0x5C</code> the owner thread (the main thread), <code>+0x90</code> / <code>+0x98</code> front / back
+manager vectors, <code>+0xA0</code> dispatched, <code>+0xA1</code> quit, <code>+0xA8</code> work event, <code>+0xB0</code> done event. Creation,
+culling, budgets, timing and the instance list belong to the main thread; the KeyData update of
+queued instances runs on the FX thread.</p>
+<h2 id="requesting-an-effect">Requesting an effect</h2>
+<pre><code>StartEffectSequenceOnCharacter 0x19B7850 -&gt; 0x19E16CC(_, target, sequence, manager wrapper)
+  -&gt; a pooled sequence player (vt_0x1DB7540, +0x10 = the manager wrapper)
+  -&gt; ... 0x15B408 -&gt; 0x15AF18 (builds a CLIENTFX_CREATESTRUCT)
+  -&gt; 0x1BB950(wrapper, link, cs)          the general entry: 72 functions, 87 call sites
+  -&gt; 0x1BB980(inner, link, cs, 1)         = manager vf2: resource check (type 0x30), distance refusal
+  -&gt; 0x1BD0D0                              enable byte 0x266D499, performance manager
+       allocate from the pool -&gt; constructor 0x1BB368 -&gt; container 0x1BAD70
+       -&gt; fields from the create structure 0x1AA5EC -&gt; KeyData 0x1BC8A0 + add 0x1BB2E8
+       -&gt; register 0x1BB5E0
+</code></pre>
+<p>The fourth argument of 0x19E16CC chooses the manager, and with it the time domain the effect runs in.
+The create structure: <code>+0x00</code> the resource handle, <code>+0x08</code> flags (bit 0 = no distance refusal), <code>+0x10
+/ +0x18 / +0x20</code> three kinds of parent (the manager's vf24 - vf28 build the attachment from whichever is
+set), <code>+0x28</code> socket, <code>+0x30</code> / <code>+0x38</code> transform, <code>+0x98</code> KeyData overrides, <code>+0xB8</code> a parent-instance
+link. Other callers include ranged-weapon hit effects (0x158308), projectile models (0x10F52C), the
+player class and the combat area attack (0x4EA0A4).</p>
+<p>Attach points use two vocabularies: creature and orc rigs name sockets <code>L_Hand</code> / <code>R_Hand</code>, the
+player rig <code>LeftHand</code> / <code>RightHand</code>; the player skeleton's sockets include <code>Torso</code>, <code>Head</code>,
+<code>LeftHand</code>, <code>RightHand</code>, <code>LeftFoot</code>, <code>RightFoot</code>, <code>Pelvis</code>, <code>SocketHead</code>, <code>SocketAttach</code> and
+<code>Socket_Ring</code>. The string <code>null</code> means unattached.</p>
+<h2 id="particles">Particles</h2>
+<ul>
+<li><code>ParticleSystem</code> simulates on the CPU. <code>GPUParticleSystem</code> is the "CustomGPUParticle" path and
+  <code>StandardGPUParticleSystem</code> the newer GPU path; in the desert the GPU nodes outnumber the CPU ones
+  (976 + 103 against 562).</li>
+<li>Each manager's constructor loads the GPU particle materials (0x1D2E440:
+  <code>StandardGPUParticle_SimEmit.mat</code>, <code>_SimEmit_Weather.mat</code>, <code>_Sort.mat</code>, <code>_ClearIndirectBuf.mat</code>,
+  <code>TextureCopyTo2DArray.mat</code>) and the grouped particle data (0x1D2F1A0, <code>Client/GroupedGPUParticleFX</code>:
+  one record, <code>Fire</code>, 16,384 particles per group).</li>
+<li>GPU particles are emitted and simulated by compute shaders and drawn with indirect draws from
+  GPU-written argument buffers: vt_0x1DBC638 vf4 0x1B572C (<code>CustomGPUParticle.Compute</code>,
+  <code>_ParticleSource</code>, <code>_ParticleDest</code>, <code>_DrawIndirect</code>), warm-up 0x1D2DB08, sort 0x587AE0;
+  vt_0x2009DA8 vf4 0x1F18D0 -&gt; 0x103A960 (<code>StandardGPUParticle_ParticleBuffer0 / 1</code>); the curves
+  texture array 0x1B722C; grouped particles vt_0x1DBC718 vf4 and vt_0x23125F0 vf4 0x1EFF0C. They run
+  inside the render thread's scene passes (see Threads and the frame: the GPU particle branch
+  0x33783C), not as separate commands from the main thread.</li>
+</ul>
+<h2 id="budgets">Budgets</h2>
+<ul>
+<li><strong>Per manager:</strong> the budget is a quarter of the arena each frame (Simulation 262,144); each
+  instance costs keys x 128 on admission and keys x 64 afterwards. The console variable
+  <code>ClientFXMgr.FXInstanceBudget</code> (0x266D4A0) feeds the two costs.</li>
+<li><strong>Per effect group</strong> (<code>Client/ClientFXBudget</code>, 7 records: MaxSimultaneousFX / MaxNewFX): OnFire 30 /
+  10, Blinded 25 / 10, BloodDecals 30 / 4, Poisoned 30 / 10, Footsteps 100 / 10,
+  Easterling_SmokeScreen 2 / 2, OnFire_Balefire 30 / 10, with a budget-exceeded behaviour and pooling
+  rules.</li>
+<li><strong>Distance:</strong> <code>MaxUpdateDistance</code>; creation is refused beyond the cull radius; visibility is
+  decided per frame.</li>
+<li>Particle limits are node properties (MaxParticleCapacity, MaxParticleLifeSpan, MaxParticleMethod,
+  MaxParticleVelocity), not a global pool.</li>
+</ul>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Which objects own the three managers outside the client shell (one of them, never visible, held 10
+  to 34 instances).</li>
+<li>Which of the KeyData slots vf6, vf7, vf8 and vf10 is the background update and which submits to the
+  renderer.</li>
+<li>How a pooled run-time object attaches to its instance, and what kinds of parent the instance
+  handles at <code>+0x150</code> / <code>+0x1A8</code> point to.</li>
+<li>How the per-group budgets of <code>Client/ClientFXBudget</code> are enforced at creation.</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
