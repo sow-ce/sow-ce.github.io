@@ -1,0 +1,166 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Scripting: HavokScript, world scripts and natives - Shadow of War engine reference</title><meta name="description" content="The game&#x27;s scripting layer: the HavokScript virtual machine and its bytecode, where every world layer&#x27;s script lives, how layer scripts are compiled and cached, how scripts reach engine records and natives, the event dispatcher and the running-script stack that some natives require, and the shipped script corpus."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" class="cur" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="scripting-havokscript-world-scripts-and-natives">Scripting: HavokScript, world scripts and natives</h1><p class=\"lede\">The game&#x27;s scripting layer: the HavokScript virtual machine and its bytecode, where every world layer&#x27;s script lives, how layer scripts are compiled and cached, how scripts reach engine records and natives, the event dispatcher and the running-script stack that some natives require, and the shipped script corpus.</p>
+<h2 id="the-virtual-machine">The virtual machine</h2>
+<p>The game's scripts run on <strong>HavokScript</strong>, Havok's fork of Lua 5.1 with typed structures
+(<code>hstructure</code> declarations, <code>hmake</code> constructors) and light-userdata literals (<code>0x572b96b9hi</code>); its
+standard library table is at 0x21DAEB0 and the source compiler ships in the executable. The main VM
+is <code>[GM+0x6CE8]</code> -&gt; a <code>CScriptVM</code> (vt_0x230EF00) whose <code>+0x58</code> is the <code>lua_State</code>: <code>L+0x10</code> the
+global state (<code>+0x560</code> compiler settings, <code>+0x588</code> the panic handler 0x1CFEEB4), <code>L+0x48</code> / <code>+0x50</code>
+the stack top and base; stack slots are 16 bytes <code>{u32 tag, value}</code>.</p>
+<ul>
+<li><code>CreateVM</code> 0x1CFE890 and <code>SetupVM</code> 0x1CFEBCC build a VM; <code>RegisterAllScriptBindings</code> 0x1C01778
+  registers every native, the per-type binder 0x1B9F69C registers the <code>DB*</code> record types (see
+  GameDB), and a helper 0x1D87644 registers into the main VM through the global script agent
+  <code>[GM+0x6CF0]</code>.</li>
+<li><code>LoadBuffer</code> 0x55B920(L, compiler settings, ...) and <code>Pcall</code> 0x406344 run a chunk.</li>
+<li>Natives do not validate their arguments, and engine asserts write to a null address, so a native
+  called with an argument shape the shipped scripts never use can fault.</li>
+</ul>
+<h3 id="records-and-natives-from-script">Records and natives from script</h3>
+<p>A script names a record as <code>DB&lt;Kind&gt;.Name</code>; the lookup (<code>WBDBRecordLookup</code>) takes the kind's live
+category and the name's hash and binary-searches the category (0x278540). The Lua names differ from
+the category paths: <code>DBFX</code> / <code>DBFXSeq</code> (<code>Client/ClientFXList</code> / <code>ClientFXSequence</code>), <code>DBCombatBuff</code>,
+<code>DBMaterialState</code> (<code>Combat/FX/MaterialController/States</code>, 168 records), <code>DBSlowMo</code> (332),
+<code>DBAlignments</code> (52), <code>DBBandType</code>, <code>DBCombatAppliedState</code>, <code>DBCharacterModels</code>. A native's argument
+types are visible in its stub: each record argument is fetched as <code>mov rdx, [rip+X]; call 0x407BAC</code>,
+where <code>[X]</code> holds the live category of the expected kind (checked on 27 of 27 natives). Most
+<code>DEBUG_*</code> bindings are stripped (no implementation, or the empty stub 0x5009B0).</p>
+<p>Script calls into the engine fall in two groups: calls that set engine state or queue work (weather,
+material states, AI requests: <code>AISpawnManager:SummonGrunts</code> only queues a spawn request) and calls
+that <strong>dispatch to script listeners</strong> - <code>System:ActivateRemoteScript</code> is the script bus's <code>Notify</code>
+0x605990, which calls the global script agent per listener and so belongs on the main thread.</p>
+<h3 id="the-running-script-stack">The running-script stack</h3>
+<p>The engine keeps a stack of the scripts it is running: depth u32 <code>[base+0x2702540]</code>, entries
+<code>0x277C1B0 + i * 0x80</code> (at most 16; depth 0 is the static 0x2680000), entry <code>+0x28</code> = the running
+script's name. 0x503EF8 returns the top entry's name. Only the engine pushes: the <code>__eventmap</code>
+dispatcher 0x406538 (push 0x4066B8 -&gt; 0x5029D0 -&gt; 0x502A00 -&gt; 0x502A44, which always writes a name,
+"Invalid" at worst; pop 0x406744 -&gt; 0x115F8E0) and the resource loaders 0x4FD9C0, 0x4FEFA8 and
+0x4A6088. A few natives require it: <code>NPC::SetAlignment</code> 0x7D2ED4 asserts "This function should only be
+called from script code" when the name is empty; the other direct users of the name are
+<code>CPlayerObj::SetAISpectatorInvisible</code>, the player's <code>SetHidden</code> (vf32, logging only),
+<code>SetRetreatingEnabled</code> 0x1BAE1F8, 0x1BA7C8C and 0x1D86F28. Such natives work only from inside an
+engine-dispatched script handler; <code>LoadBuffer</code> + <code>Pcall</code> push nothing.</p>
+<h2 id="world-scripts">World scripts</h2>
+<p>Every world layer's script is one SCRI payload:</p>
+<pre><code>&quot;SCRI&quot; | u32 version (1) | u8 flag | u32 length | body
+flag 1 = Lua source text, flag 0 = HavokScript bytecode (&quot;\x1bLua&quot; + header)
+</code></pre>
+<p>It ships as a standalone <code>&lt;layer&gt;.scripts</code> archive entry (the patch archives ship these, and the
+standalone copy wins) and / or as a SCRI section inside the layer's container. A layer's chunk ends
+with <code>_G.loadedresource = section_&lt;hash&gt;</code>; its entries are script threads
+<code>function(self, threadId, scriptId)</code> that may <code>LithThreadSleep(threadId, seconds)</code>. Objects named
+<code>*.SC</code> are <code>StartupCommand</code>s whose <code>_&lt;prefab&gt;_SC_Script_&lt;hash&gt;</code> entry the engine starts as a thread.
+Script threads run on simulation time, so they wait while the game is paused or unfocused.</p>
+<p><strong>Compiled layer scripts are cached for the whole process</strong> in the main VM's global <code>reinstall</code>
+(0x6A60EC: <code>reinstall[id]</code> unset -&gt; compile the buffer and set it; set -&gt; reuse it), so a layer's
+script is compiled once per process, the first time its region loads.</p>
+<p><strong>Which object runs which script</strong> is world data: the layer's <code>ScriptBind</code> block maps objects and
+events to functions of the layer's own script (see World).</p>
+<h3 id="the-shipped-corpus">The shipped corpus</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Payloads</th>
+<th>Distinct bodies</th>
+<th>Regions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lua source</td>
+<td>3,829</td>
+<td>2,562</td>
+<td>snowmtn 791, island 767, volcano 752, mtnpass 747, minasithil 522, prefabs 226, benchmark 13, blackgates 5, baraddur 3, cinematics 2, shared 1</td>
+</tr>
+<tr>
+<td>HavokScript bytecode</td>
+<td>480</td>
+<td>117</td>
+<td>desert (all of it)</td>
+</tr>
+</tbody>
+</table>
+<p>The sources are the authored scripts, comments included. A layer's script object
+(<code>_&lt;layer&gt;_SO_Script_&lt;hash&gt;_meta</code> / <code>_inst</code>) declares its methods (<code>Init</code>, <code>Enable</code> ...) and the
+instance fields it drives (dynamic object groups, relays, flags). <code>Script_SetState</code> appears in 1,370
+of the 2,562 scripts. The largest bytecode program, <code>worlds\retail\desert\desert.scripts</code>, has 2,227
+functions, 184,681 instructions, 56,969 constants and 204 structure declarations, with no debug
+information. Function names carry a content hash and prefab scripts compile into every region that
+uses them: 1,167 of the 1,939 distinct functions the desert's objects bind (60.2%) are defined by name
+in another region's source, and the same name means the same code (616 of 617 compared functions
+match completely; a random other function matches 33 of 617).</p>
+<h2 id="the-bytecode">The bytecode</h2>
+<p><strong>The interpreter.</strong> The main loop 0x1D88000 fetches a u32 instruction, takes <code>op = insn &gt;&gt; 25</code>,
+refuses <code>op &gt; 0x5B</code> and jumps through a 92-entry table at 0x1D8B208; two more 61-case loops sit at
+0x1D8B378 and 0x1D8E188. Fields: A = bits 0-7 (a register, or a flag for EQ / LT / LE / TEST); C =
+bits 8-16 (RK: 256 and above = constant K[C - 256]); B = bits 17-24, with bit 25 set by the <code>*_BK</code>
+opcode of a pair (B is then a constant index); Bx = bits 8-24; sBx = Bx - 0xFFFF, relative to the next
+instruction. DATA (op 76) is a word the VM skips; several opcodes own a fixed number of DATA words
+after them (inline caches, structure ids, SETLIST counts). NEWSTRUCT's DATA word holds the structure id.
+<code>return f(x)</code> compiles to TAILCALL followed by an unreachable <code>RETURN A, 0</code>, and jumps are threaded (an
+inner <code>else</code> skip or a <code>break</code> lands directly on the enclosing construct's destination).</p>
+<p><strong>The chunk format</strong> (the engine's loader: <code>LoadHeader</code> 0x1D1A234, <code>LoadFunction</code> 0x1D1AFDC
+("code too deep" past depth 128), <code>LoadConstants</code> 0x1D1AB48, <code>LoadDebug</code> 0x1D1AD68, <code>LoadStructures</code>
+0x1D1F048, <code>LoadString</code> 0x1D1B548, <code>Align4</code> 0x1D1A114 (to a multiple of 4 of the bytes read so far);
+the writer's <code>DumpHeader</code> is 0x1D06A14). Little endian; int 4 bytes, size_t 8, instruction 4,
+lua_Number 4 (float32).</p>
+<pre><code>header    &quot;\x1bLua&quot; | 0x51 | 0x0E format | 1 endian | 4 int | 8 size_t | 4 instruction | 4 number
+          | 0 integral | 3 build flags | 0 referenced
+types     int 13, then 13 x {int id, int length, &quot;TNIL\0&quot; ... &quot;TSTRUCT\0&quot;}
+function  int upvalues | int params | u8 flags | int max stack | size_t code count | pad to 4
+          | code | int constant count, constants {u8 type: 0 nil, 1 u8 bool, 2 size_t light userdata,
+          3 f32 number, 4 string} | int has debug [debug] | int child count, children
+debug     int lines | int locals | int upvalue names | int line defined | int last line defined
+          | string source (null = the parent's) | string name | lines | locals {string, start pc,
+          end pc} | upvalue names
+structs   int 1, then {string name (null ends) | size_t id | int | int | size_t slot count
+          | slot count x {string name, size_t, int, int, size_t}}
+strings   size_t length (0 = null), then length bytes including the terminating NUL
+</code></pre>
+<p>Checks on the shipped corpus: all 117 bytecode chunks reassemble byte for byte from a lossless
+listing; an operand-range check finds 0 violations over 2,040,690 instructions in 18,994 functions,
+while the same check with the A and B fields swapped finds 9,935 and with the opcode read one bit low
+141,077. Decompiling the desert chunks back to Lua and comparing the 617 functions that also exist as
+source: 617 of 617 have the same calls and string literals.</p>
+<h2 id="the-main-thread-s-loop-and-the-window-pump">The main thread's loop and the window pump</h2>
+<p>The main loop is 0xC25568: it calls the application object <code>[base+0x26FEFD8]</code> (vt_0x1FFE760) slot 33
+(<code>+0x108</code>) and slot 29 (<code>+0xE8</code>), then pumps window messages (<code>PeekMessageW</code> / <code>DispatchMessageW</code> at
+0xC2589A) and runs a sleep limiter. The game window belongs to the main thread. The main thread's frame
+wait (slot 28 0x380FAC -&gt; 0x38105C -&gt; 0x1CF430) is back-pressure for space in the render command ring
+and pumps messages too (0x6EE5D0, dispatch 0x6EE670); both pumps share the re-entrancy byte
+0x277DBB0. Posting to the render ring (0x381FCC posts <code>{0x1EE088, context, function}</code>) uses an
+unlocked bump allocation, so only the main thread may post.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>The names of six opcodes whose handler is the dispatch loop itself (no-ops).</li>
+<li>Which opcode families the two 61-case loops serve.</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
