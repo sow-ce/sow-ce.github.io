@@ -1,434 +1,1207 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Archives and disk formats: Anvil, packet converter, LTAR / BNDL / SKDB / EMBB - Shadow of War engine reference</title><meta name="description" content="Anvil (record of the retired write route), packet converter, LTAR / BNDL / SKDB / EMBB"><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
-<a href="https://sow-ce.github.io/">SoW:CE home</a>
-<h2>Topics</h2>
-<a href="anchors.html" data-p="anchors">Engine anchors and the laws</a>
-<a href="ai-planner.html" data-p="ai-planner">AI planner</a>
-<a href="ai-spawn-pits.html" data-p="ai-spawn-pits">AI spawning, fight pits, gangs, mounts</a>
-<a href="aire-api.html" data-p="aire-api">AIRE tool reference</a>
-<a href="anim-runtime.html" data-p="anim-runtime">Animation runtime</a>
-<a href="archives-formats.html" class="cur" data-p="archives-formats">Archives and disk formats</a>
-<a href="army-menu.html" data-p="army-menu">Army menu</a>
-<a href="assets-world.html" data-p="assets-world">Assets and world layers</a>
-<a href="audio-video.html" data-p="audio-video">Audio and video</a>
-<a href="binary-code.html" data-p="binary-code">Binary and heap</a>
-<a href="captain-colorizer.html" data-p="captain-colorizer">Character tint and the captain colorizer (palett</a>
-<a href="captain-looks.html" data-p="captain-looks">Captain looks</a>
-<a href="captain-traits.html" data-p="captain-traits">Captain traits</a>
-<a href="combat-items.html" data-p="combat-items">Inventory, affixes, gems, skills, weapon records</a>
-<a href="combat-systems.html" data-p="combat-systems">Combat systems</a>
-<a href="engine-anchors.html" data-p="engine-anchors">Engine anchors</a>
-<a href="factionmember.html" data-p="factionmember">FactionMember</a>
-<a href="forge.html" data-p="forge">Forge</a>
-<a href="gamedb-bindings.html" data-p="gamedb-bindings">GameDB from code and disk</a>
-<a href="gamedb-schema.html" data-p="gamedb-schema">GameDB schema</a>
-<a href="hard-won-rules.html" data-p="hard-won-rules">Hard-won rules (full text; CLAUDE.md carries the</a>
-<a href="identity-graph.html" data-p="identity-graph">Identity</a>
-<a href="live-bundles.html" data-p="live-bundles">Live bundles</a>
-<a href="live-runtime.html" data-p="live-runtime">Live runtime</a>
-<a href="live-world-objects.html" data-p="live-world-objects">Live world objects</a>
-<a href="loader-guard.html" data-p="loader-guard">Loader and Vanilla Guard</a>
-<a href="platform-systems.html" data-p="platform-systems">Platform systems</a>
-<a href="player-camera.html" data-p="player-camera">Player camera and movement</a>
-<a href="quests-story-scenes.html" data-p="quests-story-scenes">Quests, story characters and scripted scenes (be</a>
-<a href="render-fx.html" data-p="render-fx">Rendering and effects</a>
-<a href="scene-capture.html" data-p="scene-capture">Scene capture, live pose, world geometry, Mega-M</a>
-<a href="studio-tools.html" data-p="studio-tools">Studio tools</a>
-<a href="vfx-runtime.html" data-p="vfx-runtime">VFX runtime</a></nav><main><h1 id="archives-and-disk-formats-anvil-packet-converter-ltar-bndl-skdb-embb">Archives and disk formats: Anvil, packet converter, LTAR / BNDL / SKDB / EMBB</h1>
-<p>Part of the SoW:CE knowledge base. Routing: CLAUDE.md "Knowledge base". Moved verbatim from
-CLAUDE.md on 2026-10-27 (original lines 1076-1185, 3360-3431, 9453-9610); heading levels normalised, emoji markers replaced with plain text.
-Correct a fact HERE, in place, and mark it CORRECTED <date>; never append a contradicting copy.</p>
-<p><strong>Read with care:</strong>
-- Anvil's write route is RETIRED (2026-10-19): nothing writes game files. Its write examples stay as the record of that route only.</p>
-<p><strong>Sections:</strong>
-- Anvil — Offline Persistent Mod Engine (<code>tools/anvil/</code>)
-- Packet -&gt; Archive Mod Converter (PROVEN IN-GAME 2026-08-15)
-- Archive &amp; Format Knowledge (backs Anvil + <code>aire.formats</code>)
-- Behaviour graphs (<code>.bvr</code>) - animation state machines, decoded node by node (MEASURED 2026-10-27)
-- Havok tagfiles - navmeshes and physics shapes (<code>aire/havok/</code>, VERIFIED 2026-10-27)
-  - Archive Layout (DECODED 2026-04-23)
-  - BNDL v6 Format (CORRECTED 2026-08-06 — byte-identical emit 1,276/1,276)
-  - SKDB v9 Format (CRACKED 2026-04-23)
-  - EMBB v5 Format (RE-CRACKED 2026-08-06 — THERE IS NO PADDING)</p>
-<hr />
-<h2 id="anvil-offline-persistent-mod-engine-tools-anvil">Anvil — Offline Persistent Mod Engine (<code>tools/anvil/</code>)</h2>
-<blockquote>
-<p><strong>2026-10-19 — ANVIL NO LONGER WRITES THE INSTALL.</strong> <code>apply=True</code> / <code>install</code> / <code>asset_replace</code> and
-every other write into a game archive is REFUSED (<code>refused</code> + <code>why</code> in the result; the edited GADB blob
-is still saved to <code>tools/anvil/data/extracts/</code>), <code>modkit.install</code> / <code>set_mounted(on=True)</code> refuse, and
-<code>call("restore")</code> goes through the Vanilla Guard. <strong><code>.vanilla</code> IS NOT PROOF</strong>: MEASURED 2026-10-19,
-<code>Patch_02.arch06.vanilla</code> and <code>Patch_02_LC.arch06.vanilla</code> are NOT Steam's bytes while the live
-Patch_02 files are, so the old restore (copy every <code>.vanilla</code> over its archive) would have installed two
-modified archives. The text below describes the retired disk route and stays as its record.</p>
-</blockquote>
-<p>Anvil is the disk-side counterpart to AIRE: it modifies on-disk <code>.arch06</code> archives so changes persist
-across game restarts. No game running required for bake/apply. Vanilla <code>.arch06</code> backups are created
-automatically (one-time, never overwritten).</p>
-<p><strong>Architecture</strong>: <code>engine.py</code> (orchestrator), <code>archive_router.py</code> (71-archive index), <code>delta.py</code> (plans),
-<code>headless.py</code> (AI-native JSON API), <code>packager.py</code> (.sowmod ZIP), <code>snapshot.py</code> (live capture), <code>randomizer.py</code>.</p>
-<p><strong>AI Integration</strong>: ALL operations go through <code>tools.anvil.headless.call(action, **kwargs)</code>.
-Returns <code>{"ok": bool, "action": str, "data": {...}}</code>. No argparse, no printing.</p>
-<pre><code class="language-python">from tools.anvil.headless import call
-
-# ── Discovery (uses cached index, instant after first scan) ──
-call(&quot;info&quot;)                          # game dir, archive count, records owned
-call(&quot;list_archives&quot;)                 # all 71 .arch06 files
-call(&quot;categories&quot;, filter=&quot;Combat&quot;)   # search 2,742 GADB categories
-call(&quot;list_records&quot;, category=&quot;AI/SpawnAmbient/AITypes&quot;, filter=&quot;caragor&quot;)
-call(&quot;show_record&quot;, category=&quot;AI/SpawnAmbient/AITypes&quot;, record=&quot;Enemy_DifficultyAny&quot;)
-call(&quot;show_category&quot;, category=&quot;Faction/Events/SimEventChance&quot;)
-call(&quot;find_spawns&quot;, match_template=&quot;Caragor&quot;)  # find all slots using a template
-
-# ── Offline Bake (NO game running needed) ──
-call(&quot;bake&quot;, preset={
-    &quot;aitypes&quot;: {
-        &quot;Enemy_DifficultyAny&quot;: &quot;Werewyrm_talion&quot;,  # slot -&gt; template
-        &quot;Enemy_Caragor&quot;: &quot;Fellbeast&quot;,
-    },
-    &quot;lists&quot;: {
-        &quot;World_Desert_Day&quot;: [&quot;Goblin&quot;, &quot;Werewyrm_talion&quot;],  # bundle slot1, slot2
-    },
-    &quot;fields&quot;: {  # raw u32 writes to any record field
-        &quot;Client/PlayerMovement&quot;: {
-            &quot;PlayerMovement&quot;: {&quot;16&quot;: 46}  # field[16] = 46 (speed)
-        }
-    }
-}, apply=True)  # apply=True writes to archives immediately
-
-# ── Swap Spawn (targeted creature swap) ──
-call(&quot;swap_spawn&quot;,
-     match_template=&quot;Caragor&quot;,
-     new_template=&quot;Werewyrm_talion&quot;,
-     force_load_bundle=&quot;Werewyrm_talion&quot;,
-     apply=True)
-
-# ── War Mode (multi-creature chaos) ──
-call(&quot;war&quot;, name=&quot;mythic_war&quot;, apply=True)   # built-in preset
-call(&quot;war&quot;, name=&quot;boss_chaos&quot;, apply=True)   # Nazgul+Drakes+Trolls+Shelob everywhere
-call(&quot;war&quot;, bundles=[&quot;Nazgul_base&quot;, &quot;Fellbeast&quot;, &quot;Troll_base&quot;],
-     bundle_slot=&quot;both&quot;, apply=True)          # custom mix
-
-# ── Omnispawn (broadcast one creature/bundle globally) ──
-call(&quot;omnispawn&quot;, bundle=&quot;Nazgul_base&quot;, bundle_slot=2, apply=True)
-call(&quot;omnispawn&quot;, template=&quot;Werewyrm_talion&quot;, apply=True)
-
-# ── Mount Swap / Field Edit / PRFB redirect ──
-call(&quot;swap_mount&quot;, old_creature=&quot;Caragor&quot;, new_creature=&quot;Werewyrm&quot;, apply=True)
-call(&quot;field_edit&quot;, category=&quot;Faction/Events/SimEventChance&quot;,
-     record=&quot;Arena&quot;, field_idx=0, value=0x3F000000, apply=True)  # StartChance=0.5
-call(&quot;find_prefab_refs&quot;, pattern=&quot;caragor&quot;)
-call(&quot;redirect_prefab&quot;, source_pattern=&quot;caragor&quot;, target_pattern=&quot;werewyrm&quot;, apply=True)
-
-# ── Packaging &amp; Restore ──
-call(&quot;bake&quot;, preset={...}, package=&quot;my-chaos-mod&quot;)  # creates .sowmod ZIP
-call(&quot;install&quot;, sowmod=&quot;path/to/mod.sowmod&quot;)
-call(&quot;restore&quot;)  # back to Steam's bytes via the Vanilla Guard (SHA-1-checked sources, quarantine)
-</code></pre>
-<p><strong>Read-only GADB index actions (ADDED 2026-08-02, feed AIRE's correlation spine)</strong>:</p>
-<pre><code class="language-python">call(&quot;gadb_category_index&quot;)                    # ORDERED category array = the RecordLink index
-                                               # space. `categories()` sorts by NAME and destroys
-                                               # the ordinal RL is built from — use this instead
-call(&quot;gadb_record_values&quot;, category=&quot;AI/Perception&quot;)   # raw shipped value cells per record
-call(&quot;gadb_strings&quot;, offsets=[12345, 67890])   # decode string-block offsets
-</code></pre>
-<p>These are reads. They exist so AIRE can diff shipped-vs-live and key records by RecordLink;
-they never touch a write path, per the standing Anvil read-only rule.</p>
-<p><strong>Built-in War Presets</strong>: <code>mythic_war</code>, <code>boss_chaos</code>, <code>beasts_unleashed</code>, <code>ringwraith_siege</code>,
-<code>troll_army</code>, <code>spider_invasion</code>. Use <code>call("war_presets")</code> to list.</p>
-<p><strong>Archive Priority</strong> — WARNING: <strong>CORRECTED 2026-08-03 from the shipped <code>x64/default.archcfg</code></strong>, which
-ends with "file search order is from the bottom up" and lists <code>Global.Arch06</code> and
-<code>HotChunk.Arch06</code> <strong>after</strong> every <code>Patch_*</code>. Bottom-up therefore makes <strong>hotchunk the HIGHEST
-priority GADB</strong>, not the lowest — the reverse of the long-documented
-<code>Patch_04_LC &gt; ... &gt; hotchunk</code>. Confirmed by content: merging all 25 GADB-bearing archives in
-archcfg order changed <strong>0</strong> existing values and only ADDED 1,996 that hotchunk leaves unset.
-Read the archcfg; do not hardcode an order. (<code>tools/anvil/modkit.py</code> still states the old order,
-premised on "the shipped order puts the patch archives last" — that premise is false for this
-file. Anvil is read-only by standing rule, so nothing is at risk today, but its routing
-assumption is wrong.)</p>
-<p><strong>RecordLink helper</strong>: <code>RL = (category_index * 16) &lt;&lt; 16 | record_index</code> — Anvil's substrate exposes
-<code>make_recordlink(cat_path, record_name)</code>. GADB parse/rebuild/expand/repack (Oodle Kraken) is handled
-internally by Anvil's substrate — drive it via <code>call("bake"/"field_edit"/...)</code>; touch the substrate
-only when extending Anvil itself.</p>
-<h2 id="packet-archive-mod-converter-proven-in-game-2026-08-15">Packet -&gt; Archive Mod Converter (PROVEN IN-GAME 2026-08-15)</h2>
-<blockquote>
-<p><strong>2026-10-19 — THE ARCHIVE LANE IS OFF</strong> (game files stay vanilla). <code>Ltar::SetMounted(on=true)</code> and the
-menu's archive mount refuse (<code>kArchiveMountingOff</code>), and <code>sow_packet_convert.cpp</code> builds no archive
-(<code>kArchiveLane = false</code>): every asset goes to the live <code>.hotswap</code> sidecar, which writes nothing into
-the game. Taking a mount line OUT still works. The measurements below stay as the route's record.</p>
-</blockquote>
-<p>The community's Find/Replace packet mods convert into archive mods — <strong>natively, in the DLL,
-no Python</strong> — so anyone with the shipped drop has the capability. Proven in-game: faceless
-Talion renders in full from the converter's two outputs with the original packet disabled;
-menu background + loading icon likewise.</p>
-<p><strong>A packet splits PER ASSET, and the split is provable, not a preference:</strong></p>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Archives and file formats - Shadow of War engine reference</title><meta name="description" content="How to open the shipped data: the LTAR archive family and its byte layout, name resolution and its traps, Oodle chunking, the archive config list and how the engine decides which copy of a file wins, the BNDL / EMBB bundle pair, textures and their tiers, meshes, skeletons and string tables, with the coverage measured on every shipped file."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" class="cur" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="archives-and-file-formats">Archives and file formats</h1><p class=\"lede\">How to open the shipped data: the LTAR archive family and its byte layout, name resolution and its traps, Oodle chunking, the archive config list and how the engine decides which copy of a file wins, the BNDL / EMBB bundle pair, textures and their tiers, meshes, skeletons and string tables, with the coverage measured on every shipped file.</p>
+<p>The game ships its data as 76 <code>.arch06</code> archives in the install root plus a small loose <code>Game\</code>
+folder; every asset path the engine opens is resolved through those archives in a fixed search
+order. This chapter gives the archive layout, compression, the search order and the rules that pick
+one copy of a file, then the container and payload formats inside, each checked against the shipped
+files.</p>
+<h2 id="the-shipped-files">The shipped files</h2>
 <table>
 <thead>
 <tr>
-<th>asset class</th>
-<th>route</th>
-<th>measured</th>
+<th>What</th>
+<th>Count</th>
+<th>Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>has a LOOSE archive entry</td>
-<td>minimal <code>.Arch06</code> (permanent, zero runtime cost)</td>
-<td>Faceless: 10 assets -&gt; 839,177 B</td>
+<td><code>.arch06</code> archives</td>
+<td>76 (113.5 GB on disk, 180.7 GB unpacked)</td>
+<td>488,752 file records, 16,302 folder records</td>
 </tr>
 <tr>
-<td>container-only</td>
-<td><code>.hotswap</code> live sidecar (instant toggle, slice revert)</td>
-<td>archive equivalent = 2,636 MB for ONE 1,941 B material</td>
+<td><code>Game\</code> folder</td>
+<td>822 loose files, about 20 GB</td>
+<td>741 <code>.vib</code> movies, 77 Wwise <code>.pck</code> packages, 2 <code>.vid</code>, 2 <code>.cfg</code></td>
 </tr>
 <tr>
-<td>no stored form (decoded <code>DDS</code>)</td>
-<td>sidecar only</td>
-<td>branding: not TEXR-76, not a mip — measured 0/16</td>
+<td><code>x64\default.archcfg</code></td>
+<td>1</td>
+<td>the archive config list (below)</td>
+</tr>
+<tr>
+<td><code>x64\oo2core_5_win64.dll</code></td>
+<td>1</td>
+<td>the Oodle decoder the executable imports</td>
 </tr>
 </tbody>
 </table>
-<p>The sidecar is a STANDARD packet folder in <code>Mods\&lt;mod&gt;.hotswap</code>; <code>Mods\</code> is a packet root in
-<code>sow_hotswap.cpp</code>, so the proven intercept engine serves it with no new format. Which side is
-cheaper is per packet — <code>convert_packet</code> reports both prices. Alternates (a Find that lost its
-path contest to a higher-priority copy) are an OUTCOME, not a failure.</p>
-<p><strong>Native modules</strong> (<code>framework/sowframework/packets/</code>): <code>sow_ltar.{hpp,cpp}</code> — TOC read,
-structural full paths, minimal authoring, <code>SetMounted</code> (BOM refusal, one-time backup,
-main-block insert, &gt;512-file refusal); <code>sow_packet_convert.{hpp,cpp}</code> — Convert button,
-auto-mounts by default (a built-but-unmounted archive is correct, verified and INERT);
-<code>sow_mod_shrink.{hpp,cpp}</code> — Shrink button on clone cards. Needs nothing bundled: Oodle is the
-game's own already-loaded <code>oo2core_5_win64.dll</code> (one-arg <code>GetCompressedBufferSizeNeeded</code> —
-probe, don't assume) and the P=919 LUT is read from <code>base+0x1DB50D0</code> with a sanity check.
-Python twins: <code>tools/anvil/minimal_archive.py</code>, <code>aire/formats/packet.py</code> (THE one packet
-reader). <strong>Cross-check law: native and Python must produce identical output</strong> (Faceless:
-839,177 B / 15 files / 10+7+1, byte-identical both routes).</p>
-<p><strong>Clone shrink</strong> (<code>call("mod_shrink", clone=...)</code> / Shrink button): a clone mod is GB of
-ballast — measured, a 293.4 MB clone changes 3 files and rebuilds to 2.6 MB (112.5x),
-content-diffed (size diff scores ZERO on same-size swaps) and re-verified against the clone's
-bytes. <strong>Mount-slot law</strong>: no global mount cap observed (89 active archcfg entries run fine),
-but a clone SUBSTITUTES for its original's single line — N clones of one archive = N-1
-silently inert — while a minimal archive INSERTS and coexists. Shrinking is the bypass.</p>
-<p><strong>Archive-writer law (IN-GAME 2026-08-15)</strong>: chunk headers are 4-byte aligned relative to the
-blob start; the engine walks by that alignment and never scans, and OUR readers scan forward
-so read-back verify is BLIND to the one defect that hangs the loading screen. Every writer
-pads and gates on the strict engine-model walk (<code>_strict_walk_failures</code> /
-<code>Ltar::Author</code>) — first multi-chunk authored entry (19 chunks) launched clean.</p>
-<p><strong>Archive-writer law 2 — files inside a folder sorted by lower-case leaf (IN-GAME CONFIRMED
-2026-10-07)</strong>: the engine finds a file by BINARY SEARCH over its folder's file list, and every
-shipped archive keeps each folder sorted (ui_assets 278/278 folders, Patch_DLC3 773/773,
-highmip 1,168/1,168). All three writers (<code>aire/armory/ltar.py</code>, <code>tools/anvil/minimal_archive.py</code>,
-native <code>Ltar::Author</code>) sorted folders but kept files in INSERTION order, so an archive mounted,
-read back byte-perfect, and still hid files from the game: the Armory archive hid 56 of 97 (its
-blade's mesh / skel / material / colour texture) = the "invisible blade"; the 2026-09-02 build hid
-its 4 textures = the blade that "rendered black" (wrongly blamed on TEXR header naming). A by-name
-binary-search simulation predicted 12/13 live resource states (the 13th a streaming tier). Fix:
-sort (manifest first), refuse any archive where <code>lookup_misses()</code> is non-empty. User screenshot:
-the blade renders after the rebuild. Other writers' outputs passed only because their callers
-happened to pass sorted lists. Audit any archive with <code>ltar.Archive(p).lookup_misses()</code>.</p>
-<p>Conflict pre-flight (Python-side): <code>call("mod_conflicts")</code> — four checks (slot / path /
-shadowed / live-signature), all presenting in-game as "nothing happened";
-<code>call("mod_can_enable", mod=...)</code>. Not yet native. The Python container lane
-(<code>containers=True</code>) is also Python-only — the 71 MB section index matters ONLY there;
-default-config output is byte-identical without it.</p>
-<p><strong>Index-space trap</strong>: <code>aire</code> EntryIndex row <code>i</code> = <code>minimal_archive.ArchiveToc</code> entry <code>i+1</code>
-(the substrate APPENDS the recovered file #0). Join only via size-verified
-<code>toc_index_for()</code> — a raw join priced a 2,636 MB container at 84 KB.</p>
-<h2 id="archive-format-knowledge-backs-anvil-aire-formats">Archive &amp; Format Knowledge (backs Anvil + <code>aire.formats</code>)</h2>
-<h3 id="archive-layout-decoded-2026-04-23">Archive Layout (DECODED 2026-04-23)</h3>
-<p>71 <code>.arch06</code> archives total. Priority order: <code>Patch_DLC &gt; Patch_XX &gt; base</code>.</p>
-<p><strong>hotchunk.arch06</strong> (62.2 MB, LTAR v4, 47 entries):</p>
+<p>The archives fall into families:</p>
+<table>
+<thead>
+<tr>
+<th>Family</th>
+<th>Archives</th>
+<th>Files</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UI, characters, creatures</td>
+<td><code>UI_Assets</code>, <code>CoreCharacter</code>, <code>Monsters</code></td>
+<td>4,541 / 78 / 378</td>
+</tr>
+<tr>
+<td>Presentations (scenes, dialogue)</td>
+<td><code>Presentations</code> + 8 language archives (<code>_en _fr _it _de _esla _eses _ptbr _ja</code>)</td>
+<td>39,096 + 39,098 each</td>
+</tr>
+<tr>
+<td>Regions</td>
+<td><code>BlackGates</code>, <code>BaradDur</code>, <code>Island</code>, <code>MinasIthil</code>, <code>MtnPass</code>, <code>snowMtn</code>, <code>Volcano</code>, each with a <code>_Lighting</code> twin</td>
+<td>24 - 3,073 per region, 2 - 60 per lighting archive</td>
+</tr>
+<tr>
+<td>Benchmark level</td>
+<td><code>Benchmark</code></td>
+<td>4,577</td>
+</tr>
+<tr>
+<td>Numbered patches</td>
+<td><code>Patch_00</code> - <code>Patch_13</code>, each with an <code>_LC</code> twin</td>
+<td>8 - 5,869</td>
+</tr>
+<tr>
+<td>DLC patches</td>
+<td><code>Patch_DLC1</code> - <code>Patch_DLC5</code>, each with an <code>_LC</code> twin</td>
+<td>1,216 - 21,489</td>
+</tr>
+<tr>
+<td>Sound banks</td>
+<td><code>soundbundles</code></td>
+<td>3,762</td>
+</tr>
+<tr>
+<td>Engine data</td>
+<td><code>Global</code> (shaders, materials), <code>HotChunk</code> (GameDB, strings)</td>
+<td>244 / 48</td>
+</tr>
+<tr>
+<td>High-resolution textures</td>
+<td><code>HighMip</code>; <code>uhdmip</code>, <code>uhdmip_DLC1</code> - <code>_DLC4</code></td>
+<td>9,691; 6,572 + 3,091</td>
+</tr>
+<tr>
+<td>DLC markers</td>
+<td><code>Blade</code>, <code>Lithlad</code></td>
+<td>1 each</td>
+</tr>
+</tbody>
+</table>
+<p>Three archives are empty (<code>Patch_00_LC</code>, <code>Patch_12</code>, <code>Patch_12_LC</code>: a 65-byte header and one empty
+root folder). <code>Blade.arch06</code> and <code>Lithlad.arch06</code> each hold one file, <code>dlc\blade.txt</code> /
+<code>dlc\lithlad.txt</code>, whose eight bytes read <code>Unlocked</code>; neither is in the config list and neither is
+mounted in a running game.</p>
+<p><code>HotChunk.arch06</code> holds the GameDB and the string tables: entry 0 is its path index (2,136 bytes,
+below), entry 1 <code>database\game\game.gamedb</code> (56,759,100 bytes), entries 2-29 the 14 language folders'
+<code>string.strdb</code> and <code>string_uwp.strdb</code>, entry 30 <code>globalbundles\globaldatabase.bndl</code> and entries 31-47
+the 17 <code>globalbundles\globalresources_&lt;lang&gt;.bndl</code> bundles.</p>
+<h2 id="the-archive-config-list-and-the-search-order">The archive config list and the search order</h2>
+<p>At start-up 0x119717C mounts any archive named with <code>-arch</code> on the command line, then reads the config
+list: 0x1196FE0 takes <code>default.archcfg</code> (string at 0x22C0B20) unless <code>-archcfg</code> (0x22C0B08) names
+another file. The list is text, one path per line, <code>;</code> starting a comment; it opens with the <code>Game</code>
+directory lines and states "file search order is from the bottom up".</p>
+<p>Every line goes through <code>Mount</code> 0xC28560 (see Resource streaming for the file system object and its
+mount vector). A directory becomes a directory source, an existing file an archive source
+(<code>CArchiveTree</code>, vt_0x22C21B8), and a line that names nothing is skipped: the shipped list names five
+archives that do not ship (<code>Great_Hall</code>, <code>Great_Hall_Lighting</code>, <code>TextureArrayPatch</code>, <code>HighMipA</code>,
+<code>uhdmipA</code>) and, for each high-resolution archive, a second spelling without <code>..\</code> that resolves to
+nothing in the Steam layout. The three empty archives are mounted like any other.</p>
+<p><strong>The live order.</strong> Read from a running game, the mount vector is the list reversed, so the bottom line
+is consulted first:</p>
+<table>
+<thead>
+<tr>
+<th>Search position</th>
+<th>Sources</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>first</td>
+<td>archives the online service downloaded into the player's profile folder</td>
+</tr>
+<tr>
+<td>then</td>
+<td><code>uhdmip_DLC4</code>, <code>_DLC3</code>, <code>_DLC2</code>, <code>_DLC1</code>, <code>uhdmip</code>, <code>HighMip</code></td>
+</tr>
+<tr>
+<td>then</td>
+<td><code>HotChunk</code>, <code>Global</code></td>
+</tr>
+<tr>
+<td>then</td>
+<td><code>Patch_13_LC</code>, <code>Patch_13</code>, <code>Patch_12_LC</code>, <code>Patch_12</code>, <code>Patch_DLC5_LC</code>, <code>Patch_DLC5</code>, <code>Patch_11_LC</code> ... <code>Patch_09</code>, <code>Patch_DLC4_LC</code>, <code>Patch_DLC4</code>, <code>Patch_08_LC</code> ... <code>Patch_07</code>, <code>Patch_DLC3_LC</code>, <code>Patch_DLC3</code>, <code>soundbundles</code>, <code>Patch_06_LC</code>, <code>Patch_06</code>, <code>Patch_DLC2_LC</code>, <code>Patch_DLC2</code>, <code>Patch_05_LC</code>, <code>Patch_05</code>, <code>Patch_DLC1_LC</code>, <code>Patch_DLC1</code>, <code>Patch_04_LC</code> ... <code>Patch_00</code></td>
+</tr>
+<tr>
+<td>then</td>
+<td><code>Benchmark</code>, then each region archive above its <code>_Lighting</code> twin (<code>Volcano</code> ... <code>BlackGates</code>)</td>
+</tr>
+<tr>
+<td>then</td>
+<td>the eight language presentation archives, <code>Presentations</code>, <code>Monsters</code>, <code>CoreCharacter</code>, <code>UI_Assets</code></td>
+</tr>
+<tr>
+<td>last</td>
+<td>the <code>..\Game\</code> directory</td>
+</tr>
+</tbody>
+</table>
+<p>The DLC patches are interleaved with the numbered ones, so no "DLC above numbered above base" rule
+holds; <code>HotChunk</code> and <code>Global</code> sit above every patch, and the high-resolution texture
+archives above those. The resolver 0x3DD958 walks the sources from index 0 up to the archive-scan
+bound <code>[fs+0xE0]</code> and returns the first archive that holds the path. A path that ships in several
+archives (26,122 of the 431,226 distinct paths, up to 37 copies) is therefore served from the highest
+one: the engine's byte count for the loaded English string table is 7,797,636, which fits HotChunk's
+7,797,584-byte <code>string.strdb</code> and none of the patch copies (7,110,464 and 7,143,600).</p>
+<h2 id="ltar-v4-the-arch06-layout">LTAR v4: the <code>.arch06</code> layout</h2>
+<p>All 76 archives are LTAR version 4, little-endian. The engine's reader is 0x11AE284: it checks
+<code>LTAR</code> and version 4, reads the rest of the header (0x11AE20C), the name pool, the file records and
+the folder records (0x11AE154), then copies the archive's own path to <code>archive+0x50</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x00</td>
+<td>char[4]</td>
+<td><code>LTAR</code></td>
+</tr>
+<tr>
+<td>0x04</td>
+<td>u32</td>
+<td>version, 4</td>
+</tr>
+<tr>
+<td>0x08</td>
+<td>u32</td>
+<td>name pool size</td>
+</tr>
+<tr>
+<td>0x0C</td>
+<td>u32</td>
+<td>folder count</td>
+</tr>
+<tr>
+<td>0x10</td>
+<td>u32</td>
+<td>file count</td>
+</tr>
+<tr>
+<td>0x14, 0x18, 0x1C</td>
+<td>u32 x 3</td>
+<td>flags, each read as a boolean into <code>archive+0x28..+0x2A</code> (1, 0, 0 in all 76)</td>
+</tr>
+<tr>
+<td>0x20</td>
+<td>16 bytes</td>
+<td>copied to <code>archive+0x18</code> (zero in all 76)</td>
+</tr>
+<tr>
+<td>0x30</td>
+<td></td>
+<td>the name pool: NUL-terminated strings, offset 0 is an empty string</td>
+</tr>
+<tr>
+<td>0x30 + pool size</td>
+<td>30 bytes x file count</td>
+<td>file records</td>
+</tr>
+<tr>
+<td>then</td>
+<td>16 bytes x folder count</td>
+<td>folder records</td>
+</tr>
+<tr>
+<td>then</td>
+<td>6 bytes x file count</td>
+<td>zeros in every archive; the reader does not read them</td>
+</tr>
+<tr>
+<td>then</td>
+<td></td>
+<td>file data</td>
+</tr>
+</tbody>
+</table>
+<p><strong>File record (30 bytes):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>u32</td>
+<td>name: offset of the file's leaf name in the pool</td>
+</tr>
+<tr>
+<td>+0x04</td>
+<td>u64</td>
+<td>data offset from the start of the archive</td>
+</tr>
+<tr>
+<td>+0x0C</td>
+<td>u64</td>
+<td>stored size</td>
+</tr>
+<tr>
+<td>+0x14</td>
+<td>u64</td>
+<td>size</td>
+</tr>
+<tr>
+<td>+0x1C</td>
+<td>u8</td>
+<td>reader kind, kept by the reader in the top byte of the stored-size word (1 on all 488,752 records)</td>
+</tr>
+<tr>
+<td>+0x1D</td>
+<td>u8</td>
+<td>0 = plain bytes, otherwise chunked; kept in the top byte of the size word (9 on all records)</td>
+</tr>
+</tbody>
+</table>
+<p>The two bytes trail every record, the last one included. Opening an entry (0x11AE510): when the
+byte at +0x1D is 0 the entry is read as a plain byte range (0x11DC110); otherwise +0x1C selects the
+reader, 1 the chunked stream (0x11DC4B8) and 0 a whole-file read into fresh memory (0x11DCC64).</p>
+<p><strong>Folder record (16 bytes):</strong> <code>{u32 name, u32 first child, u32 next sibling, u32 file count}</code>, with
+0xFFFFFFFF for "none". The name is the folder's full path (<code>database\string\enus</code>), the root folder
+(record 0) has an empty name, and the reader turns the two links into pointers to 0x30-byte folder
+objects. Files belong to folders in record order: folder 0 owns the first <code>file count</code> records, the
+next folder the following ones, and so on, so a file's path is <code>folder + "\" + leaf</code>. Across all 76
+archives, 16,226 of 16,226 non-root folders extend their parent's path and the counts add up to the
+file count.</p>
+<p><strong>Lookup.</strong> 0x3DDAD8 splits a path at its last <code>\</code> or <code>/</code>, finds the folder by binary search over the
+folder records (0x3DDB90, case-insensitive), then binary-searches that folder's leaf names with
+<code>_stricmp</code> and returns the file record. Both tables are kept sorted for this: the leaf names inside
+every folder are in case-insensitive order (16,299 of 16,299 folders), and the folder records are in
+case-insensitive order of their full paths compared as if each ended in a backslash (76 of 76
+archives; plain order differs in 7 archives, only where one folder name is a prefix of another, such
+as <code>bundles\dlc</code> and <code>bundles\dlc4</code>).</p>
+<h3 id="names-what-is-a-file-fact-and-what-is-a-reader-trap">Names: what is a file fact and what is a reader trap</h3>
 <ul>
-<li>Entry[0]: <code>archivepatchloosefiles.txt</code> = <strong>THE GADB</strong> (56,759,100 bytes, raw GADB, no Firebird container)</li>
-<li>Entries[1-28]: <code>database</code> + <code>database\string</code> pairs (14 pairs, SKDB v9 format, per-region string overrides)</li>
-<li>Entry[29]: <code>database\string\zhcn</code> (88 bytes)</li>
-<li>Entries[30-46]: <code>database\string\globalresources_*.bndl</code> (17 per-language string bundles, 136 bytes each)</li>
+<li>A record's name offset points at its own leaf, relative to 0x30. Read that way, with folders taken
+  from the folder table, every typed entry's content matches its extension: 482,736 of 482,736 entries
+  of 16 typed extensions (<code>.bndl</code>, <code>.embb</code>, <code>.tex</code>, <code>.mesh</code>, <code>.anix</code>, <code>.bnk</code> ...), and each of the 39
+  extensions in the install maps to one format (catalogue below). No per-archive naming rule is
+  needed.</li>
+<li>The pool is not a list of entries in order. It also holds the folder paths, and it stores each leaf
+  string once: 56,018 records share a leaf string with another record (<code>string.strdb</code> in 14 language
+  folders), while full paths are unique within each archive (0 duplicates). A reader that takes "the
+  string after the previous name", or resolves offsets against a wrong base (0x18 instead of 0x30),
+  names a neighbouring file: on the same records those rules give a name whose extension contradicts
+  the content for 396,483 and 388,454 records. The result looks plausible because a neighbour's name
+  is still a real path.</li>
+<li>A path names a file only within one archive; the same path in another archive is another copy,
+  chosen by the search order above.</li>
 </ul>
-<p><strong>global.arch06</strong> (7.9 MB, 243 entries): rendering materials, shaders, FX only — NO GADB.
-<strong>corecharacter.arch06</strong> (208.7 MB, 77 entries): character <code>.bndl</code> manifests + <code>.embb</code> data bundles.
-Oodle DLL: <code>x64/oo2core_5_win64.dll</code> (Kraken codec, ships with game).</p>
-<h3 id="bndl-v6-format-corrected-2026-08-06-byte-identical-emit-1-276-1-276">BNDL v6 Format (CORRECTED 2026-08-06 — byte-identical emit 1,276/1,276)</h3>
-<p><code>.bndl</code> is the manifest for the paired <code>.embb</code>, and it MIRRORS it: same path table,
-same path offsets, and the <strong>same payload-size array the EMBB carries as size prefixes</strong>.</p>
-<pre><code>[0x00] &quot;BNDL&quot; magic
-[0x04] u32  version (6)
-[0x08] u32  path_table_size                     == the paired EMBB's
-[0x0C] u32  path_table_size + align4(len(type_string)+1)
-[0x10] u32  asset_count                         == the paired EMBB's
-[0x14] asset_count × u32  PAYLOAD SIZES  ← identical to the EMBB's size prefixes
-[0x14 + ac*4] path table (path_table_size bytes) — identical BYTES to the EMBB's
-[after path table] &quot;Bundles/Types:XXX&quot; null-terminated, then 4-aligned
-[then] asset_count × u32 path offsets — identical to the EMBB's
-</code></pre>
-<blockquote>
-<p><strong><code>[0x0C]</code> is NOT <code>[0x08] + 28</code>.</strong> That held on 995 of 1,276 sampled manifests and
-failed on 281 (deltas 20/24/32/36/40). The rule is
-<code>[0x0C] = path_table_size + align4(len(bundle_type)+1)</code> — i.e. the combined length of
-the path table plus the type string region — which holds <strong>1,276/1,276</strong>. Emitting the
-constant 28 produces a corrupt manifest for ~22% of bundles.</p>
-</blockquote>
-<p>Bundle types are open-ended, not a fixed three: <code>Presentation</code> (208,575), <code>WorldQuest</code>,
-<code>Sound_1</code>, <code>FlairWorld</code>, <code>Flair_1MB</code>, <code>WorldLighting</code>, <code>ThroneRoomBarrows</code>, <code>UI_Tutorial</code>,
-<code>QuestCinBundle</code>, … — read it, do not assume it.</p>
-<blockquote>
-<p><strong>RESOLVE THE MANIFEST FROM THE EMBB'S OWN ARCHIVE.</strong> Looking up the <code>.bndl</code> path
-independently crosses a patch boundary: a bundle updated by a patch ships its EMBB in
-<code>Patch_*</code> while the base archive still holds the ORIGINAL manifest. Measured on 40
-shipped character bundles, 3 paired that way and disagreed —
-<code>player_rhovaniont2_cloak</code> matched on all 11 paths but declared asset 2 as 87,657 bytes
-against the patched EMBB's 43,961; <code>orc_buff_leather_pants_g</code> paired a 4-asset EMBB to
-a 3-asset manifest from a different archive. <code>Cortex._embb_manifest</code> takes the
-neighbouring entry in the EMBB's own archive and confirms it by CONTENT (identical path
-list) before trusting it — 60/60 after the fix, and the one bundle with no confirmable
-manifest is reported as such rather than silently paired to the wrong one.</p>
-<p><strong>A PATCH CAN UPDATE ONE ASSET OF A BUNDLE BY MANIFEST + LOOSE FILE (MEASURED 2026-10-09).</strong>
-Patch_DLC4_LC re-ships the <code>defender_weaponpairs\*.bndl</code> manifests WITHOUT their EMBBs (those win
-from ui_assets). Paths identical; one size differs: <code>orc_metalshield.skel</code> is declared 147,990
-while the ui_assets EMBB carries 128,871, and 147,990 is exactly the LOOSE
-<code>orc_metalshield.skel</code> in Patch_DLC4/_LC. So the vanilla pair the engine loads is cross-archive
-by design (that the loose skel is what gets used is a LEAD, not observed at runtime). Reading a
-pair for ANALYSIS: own archive (above). SHIPPING an override: start from the WINNING manifest
-and change only your own slots; rebuilding it from the EMBB would undo the patch's declaration.</p>
-</blockquote>
-<h3 id="skdb-v9-format-cracked-2026-04-23">SKDB v9 Format (CRACKED 2026-04-23)</h3>
-<p>Serialized Key Database — per-region/per-language string override tables.</p>
-<pre><code>[0x00] u32 magic &quot;SKDB&quot;
-[0x04] u32 version (9)
-[0x08] u32 header_size (28)
-[0x0C] u32 key_count (total hash entries across all language sections)
-[0x10] u32 reserved (0)
-[0x14] u32 string_pool_size (byte size of the UTF-16LE string pool at EOF)
-[0x18] u32 reserved (0)
-[0x1C] u32 lang_count (19)
-[0x20] lang_count × (u32 section_data_offset, u32 cumulative_metric)
-[after section table] Initial key lookup table: 8-byte entries
-[at each section_data_offset] Per-language key lookup tables: 8-byte entries
-[EOF - string_pool_size] String pool: flat, null-terminated UTF-16LE strings
-</code></pre>
-<p>Each 8-byte key entry: <code>u16 hash_lo, u16 hash_hi, u16 secondary_hash, u16 string_index</code>
-(<code>string_index</code> = 0-based index into the flat string pool). Access via <code>aire.formats.StringEditor</code>.</p>
-<h3 id="embb-v5-format-re-cracked-2026-08-06-there-is-no-padding">EMBB v5 Format (RE-CRACKED 2026-08-06 — THERE IS NO PADDING)</h3>
-<p><code>aire/formats/embb.py</code>; <code>call("embb_probe" / "embb_verify" / "embb_replace")</code>. Offline.
-Full write-up: <strong><code>aire/documents/EMBB_BNDL_CONTAINER.md</code></strong>.
-Byte-identical rebuild from parsed parts <strong>400/400</strong> — the only standard that counts.</p>
-<p>Population verified COMPLETE (not sampled): <strong>190,407 EMBB blobs, 100% version 5</strong> and
-<strong>225,311 BNDL blobs, 100% version 6</strong> — no version variants exist. Header + path-table
-invariants pass on <strong>190,407/190,407 = 100.0000%</strong>.</p>
-<pre><code>[0x00] u32 magic &quot;EMBB&quot;
-[0x04] u32 version (5)
-[0x08] u32 path_table_size
-[0x0C] u32 asset_count
-[0x10] path table: asset_count NUL-terminated ASCII paths, each NUL-padded to
-       a 4-byte boundary.  path_table_size == end of the last aligned path, EXACTLY.
-[0x10 + pts] asset_count × u32 — byte offset of each PATH, relative to 0x10.
-       This is a path index, NOT a section table.
-[then]  asset_count × [ u32 payload_size ; payload ]
-       payload begins with its own 4-char tag, chosen by the path's EXTENSION.
-</code></pre>
-<p><strong>Measured over 964 containers / 35 archives / 8,218 sections (all version 5):</strong></p>
-<table>
-<thead>
-<tr>
-<th>invariant</th>
-<th>result</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>chain terminates exactly on EOF</td>
-<td><strong>964/964</strong>, slack 0</td>
-</tr>
-<tr>
-<td><code>path_table_size</code> == end of last aligned path</td>
-<td>964/964</td>
-</tr>
-<tr>
-<td>path offsets 4-aligned and chained by aligned length</td>
-<td>964/964</td>
-</tr>
-<tr>
-<td>zero-size / oversize sections</td>
-<td>0 / 0</td>
-</tr>
-<tr>
-<td>byte-identical rebuild</td>
-<td>400/400</td>
-</tr>
-</tbody>
-</table>
-<blockquote>
-<p><strong>THERE IS NO PADDING AND NO ALIGNMENT IN THE SECTION CHAIN.</strong> A payload is followed
-IMMEDIATELY by the next section's u32 size prefix. Section start offsets mod 16 are
-~uniform (0: 8.9%, 7: 4.9%, 15: 5.7%) and only <strong>531 of 964</strong> containers have every
-section 4-aligned — <code>player_celebrimbor_armor_pc.embb</code> itself has sections at mod-16 of
-7, 13, 5 and 1. So a payload may be ANY size; nothing is rounded up, and there is no
-slack to preserve. Do not pad a resized payload — padding is what would be wrong.</p>
-<p><strong>THE OLD READER'S TWO ERRORS.</strong> It read <code>asset_count + 1</code> offsets, but the
-(count+1)-th u32 is <strong>the size prefix of section 0</strong>, not a table entry — so
-<code>section_data_start</code> was 4 bytes past the truth and the last "offset" (27,928 on that
-bundle) was misread as "total size of dependency data". Sections were then located by
-<strong>scanning for known tags</strong>, which cannot work: a 4-byte tag occurs by chance inside
-texture and mesh payloads (18 tag hits for 17 real sections on one 12 MB character
-bundle, several deep inside TEXR data), and sizes came out as "distance to the next
-hit". Those sizes are fiction, and they are why the container appeared to have padding.
-<strong>The substrate parser was repaired 2026-08-06</strong> — it now walks the chain, so
-<code>asset_probe</code>/<code>asset_decode</code>/<code>export_obj</code> and every other caller are correct too. It
-falls back to the old scan ONLY when the chain is broken, and then reports
-<code>chain_valid: false</code> and refuses to rebuild rather than writing guessed sizes.</p>
-</blockquote>
-<p>Extension → tag (8,218 sections, none contradicted): <code>mesh</code>→MMSH, <code>skel</code>→SKEL,
-<code>anix</code>→ANIX, <code>tex</code>→TEXR <em>or</em> SLVT, <code>texa</code>→TEXA, <code>texcpu</code>→CPUT, <code>mat</code>→LTMI, <code>fxo</code>→SRHR,
-<code>fxp</code>→LTFX, <code>inst</code>→PRFB, <code>bnk</code>→BKHD, <code>cres</code>→CRES, <code>vid</code>→VIDO, <code>subb</code>→SUBB, <code>wldmsh</code>→MESH,
-<code>objres</code>→OBJR, <code>uis</code>→UISH, <code>uiwd</code>→UIWD, <code>scripts</code>→SCRI, <code>wldclnt</code>→WDSC, <code>hkai</code>→HKAI,
-<code>veggrid</code>→VEGG, <code>terrain</code>→TERR. (<code>CDEF</code> is not a tag — see the phantom-tag note.)</p>
-<p><strong>WHAT ACTUALLY BREAKS A RESIZE — three things must move together:</strong></p>
+<h3 id="compression-and-chunks">Compression and chunks</h3>
+<p>File data is a chain of chunks, each <code>{u32 stored length, u32 length, bytes}</code>, with every chunk header
+4-byte aligned relative to the start of the entry and a record's stored size equal to the chain's
+length rounded up to 4 (19,993 of 19,993 sampled entries, up to 400 per archive). The chunk reader
+0x11DC664:</p>
 <ol>
-<li>the resized section's <strong>u32 size prefix</strong> inside the EMBB;</li>
-<li>the matching entry in the <strong>paired BNDL's size array</strong>;</li>
-<li>the <strong>archive entry's uncompressed size</strong> (Anvil/modkit).</li>
+<li>reads the two lengths and asserts "Encountered a corrupted compressed chunk header." when either
+   exceeds 0x10000, so a chunk holds at most 64 KB;</li>
+<li>copies the bytes when the stored length is at least the length (a stored chunk);</li>
+<li>otherwise checks that <code>OodleLZDecoder_MemorySizeNeeded(8 = Kraken, length)</code> fits its 0x20800-byte
+   work buffer and calls <code>OodleLZ_Decompress</code> (fuzz-safe) from <code>oo2core_5_win64.dll</code>, asserting
+   "Decompression failure." unless exactly <code>length</code> bytes come out;</li>
+<li>skips to the next 4-byte boundary.</li>
 </ol>
-<p>Splicing a bigger payload in place without (1) leaves the loader reading the next
-section's size from inside the new payload. Reproduced exactly on
-<code>player_celebrimbor_armor_pc.embb</code>: a +1,500,000-byte MMSH splice makes section 9's size
-read as <code>0xAAAAAAAA</code> = <strong>2.86 GB</strong>, which the streaming loader then tries to consume —
-<strong>that is a hang on load</strong>, and it is indistinguishable from a geometry failure unless you
-walk the chain. <code>EmbbContainer.parse</code> refuses such a file with the offending section named.</p>
-<h2 id="behaviour-graphs-bvr-animation-state-machines-decoded-node-by-node-measured-2026">Behaviour graphs (<code>.bvr</code>) - animation state machines, decoded node by node (MEASURED 2026-10-27)</h2>
-<p>A <code>.bvr</code> is a GADB v17 database (root <code>BlendDB</code>): categories = node types, records = nodes,
-mostly NAMED SECONDARY records (CORRECTED 2026-10-27: not anonymous primaries as the 2026-08-05
-<code>behavior.py</code> read). 29 graphs, <strong>10,702 blend states, 73,448 transition links</strong>; player graphs
-(player_elf / el2 / elt / bar) ~2,050 states + ~1,700 camera states each, orcs ~132, warg 431,
-troll 218.</p>
+<p>In the sample, 638,807 chunks were packed and 31,098 stored. Packed chunks start with the Oodle block
+bytes <code>8C 06</code> (5,287 of 5,910 sampled) or <code>8C 02</code> (623). The first chunk of every one of the 488,752
+entries decodes with the shipped DLL. Over the whole install the stored data is 62.8% of its
+unpacked size.</p>
+<h3 id="the-path-index-archivepatchloosefiles-txt">The path index (<code>ArchivePatchLooseFiles.txt</code>)</h3>
+<p>37 archives (<code>Patch_01</code> - <code>Patch_11</code>, <code>Patch_13</code> and <code>Patch_DLC1</code> - <code>Patch_DLC5</code> with their <code>_LC</code>
+twins, <code>Global</code>, <code>HotChunk</code>, <code>soundbundles</code>) carry a root file <code>archivepatchloosefiles.txt</code> as
+record 0:</p>
+<pre><code>u32 1 | u32 string bytes | strings (NUL-terminated full paths) | u32 count | count x {u32 hash, u32 string offset}
+</code></pre>
+<p>The rows are sorted by hash and every hash is <code>StringHash</code> of its path (73,038 of 73,038). The index
+lists an archive's loose files: every loose <code>.anix</code>, <code>.bnk</code>, <code>.objres</code>, <code>.scripts</code>, <code>.mesh</code>, <code>.skel</code>
+in those archives, and a <code>.bndl</code> exactly when its container is not in the same archive (34,920 of
+34,926; 10,849 of 10,883 manifests that sit beside their container are left out); no <code>.embb</code> is ever
+listed. It also names 495 paths that its archive does not hold.</p>
+<p>When <code>Mount</code> adds an archive it looks the file up (0x3DDAD8) and passes it to 0x1182428, which checks
+the leading 1, keeps the string block, builds <code>{u32 hash, char* path}</code> rows and merges them, sorted,
+into the file system's hash -&gt; path table at <code>fs+0x80</code> under the lock at <code>fs+0x98</code>, incrementing the
+generation at <code>fs+0xC0</code>. In a running game that table holds 30,639 rows: exactly the 30,637 distinct
+hashes of the 37 shipped indexes, plus two rows from a directory mounted at run time. The load stage's
+name table (<code>core+0x1D0</code>, see Resource streaming) is a row-for-row copy of it (same 30,639 hashes, same
+string pointers). Archives without an index (regions, UI, presentations, high-resolution textures) are
+mounted and searched like the others.</p>
+<p><strong>Hashing.</strong> <code>StringHash</code> 0x423E70 computes <code>h = h * 919 + LUT[c]</code> with the table at 0x1DB50D0. The
+table folds case but not separators: <code>\</code> is 42 and <code>/</code> is 52, so a path hashes as written with
+backslashes. Other values: <code>.</code> 55, <code>-</code> 39, <code>_</code> 38, space 37, <code>a</code>-<code>z</code> 1-26, <code>0</code>-<code>9</code> 27-36.</p>
+<h2 id="bundles-the-bndl-manifest-and-the-embb-container">Bundles: the BNDL manifest and the EMBB container</h2>
+<p>A bundle is a manifest (<code>.bndl</code>, magic <code>BNDL</code>) naming its members, usually paired with a container
+(<code>.embb</code>, magic <code>EMBB</code>) of the same path stem holding their bytes. The bundle loader 0x3DBE50 reads the
+container through 0x11B5E68 (it checks <code>EMBB</code> and version 5); the manifest's loader 0x504C70, a slot
+of the manifest resource handler, checks <code>BNDL</code> and version 6. How bundles are requested, referenced
+and released is in Resource streaming.</p>
+<h3 id="embb-v5">EMBB v5</h3>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x00</td>
+<td>char[4]</td>
+<td><code>EMBB</code></td>
+</tr>
+<tr>
+<td>0x04</td>
+<td>u32</td>
+<td>version, 5</td>
+</tr>
+<tr>
+<td>0x08</td>
+<td>u32</td>
+<td>path table size</td>
+</tr>
+<tr>
+<td>0x0C</td>
+<td>u32</td>
+<td>member count <code>n</code></td>
+</tr>
+<tr>
+<td>0x10</td>
+<td></td>
+<td>path table: <code>n</code> NUL-terminated paths, each padded with NULs to 4 bytes; the size ends exactly at the last padded path</td>
+</tr>
+<tr>
+<td>0x10 + size</td>
+<td>u32 x n</td>
+<td>offset of each path, relative to 0x10</td>
+</tr>
+<tr>
+<td>then</td>
+<td>n x {u32 size, payload}</td>
+<td>members in path order; each payload begins with its own 4-character tag</td>
+</tr>
+</tbody>
+</table>
+<p>There is no padding in the section chain: a payload is followed at once by the next size word, and
+payload starts are spread evenly over all 16 residues mod 16 (643 - 1,008 sections each, 12,031
+sections). All 190,407 containers are version 5 and all pass the header rules (offsets 4-aligned and
+chained by padded length, size exact, padding all NUL); 2,441 are empty, the largest holds 11,178
+members, 428,440 members in all. Walking the chain of 780 containers (up to 30 per archive, each at
+most 64 MB) ends exactly at the end of the file in 780 of 780, with no zero-size or overrunning
+section. A member's size word is the only thing that locates the next one, so a payload whose size
+word disagrees with its length makes the loader read the next size from inside the payload.</p>
+<h3 id="bndl-v6">BNDL v6</h3>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x00</td>
+<td>char[4]</td>
+<td><code>BNDL</code></td>
+</tr>
+<tr>
+<td>0x04</td>
+<td>u32</td>
+<td>version, 6</td>
+</tr>
+<tr>
+<td>0x08</td>
+<td>u32</td>
+<td>path table size</td>
+</tr>
+<tr>
+<td>0x0C</td>
+<td>u32</td>
+<td>path table size + the type string's length with its NUL, rounded up to 4</td>
+</tr>
+<tr>
+<td>0x10</td>
+<td>u32</td>
+<td>member count <code>n</code></td>
+</tr>
+<tr>
+<td>0x14</td>
+<td>u32 x n</td>
+<td>member sizes</td>
+</tr>
+<tr>
+<td>then</td>
+<td></td>
+<td>path table, same rules as the container's</td>
+</tr>
+<tr>
+<td>then</td>
+<td></td>
+<td><code>Bundles/Types:&lt;Name&gt;</code>, NUL-terminated, padded to 4</td>
+</tr>
+<tr>
+<td>then</td>
+<td>u32 x n</td>
+<td>path offsets</td>
+</tr>
+</tbody>
+</table>
+<p>All 225,338 manifests are version 6 and parse to their last byte; the 0x0C rule holds on 225,338
+(a constant <code>+28</code> would be right on only 217,350). The type string names a record of the GameDB
+category <code>Bundles/Types</code>; 130 distinct strings are used, led by <code>Presentation</code> (208,584),
+<code>WorldQuest</code> (4,111), <code>Sound_1</code> (1,656), <code>FlairWorld</code> (1,312) and <code>Flair_1MB</code> (982); 11 manifests have no
+members and an empty type.</p>
+<h3 id="how-a-manifest-and-its-container-relate">How a manifest and its container relate</h3>
+<p>Every container has a manifest with the same path stem in its own archive (190,407 of 190,407). In
+186,478 of those pairs the manifest mirrors the container exactly: identical path-table bytes and
+offsets, and sizes that predict the container's length,</p>
+<pre><code>16 + path table size + 4n + sum(4 + size[i]) = container size
+</code></pre>
+<p>In the other 3,929 pairs the manifest declares members the container does not hold: the Desert
+region's <code>worlds\retail\desert\desert.bndl</code> lists 3,805 members while <code>desert.embb</code> (1.43 GB, in
+<code>Patch_DLC4</code>) holds 3,763 (the other 42 are 41 <code>.cres</code> prefab resources and one <code>.record06</code>, none of
+them a loose entry). Taking the winning copy of each side by the search order (190,367 bundles):</p>
+<table>
+<thead>
+<tr>
+<th>Relation</th>
+<th>Bundles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>same member list and sizes</td>
+<td>184,506</td>
+</tr>
+<tr>
+<td>same list, but the winning manifest re-declares some sizes</td>
+<td>1,710 (2,844 of the changed sizes equal the winning loose copy of that member)</td>
+</tr>
+<tr>
+<td>manifest lists members the container lacks</td>
+<td>3,770</td>
+</tr>
+<tr>
+<td>other differences</td>
+<td>381</td>
+</tr>
+</tbody>
+</table>
+<p>Of the 13,695 paths that winning manifests list beyond their container, 8,521 ship as loose entries.
+Patches use this to update part of a bundle: 32,903 manifests ship in an archive above their
+container's best copy (27 below).</p>
+<p><strong>Container-less bundles.</strong> 2,001 manifests have no container anywhere: sound bundles (<code>Sound_1</code>
+1,654, <code>Sound_5</code> 187 ...), the language string bundles (<code>StringDB</code>, 73), <code>GlobalDatabase</code> (7),
+<code>GlobalRenderingResources</code> and a few others. Their 3,398 members resolve as loose entries (3,257) or
+container members (34); 3,016 of the 3,257 declared sizes equal the winning entry's size and 206 more
+equal another copy's. <code>globalbundles\globaldatabase.bndl</code> declares the one member
+<code>database\game\game.gamedb</code>.</p>
+<h2 id="which-copy-wins">Which copy wins</h2>
 <ul>
-<li>Links: 73,017 resolve to a decoded state, 431 have no target, <strong>0</strong> name a missing state.</li>
-<li>5,300 states (49.5%) are reachable by transitions from the start state; the rest are entered BY
-  CODE (grabs <code>Grab_HOG_*</code> / <code>GrabFlurry_*</code>, warg riding, ladder climbing, mount deaths) - the
-  states sync actions and presentations force.</li>
-<li>Clips: <strong>17,606 / 17,606</strong> state clip references resolve to an ANIX carrier (archive, entry,
-  clip index, P919 hash); invented names resolve to nothing (control). The <code>.skel</code> set paths the
-  nodes name ship nowhere: the join goes through the ANIX clip directories.</li>
-<li>Field readers are thin (17 fields) because a BlendDB record is a NATIVE STRUCT (header +0x01 =
-  0x1A on 318,372 / 318,372 live records): fields at <code>instance + SlotOffset</code>, read as plain members.
-  Live offsets checked 10,697 / 10,697 (<code>behavior_field_offsets</code>, <code>behavior_live_node</code>;
-  kb/gamedb-schema.md slot-law exception).</li>
+<li><strong>A path:</strong> the first archive in the search order that holds it.</li>
+<li><strong>A bundle:</strong> its manifest is opened by path like any file, so the winning manifest gives the
+  member list. A member can be in the container, a loose entry of the same path, or both; when both
+  exist, the measured case below shows the loose copy in use.</li>
+<li><strong>Standalone against embedded:</strong> 14,172 asset paths ship both as a loose entry and inside some
+  container (<code>.bnk</code> 3,658, <code>.tex</code> 1,804, <code>.anix</code> 1,612, <code>.fxp</code> 1,165, <code>.mat</code> 900, <code>.scripts</code> 835,
+  <code>.objres</code> 680 ...). For the Desert main part, the live context-action data equals the standalone
+  <code>desert.objres</code> of <code>Patch_DLC5</code>, not the section embedded in <code>Patch_DLC4</code>'s <code>desert.embb</code> nor the
+  older standalone copies of <code>Patch_09</code> and <code>Patch_10</code>; the winning <code>desert.bndl</code> (<code>Patch_DLC5</code>) declares
+  exactly that copy's size. The same holds for a layer's <code>.scripts</code> (see Scripting); a path can also
+  ship as different loose and embedded clips (see Animation).</li>
+<li><strong>The GameDB:</strong> <code>database\game\game.gamedb</code> ships in nine archives (<code>HotChunk</code> 56,759,100 bytes;
+  <code>Patch_01</code> - <code>Patch_04</code> and their <code>_LC</code> twins 58,084,930 - 58,099,992). <code>HotChunk</code> is above all of
+  them, so a path lookup returns its copy (see GameDB).</li>
 </ul>
-<p>Actions: <code>behavior_graphs</code>, <code>behavior_graph</code>, <code>behavior_state</code>, <code>behavior_moveset</code>,
-<code>behavior_clip</code>, <code>behavior_field_readers</code> (aire/formats/behavior_actions.py); full reference
-aire/documents/BEHAVIOR_GRAPHS.md. Edits are LIVE record writes, never the file.</p>
-<h2 id="havok-tagfiles-navmeshes-and-physics-shapes-aire-havok-verified-2026-10-27">Havok tagfiles - navmeshes and physics shapes (<code>aire/havok/</code>, VERIFIED 2026-10-27)</h2>
-<p>Built 2026-10-18 by a background agent, wired as <code>HavokActions</code> (aire/havok/actions.py), measured
-2026-10-27. A Havok tagfile (root <code>hkRootLevelContainer</code>) is read with its OWN type table
-(tagfile.py / types.py), so every class layout comes from the file.</p>
+<p>Distinct asset paths by where they ship (manifests and containers excluded): 238,588 only inside
+containers, 34,409 only loose (mostly texture tiers), 14,172 both.</p>
+<h2 id="format-catalogue">Format catalogue</h2>
+<p>Every file starts with a 4-character tag, and the extension decides it: across all 488,752 records
+each extension maps to one format (<code>.txt</code> aside). Section tags inside containers follow the same table
+(12,031 of 12,031 walked sections), with one exception: a <code>.tex</code> section is <code>TEXR</code> or <code>SLVT</code> (9 of
+3,181). Each format is loaded by a slot of its resource handler (vf3, <code>.vid</code> vf4) whose code checks
+the tag; the loader column gives the function holding that check and, where it differs, the
+handler's vtable.</p>
+<table>
+<thead>
+<tr>
+<th>Extension</th>
+<th>Tag, version</th>
+<th>Loose files</th>
+<th>Loader (tag check)</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.bndl</code></td>
+<td><code>BNDL</code> 6</td>
+<td>225,338</td>
+<td>0x504C70</td>
+<td>manifest, above</td>
+</tr>
+<tr>
+<td><code>.embb</code></td>
+<td><code>EMBB</code> 5</td>
+<td>190,407</td>
+<td>0x11B5E68</td>
+<td>container, above</td>
+</tr>
+<tr>
+<td><code>.tex</code> <code>.tex0</code> <code>.texuhd</code></td>
+<td><code>TEXR</code> 8</td>
+<td>16,453 / 11,631 / 10,297</td>
+<td>0x5030EC (vt_0x230B988, vt_0x230B9F0)</td>
+<td>textures, below</td>
+</tr>
+<tr>
+<td><code>.texa</code> <code>.texa0</code> <code>.texauhd</code></td>
+<td><code>TEXA</code> 1</td>
+<td>135 / 784 / 1,027</td>
+<td>0x5030EC</td>
+<td>texture arrays</td>
+</tr>
+<tr>
+<td><code>.bnk</code></td>
+<td><code>BKHD</code></td>
+<td>6,974</td>
+<td>0x550F68</td>
+<td>Wwise banks (see Audio and video)</td>
+</tr>
+<tr>
+<td><code>.anix</code></td>
+<td><code>ANIX</code></td>
+<td>3,289</td>
+<td>0x480AEC (vt_0x22C2C60)</td>
+<td>clips (see Animation)</td>
+</tr>
+<tr>
+<td><code>.fxp</code></td>
+<td><code>LTFX</code> 8</td>
+<td>2,996</td>
+<td>0x48FBB90 (vt_0x2312410)</td>
+<td>effects (see Visual effects)</td>
+</tr>
+<tr>
+<td><code>.scripts</code></td>
+<td><code>SCRI</code> 1</td>
+<td>2,770</td>
+<td>0x6AB1D4 (vt_0x230EF98)</td>
+<td>layer scripts (see Scripting)</td>
+</tr>
+<tr>
+<td><code>.objres</code></td>
+<td><code>OBJR</code> 13</td>
+<td>2,753</td>
+<td>0x7A75C8 (vt_0x22BFFB8)</td>
+<td>world object data (see World)</td>
+</tr>
+<tr>
+<td><code>.mat</code></td>
+<td><code>LTMI</code> 8</td>
+<td>2,355</td>
+<td>0x502230 (vt_0x230A730)</td>
+<td>material instances</td>
+</tr>
+<tr>
+<td><code>.fxo</code></td>
+<td><code>SRHR</code> 2</td>
+<td>1,989</td>
+<td>0x4D3768</td>
+<td>shader trees (see Rendering)</td>
+</tr>
+<tr>
+<td><code>.hkai</code></td>
+<td><code>HKAI</code> 3</td>
+<td>1,923</td>
+<td>0x48427C (vt_0x22C05C0)</td>
+<td>Havok navigation (see Physics)</td>
+</tr>
+<tr>
+<td><code>.inst</code></td>
+<td><code>PRFB</code> 8</td>
+<td>1,877</td>
+<td>0x58A26C (vt_0x230A528)</td>
+<td>prefabs (see World)</td>
+</tr>
+<tr>
+<td><code>.skel</code></td>
+<td><code>SKEL</code> 17</td>
+<td>973</td>
+<td>0x504420</td>
+<td>skeletons, below</td>
+</tr>
+<tr>
+<td><code>.vegtile</code></td>
+<td><code>VEGT</code> 3</td>
+<td>954</td>
+<td>0x503A0C (vt_0x22C01E8)</td>
+<td>vegetation tiles</td>
+</tr>
+<tr>
+<td><code>.mesh</code></td>
+<td><code>MMSH</code> 17</td>
+<td>711</td>
+<td>0x4B7C08 (vt_0x230A660)</td>
+<td>meshes, below</td>
+</tr>
+<tr>
+<td><code>.uiwd</code> / <code>.uis</code></td>
+<td><code>UIWD</code> 4 / <code>UISH</code> 3</td>
+<td>422 / 393</td>
+<td>0x6C761C / 0x72E400</td>
+<td>world UI data</td>
+</tr>
+<tr>
+<td><code>.rcv</code></td>
+<td><code>RCVA</code> 2</td>
+<td>381</td>
+<td>0x6AA5200 (vt_0x22F5300)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>.vid</code></td>
+<td><code>VIDO</code> 12</td>
+<td>318</td>
+<td>0x4BBD78</td>
+<td>movie records; the engine plays the <code>.vib</code> beside them (see Audio and video)</td>
+</tr>
+<tr>
+<td><code>.bvr</code></td>
+<td><code>GADB</code> 17</td>
+<td>305</td>
+<td>0x503694 (database reader)</td>
+<td>behaviour graphs (see Animation)</td>
+</tr>
+<tr>
+<td><code>.wldclnt</code></td>
+<td><code>WDSC</code> 9</td>
+<td>287</td>
+<td>0x6B3510 (vt_0x230A800)</td>
+<td>world part placements (see World)</td>
+</tr>
+<tr>
+<td><code>.subb</code></td>
+<td><code>SUBB</code> 1</td>
+<td>244</td>
+<td>0x17CCB88</td>
+<td>subtitles</td>
+</tr>
+<tr>
+<td><code>.cres</code></td>
+<td><code>CRES</code> 5</td>
+<td>232</td>
+<td>0x72E4A8 (vt_0x230A868)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>.strdb</code></td>
+<td><code>SKDB</code> 9</td>
+<td>140</td>
+<td>0x1D23228</td>
+<td>string tables, below</td>
+</tr>
+<tr>
+<td><code>.wldmsh</code></td>
+<td><code>MESH</code> 5</td>
+<td>137</td>
+<td>0x1CC5424 (vt_0x230A5F8)</td>
+<td>world part meshes (see World)</td>
+</tr>
+<tr>
+<td><code>.pmo</code></td>
+<td><code>PARA</code> 1</td>
+<td>113</td>
+<td>0x18055E4 (vt_0x22F5298)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>.gfx</code></td>
+<td><code>GFX</code> + version byte</td>
+<td>56</td>
+<td></td>
+<td>Scaleform movies (see User interface)</td>
+</tr>
+<tr>
+<td><code>.txt</code></td>
+<td></td>
+<td>39</td>
+<td></td>
+<td>37 path indexes, 2 DLC markers</td>
+</tr>
+<tr>
+<td><code>.cred</code></td>
+<td>UTF-16 text</td>
+<td>22</td>
+<td></td>
+<td>credits</td>
+</tr>
+<tr>
+<td><code>.gamedb</code></td>
+<td><code>GADB</code> 17</td>
+<td>9</td>
+<td>0x503694</td>
+<td>the GameDB (see GameDB)</td>
+</tr>
+<tr>
+<td><code>.veggrid</code></td>
+<td><code>VEGG</code> 1</td>
+<td>8</td>
+<td>0x4369DC (vt_0x22C0250)</td>
+<td>vegetation grids</td>
+</tr>
+<tr>
+<td><code>.sndmap</code></td>
+<td><code>SMAP</code> 1</td>
+<td>5</td>
+<td>0x1D2B488 (vt_0x23124B8)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>.texcpu</code></td>
+<td><code>CPUT</code> 1</td>
+<td>4</td>
+<td>0x70BD900 (vt_0x230A6C8)</td>
+<td>CPU-side textures</td>
+</tr>
+<tr>
+<td><code>.terrain</code></td>
+<td><code>TERR</code> 9</td>
+<td>1</td>
+<td>0x7AC0F4 (vt_0x230BEE0)</td>
+<td>terrain (see World)</td>
+</tr>
+<tr>
+<td><code>.txanm</code></td>
+<td><code>LTTA</code></td>
+<td>in containers</td>
+<td>0x1CBAAD4 (vt_0x230A798)</td>
+<td>texture animation</td>
+</tr>
+</tbody>
+</table>
+<h2 id="textures-texr-v8">Textures (<code>TEXR</code> v8)</h2>
+<p>A texture file is a <code>TEXR</code> header followed by a standard DDS header and the pixel levels it carries.
+The loader 0x5030EC accepts <code>TEXR</code> version 8 and <code>SLVT</code> version 4 (a small header that wraps a <code>TEXR</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x00</td>
+<td>char[4]</td>
+<td><code>TEXR</code></td>
+</tr>
+<tr>
+<td>0x04</td>
+<td>u32</td>
+<td>version, 8</td>
+</tr>
+<tr>
+<td>0x08 / 0x09</td>
+<td>u8</td>
+<td>log2 of the described width / height, rounded down (37,747 / 37,749 of 37,749)</td>
+</tr>
+<tr>
+<td>0x0A</td>
+<td>u8</td>
+<td>log2 of the depth (0 for 2D)</td>
+</tr>
+<tr>
+<td>0x0B</td>
+<td>u8</td>
+<td>mip count of the described texture (37,747 of 37,749)</td>
+</tr>
+<tr>
+<td>0x0C</td>
+<td>u8</td>
+<td>kind: 1 = 2D (37,749), 3 = volume (632)</td>
+</tr>
+<tr>
+<td>0x0D</td>
+<td>u8</td>
+<td>format class (table)</td>
+</tr>
+<tr>
+<td>0x10</td>
+<td>u16</td>
+<td>name length</td>
+</tr>
+<tr>
+<td>0x12</td>
+<td>char[]</td>
+<td>name (no NUL)</td>
+</tr>
+<tr>
+<td>name end</td>
+<td>u8 3, u16 width, u16 height, u16 1, u8 mips, u8 1, u8 DXGI format</td>
+<td>the described texture (2D; a volume has u8 5, width, height, depth, mips, format)</td>
+</tr>
+<tr>
+<td>name end + 19</td>
+<td>u8</td>
+<td>sRGB flag</td>
+</tr>
+<tr>
+<td>name end + 23</td>
+<td></td>
+<td><code>DDS</code> header (with a DX10 extension when the format needs one), then the levels in this file</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>DXGI format (files)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>BC1_UNORM (7,938)</td>
+</tr>
+<tr>
+<td>1</td>
+<td>BC2_UNORM (142)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>BC3_UNORM (17,296)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>BC4_UNORM (86)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>BC5_UNORM (7)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>uncompressed: B8G8R8A8_UNORM (8,064), R16_UNORM (4,109), R11G11B10_FLOAT (5)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>BC7_UNORM (88)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>BC6H_UF16 (14)</td>
+</tr>
+</tbody>
+</table>
+<p>The stored DXGI format is always the UNORM one; the sRGB flag marks colour textures (set on 5,128 of
+5,203 <code>_d</code> diffuse maps, 1 of 4,712 <code>_n</code> normal maps, 17 of 3,485 <code>_s</code> maps, 95 of 2,511 <code>_m</code> masks).
+Texture creation (0x1E71F0) maps each format to a typeless / UNORM / sRGB triplet from the table at
+0x2777E20. Normal maps store X in green and Y in alpha (the shaders decode <code>(G * 2 - 1, A * 2 - 1)</code>);
+<code>_s</code> maps store reflectance in red, a mask in green and roughness in blue.</p>
+<h3 id="tiers">Tiers</h3>
+<p>A texture can ship in up to three files with the same stem:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Archives</th>
+<th>Levels it carries, against the size its own header describes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.tex</code></td>
+<td>bundles, regions, patches</td>
+<td>the whole chain from that size, or from half of it when the name field points at a <code>.tex0</code> (2,697 files)</td>
+</tr>
+<tr>
+<td><code>.tex0</code></td>
+<td><code>HighMip</code> (9,037), <code>Benchmark</code>, patches</td>
+<td>3 levels from half the size (7,879) or 4 levels from the size (3,752)</td>
+</tr>
+<tr>
+<td><code>.texuhd</code></td>
+<td><code>uhdmip</code>, <code>uhdmip_DLC1</code> - <code>_DLC4</code> (8,752), <code>Benchmark</code>, patches</td>
+<td>exactly one level, the described size (10,297 of 10,297)</td>
+</tr>
+</tbody>
+</table>
+<p>The tiers of one texture do not always describe the same size: the <code>.tex0</code> and <code>.texuhd</code> of a stem
+agree in 5,873 of 6,165 stems, a <code>.tex</code> and its <code>.tex0</code> in 497 of 1,037, and the level ranges of
+neighbouring tiers can overlap. The name field of a <code>.tex0</code> or <code>.texuhd</code> names its own <code>.tex</code> (21,928
+of 21,928); a <code>.tex</code> names its <code>.tex0</code> (2,697) or itself (1,083); 12,673 world textures under
+<code>worlds\</code> leave it empty. Only <code>.tex</code> and <code>.texa</code> files are bundle members (61,622 and 7,949
+container members, no higher tier in any container or manifest); the higher tiers are loose entries
+streamed after base data (see Resource streaming). For the Ranger's starting sword the diffuse ships at
+512 x 1024 (<code>.tex</code>, 11 levels), 1024 x 2048 (<code>.tex0</code>, 3 levels) and 2048 x 4096 (<code>.texuhd</code>, 1 level).</p>
+<p><strong>Texture arrays</strong> (<code>TEXA</code> v1, 1,946 files: <code>.texa</code>, <code>.texa0</code>, <code>.texauhd</code>) carry a header, their own
+path and the source path of each slice, then a DX10 DDS whose array size is the slice count, slices
+stored one after another with full mip chains. In a measured area of Cirith Ungol they textured about
+90% of the static world's triangles (see World).</p>
+<h2 id="meshes-mmsh-v17">Meshes (<code>MMSH</code> v17)</h2>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x00</td>
+<td>char[4]</td>
+<td><code>MMSH</code></td>
+</tr>
+<tr>
+<td>0x04</td>
+<td>u32</td>
+<td>version, 17</td>
+</tr>
+<tr>
+<td>0x08</td>
+<td>u32</td>
+<td>bytes from 0x14 to the descriptor block</td>
+</tr>
+<tr>
+<td>0x0C</td>
+<td>u32</td>
+<td>descriptor block size</td>
+</tr>
+<tr>
+<td>0x10</td>
+<td>u32</td>
+<td>4 + all buffer bytes</td>
+</tr>
+<tr>
+<td>0x14</td>
+<td>u32</td>
+<td>0xEBAEC3FA</td>
+</tr>
+<tr>
+<td>0x18</td>
+<td>u32</td>
+<td>object record count <code>N1</code></td>
+</tr>
+<tr>
+<td>0x1C</td>
+<td>u32</td>
+<td>arena count <code>N2</code></td>
+</tr>
+<tr>
+<td>0x20</td>
+<td>u32 x N1, i32 x N1</td>
+<td>per object record: flags, and its arena (-1 = not drawn)</td>
+</tr>
+<tr>
+<td>then</td>
+<td>u32 x N2 three times</td>
+<td>per arena: vertex bytes, index bytes, palette bytes</td>
+</tr>
+<tr>
+<td>then</td>
+<td></td>
+<td>descriptor block, starting with 0x1A1541BC</td>
+</tr>
+<tr>
+<td>then</td>
+<td>u32</td>
+<td>0x95DBDB69</td>
+</tr>
+<tr>
+<td>then</td>
+<td></td>
+<td>the arenas' vertex, index and palette bytes</td>
+</tr>
+</tbody>
+</table>
+<p>All 711 loose meshes follow this exactly: the arena sizes add up to the rest of the file and every arena
+index is in range or -1. The descriptor block holds, at <code>+0x2C</code>, the cull distance (500 on 376 meshes,
+400 on 153, 140 on 126) and at <code>+0x30</code> a bounding sphere (centre, radius); one 48-byte record per arena
+<code>{u32 vertex bytes, u32 index bytes, u32 palette bytes, u32 group count, u16[16] LOD triangle ladder}</code>,
+the ladder rising to the arena's triangle count (index bytes / 6: 16-bit indices), found for 4,377 of
+4,377 arenas; and the object records again as 16-byte <code>{flags, object id, arena, material slot}</code> entries,
+where an object's consecutive records are its LOD chain.</p>
+<p>An arena is drawn as one or more groups that share its buffers; a group's vertices are two streams:</p>
 <ul>
-<li><strong>Census</strong> (<code>havok_tag_census</code>, cached): every carrier parses EXACTLY, 0 parse failures, all
-  types consistent across files - standalone <code>.hkai</code> 923 files (185 types), EMBB <code>HKAI</code> sections
-  1,176 files, OBJR-entry physics 5,148 files (196 types), EMBB OBJR physics 4,808 files.</li>
-<li><strong>Navmeshes</strong> (<code>havok_navmesh</code>, navmesh.py): <code>hkaiNavMesh</code> v16 (208 B) faces / edges / vertices
-  -&gt; world-space geometry (cm) + .glb / .obj. Oracles on <code>worlds\retail\mtnpass\mtnpass.hkai</code>
-  (Patch_DLC5_LC, 37.5 MB): 713 navmeshes, <strong>713 structurally exact</strong>; main mesh 205,467 vertices,
-  273,917 edges, 49,774 faces (3-14 edges each), edge closure 210,057 / 210,057, opposite edges
-  symmetric 227,694 / 227,694 and collinear within 2.5e-15 m. The pieces are the dynamic navmesh
-  pieces of props (<code>Resou_09.W.dnmp</code>, <code>Store_34.NMPtop</code>).</li>
-<li><strong>Physics</strong> (<code>havok_collision</code>, physics.py): hknpCompoundShape roots; hknpCompressedMeshShape,
-  hknpConvexPolytopeShape (Box / Capsule), hknpSphereShape, hknpHeightFieldShape, hknpConvexShape
-  -&gt; triangle meshes in the shape frame (metres); instance transform <code>p' = R (p * scale) + t</code>.</li>
-<li>Other actions: <code>havok_tagfile</code>, <code>havok_type</code> (a class layout from the file), <code>havok_object</code> (an
-  object as JSON), <code>havok_sources</code>. Exports go to a scratch or project folder, never the install.</li>
-</ul><p class="muted">Generated from the SoW:CE knowledge base on 2026-10-28. Status words: IN-GAME CONFIRMED (seen in game), MEASURED (read and counted), LEAD, GUESS, BUILT NOT RUN.</p></main></div></body></html>
+<li>stream A, 16 bytes per vertex: half4 position with w = 1, ubyte4 weights summing to 255, ubyte4
+  indices into the group's palette;</li>
+<li>stream B, the rest of the stride (60, 64, 68, 72 ... bytes in all): the UV area, then normal, tangent
+  and binormal as float3 at <code>stride - 40</code>, <code>- 28</code>, <code>- 16</code>, and a 4-byte colour. UV0 is a float32 pair at
+  <code>+0</code> on stride 68 and <code>+8</code> on stride 72; one LOD chain can mix strides.</li>
+</ul>
+<p>Weights are stored in BGRA order against RGBA indices: the weight of index slot k is byte
+<code>(2, 1, 0, 3)[k]</code>. A palette byte indexes the skeleton's name-table order, not its bind order.</p>
+<p><strong>Shipped weapons and armour.</strong> The Numenorean sword (<code>player_numenoreanswordt1.mesh</code>) has its grip
+at the origin, the blade along +Y, width along Z and thickness along X (bounds X +-4.35, Y -34.9 to
+102.1, Z +-7.74 cm), 810 vertices and 1,320 triangles on one bone <code>Twitch</code>, stride 64, cull distance
+140; blades are about four times thicker than real ones (9.23 x 2.30 cm at y = 16). Tangents run
+along +dP/du and binormals along +dP/dv (median 0.996 and 0.997 over 16 weapon and armour meshes).
+Player weapons mostly ship one LOD (57 of 93) with 1:2 textures (81 of 93) and 1,500 - 2,348 LOD0
+triangles; orc and olog weapons 1,334 - 1,996 LOD0 triangles with 1:1 textures (56 of 77). LOD chains
+follow two presets, 1 : 0.50 : 0.125 (a falchion: 2,000 / 1,000 / 250) and 1 : 0.7 : 0.4 : 0.2.
+Armour LOD0: helmets 1,661 - 2,857, chests 3,741 - 6,275, shoulder pairs 2,551 - 4,158 (both shoulders
+in one skinned mesh, vertex alpha 16 on the left and 64 on the right), legs 1,996 - 2,573.</p>
+<h2 id="skeletons-skel-v17">Skeletons (<code>SKEL</code> v17)</h2>
+<pre><code>0x00  'SKEL'
+0x04  u32 x 16: [0] version 17, [1] header size 64, [2] string blob size, [3] string count
+      (= [6] + [7]), [4] bone count, [5] bone bytes (= 37 x [4]), [6] .anix library count,
+      [7] mesh-part count, [8] socket count, [9] bone count again
+0x44  bounds: f32 radius, f32 min[3], f32 max[3]
+0x60  mesh parts, each u32 LOD count + 14-byte LOD entries
+      0xDCDCFF00, string blob (offset 0 = empty string)
+      bones, 37 bytes each, depth-first: {u32 name offset, u8 deform, f32 position[3],
+      f32 rotation[4] (x, y, z, w), u32 child count}
+      masks {u32 name, u32 bone count, u32, u8 value per bone}, sockets {u32 bone, u32 name,
+      f32 rotation[4], f32 position[3], f32 scale}
+      0xDCDCFF01 string offsets (.anix libraries, then part names), 0xDCDCFF02 one flag per
+      library, 0xDCDCFF03 one byte per bone, 0xDCDCFF04 tail (0xDCDCFF99 skeleton physics,
+      optional Havok cloth)
+</code></pre>
+<p>All 973 loose skeletons satisfy the header identities and carry the five markers in order; their
+73,958 bones all hold unit quaternions. The largest has 241 bones; the orc base rig
+(<code>orcs\base\orc_base.skel</code>) has 100, the player's 128, a Gondorian's 95 and the olog's 89. Vertex
+palettes and the live pose arrays index bones in the skeleton's name-table order, not in the
+depth-first record order.</p>
+<h2 id="string-tables-skdb-v9-strdb">String tables (<code>SKDB</code> v9, <code>.strdb</code>)</h2>
+<pre><code>0x00  'SKDB' | u32 9 | u32 header size 0x1C | u32 key count | u32 0 | u32 text units | u32 0
+0x1C  key count x {u32 key hash, u32 text offset}, strictly ascending by hash
+then  UTF-16LE text, NUL-terminated strings, exactly `text units` code units to the end of the file
+</code></pre>
+<p>140 of 140 shipped tables follow this (version, header size, strictly ascending keys, offsets in range,
+text ending at the file's end). Each language folder ships <code>string.strdb</code> and <code>string_uwp.strdb</code>; the
+English table has 68,547 keys. A key is <code>StringHash</code> of the key name and an offset counts UTF-16 units:
+<code>UI_1Sword_Starting_N</code> (0xDCDB4713) reads "Urfael". Several keys can share one string.</p>
+<h2 id="coverage-on-the-shipped-files">Coverage on the shipped files</h2>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Parsed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LTAR archives / records</td>
+<td>76 / 76 archives, 488,752 records, 16,302 folders; first chunk of every entry decoded</td>
+</tr>
+<tr>
+<td>names against content</td>
+<td>482,736 / 482,736 typed entries</td>
+</tr>
+<tr>
+<td>path indexes</td>
+<td>37 archives, 73,038 / 73,038 rows hash-exact</td>
+</tr>
+<tr>
+<td>BNDL</td>
+<td>225,338 / 225,338</td>
+</tr>
+<tr>
+<td>EMBB headers / chains</td>
+<td>190,407 / 190,407 headers; 780 / 780 sampled chains exact (319 containers over 64 MB not walked)</td>
+</tr>
+<tr>
+<td>manifest mirrors container</td>
+<td>186,478 / 190,407 (the rest list members the container lacks)</td>
+</tr>
+<tr>
+<td>TEXR</td>
+<td>38,381 / 38,381 headers</td>
+</tr>
+<tr>
+<td>TEXA</td>
+<td>1,946 / 1,946 version 1</td>
+</tr>
+<tr>
+<td>MMSH</td>
+<td>711 / 711 headers; 4,377 / 4,377 arena records</td>
+</tr>
+<tr>
+<td>SKEL</td>
+<td>973 / 973 headers; 73,958 bones</td>
+</tr>
+<tr>
+<td>SKDB</td>
+<td>140 / 140</td>
+</tr>
+</tbody>
+</table>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>What the record bytes 1 and 9 encode beyond selecting the chunked reader, and what the archive header
+  flags at 0x14 / 0x18 / 0x1C switch: every shipped archive has the same values, so only the code that
+  reads <code>archive+0x28..+0x2A</code> and the size words' top bytes can tell.</li>
+<li>Which Oodle decoder the <code>8C 02</code> chunks use; checking the decoder type each chunk reports would
+  settle it.</li>
+<li>What the engine looks up in the hash -&gt; path table besides copying it to the load stage; the
+  callers of the merged table at <code>fs+0x80</code> are not traced.</li>
+<li>Whether a loose member always replaces a container section, or only when its archive is above the
+  container's: the measured Desert case has the loose copy higher. A bundle whose only loose member
+  sits below its container would settle it.</li>
+<li>Whether the engine reads more than one copy of <code>database\game\game.gamedb</code>; the GameDB loader's use
+  of the archives would settle it.</li>
+<li>How <code>Blade.arch06</code> and <code>Lithlad.arch06</code> are used: neither is in the config list or the live mount
+  vector; the third caller of <code>Mount</code>, vt_0x22BF9C8 vf2, is the place to look.</li>
+<li>Whether the folder binary search can miss a folder in the seven archives whose folder order differs
+  from plain case-insensitive order (the compare length used by 0x3DDB90 is not traced).</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
