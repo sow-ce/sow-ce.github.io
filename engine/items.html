@@ -246,11 +246,20 @@ Combat/Buffs/Procs/Definitions: Chance, Predicate, ResourceGain, Buff, MustBeDis
 <p><code>_Base_Prop_</code> affixes are always on (<code>_SetProp_</code> affixes need the set's pieces). Across the 752 area
 ticks the radius ranges from 0 to 1,000,000 (median 550; 20,000 is the shipped "whole arena" value).
 <code>Combat/AOE.Alignment</code> decides who is damaged (<code>*_DamageAll</code> includes followers).</p>
+<p>An affix's <code>Buff</code> and <code>Proc</code> are read only when its item is equipped or a gem is socketed: the field
+bindings list three readers, all on those paths - 0x40136C (log tag <code>[COMBAT|BUFF]</code>; it also applies the
+item's <code>ActiveBuffData</code>, <code>ActiveVariableMod</code>, <code>ActiveMaterialOverrides</code> and <code>AppearanceTagsOnEquip</code>),
+called from the equip paths 0x4010D8 and 0x1BF2ED8 and reading the affix through 0x1BFBC50, the
+gem-socketing path 0x1BFBCB8, and 0x1C7FCD8, reached from the same equip path (0x4010D8 -&gt; 0x1C68B58 -&gt;
+0x1C7FC04). A change to an affix's <code>Buff</code> or <code>Proc</code> record therefore
+takes effect at the next equip, not at the next event.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>Whether a held <code>Buff</code> is aggregated onto the player when the item is equipped (so that changing an
-  affix's <code>Buff</code> later has no effect) while a <code>Proc</code> is looked up at each event.</li>
-<li>Whether an area tick whose <code>TickDelay</code> exceeds its <code>Timer</code> can ever fire.</li>
+<li>Whether an area tick whose <code>TickDelay</code> exceeds its <code>Timer</code> can ever fire. The tick loop 0x4E9D28 fires
+  when the area's tick timer (<code>+0x150</code>: <code>{clock, u32 end in ms}</code>) has expired and re-arms it with
+  <code>TickDelay</code> (0x4EA90C: end = now + seconds x 1000); a timer without a clock counts as expired
+  (0x4E9E98), so if the timer starts unarmed the first tick fires at once and such an area ticks exactly
+  once. How <code>+0x150</code> is armed at creation is not traced.</li>
 <li>What the four records of the inventory's last slot entries are on a finished save (ids one above the
   highest item).</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
