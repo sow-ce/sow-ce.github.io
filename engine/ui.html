@@ -1046,6 +1046,12 @@ hierarchy menu's tutorial manager (<code>HierarchyMenuTutorialMgr.cpp</code>), a
 <li>Is <code>CameraOffsetRange</code> the yaw and pitch freedom (in degrees) of an orbit key, and what values do the
   overview's two keys carry? Decoding the shared float-pool pairs of keys 340 and 341 would settle it.</li>
 <li>Does anything consume the <code>DebugMenuActivate1-4</code> command IDs? No consumer of those IDs was found.</li>
-<li>Which code selects the <code>Interface/LoadingScreen</code> record for a given load.</li>
+<li>Which code selects the <code>Interface/LoadingScreen</code> record for a given load. Data names few of them:
+  no shipped script names a loading screen (0 of 2,562 script sources), and the fields that can link
+  one are <code>GameModes.InitialLoadingScreen</code> (8 of 13 game modes name <code>Intro1</code>, one
+  <code>DLC3_FastTravel_FromUI</code>), <code>Presentation/Elements.LoadingScreen</code> (set on 0 of 3,000 elements),
+  <code>Regions/Region.ExitOnlineModeLoadingScreenOverride</code> (0 of 19 regions) and
+  <code>Faction/MoneywallSetup/UI.LoadingScreen</code>. The per-region fast-travel screens
+  (<code>FastTravel_DesertLoadScreen</code> ...) are therefore chosen in code.</li>
 <li>Where the viewed-tutorial list is stored and whether it is saved with the game or the profile.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
