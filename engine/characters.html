@@ -313,7 +313,253 @@ alpha floor, opacity, opacity minimum; <code>cb3[12].x</code> bloom scale). Reve
 Arm - 1) / W) x (1 - Dissolve) with W the reveal width; alpha is roughly fresnel x reveal x
 <code>k_vObjectColor.w</code> x opacity x diffuse alpha. <code>k_vObjectColor</code> is a global shader-constant object
 (0x2A39FA0, value at <code>+0x40</code>) filled per draw (0x254B80) from a packed colour at draw item <code>+0x4C</code>.</p>
+<h2 id="birds-and-other-flying-creatures">Birds and other flying creatures</h2>
+<p>Crows, bats, seagulls and the desert raptors are not characters. Each is an <code>AvianObject</code> (vt_0x1DBBD30,
+0x518 bytes, derived from the generic game object, without a character controller, behaviour graph or
+inventory) spawned by a placed world object, an <code>AvianMarker</code> (vt_0x1FA4CD0). A marker owns at most one bird.</p>
+<h3 id="definitions">Definitions</h3>
+<p><code>Avian/Definition</code> holds 14 species records: Crow, Crow_Eat, bat, bat_Day, bat_DaySleep, bat_AnyTime,
+Seagul, Seagull_Eat, raptor_Desert, raptor_Desert_Day, raptor_Desert_Night, raptor_Desert_Night_Clear,
+testing and testingBenchmark. A definition names the model (<code>Model.Cha_Crow</code>, <code>Cha_Bat</code>, <code>Cha_Seagull</code>,
+<code>Cha_RaptorDesert</code>), a scale range (crows 1.0-1.5, the others 0.9-1.1), a weather / time-of-day predicate
+(<code>Weather/Predicates/Forecast.AnyTimeNoRain</code>, <code>NightNoRain</code>, <code>DayNoWeather</code> ...), a combat tree
+(<code>Hunting_Crow</code>, <code>Hunting_Bat</code>, <code>Hunting_Seagull</code>, <code>Hunting_Avian</code>), a render-ID setup, seven animation
+slots each with a weighted variant list (perched, eating, take-off, bank left, bank right, flap, landing),
+perch and flight durations (average and variance), take-off height and distance, climb, descent, turn and
+lateral rates, a death effect, a respawn time and the group-sound settings. A crow perches 9 +/- 6 s and
+flies 60 +/- 11 s; bats fly 900 s; every species respawns after 33-120 s.</p>
+<h3 id="the-manager">The manager</h3>
+<p><code>CAvianMgr</code> is a singleton at <code>[base+0x2A86878]</code> (constructor 0x19C7D8C, destructor 0x19C7E00):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>the markers (<code>{begin, end, u32 capacity, u8 owned}</code>)</td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td>the live birds</td>
+</tr>
+<tr>
+<td>+0x30</td>
+<td>group-sound entries (no vtable; <code>+0x00</code> = the definition)</td>
+</tr>
+<tr>
+<td>+0x48</td>
+<td>enabled</td>
+</tr>
+<tr>
+<td>+0x4C</td>
+<td>the sweep cursor</td>
+</tr>
+</tbody>
+</table>
+<p><code>System.SetEnabledAvians</code> (0x1BAAB9C) writes <code>+0x48</code>; disabling also removes every marker's bird
+(0x575F98). Each frame on the main thread the client shell's update (0x1A864C) calls 0x441A10: the marker
+sweep 0x4418A8, then the group sounds 0x441A3C. The sweep is round-robin: it processes
+<code>max(1, markers / 10)</code> markers per frame from the cursor (the divisor is the static 0x267355C), so every
+marker is visited about every ten frames.</p>
+<h3 id="markers">Markers</h3>
+<p>A marker reads its world properties when loaded (0x1A41DF4; defaults in brackets, distances in cm):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Property</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x120</td>
+<td>position</td>
+</tr>
+<tr>
+<td>+0x140</td>
+<td><code>AvianDef</code>, the definition record</td>
+</tr>
+<tr>
+<td>+0x148</td>
+<td>StartEnabled</td>
+</tr>
+<tr>
+<td>+0x14C / +0x150</td>
+<td>ActivationRadius [2000] and its square</td>
+</tr>
+<tr>
+<td>+0x154 / +0x158</td>
+<td>DeactivateRadius [2500; raised to 1.1 x ActivationRadius when not larger] and its square</td>
+</tr>
+<tr>
+<td>+0x15C</td>
+<td>ActivationPercent [100]</td>
+</tr>
+<tr>
+<td>+0x160 / +0x161 / +0x162</td>
+<td>Unique, AlwaysFlying, Eating</td>
+</tr>
+<tr>
+<td>+0x164 / +0x168 / +0x16C</td>
+<td>the script event ids <code>AvianSpawnScript</code>, <code>AvianKilledScript</code>, <code>AvianOutOfRangeScript</code> (P919 of the names)</td>
+</tr>
+<tr>
+<td>+0x170 / +0x174</td>
+<td>FearDistance [300] and its square</td>
+</tr>
+<tr>
+<td>+0x178 / +0x17C / +0x180</td>
+<td>FlightBottom [100], FlightTop [200], FlightRadius [100]</td>
+</tr>
+<tr>
+<td>+0x188</td>
+<td>the definition's render-ID setup</td>
+</tr>
+<tr>
+<td>+0x198 / +0x19C</td>
+<td>an orbit centre is set / its position, copied from the object named by <code>OrbitMarker</code> (0x1A41C34)</td>
+</tr>
+<tr>
+<td>+0x1A8 / +0x1AC</td>
+<td>FlyOff [false], FlyOffRange [4000]</td>
+</tr>
+<tr>
+<td>+0x1D0</td>
+<td>the bird</td>
+</tr>
+<tr>
+<td>+0x1D8</td>
+<td>the respawn time (ms)</td>
+</tr>
+<tr>
+<td>+0x1DD / +0x1DE</td>
+<td>activated / the spawn roll passed</td>
+</tr>
+</tbody>
+</table>
+<p>Per marker the sweep calls 0x43AE38 with the player's position. A disabled marker, or one whose definition's
+weather predicate fails against <code>[GameManager+0x6D98]</code>, loses its bird. Distances are horizontal (X and Z)
+and measured to the player only. On entering the activation radius the marker rolls once:
+<code>random(0, 99.9) &lt; ActivationPercent</code>; on success it spawns (0x1A41FFC: the definition's model, a scale
+drawn from the scale range and stored at the bird's <code>+0xC8</code>, class <code>AvianObject</code>, created through the object
+server). While activated, a marker with no bird respawns once the engine clock passes <code>+0x1D8</code>. Beyond the
+deactivation radius the bird is removed and the out-of-range script event fires. When a bird is destroyed
+the marker sets <code>+0x1D8</code> = now + RespawnTime x 1000 (0x575ED4; 5 s when the field is absent); a respawn time
+of 0 or less clears the roll instead, so nothing returns until the player leaves and comes back.</p>
+<p>In a live desert region 301 markers (raptor_Desert_Day 157, raptor_Desert 63, raptor_Desert_Night 57,
+raptor_Desert_Night_Clear 24) used activation radii of 120-130 m, a deactivation radius of 140 m, fear
+distances of 30-40 m and activation chances of 25, 38 and 40 percent; 250 were AlwaysFlying. Of 28 markers
+whose radius covered the player, 21 were activated and 6 had passed the roll, giving 6 birds, each linked
+both ways (<code>marker+0x1D0</code> and <code>bird+0x390</code>), flying 7-26 m from its marker at 0.5-6 m above it, with scales
+0.92-1.07.</p>
+<h3 id="the-bird">The bird</h3>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0xAC / +0xB8 / +0xC8</td>
+<td>position, rotation, scale</td>
+</tr>
+<tr>
+<td>+0x120</td>
+<td>the hittable interface (vt_0x1DBBBD8)</td>
+</tr>
+<tr>
+<td>+0x390 / +0x398</td>
+<td>the marker / the definition</td>
+</tr>
+<tr>
+<td>+0x40C</td>
+<td>the player is inside the marker's fear distance</td>
+</tr>
+<tr>
+<td>+0x410</td>
+<td>flight state</td>
+</tr>
+<tr>
+<td>+0x4D0</td>
+<td>a combat object of the definition's <code>Hunting_*</code> character type</td>
+</tr>
+<tr>
+<td>+0x500 / +0x508</td>
+<td>a pending attack and its tree node</td>
+</tr>
+<tr>
+<td>+0x510</td>
+<td>dead</td>
+</tr>
+</tbody>
+</table>
+<p>The update (vf18, 0xEF820) advances the state machine at <code>+0x410</code>:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Function</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0 perched</td>
+<td>0x1A5B6B8</td>
+<td>perched (or eating) animations; leaves after the perch time or when the player comes within the fear distance of the marker</td>
+</tr>
+<tr>
+<td>1 take-off</td>
+<td>0x1A5B8A0</td>
+<td>take-off animation and climb from the take-off height and distance</td>
+</tr>
+<tr>
+<td>2 flying</td>
+<td>0xEFC48, steering 0xEFD10</td>
+<td>flies for the flight time around the marker or its orbit centre above FlightBottom; turns pick the bank animations, straight flight the flap animations (threshold pi/16); a FlyOff marker's bird is destroyed</td>
+</tr>
+<tr>
+<td>3 descending</td>
+<td>0x1A5B3E8</td>
+<td>landing animation down to the landing height; fear sends it back to 2</td>
+</tr>
+<tr>
+<td>4 landing</td>
+<td>0x1A5B508</td>
+<td>touchdown, then 0 (or 2 on fear)</td>
+</tr>
+<tr>
+<td>5 attacking</td>
+<td>0x1A5B390</td>
+<td>plays a pending attack</td>
+</tr>
+</tbody>
+</table>
+<p><code>AvianMarker.Script_StartAttack</code> (0x1A41FBC -&gt; 0x1A5B160) picks an attack from the bird's combat tree for a
+target and enters state 5. The four bird trees in the shipped database have no attack nodes (132 of 281
+combat trees do), so from shipped data the call finds no attack.</p>
+<p><strong>Killing a bird.</strong> A hit goes through the hittable interface's slot 8 (0x1A5AA58), which runs the same damage
+evaluation as for characters (0x2E3B6C) and kills only when the damage is greater than 0. Death (0x1A5B01C)
+sets <code>+0x510</code>, fires the marker's <code>AvianKilledScript</code> event, plays the definition's death effect, posts combat
+event 0xB and destroys the object; the hit routine also calls the hit-counter increment 0x2DC668. The ranged
+targeting predicate <code>WraithRanged_Targeting</code> lists all six <code>Hunting_*</code> character types (avian, bat, crow,
+rat, seagull, spider).</p>
+<p><strong>Group sounds.</strong> 0x441A3C counts the birds of each definition within <code>GroupSoundDistance</code>, perched and in
+flight separately, and picks the none / low / high loop from the <code>LowCount</code> / <code>HighCount</code> thresholds.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
 <li><code>Presentation/Settings.HideCharacterRadius</code> and its sphere query 0xF4DD50.</li>
+<li>The role of the registered class name <code>AvianOrbitMarker</code>.</li>
+<li>Whether FlightRadius is the radius of a circling path or a wander bound, and how FlightTop enters the
+  flight target (the steering 0xEFD10 is only partly decoded).</li>
+<li>The fields at <code>+0x30</code> to <code>+0x3C</code> of a group-sound entry.</li>
+<li>Whether a later database layer gives the bird combat trees attacks, which <code>Script_StartAttack</code> needs.</li>
+<li>The class at vt_0x1FA4E78, which reads the neighbouring properties SpawnCount, SpawnPoint, SpawnOnNavMesh,
+  NightTime, RespawnDelay and RespawnWaitForBubbleReset.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
