@@ -568,7 +568,7 @@ armies through their own <code>DLC3_&lt;region&gt;_Row_*</code> records), the De
 </tr>
 <tr>
 <td>+0x20</td>
-<td>u32 seat count (the seat function checks a column against it)</td>
+<td>u32 seat count: the record's <code>ColumnMax</code> (208 of 208 live rows across the 38 armies, with the seats vector the same length)</td>
 </tr>
 <tr>
 <td>+0x24</td>
@@ -1741,7 +1741,6 @@ eliminated: the henchmen link effects 0x18316FC / 0x183191C skip such a member.<
   both in the InvasionGame pool, and 0 on 527 of 527 in another.</li>
 <li>What clears flag bit 16, which the un-death sets, and what reads flag bit 35. Neither has a resolved
   getter call, and 60 of the getter's 125 calls pass the bit indirectly.</li>
-<li>Whether the runtime row's seat count at <code>+0x20</code> is always the record's <code>ColumnMax</code>.</li>
 <li>Whether the role counter at <code>FS+0xB0</code> is the number of times the role was given (it would then
   lower the role's weight by <code>WeightReductionPerUse</code> per use, as the scar table does by its use
   count); the code that reads it is not traced.</li>
