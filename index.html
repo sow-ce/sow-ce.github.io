@@ -370,7 +370,7 @@ section[id]{scroll-margin-top:72px}
       <h2>How to install</h2>
     </header>
     <ol class="howto">
-      <li>Open the <a href="download/">download page</a>, accept the terms, tick the checklist and download the setup, <code data-slot="file-name"></code><span data-slot="file-size-text"></span>.</li>
+      <li>Open the <a href="download/">download page</a>, read the risks, tick the checklist and download the setup, <code data-slot="file-name"></code><span data-slot="file-size-text"></span>.</li>
       <li>Close the game, then run the setup. It finds your Steam install on its own.</li>
       <li>Click Install, start the game from Steam, and press TAB.</li>
     </ol>
@@ -551,7 +551,7 @@ section[id]{scroll-margin-top:72px}
     fill("ver", esc(verText(r)));
     fill("dl-sm", dlButton(st, "sm"));
     fill("dl-lg", dlButton(st, "lg"));
-    fill("dl-note", '<p class="dl-note">You\'ll accept the <a href="download/#terms">terms</a> and tick a short checklist before the download unlocks.</p>');
+    fill("dl-note", '<p class="dl-note">You\'ll read the <a href="download/#disclaimer">risks</a> and tick a short checklist before the download unlocks.</p>');
     var meta = [r.date ? "Released " + fmtDate(r.date) : "", r.size, "Steam, version 1.21"].filter(Boolean);
     fill("file-meta", meta.map(function (x) { return "<span>" + esc(x) + "</span>"; }).join(""));
     fill("notice", st.notice.trim() ? '<p class="notice">' + esc(st.notice.trim()) + "</p>" : "");
