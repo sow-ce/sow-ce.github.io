@@ -330,12 +330,22 @@ its console commands <code>NemesisBundleMgr.PrintMemory</code> and <code>PrintDy
 0x1B42728, run once from the database setup, sets the budget <code>+0x00</code> to
 <code>Faction/Global.NemsisBundleMemoryLimit</code> x 10 (320 x 10 = 3,200) and builds one object (vt_0x1FF6B90,
 constructor 0x1C52B10) for each of the 1,484 <code>DynamicResource/BundleDefinition</code> records, kept in a
-table at <code>+0x08</code> of 16-byte <code>{record, object}</code> entries. An object charges a fixed cost, <code>+0x3C</code>, taken
-from its bundle type's <code>Bundles/Types.MaxMemoryPC</code> and not from the bundle's real size: 10 for
-<code>Flair_1MB</code>, 20 for <code>Flair_2MB</code> and 30 for <code>Flair_3MB</code>, the names being the console figures. All
-1,484 definitions together cost 21,835, so about a seventh of them fit at once.</p>
+table at <code>+0x08</code> of 16-byte <code>{record, object}</code> entries. An object's cost <code>+0x3C</code> starts as an estimate,
+its bundle type's <code>Bundles/Types.MaxMemoryPC</code> (10 for <code>Flair_1MB</code>, 20 for <code>Flair_2MB</code>, 30 for
+<code>Flair_3MB</code>, the names being the console figures). When the load finishes, 0x3FFA24 replaces it once
+(latch <code>+0x58</code>) with the real size, bytes / 2^20, sets state <code>+0x48</code> to 2 and tells the requesters.
+The estimates are generous: resident <code>Flair_1MB</code> bundles held a median of 0.40 MB (124 bundles, largest
+1.12) and <code>Flair_2MB</code> a median of 0.018 MB (20). In one loaded Lithlad 157 bundles were resident at a
+total cost of 66.3 of the 3,200, so the budget was far from limiting.</p>
+<p>Each object's priority <code>+0x38</code> is rebuilt from its requesters by 0x3FFB10. Each request carries five
+bytes at <code>+0x50</code>: bytes 0, 1, 2 and 4 are flags, merged by OR, and byte 3 is a number, merged by maximum
+(0x3FFD44). The score is the highest <code>DynamicBundleLoadPriority</code> among the requesters plus that number,
++1,000 for byte 0 (when the bundle has a handle), +10,000 for byte 1, +500 for byte 2 and +1,000 for byte
+4. It is then scaled by the requester count: x1.25 at exactly 4, x1.5 at 6 or 7, x1.75 above 8, and
+unchanged at 5 and 8. Recomputed from the live requesters, this formula gives the value in <code>+0x38</code> for
+157 of 157 resident bundles (requester counts 1 to 49).</p>
 <p>Each frame 0x614438 re-evaluates the requests when they have changed (<code>+0x50</code>): it sorts them by
-the object's <code>+0x38</code>, highest first, and adds up their costs. Requests within the budget are loaded
+<code>+0x38</code>, highest first, and adds up their costs. Requests within the budget are loaded
 (0x614CB0); the rest go on a local list, and for each of those 0x1B427E4 walks the armour's and then
 the weapon's <code>OutOfMemoryBackups</code> and takes the first backup whose bundles are all resident already
 (0x1B424BC: for each bundle with an object, 0x614D3C requires a handle, its counters <code>+0x4C</code> and
