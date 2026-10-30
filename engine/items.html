@@ -246,6 +246,14 @@ Combat/Buffs/Procs/Definitions: Chance, Predicate, ResourceGain, Buff, MustBeDis
 <p><code>_Base_Prop_</code> affixes are always on (<code>_SetProp_</code> affixes need the set's pieces). Across the 752 area
 ticks the radius ranges from 0 to 1,000,000 (median 550; 20,000 is the shipped "whole arena" value).
 <code>Combat/AOE.Alignment</code> decides who is damaged (<code>*_DamageAll</code> includes followers).</p>
+<p><strong>How an area ticks.</strong> <code>Combat/AOE.Tick</code> is a list of 1 to 8 <code>Combat/AOE/Tick</code> records (1 on 344 of
+627 areas, 2 on 132, up to 8 on 7), fired in order: the tick loop 0x4E9D28 keeps the next one's index
+at <code>+0x18C</code> and stops after the last. It fires when the area's tick timer (<code>+0x150</code>, <code>{clock, u32
+end in ms}</code>) has expired and re-arms it with <code>TickDelay</code> seconds (0x4EA90C: end = now + seconds x
+1000); a timer without a clock counts as expired (0x4E9E98). The area's creation (0x15B994, "%s
+created AOE: %s") leaves the tick timer unarmed, so the first tick fires on the area's first update,
+and arms only the length timer <code>+0x178</code>, with <code>MaxAOELength</code> when that is above its threshold.
+<code>Timer</code> is an integer (1 on 583 areas, 2 on 41, 3 on 2, 4 on 1), not a duration.</p>
 <p>An affix's <code>Buff</code> and <code>Proc</code> are read only when its item is equipped or a gem is socketed: the field
 bindings list three readers, all on those paths - 0x40136C (log tag <code>[COMBAT|BUFF]</code>; it also applies the
 item's <code>ActiveBuffData</code>, <code>ActiveVariableMod</code>, <code>ActiveMaterialOverrides</code> and <code>AppearanceTagsOnEquip</code>),
@@ -255,11 +263,9 @@ gem-socketing path 0x1BFBCB8, and 0x1C7FCD8, reached from the same equip path (0
 takes effect at the next equip, not at the next event.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>Whether an area tick whose <code>TickDelay</code> exceeds its <code>Timer</code> can ever fire. The tick loop 0x4E9D28 fires
-  when the area's tick timer (<code>+0x150</code>: <code>{clock, u32 end in ms}</code>) has expired and re-arms it with
-  <code>TickDelay</code> (0x4EA90C: end = now + seconds x 1000); a timer without a clock counts as expired
-  (0x4E9E98), so if the timer starts unarmed the first tick fires at once and such an area ticks exactly
-  once. How <code>+0x150</code> is armed at creation is not traced.</li>
+<li>What the integer <code>Combat/AOE.Timer</code> controls (1 to 4; its relation to the length of the <code>Tick</code> list
+  varies: equal on 337 areas, smaller on 271, larger on 19), and whether an area whose <code>TickDelay</code>
+  is longer than its <code>MaxAOELength</code> gets past its first tick.</li>
 <li>What the four records of the inventory's last slot entries are on a finished save (ids one above the
   highest item).</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
