@@ -89,8 +89,9 @@ predicate's <code>IncludedTopMenuLayers</code> / <code>ExcludedTopMenuLayers</co
 <code>IncludedTopMenuLayerStates</code> / <code>ExcludedTopMenuLayerStates</code> with <code>[UIManager+0xF8]</code>.</p>
 <p><strong>There is no UI thread in a running game.</strong> The UI manager's constructor also creates a thread object
 named <code>UIThread</code> (0x1889460 -&gt; 0x193856C; vt_0x22F94B8 with the shared thread methods, vf8 the name,
-vf9 the stub 0x19385BC, vf10 a 0x4000-byte stack), but no thread of that name is among the game's
-named threads (see Threads and the frame). The UI's own console commands live in the source file
+vf9 the stub 0x19385BC, vf10 a 0x4000-byte stack), but it is never started: the shared thread start 0x529500 has 30
+call sites, and each starts another object (the named threads of Threads and the frame, a Bink worker, a
+queue worker and two event workers on static objects). The object sits at <code>UIManager+0x08</code>. The UI's own console commands live in the source file
 <code>CUIThread.cpp</code>. The UI's per-frame work shows on the main thread instead: the HUD's <code>CUIMgr::Render</code>
 (0x1AB28C) runs inside the main scene's render submission, and captured movie frames reach the render
 thread through the main thread's command ring (below).</p>
@@ -137,25 +138,25 @@ builds any record of <code>Interface/GFX/UI</code>.</p>
 <tbody>
 <tr>
 <td><code>NavMarkers</code></td>
-<td><code>_Structuresuiflash</code> primary 1</td>
+<td><code>_Structuresuiflash</code> primary 1 (<code>interface\flash\navmarkers.gfx</code>)</td>
 <td><code>interface\bundles\gfx\ingame.bndl</code>, <code>ingame_uifx</code>, <code>ingame_navmarkers</code>, <code>pc_alternatbuttonstyles</code></td>
 <td>yes (index 0)</td>
 </tr>
 <tr>
 <td><code>Player</code></td>
-<td>primary 2</td>
+<td>primary 2 (<code>interface\flash\sp.gfx</code>)</td>
 <td>the same four, plus five additional bundles (<code>worlduidata</code>, <code>ingame_tex</code>, <code>store_icon</code> ...)</td>
 <td>yes (index 1)</td>
 </tr>
 <tr>
 <td><code>MessageBox</code></td>
-<td>primary 4</td>
+<td>primary 4 (<code>interface\flash\messageboxes.gfx</code>)</td>
 <td><code>interface\bundles\gfx\ingame.bndl</code></td>
 <td>yes (index 2)</td>
 </tr>
 <tr>
 <td><code>PreLoad</code></td>
-<td>primary 3</td>
+<td>primary 3 (<code>interface\flash\preload.gfx</code>, the only layer with <code>BackgroundAlpha</code> 1)</td>
 <td>none</td>
 <td>no</td>
 </tr>
@@ -802,7 +803,8 @@ Nemesis system for intel levels).</p>
 </ul>
 <p>An orbit key (<code>_StructuresUIOrbitPointParams</code>) holds <code>fov</code>, <code>OrbitRadius</code> and <code>Roll</code> as plain floats of
 the key, and <code>CameraOffset</code>, <code>CameraOffsetRange</code> and <code>CameraAdjust</code> as shared float-pool pairs (type 7;
-see GameDB), plus a node offset (orbit and focal offsets with position and rotation tracking masks) and a
+see GameDB). <code>CameraOffsetRange</code> is the (yaw, pitch) freedom of the key in degrees: the overview's two keys
+340 and 341 carry (24, 12) at radius 1,025 and (16, 10) at radius 5,250, both with fov 25. A key also has a node offset (orbit and focal offsets with position and rotation tracking masks) and a
 <code>DepthOfField</code> link to <code>Client/DepthOfFieldSettings</code> (near and far in-focus and blurred distances, blur
 intensities). The reader 0x527A18 copies all of it into the camera when the state starts, so a key edited
 while its state runs takes effect the next time the state starts. <code>WorldMapCameraMode</code> is 4 on every
@@ -1033,18 +1035,15 @@ hierarchy menu's tutorial manager (<code>HierarchyMenuTutorialMgr.cpp</code>), a
 <code>HierarchyMenu.ResetTutorials</code> command.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>Is the <code>UIThread</code> object ever started, and under what condition? Nothing in the retail game's named
-  threads shows it.</li>
 <li>What class is <code>[UIManager+0x88]</code>, the owner of the debug-menu open byte? The UI manager's
   constructor 0x1889674 only zeroes the slot. In a running game the object starts with a heap pointer
   rather than a vtable and holds a run of text-style entries that name the font "Anonymous Pro" with
   sizes 45 and 100 (the name is not a literal in the executable, so it comes from data); the open
   byte sits at <code>+0x7AE</code>, near the object's end.</li>
-<li>Which movies the <code>_Structuresuiflash</code> primaries 1 to 4 name (the NavMarkers, Player, PreLoad and
-  MessageBox views), what the <code>PreLoad</code> view was for, and which movies hold the UI render list's mode 8
-  and 0x10 entries.</li>
-<li>Is <code>CameraOffsetRange</code> the yaw and pitch freedom (in degrees) of an orbit key, and what values do the
-  overview's two keys carry? Decoding the shared float-pool pairs of keys 340 and 341 would settle it.</li>
+<li>What the <code>PreLoad</code> view was for, whether its <code>preload.gfx</code> still ships (no archive entry has that
+  name and no interface bundle's manifest names it, but <code>ingame.bndl</code>'s manifest does not name
+  <code>sp.gfx</code> either, and that movie ships inside its container), and which movies hold the UI render
+  list's mode 8 and 0x10 entries.</li>
 <li>What consumes the <code>DebugMenuActivate1-4</code> command IDs (0xC8-0xCB). Data enables them: both
   <code>Profile/CommandSets</code> records <code>DebugMenuActivate_Hydra</code> (pushed at every game start) and
   <code>DebugMenuActivate_Menu</code> list all four in <code>EnableCommands</code>, next to the AI-info and FactionMember
