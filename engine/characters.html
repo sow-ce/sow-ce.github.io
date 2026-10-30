@@ -603,8 +603,9 @@ both ways (<code>marker+0x1D0</code> and <code>bird+0x390</code>), flying 7-26 m
 </tbody>
 </table>
 <p><code>AvianMarker.Script_StartAttack</code> (0x1A41FBC -&gt; 0x1A5B160) picks an attack from the bird's combat tree for a
-target and enters state 5. The four bird trees in the shipped database have no attack nodes (132 of 281
-combat trees do), so from shipped data the call finds no attack.</p>
+target and enters state 5. The four bird trees (<code>Hunting_Crow</code>, <code>_Avian</code>, <code>_Bat</code>, <code>_Seagull</code>) have no
+attack nodes in a running game's merged database (132 of 281 combat trees do), so the call finds no
+attack.</p>
 <p><strong>Killing a bird.</strong> A hit goes through the hittable interface's slot 8 (0x1A5AA58), which runs the same damage
 evaluation as for characters (0x2E3B6C) and kills only when the damage is greater than 0. Death (0x1A5B01C)
 sets <code>+0x510</code>, fires the marker's <code>AvianKilledScript</code> event, plays the definition's death effect, posts combat
@@ -620,7 +621,7 @@ flight separately, and picks the none / low / high loop from the <code>LowCount<
 <li>Whether FlightRadius is the radius of a circling path or a wander bound, and how FlightTop enters the
   flight target (the steering 0xEFD10 is only partly decoded).</li>
 <li>The fields at <code>+0x30</code> to <code>+0x3C</code> of a group-sound entry.</li>
-<li>Whether a later database layer gives the bird combat trees attacks, which <code>Script_StartAttack</code> needs.</li>
-<li>The class at vt_0x1FA4E78, which reads the neighbouring properties SpawnCount, SpawnPoint, SpawnOnNavMesh,
-  NightTime, RespawnDelay and RespawnWaitForBubbleReset.</li>
+<li>What <code>InventoryItemUISpawner</code> (vt_0x1FA4E78, 0x1A8 bytes, base <code>GameBase</code>, constructor 0x1A4258C) does
+  with the properties it reads: SpawnCount, SpawnPoint, SpawnOnNavMesh, NightTime, RespawnDelay and
+  RespawnWaitForBubbleReset.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
