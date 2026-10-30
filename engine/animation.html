@@ -229,8 +229,13 @@ characters on one graph share them, and a change to a <code>BlendState</code> re
 using that graph. In play the current state changes as characters move (60 kinds of transition in
 20 s on 80 characters: Idle -&gt; IdleToRun, IdleToRun -&gt; RunToIdle, Run -&gt; Stumble -&gt; Run, Idle -&gt;
 Wpn_Sheathe, Idle &lt;-&gt; AutoPicker_Fidget ...). <code>+0x11A8</code> is either null or equal to the current
-state (29,520 of 29,520 samples); <code>+0x11A0</code> is set only on the player (its second machine: button
-and stick states).</p>
+state (29,520 of 29,520 samples, and 35,882 of 35,882 in a second run); <code>+0x11A0</code> is set only on the
+player (its second machine: button and stick states). <code>+0x1198</code> is not a previous state: right after
+402 state changes it held the old state 0 times, the new state 334 times and was null 61 times. It
+is null on exactly the samples where <code>+0x11A8</code> is null, and otherwise equals the current state, except
+on the player, where it can hold the second machine's state: in 164 of 164 samples where it differed
+from the current state, the character was the player and the value equalled <code>+0x11A0</code> (for example
+<code>A_Button_JustPressed</code>). The null is passing: 41 of 55 characters showed both null and set within 40 s.</p>
 <p>The <code>AnimNodeLink</code>: <code>+0x98</code> the AnimationMgr, <code>+0xC8</code> the parsed name of a forced animation, <code>+0xF0</code>
 / <code>+0xF8</code> a <code>BlendState</code> pair (<code>+0xF0</code> equals <code>char+0x11A8</code>), <code>+0x230</code> a serial from the counter
 0x2702008, <code>+0x270</code> a shared pointer to the manager object. The AnimationMgr <code>[GM+0x6CB0]</code> has no
@@ -551,7 +556,7 @@ the source or the target with a delayed ragdoll (<code>StartWithDelayRagdollSour
   characters).</li>
 <li>Which graph node writes the trackers' time, and where the transition in progress and its blend
   time are held (not in the character's state slots or the link).</li>
-<li>The meaning of the state slots <code>+0x1198</code> and <code>+0x11A0</code>.</li>
+<li>What clears the state slots <code>+0x1198</code> and <code>+0x11A8</code> for a moment (43% of samples read null).</li>
 <li>The role of the AnimationMgr's 256-object pool.</li>
 <li>The hand-off from the pose output to skinning.</li>
 <li>Which names <code>AnimLink.PlayAnim</code> accepts (state names, clip names or both). The request builder
