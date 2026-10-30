@@ -78,6 +78,7 @@ code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril)}
 .hero-center > *{max-width:100%}
 h1{font:700 clamp(2.7rem,6.6vw,5.4rem)/1.02 var(--f-display);letter-spacing:-.01em;margin-top:18px;text-shadow:0 2px 28px rgba(10,10,14,.85)}
 h1 span{display:block;font-style:italic;font-weight:600;color:var(--accent-hi);font-size:.6em;letter-spacing:.01em;margin-top:.2em}
+h1 span span{display:inline;font-size:1em;margin:0}
 .lead{font-size:clamp(17px,1.5vw,19px);color:var(--dim);max-width:36em;margin-top:22px;text-shadow:0 1px 14px rgba(10,10,14,.9)}
 .cta-row{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:34px}
 .dl-note{margin-top:12px;color:var(--faint);font-size:14px}
@@ -373,7 +374,7 @@ section[id]{scroll-margin-top:72px}
   <div class="dl-box">
     <a class="btn btn-primary btn-lg is-off" id="dl" aria-disabled="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 20h16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Download mod menu</span></a>
     <p class="dl-status" id="dl-status" role="status" aria-live="polite">Accept the terms first.</p>
-    <p class="dl-file">SoW:CE v3.0 &middot; SoWCE_Setup_20261018.exe &middot; 77.6 MB<br>SHA-256 00334da685a3bf64d028adf13cd096ebe811290ea2782f38131de01d51068371</p>
+    <p class="dl-file">SoW:CE (BETA) &middot; SoWCE_Setup_20261018.exe &middot; 77.6 MB<br>SHA-256 00334da685a3bf64d028adf13cd096ebe811290ea2782f38131de01d51068371</p>
     <p class="dl-next">After the download, follow the <a href="../#install">install steps</a>.</p>
   </div>
 </main>
@@ -382,7 +383,7 @@ section[id]{scroll-margin-top:72px}
   <div class="wrap foot-grid">
     <div>
       <p class="foot-brand"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11" fill="none" stroke="url(#mini-metal)" stroke-width="6.5"/><circle cx="16" cy="16" r="11" fill="none" stroke="#66bff2" stroke-opacity=".7" stroke-width="1.6" stroke-dasharray="2.4 2.4"/></svg>SoW:CE</p>
-      <p>Shadow of War: Community Edition. Current version v3.0.</p>
+      <p>Shadow of War: Community Edition (BETA)</p>
     </div>
     <nav class="foot-links" aria-label="More">
       <a href="../">Home</a>
@@ -397,7 +398,7 @@ section[id]{scroll-margin-top:72px}
 <script>
 (function () {
   "use strict";
-  var LINK = "https://github.com/sow-ce/sow-ce.github.io/releases/download/v3.0/SoWCE_Setup_20261018.exe";
+  var LINK = "https://github.com/sow-ce/sow-ce.github.io/releases/download/beta/SoWCE_Setup_20261018.exe";
   var terms = document.getElementById("ok-terms");
   var group = document.getElementById("prereqs");
   var boxes = Array.prototype.slice.call(group.querySelectorAll('input[type="checkbox"]'));
