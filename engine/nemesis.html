@@ -98,7 +98,7 @@ the ambush update 0x6DDBA8.</p>
 | +0x1B8 | the current region's army (a <code>Faction/Definition</code> record) |
 | +0x1F0 | events queued while another is being processed; +0x208 is the busy flag |
 | +0x218 | u16 the turn counter (below) |
-| +0x21C | a counter incremented by every cheat-death mark |</p>
+| +0x21C | the world's running total of resurrections: incremented with the member's <code>FM+0x500</code> at every cheat-death mark, and read when the odds table is chosen (see "Cheat death and the return") |</p>
 <h3 id="pools">Pools</h3>
 <p>Members live in pools, one per game mode, not per region: the MainGame pool holds every captain of
 every region. A pool entry's first qword is its <code>Faction/Pool</code> record; the pool object starts at
@@ -1506,7 +1506,62 @@ in the world), SetDead, the writer 0x1BC5044 and the FactionMember document writ
 <p><strong>The data.</strong> <code>Faction/Resurrection</code> has 34 death types. Each names an <code>OddsTable</code>
 (<code>Faction/Resurrection/Tables</code>: Base, Bleedout, BodyCleaved_Uruk, Death_from_Fall, HeadRemoved_Olog,
 over 14 <code>Faction/Resurrection/Chance</code> records), a <code>ScarType</code>, a <code>SecondScarChance</code> and
-<code>SecondScarType</code>, a <code>DeathEvent</code> and loot tags. <code>Resurrection_Torment</code>: table Base, scar <code>Curse</code>, a
+<code>SecondScarType</code>, a <code>DeathEvent</code> and loot tags. The odds roll (0x6DC65C, called from 0x6DBD4C) walks
+the table's <code>ChanceRecords</code> and keeps a <code>Faction/Resurrection/Chance</code> record only when the world total
+<code>FS+0x21C</code> lies within its <code>MinTotalResurrected</code> .. <code>MaxTotalResurrected</code> and the member's own count
+<code>FM+0x500</code> within <code>MinThisGuyResurrected</code> .. <code>MaxThisGuyResurrected</code> (0x6DC784; a negative bound is
+no bound). The shipped records use the world total as a campaign stage and the member's count as a
+repeat counter:</p>
+<table>
+<thead>
+<tr>
+<th>Chance record</th>
+<th>World total</th>
+<th>Member's count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Resurrection_1st</code>, <code>Resurrection_1st_FallOnly</code></td>
+<td>0</td>
+<td>any</td>
+</tr>
+<tr>
+<td><code>Resurrection_2ndFew</code>, <code>Resurrection_2ndFew_FallOnly</code></td>
+<td>1 - 4</td>
+<td>any</td>
+</tr>
+<tr>
+<td><code>Resurrection_3rdFew</code>, <code>Resurrection_3rdFew_Bleedout</code></td>
+<td>5 or more</td>
+<td>any</td>
+</tr>
+<tr>
+<td><code>Resurrection_1stFew_OlogHeadRemoved</code> / <code>_2ndFew_OlogHeadRemoved</code></td>
+<td>up to 2 / 3 or more</td>
+<td>any</td>
+</tr>
+<tr>
+<td><code>ResurrectSameGuy_Again</code> / <code>_Again2</code> / <code>_Again3</code></td>
+<td>any</td>
+<td>1 - 2 / 2 - 3 / 4 or more</td>
+</tr>
+<tr>
+<td><code>ResurrectSameGuy_Again_OlogHeadRemoved</code> / <code>_Again2_OlogHeadRemoved</code></td>
+<td>any</td>
+<td>1 - 2 / 2 or more</td>
+</tr>
+<tr>
+<td><code>Resurrection_BodyCleave</code></td>
+<td>any</td>
+<td>any</td>
+</tr>
+</tbody>
+</table>
+<p>From the fifth return of a campaign on, the world total is above every upper bound (it read 375 in
+one late campaign), so only the records without one stay eligible: the <code>3rdFew</code> pair,
+<code>_2ndFew_OlogHeadRemoved</code>, <code>Resurrection_BodyCleave</code> and the same-member records.
+<code>Resurrection_Torment</code>: table Base, scar <code>Curse</code>, a
 second scar (<code>Sack_Head</code> or <code>Metal_Head</code>) at 0.5, event <code>WillResurrect_Torment</code>. <code>Resurrection_HeadRemoved</code>
 has no odds table and no death event: a decapitated orc never returns (the olog has its own table).</p>
 <p><strong>The mock member.</strong> <code>FM+0x2E0</code> is a 0x20-byte copy <code>{appearance, inventory, role, flag}</code> that the Army
@@ -1683,8 +1738,8 @@ eliminated: the henchmen link effects 0x18316FC / 0x183191C skip such a member.<
   count); the code that reads it is not traced.</li>
 <li>Whether the pool's <code>ImpC_*</code> coefficients are the importance score used when a full pool recycles a
   member.</li>
-<li>Whether <code>FS+0x21C</code>, the cheat-death mark counter, is a running total and who reads it (it read 375 with
-  two returns pending).</li>
+<li>Whether the world's resurrection total <code>FS+0x21C</code> is saved with the game, and under which key
+  (the faction manager's document keys include <code>Resurrected</code>).</li>
 <li>When exactly the cancel pass 0xF9BA70 runs relative to a save and a load. Its caller 0xFA0D30 is
   reached from two places: the faction manager's part of the game document (0x1B5D254, keys
   <code>TimeStamp</code>, <code>Resurrected</code>, <code>FactionPool</code>, <code>FactionRecord</code>, <code>FactionRole</code>, <code>AmbushMgr</code>,
