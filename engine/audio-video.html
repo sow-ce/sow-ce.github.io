@@ -93,6 +93,14 @@ threads and frees Bink's globals.</p>
 <p><code>GameAudioMgrThread</code> is started by 0x178C98C when byte <code>[base+0x266D9D9]</code> is set. Its routine
 registers with an engine service, then runs a job loop (0x6AB618) until its stop flag is set. Its
 first job (0x181F704 -&gt; 0x181ED58) builds the AudioHooks compiled cache (below).</p>
+<p><code>VideoClipRequestThread</code> does nothing on PC. The engine interface builds its service once (0x117D315:
+0x118 bytes, vt_0x22C0DD0, stored at <code>+0xB50</code>), and the thread (routine 0x11C7488, loop 0x11C7274)
+waits on an event, takes the request at <code>+0x100</code> and dispatches its op code (request <code>+0x08</code>: 0-6 and
+8-12) through a table of 13 function pointers that the constructor 0x119A5CC fills. All 13 are the
+same stub, <code>mov eax, 5; ret</code>. The handler stores that result at request <code>+0x358</code> (2 while running), and
+a non-zero result finishes the request with state 3 (request <code>+0x0C</code>), so every request ends at once
+with result 5. The vtable is referenced only by the constructor and the destructor, so no class
+replaces the table.</p>
 <h2 id="the-sound-manager">The sound manager</h2>
 <p>The sound manager (vt_0x1E6D5F8, 47 methods) tests its enabled byte at <code>+0x09</code> at the start of nearly
 every method.</p>
@@ -532,7 +540,5 @@ video render-target path 0x335CF4 and the skip prompt 0x17F0E48. The UI video pl
 <li>Whether the pre-check 0x3AD888 is the streaming-bank prefix match, and what it does when the bank
   is absent (wait until loaded, or drop the event).</li>
 <li>The order in which the Wwise file layer searches language folders, packages and loose files.</li>
-<li>The purpose of <code>VideoClipRequestThread</code> (loop 0x11C7274; a request at <code>+0x100</code>, a flag at
-  <code>+0x358</code>); a nearby <code>VideoUserContentFile</code> string suggests capture or sharing.</li>
 <li>Which engine objects own the emitters, and where positions are pushed each frame.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
