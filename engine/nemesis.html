@@ -1036,7 +1036,17 @@ from one getter call, <code>IsResurrected</code> bit 0, <code>IsDead</code> 2, <
 <code>WasEverPreset</code> 25, <code>Builder_CanNotSave</code> 32, <code>Builder_DisableSimEvents</code> 33, <code>DisableTraitChanges</code> 38,
 <code>DisableRelationships</code> 39, <code>CanNotDropLoot</code> 40, <code>CanNotChangeXPLevel</code> 41, <code>CanNotApplyContract</code> 42 and
 <code>CalcXPLevelOnAssignToRow</code> 44, while <code>PlayerFollower</code>, <code>Spy</code> and <code>Prisoner</code> come from functions
-(0x114E020, 0x1149E50, 0x1BBCAEC) rather than a single bit:</p>
+(0x114E020, 0x1149E50, 0x1BBCAEC) rather than a single bit.</p>
+<p>Three bits have no saved key. Bit 37 marks a temporary member: 0x1BBF928 sets it when the builder's
+byte <code>+0x180</code> is set, and 0x1BC04E4 sets it on an online arena opponent (<code>__online_arena_opponent__</code>,
+which also clears the follower bit). A quest's <code>Cleanup_OnEnter</code> (0x7652BC) then calls 0x1B5E0B4,
+which checks the bit, confirms the member still sits at its pool index, nulls that slot and destroys
+the member. Bit 35 is set in one place, 0x61CED0, which assigns a member to a sim event: it copies bit 0
+of the intel mask <code>FM+0x510</code> at that moment. In one campaign all 102 members with bit 35 held that
+mask bit, none of the 75 members without it had bit 35, and 350 members held the mask bit without
+it. Bit 16 is transient: the un-death 0x630644 sets it just before clearing the dead bit, but only 1
+of the 86 members with a return on record (<code>FM+0x500</code> above 0) carried it, so it does not mark a
+returned member.</p>
 <table>
 <thead>
 <tr>
@@ -1727,11 +1737,10 @@ start is ordinary: the builder build, 0x1BC00C8, 0x1BC02AC, the preset build (tw
 eliminated: the henchmen link effects 0x18316FC / 0x183191C skip such a member.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>What <code>FM+0x4F8</code> and flag bits 16, 35 and 37 mean. Neither the loader nor the document writer
-  names them, so they are not saved under a key of their own. The seat function tests <code>+0x4F8</code>
-  (it held 1 on 2 of 555 members, both in the InvasionGame pool), the builder build sets bit 37 (0
-  members at the time), the un-death sets bit 16 (2 members), and bit 35 was set on 119 members, 81
-  of them seated.</li>
+<li>What <code>FM+0x4F8</code> means. The seat function tests it; it held 1 on 2 of 555 members in one campaign,
+  both in the InvasionGame pool, and 0 on 527 of 527 in another.</li>
+<li>What clears flag bit 16, which the un-death sets, and what reads flag bit 35. Neither has a resolved
+  getter call, and 60 of the getter's 125 calls pass the bit indirectly.</li>
 <li>Whether the runtime row's seat count at <code>+0x20</code> is always the record's <code>ColumnMax</code>.</li>
 <li>Whether the role counter at <code>FS+0xB0</code> is the number of times the role was given (it would then
   lower the role's weight by <code>WeightReductionPerUse</code> per use, as the scar table does by its use
