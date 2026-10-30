@@ -158,6 +158,67 @@ SetGravityEnabled 0x3F1900, 12 IsGravityEnabled, 13 refresh support, 20 SetColli
 during play</strong> (across a death or respawn), so it is reached through the chain on every use. The
 character controller's gravity (<code>Client/PlayerMovement</code>: -2000 at the movement object's <code>+0x54</code>) is
 separate from the rigid-body world's.</p>
+<p><strong>The proxy.</strong> The <code>hknpCharacterProxy</code> holds its shape at <code>+0x28</code> (an <code>hknpCapsuleShape</code> on 17 of
+17 live proxies) and the physics world at <code>+0x40</code>. <code>+0x50</code> .. <code>+0x8F</code> is its transform: three
+rotation columns, then the position at <code>+0x80</code> (w = 0), which equals the character's <code>+0xAC</code> / 100
+(0.0 cm apart on the player). <code>+0x90</code> / <code>+0xA0</code> are the minimum and maximum corners of a box around
+the shape, relative to the position (0.73 x 1.89 m up to 0.99 x 2.56 m for orcs and humans, 3.5 x
+6.16 m for the largest creature in one scene). The integrator 0x399F18 (controller slot 8) turns the
+velocity into the step's displacement, <code>+0xC0 = +0xB0 x dt</code> (dt from the step information <code>+0x08</code>),
+casts the capsule from <code>+0x80</code> to <code>+0x80 + +0xC0</code>, and keeps the velocity it started from in
+<code>+0xD0</code>, so a value written to <code>+0xB0</code> is what the next step moves by. <code>+0x120</code> is the up vector
+(0, 1, 0). The settings that follow are the same on all 17 proxies, so they are not per character:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Value</th>
+<th>Use in the integrator</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x130</td>
+<td>0.05</td>
+<td>added to <code>+0x134</code> for the cast tolerance; also multiplied by 0.5 in a later step</td>
+</tr>
+<tr>
+<td>+0x134</td>
+<td>0.1</td>
+<td>added to <code>+0x130</code> for the cast tolerance</td>
+</tr>
+<tr>
+<td>+0x138</td>
+<td>10.0</td>
+<td></td>
+</tr>
+<tr>
+<td>+0x13C</td>
+<td>50 (u32)</td>
+<td>added, with 10, to the manifold size <code>+0x20</code> to size the plane buffer</td>
+</tr>
+<tr>
+<td>+0x140</td>
+<td>10.0</td>
+<td>passed to the solver as the w of its input vector</td>
+</tr>
+<tr>
+<td>+0x144 / +0x148</td>
+<td>100.0 / 100.0</td>
+<td></td>
+</tr>
+<tr>
+<td>+0x14C</td>
+<td>1.0</td>
+<td></td>
+</tr>
+<tr>
+<td>+0x150</td>
+<td>10 (u32)</td>
+<td>the bound of the cast loop</td>
+</tr>
+</tbody>
+</table>
 <p><strong>Collision layers.</strong> The world's collision filter is the object at <code>[hknpWorld+0x480]</code> (vt_0x22C2530,
 an engine subclass of <code>hknpGroupCollisionFilter</code>): two bodies collide when <code>table[layerA] &amp; (1 &lt;&lt;
 layerB)</code> (table at filter <code>+0x24</code>, symmetric). The player's proxy is on layer 7 (row 0x0030003D);
