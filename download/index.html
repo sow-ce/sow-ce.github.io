@@ -1,0 +1,429 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Download SoW:CE</title>
+<meta name="description" content="Read the terms and tick the checklist to download the SoW:CE mod menu for Shadow of War.">
+<meta name="theme-color" content="#66bff2">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SoW:CE">
+<meta property="og:title" content="Download SoW:CE">
+<meta property="og:description" content="Read the terms and tick the checklist to download the SoW:CE mod menu for Shadow of War.">
+<meta property="og:url" content="https://sow-ce.github.io/download/">
+<meta property="og:image" content="https://sow-ce.github.io/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%23c9d2df' stroke-width='6.5'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%2366bff2' stroke-width='1.6' stroke-dasharray='2.4 2.4'/%3E%3C/svg%3E">
+<link rel="canonical" href="https://sow-ce.github.io/download/">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<style>
+/* Layout: one dark column in the menu's own Wraith Blue. The hero pairs the download with the
+   Dashboard's mithril ring; the feature list sits beside a copy of the menu's tab rail. */
+:root{
+  --bg:#0f0f14; --bg-deep:#0a0a0e; --panel:#141419; --panel-2:#1b1b22; --edge:#262632; --edge-hi:#34343f;
+  --text:#ebebf0; --dim:#a4a4b1; --faint:#82828f;
+  --accent:#66bff2; --accent-hi:#8cd9ff; --accent-deep:#3373a6; --primary:#2a6a9a; --primary-hi:#3584bd;
+  --mithril:#dde4ef; --ok:#3ecf6e; --warn:#f2bf33; --bad:#f05252;
+  --f-display:"Palatino Linotype",Palatino,"Book Antiqua","Cormorant Garamond",Georgia,serif;
+  --f-body:"Segoe UI","Figtree",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --f-mono:Consolas,"JetBrains Mono",ui-monospace,"Cascadia Mono",monospace;
+  --f-tengwar:"Tengwar Annatar",serif;
+  --max:1180px; --r:10px;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 var(--f-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:31;background:var(--bg)}
+a{color:var(--accent-hi);text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{color:#b8e8ff}
+h1,h2,h3{text-wrap:balance;margin:0}
+p{margin:0}
+code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril)}
+:focus-visible{outline:2px solid var(--accent-hi);outline-offset:3px;border-radius:4px}
+.wrap{width:100%;max-width:var(--max);margin-inline:auto;padding-left:max(clamp(16px,4vw,40px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,4vw,40px),env(safe-area-inset-right,0px))}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:12px;top:-60px;z-index:60;background:var(--panel);color:var(--text);padding:8px 12px;border-radius:6px}
+.skip:focus{top:12px}
+.eyebrow{font:500 12px/1.3 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:rgba(15,15,20,.9);-webkit-backdrop-filter:saturate(1.2) blur(10px);backdrop-filter:saturate(1.2) blur(10px);border-bottom:1px solid var(--edge)}
+.top .wrap{display:flex;align-items:center;gap:24px;min-height:64px}
+.brand{display:flex;align-items:center;gap:11px;color:var(--text);text-decoration:none;margin-right:auto;min-width:0}
+.brand:hover{color:var(--text)}
+.brand svg{width:30px;height:30px;flex:none}
+.brand b{display:block;font:700 20px/1 var(--f-display);letter-spacing:.02em}
+.brand small{display:block;margin-top:3px;font:500 10.5px/1.2 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.nav{display:flex;gap:24px}
+.nav a{color:var(--dim);text-decoration:none;font-size:14.5px;font-weight:500}
+.nav a:hover{color:var(--text)}
+@media (max-width:780px){.nav{display:none}}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:8px;text-decoration:none;cursor:pointer;border:1px solid transparent;font-family:var(--f-display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1.1;transition:background .15s,border-color .15s,transform .15s,box-shadow .15s,color .15s}
+.btn .ico{width:1.15em;height:1.15em;flex:none}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary-hi)}
+.btn-primary:hover{background:var(--primary-hi);color:#fff}
+.btn-lg{font-size:clamp(17px,1.6vw,20px);padding:17px 28px;min-height:60px}
+.btn-sm{font-size:13px;padding:9px 15px}
+.btn-ghost{background:transparent;color:var(--text);border-color:var(--edge-hi);font:600 15.5px/1.1 var(--f-body);letter-spacing:0;text-transform:none;padding:16px 22px;min-height:60px}
+.btn-ghost:hover{border-color:var(--accent-deep);color:var(--accent-hi)}
+.btn.is-off{background:var(--panel-2);color:var(--faint);border-color:var(--edge);box-shadow:none;cursor:not-allowed;transform:none}
+
+/* hero: one centered column over the ring */
+.hero{position:relative;overflow:hidden;isolation:isolate;border-bottom:1px solid var(--edge)}
+.hero-ring{position:absolute;left:50%;top:50%;z-index:-2;width:min(900px,126vw);aspect-ratio:1/1;transform:translate(-50%,-50%);pointer-events:none;opacity:.5}
+.hero-ring svg{display:block;width:100%;height:100%}
+.hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse 42% 46% at 50% 50%,rgba(15,15,20,.9),rgba(15,15,20,.7) 58%,rgba(15,15,20,0) 100%)}
+.hero-center{display:flex;flex-direction:column;align-items:center;text-align:center;padding-block:clamp(76px,11vw,150px)}
+.hero-center > *{max-width:100%}
+h1{font:700 clamp(2.7rem,6.6vw,5.4rem)/1.02 var(--f-display);letter-spacing:-.01em;margin-top:18px;text-shadow:0 2px 28px rgba(10,10,14,.85)}
+h1 span{display:block;font-style:italic;font-weight:600;color:var(--accent-hi);font-size:.6em;letter-spacing:.01em;margin-top:.2em}
+.lead{font-size:clamp(17px,1.5vw,19px);color:var(--dim);max-width:36em;margin-top:22px;text-shadow:0 1px 14px rgba(10,10,14,.9)}
+.cta-row{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:34px}
+.dl-note{margin-top:12px;color:var(--faint);font-size:14px}
+.meta-line{margin-top:26px;display:flex;flex-wrap:wrap;justify-content:center;row-gap:4px;font:500 13.5px/1.5 var(--f-mono);color:var(--dim);font-variant-numeric:tabular-nums;text-shadow:0 1px 10px rgba(10,10,14,.95)}
+.meta-line span + span::before{content:"·";margin:0 12px;color:var(--faint)}
+.notice{display:inline-flex;align-items:center;gap:10px;margin-bottom:18px;padding:7px 14px;border:1px solid var(--accent-deep);border-radius:999px;color:var(--accent-hi);font-size:14px;background:rgba(15,15,20,.7)}
+.notice::before{content:none}
+.owner-hint{margin-top:18px;padding:10px 14px;border:1px dashed var(--accent-deep);border-radius:8px;color:var(--accent-hi);font-size:14px;max-width:34em;background:rgba(15,15,20,.7)}
+.ring-legend{transform-box:view-box;transform-origin:50% 50%;animation:ring-spin 140s linear infinite}
+.ring-legend text{font-family:var(--f-tengwar);font-size:20.4px;fill:var(--accent-hi);white-space:pre;animation:kindle 2.6s ease-out both}
+.ring-glow{animation:breathe 7s ease-in-out infinite alternate}
+@keyframes ring-spin{to{transform:rotate(360deg)}}
+@keyframes kindle{from{opacity:.3}to{opacity:1}}
+@keyframes breathe{from{opacity:.65}to{opacity:1}}
+
+/* facts strip */
+.facts{background:var(--bg-deep);border-bottom:1px solid var(--edge)}
+.facts ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--edge)}
+.facts li{background:var(--bg-deep);padding:22px 20px;display:flex;gap:14px;align-items:baseline;min-width:0}
+.facts li:first-child{padding-left:0}
+.facts b{font:700 28px/1 var(--f-display);color:var(--mithril);flex:none}
+.facts span{color:var(--dim);font-size:14px;line-height:1.4}
+@media (max-width:860px){.facts ul{grid-template-columns:repeat(2,minmax(0,1fr))}.facts li:nth-child(3){padding-left:0}}
+@media (max-width:460px){.facts ul{grid-template-columns:1fr}.facts li{padding-left:0}}
+
+/* sections */
+.section{padding-block:clamp(64px,9vw,112px)}
+section[id]{scroll-margin-top:72px}
+.section-alt{background:var(--bg-deep);border-block:1px solid var(--edge)}
+.sec-head{max-width:46rem;margin-bottom:clamp(28px,4vw,44px)}
+.sec-head h2{font:700 clamp(2rem,4vw,3rem)/1.08 var(--f-display);margin-top:12px}
+.sec-lead{color:var(--dim);margin-top:14px;font-size:17px;max-width:40em}
+
+/* features */
+.feat-layout{display:grid;grid-template-columns:232px minmax(0,1fr);gap:clamp(20px,3vw,44px);align-items:start}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 84px);background:var(--panel);border:1px solid var(--edge);border-radius:var(--r);padding:10px}
+.rail-group{font:600 12.5px/1 var(--f-body);color:var(--faint);padding:16px 10px 7px}
+.rail-item{display:flex;width:100%;justify-content:space-between;align-items:center;gap:10px;background:none;border:0;border-radius:6px;padding:8px 10px;color:var(--dim);font:500 14.5px/1.25 var(--f-body);cursor:pointer;text-align:left}
+.rail-item em{font:500 12px/1 var(--f-mono);font-style:normal;color:var(--faint)}
+.rail-item:hover{background:var(--panel-2);color:var(--text)}
+.rail-item[aria-pressed="true"]{background:rgba(102,191,242,.11);color:var(--accent-hi)}
+.rail-item[aria-pressed="true"] em{color:var(--accent)}
+.feat-main{min-width:0}
+.feat-tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.feat-tools input{flex:1 1 260px;min-width:0;background:var(--bg-deep);border:1px solid var(--edge-hi);border-radius:8px;padding:12px 14px;color:var(--text);font:15px var(--f-body)}
+.feat-tools input::placeholder{color:var(--faint)}
+.feat-tools input:focus{border-color:var(--accent-deep);outline:none;box-shadow:0 0 0 3px rgba(102,191,242,.18)}
+.kbd{font:500 12px var(--f-mono);color:var(--dim);border:1px solid var(--edge-hi);border-bottom-width:2px;border-radius:5px;padding:4px 8px;white-space:nowrap}
+.feat-count{color:var(--faint);font:500 12.5px var(--f-mono);margin:20px 0 4px;letter-spacing:.04em}
+.feat-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:40px}
+.feat{padding:18px 0 20px;border-top:1px solid var(--edge);min-width:0}
+.feat-path{font:500 12px/1.4 var(--f-mono);color:var(--faint);letter-spacing:.02em}
+.feat-path .sep{color:var(--accent-deep)}
+.feat h3{font:600 17px/1.35 var(--f-body);margin-top:6px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 9px}
+.feat .d{color:var(--dim);margin-top:6px;font-size:15px;line-height:1.55}
+.tag{font:600 10.5px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;padding:4px 7px;border-radius:4px;border:1px solid currentColor}
+.tag-new{color:var(--accent)}
+.tag-updated{color:var(--ok)}
+.empty{color:var(--dim);padding:22px 0;border-top:1px solid var(--edge);grid-column:1/-1}
+@media (max-width:1060px){.feat-list{grid-template-columns:1fr}}
+@media (max-width:900px){
+  .feat-layout{grid-template-columns:1fr}
+  .rail{position:static;display:flex;gap:6px;overflow-x:auto;padding:8px}
+  .rail-group{display:none}
+  .rail-item{width:auto;flex:none;white-space:nowrap}
+}
+
+/* change log */
+.wrap.narrow{max-width:960px}
+.cl-meta{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:14px;font:500 13.5px/1.4 var(--f-mono);color:var(--dim);overflow-wrap:anywhere}
+.cl-sec{padding:22px 0 6px;border-top:1px solid var(--edge)}
+.chip{font:700 21px/1.3 var(--f-display);color:var(--k)}
+.chip::before{content:none}
+.cl-new{--k:var(--accent)}.cl-improved{--k:var(--ok)}.cl-fixed{--k:var(--warn)}.cl-issue{--k:var(--bad)}.cl-other{--k:var(--dim)}
+.cl-sec ul{margin:10px 0 0;padding-left:22px;display:grid;gap:8px;min-width:0}
+.cl-sec li{color:var(--dim);line-height:1.55}
+.cl-sec li b{color:var(--text);font-weight:600}
+.cl-sec li::marker{color:var(--k)}
+.hist{margin-top:30px;border-top:1px solid var(--edge);padding-top:20px}
+.hist summary{cursor:pointer;color:var(--accent-hi);font-weight:600}
+.hist-ver{margin-top:26px}
+.hist-ver h3{font:700 24px/1.2 var(--f-display)}
+@media (max-width:640px){.cl-sec{grid-template-columns:1fr;gap:12px}}
+
+/* install */
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(16px,2.5vw,28px)}
+.steps li{padding:28px 26px;background:var(--panel);border:1px solid var(--edge);border-radius:var(--r);min-width:0}
+.steps .n{display:block;font:700 46px/1 var(--f-display);color:var(--accent)}
+.steps h3{font:700 23px/1.2 var(--f-display);margin-top:14px}
+.steps p{color:var(--dim);margin-top:8px;font-size:15.5px;overflow-wrap:anywhere}
+.req-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(24px,4vw,56px);margin-top:clamp(36px,5vw,56px)}
+.req-grid h3{font:700 22px/1.2 var(--f-display)}
+.req-grid > div{min-width:0}
+.req dl{margin:16px 0 0;display:grid}
+.req dl div{display:grid;grid-template-columns:110px minmax(0,1fr);gap:14px;padding:12px 0;border-top:1px solid var(--edge)}
+.req dt{color:var(--faint);font:500 12px/1.5 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding-top:2px}
+.req dd{margin:0;color:var(--text)}
+.verify p{color:var(--dim);margin-top:10px}
+.hash{display:flex;gap:8px;align-items:stretch;margin-top:16px}
+.hash code{flex:1;min-width:0;overflow-wrap:anywhere;background:var(--bg-deep);border:1px solid var(--edge-hi);border-radius:8px;padding:11px 13px;font-size:13px;line-height:1.5}
+.btn-copy{flex:none;background:var(--panel-2);color:var(--text);border:1px solid var(--edge-hi);border-radius:8px;padding:0 16px;font:600 14px var(--f-body);cursor:pointer}
+.btn-copy:hover{border-color:var(--accent-deep);color:var(--accent-hi)}
+.small{font-size:14px}
+@media (max-width:860px){.steps,.req-grid{grid-template-columns:1fr}}
+
+/* faq */
+.faq{display:block}
+.qa{padding:24px 0;border-top:1px solid var(--edge);min-width:0}
+.qa h3{font:600 17.5px/1.4 var(--f-body)}
+.qa p{color:var(--dim);margin-top:8px}
+@media (max-width:860px){.faq{grid-template-columns:1fr}}
+
+/* closing band + footer */
+.final{border-top:1px solid var(--edge);background:radial-gradient(ellipse 70% 120% at 50% 0%,rgba(102,191,242,.11),transparent 62%),var(--bg)}
+.final-inner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:28px;padding-block:clamp(52px,7vw,92px)}
+.final-inner > div{min-width:0;flex:1 1 380px}
+.final h2{font:700 clamp(1.9rem,3.6vw,2.8rem)/1.1 var(--f-display)}
+.final p{color:var(--dim);margin-top:10px;max-width:36em}
+.foot{border-top:1px solid var(--edge);background:var(--bg-deep);padding-block:40px;color:var(--faint);font-size:13.5px}
+.foot-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px 40px;align-items:start}
+.foot-brand{display:flex;align-items:center;gap:10px;font:700 20px/1 var(--f-display);color:var(--text)}
+.foot-brand svg{width:24px;height:24px}
+.foot-grid p + p{margin-top:8px}
+.foot-links{display:flex;flex-wrap:wrap;gap:8px 20px}
+.legal{grid-column:1/-1;max-width:64em;line-height:1.6;padding-top:20px;border-top:1px solid var(--edge)}
+@media (max-width:640px){.foot-grid{grid-template-columns:1fr}}
+
+.btn-head{background:transparent;color:var(--text);border-color:var(--accent-deep);font:600 14px/1 var(--f-body);letter-spacing:0;text-transform:none;padding:10px 15px;gap:8px}
+.btn-head:hover{border-color:var(--accent);color:var(--accent-hi);background:rgba(102,191,242,.06)}
+.btn-head .ico{width:17px;height:17px}
+
+/* install, written as a plain list */
+.howto{margin:0;padding-left:24px;display:grid;gap:10px;font-size:17px}
+.howto li::marker{color:var(--accent);font-weight:700}
+.howto-note{color:var(--dim);margin-top:14px}
+.plain-h3{font:700 21px/1.3 var(--f-display);margin-top:38px}
+.reqs{margin:10px 0 0;padding-left:22px;display:grid;gap:6px;color:var(--dim)}
+.install-sha p{color:var(--dim);margin-top:10px}
+
+/* community band */
+.community{border-top:1px solid var(--edge);background:var(--bg-deep)}
+.community-inner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:24px 40px;padding-block:clamp(44px,6vw,76px)}
+.community-inner > div{min-width:0;flex:1 1 420px}
+.community h2{font:700 clamp(1.8rem,3.2vw,2.5rem)/1.1 var(--f-display);margin-top:10px}
+.community-text{color:var(--dim);margin-top:10px;max-width:40em}
+.btn-join{flex:none}
+
+/* owner editor */
+.ed-fab{position:fixed;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:40;display:inline-flex;align-items:center;gap:8px;background:var(--panel);color:var(--text);border:1px solid var(--accent-deep);border-radius:999px;padding:11px 18px;font:600 14px var(--f-body);cursor:pointer;box-shadow:0 12px 30px -8px rgba(0,0,0,.7)}
+.ed-fab:hover{border-color:var(--accent);color:var(--accent-hi)}
+.ed-fab svg{width:16px;height:16px}
+.owner-bar{position:fixed;left:calc(18px + env(safe-area-inset-left,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:40;display:flex;flex-wrap:wrap;align-items:center;gap:10px;max-width:min(520px,calc(100% - 36px));background:var(--panel);border:1px solid var(--warn);border-radius:10px;padding:12px 14px;font-size:14px}
+.owner-bar p{flex:1 1 220px}
+.ed{position:fixed;top:env(safe-area-inset-top,0px);right:0;bottom:0;width:min(560px,100%);z-index:50;background:var(--panel);border-left:1px solid var(--edge-hi);display:flex;flex-direction:column;box-shadow:-30px 0 60px -20px rgba(0,0,0,.75);padding-right:env(safe-area-inset-right,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.ed-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--edge)}
+.ed-head h2{font:700 22px/1.2 var(--f-display)}
+.ed-tabs{display:flex;gap:2px;padding:6px 12px 0;border-bottom:1px solid var(--edge);overflow-x:auto}
+.ed-tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);padding:10px 12px;font:600 14px var(--f-body);cursor:pointer;white-space:nowrap}
+.ed-tab[aria-selected="true"]{color:var(--accent-hi);border-bottom-color:var(--accent)}
+.ed-body{flex:1;overflow-y:auto;padding:18px 20px 26px}
+.ed-pane{display:grid;gap:16px}
+.ed-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fld{display:grid;gap:6px;min-width:0}
+.fld label{font:600 13.5px var(--f-body);color:var(--text)}
+.fld .hint{font-size:12.5px;color:var(--faint);line-height:1.45}
+.fld input,.fld textarea{width:100%;background:var(--bg-deep);border:1px solid var(--edge-hi);border-radius:7px;color:var(--text);padding:10px 12px;font:14px var(--f-body)}
+.fld textarea{font:13px/1.55 var(--f-mono);resize:vertical;min-height:150px}
+.fld input:focus,.fld textarea:focus{outline:none;border-color:var(--accent-deep);box-shadow:0 0 0 3px rgba(102,191,242,.16)}
+.fld.bad input,.fld.bad textarea{border-color:var(--bad)}
+.ed-box{border:1px solid var(--edge);border-radius:8px;padding:14px;display:grid;gap:10px;color:var(--dim);font-size:14px}
+.ed-box b{color:var(--text)}
+.hist-ed{display:grid;gap:6px}
+.hist-ed div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--edge);border-radius:6px;font:13px var(--f-mono);color:var(--dim)}
+.ed-foot{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 20px;border-top:1px solid var(--edge)}
+.ed-status{flex:1 1 220px;font-size:13px;color:var(--dim);min-width:0}
+.ed-status.err{color:var(--bad)}
+.ed-status.ok{color:var(--ok)}
+.ed-btn{background:var(--panel-2);color:var(--text);border:1px solid var(--edge-hi);border-radius:7px;padding:9px 15px;font:600 14px var(--f-body);cursor:pointer}
+.ed-btn:hover{border-color:var(--accent-deep);color:var(--accent-hi)}
+.ed-btn.ed-primary{background:var(--primary);border-color:#4a95cc;color:#fff}
+.ed-btn.ed-primary:hover{background:var(--primary-hi)}
+.ed-btn[disabled]{opacity:.55;cursor:wait}
+@media (max-width:520px){.ed-row{grid-template-columns:1fr}}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+
+/* the terms page: one reading column, then the checklist */
+.wrap.doc{max-width:800px;padding-block:clamp(40px,7vw,84px)}
+.doc h1{font-size:clamp(2.3rem,5vw,3.4rem);margin-top:0;text-shadow:none}
+.doc h2{font:700 clamp(1.6rem,3vw,2.1rem)/1.15 var(--f-display);margin-top:52px;scroll-margin-top:84px}
+.doc > p,.doc li{color:var(--dim)}
+.doc > p{margin-top:12px}
+.doc-lead{font-size:18px}
+.doc ol{margin:16px 0 0;padding-left:26px;display:grid;gap:12px}
+.doc li::marker{color:var(--accent);font-weight:700}
+.doc b{color:var(--text);font-weight:600}
+.doc code{overflow-wrap:anywhere}
+.updated{font:500 13px var(--f-mono);color:var(--faint)}
+.gate{display:grid;gap:8px;min-width:0;margin:18px 0 0;padding:0;border:0}
+.gate legend{font:700 21px/1.3 var(--f-display);padding:0;margin-bottom:10px}
+.tick{display:flex;gap:12px;align-items:flex-start;padding:11px 13px;border:1px solid var(--edge);border-radius:8px;color:var(--text);cursor:pointer}
+.tick:hover{border-color:var(--edge-hi)}
+.tick input{width:18px;height:18px;margin:3px 0 0;flex:none;accent-color:var(--accent);cursor:inherit}
+.tick:has(input:checked){border-color:var(--accent-deep)}
+.gate[disabled]{opacity:.5}
+.gate[disabled] .tick{cursor:not-allowed}
+.dl-box{margin-top:28px}
+.dl-status{margin-top:10px;color:var(--dim);font-size:15px}
+.dl-file{margin-top:18px;font:500 13.5px/1.6 var(--f-mono);color:var(--dim);overflow-wrap:anywhere}
+.dl-next{margin-top:12px;color:var(--dim)}
+</style></head><body>
+<a class="skip" href="#accept">Skip to the checklist</a>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="../" aria-label="SoW:CE, back to the home page">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="mini-metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7f9fc"/><stop offset=".45" stop-color="#9aa5b6"/><stop offset=".7" stop-color="#e9eef6"/><stop offset="1" stop-color="#6d7788"/></linearGradient></defs><circle cx="16" cy="16" r="11" fill="none" stroke="url(#mini-metal)" stroke-width="6.5"/><circle cx="16" cy="16" r="11" fill="none" stroke="#66bff2" stroke-opacity=".7" stroke-width="1.6" stroke-dasharray="2.4 2.4"/></svg>
+      <span><b>SoW:CE</b><small>Community Edition</small></span>
+    </a>
+    <nav class="nav" aria-label="Site">
+      <a href="../#features">Features</a>
+      <a href="../#changelog">Patch notes</a>
+      <a href="../#install">Install</a>
+      <a href="../#faq">FAQ</a>
+      <a href="../engine/">Engine reference</a>
+    </nav>
+    <a class="btn btn-head" href="https://discord.gg/shadow-of-war-modding-community-1135521354838458438" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Join Discord</span></a>
+  </div>
+</header>
+
+<main class="wrap doc">
+  <h1>Before you download</h1>
+  <p class="doc-lead">SoW:CE is free, unofficial and experimental. Read this page, accept the terms and tick the checklist at the bottom. The download unlocks after that.</p>
+  <p><a href="#accept">Go to the checklist</a></p>
+
+  <h2 id="disclaimer">Disclaimer</h2>
+  <p>These are the real risks of using SoW:CE. If you aren't comfortable with them, don't install it.</p>
+  <ol>
+    <li><b>It's experimental.</b> SoW:CE is a highly experimental framework that changes Shadow of War while the game is running. It can crash or freeze the game, break quests, damage or lose saves, and leave your army or progress in a state that can't be undone. Some features have only been tested on a handful of PCs.</li>
+    <li><b>Online services haven't been tested with mods.</b> That means Online Vendettas, Online Conquests, online fight pits, leaderboards and anything else that talks to WB's servers. If you use them with SoW:CE, you do so at your own risk. The developer can't control how those servers respond to a modded game, or what happens to your WB or Steam account as a result.</li>
+    <li><b>Garrison and the Market may not load or work properly.</b> Both rely on WB's servers and on parts of the game that were changed or switched off years ago. They can fail to load, show the wrong content or stop working at any time. Nothing you open, earn or buy through them is guaranteed.</li>
+    <li><b>It changes your game install.</b> The setup adds its own files to the game folder, including a loader in the <code>x64</code> folder. If you install the optional Armory weapons, it also changes two of the game's own files, <code>hotchunk.arch06</code> and <code>x64\default.archcfg</code>. Uninstalling normally puts them back. If another mod changed them in the meantime they're left alone, and Steam's Verify integrity has to restore them.</li>
+    <li><b>Your saves are at risk.</b> Some things you do with the menu get written into your save, and uninstalling SoW:CE doesn't undo them. A save that holds an Armory weapon hasn't been tested without them. SoW:CE backs up your saves when the game starts, but don't rely on that alone. Keep your own copies.</li>
+    <li><b>Mods can clash.</b> Other mods and tools can conflict with SoW:CE, and nobody has tested every combination.</li>
+  </ol>
+
+  <h2 id="updates">Remove it before you update</h2>
+  <p>Before any Windows update, graphics driver update or Shadow of War update, do a clean remove. This makes sure nothing of SoW:CE's is in the way of the game's DRM. One tester's game asked to be activated again after a Windows update, and SoW:CE is built for Steam version 1.21 only, so a game update can break it too.</p>
+  <ol>
+    <li>Close the game.</li>
+    <li>Run the setup, click Uninstall at the bottom of the window, tick "Also delete my mod menu settings and logs" and confirm.</li>
+    <li>In Steam, right-click Shadow of War, open Properties, then Installed Files, and click Verify integrity of game files.</li>
+    <li>Install the update, then start the game once from Steam to check it still runs.</li>
+    <li>Run the setup again to reinstall SoW:CE.</li>
+  </ol>
+  <p>Keep the setup file so you can do this later. If Windows updates on its own and the game won't start or asks to be activated, do the same thing: clean remove first, get the game running by itself, then reinstall.</p>
+
+  <h2 id="terms">Terms of Use</h2>
+  <p class="updated">Last updated 30 October 2026</p>
+  <p>Downloading, installing or using SoW:CE means you agree to this whole page. "SoW:CE" means the mod menu, the framework, the setup and this website. "The developer" means the person who makes them. You need to be old enough to agree to terms like these where you live.</p>
+  <ol>
+    <li><b>Legitimate copies only.</b> You need your own legitimate copy of Middle-earth: Shadow of War on Steam. You may not use SoW:CE to play a copy you don't own, to get DLC you haven't paid for, or to get around the game's DRM.</li>
+    <li><b>Free, personal use.</b> SoW:CE is free. You may use it for your own non-commercial play and share screenshots and videos of it. You may not sell it, charge for access to it, or re-upload it elsewhere without the developer's permission.</li>
+    <li><b>Fair play.</b> Don't use SoW:CE to cheat against other players, harass anyone or interfere with WB's services.</li>
+    <li><b>The game's own terms still apply.</b> WB's terms and the Steam Subscriber Agreement still cover the game and your accounts, and they may not allow mods. Checking them, and accepting that risk, is up to you.</li>
+    <li><b>Not official.</b> SoW:CE is an unofficial fan project. It isn't affiliated with or endorsed by Warner Bros. Games, Monolith Productions, Middle-earth Enterprises or Valve, and they aren't responsible for it. Their names and trademarks belong to them. Please don't ask them for help with a modded game.</li>
+    <li><b>No warranty.</b> <b>SoW:CE is provided "as is" and "as available", with no warranty of any kind, express or implied, including any warranty that it is safe, free of errors or fit for any purpose.</b> You use it entirely at your own risk.</li>
+    <li><b>Limit of liability.</b> <b>As far as the law allows, the developer isn't liable for any loss or damage that comes from using SoW:CE or from not being able to use it.</b> That includes lost saves or progress, damaged game files, problems with your PC, losing access to the game or its DLC, and any action taken against your WB or Steam account.</li>
+    <li><b>Updates and support.</b> There's no promise of updates, fixes or support. SoW:CE can change or stop at any time. Help on Discord is given when there's time for it.</li>
+    <li><b>Privacy.</b> This site has no accounts and no analytics, and nothing you tick on this page is saved or sent anywhere. The site is hosted on GitHub Pages, its fonts come from Google Fonts and the download comes from GitHub, so those companies see ordinary web requests, including your IP address. "Report a problem" in the setup saves a file on your PC. Nothing leaves your PC unless you send it yourself.</li>
+    <li><b>Ending this agreement.</b> You can stop at any time by uninstalling SoW:CE. If you break these terms, your permission to use it ends and you need to uninstall it.</li>
+    <li><b>Changes.</b> These terms can change. The current version is always on this page, with its date at the top. Using a newer release means you accept the terms in place when you downloaded it.</li>
+    <li><b>Local law.</b> If part of these terms can't be enforced where you live, the rest still applies. Some places don't allow limits like the ones above, so they only apply as far as your local law allows, and nothing here takes away rights you can't legally give up.</li>
+    <li><b>Contact.</b> You can reach the developer in the <a href="https://discord.gg/shadow-of-war-modding-community-1135521354838458438" target="_blank" rel="noopener">Shadow of War Modding Community Discord</a>.</li>
+  </ol>
+
+  <h2 id="accept">Accept and download</h2>
+  <noscript><p>This page needs JavaScript to unlock the download.</p></noscript>
+  <div class="gate">
+    <label class="tick"><input type="checkbox" id="ok-terms" autocomplete="off"><span>I've read the disclaimer and terms above, and I accept them.</span></label>
+  </div>
+  <fieldset class="gate" id="prereqs" disabled>
+    <legend>Confirm your setup</legend>
+    <label class="tick"><input type="checkbox" autocomplete="off"><span>I own a legitimate copy of Shadow of War.</span></label>
+    <label class="tick"><input type="checkbox" autocomplete="off"><span>It's the Steam version, game version 1.21.</span></label>
+    <label class="tick"><input type="checkbox" autocomplete="off"><span>All of the game's DLC is downloaded and installed.</span></label>
+    <label class="tick"><input type="checkbox" autocomplete="off"><span>I'm on 64-bit Windows 10 or 11.</span></label>
+    <label class="tick"><input type="checkbox" autocomplete="off"><span>I've made my own backup of my saves.</span></label>
+    <label class="tick"><input type="checkbox" autocomplete="off"><span>I'll do a clean remove before any Windows, driver or game update.</span></label>
+  </fieldset>
+  <div class="dl-box">
+    <a class="btn btn-primary btn-lg is-off" id="dl" aria-disabled="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 20h16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Download mod menu</span></a>
+    <p class="dl-status" id="dl-status" role="status" aria-live="polite">Accept the terms first.</p>
+    <p class="dl-file">SoW:CE v3.0 &middot; SoWCE_Setup_20261018.exe &middot; 77.6 MB<br>SHA-256 00334da685a3bf64d028adf13cd096ebe811290ea2782f38131de01d51068371</p>
+    <p class="dl-next">After the download, follow the <a href="../#install">install steps</a>.</p>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-grid">
+    <div>
+      <p class="foot-brand"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11" fill="none" stroke="url(#mini-metal)" stroke-width="6.5"/><circle cx="16" cy="16" r="11" fill="none" stroke="#66bff2" stroke-opacity=".7" stroke-width="1.6" stroke-dasharray="2.4 2.4"/></svg>SoW:CE</p>
+      <p>Shadow of War: Community Edition. Current version v3.0.</p>
+    </div>
+    <nav class="foot-links" aria-label="More">
+      <a href="../">Home</a>
+      <a href="../#changelog">Patch notes</a>
+      <a href="../#install">Install</a>
+      <a href="../#faq">FAQ</a>
+      <a href="https://discord.gg/shadow-of-war-modding-community-1135521354838458438" target="_blank" rel="noopener">Discord</a>
+    </nav>
+    <p class="legal">An unofficial fan project. It is not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises, and Middle-earth: Shadow of War belongs to its owners.</p>
+  </div>
+</footer>
+<script>
+(function () {
+  "use strict";
+  var LINK = "https://github.com/sow-ce/sow-ce.github.io/releases/download/v3.0/SoWCE_Setup_20261018.exe";
+  var terms = document.getElementById("ok-terms");
+  var group = document.getElementById("prereqs");
+  var boxes = Array.prototype.slice.call(group.querySelectorAll('input[type="checkbox"]'));
+  var dl = document.getElementById("dl");
+  var status = document.getElementById("dl-status");
+
+  function update() {
+    group.disabled = !terms.checked;
+    var left = boxes.filter(function (b) { return !b.checked; }).length;
+    var open = terms.checked && left === 0;
+    dl.classList.toggle("is-off", !open);
+    if (open) {
+      dl.href = LINK;
+      dl.removeAttribute("aria-disabled");
+      status.textContent = "Unlocked. Your download is ready.";
+    } else {
+      dl.removeAttribute("href");
+      dl.setAttribute("aria-disabled", "true");
+      status.textContent = !terms.checked ? "Accept the terms first."
+        : left === 1 ? "1 box left to tick." : left + " boxes left to tick.";
+    }
+  }
+  terms.addEventListener("change", update);
+  group.addEventListener("change", update);
+  window.addEventListener("pageshow", update);
+  update();
+})();
+</script>
+</body></html>
