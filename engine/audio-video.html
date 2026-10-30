@@ -211,7 +211,7 @@ position: the player's emitters.</p>
 <pre><code>caller (dialogue 0x54D7E0, audio-key job 0x17A210, ...)
  -&gt; 0x3AD6A8 emitter PlayEvent(emitter, event name, external file, flags); emitter +0x29 must be set
  -&gt; 0x3AD7AC(audio context = [[CGameClientShell]+0xA28]+0xCBA48, emitter, name, file, flags)
-      vf8 IsEnabled; a pre-check 0x3AD888 against the streaming-bank data
+      vf8 IsEnabled; the streaming-bank gate 0x3AD888 (false = no post, see &quot;Banks&quot;)
       with an emitter -&gt; vf13 0x3ADC1C; without -&gt; vf12 0x74ED6C
  -&gt; vf13: sound object = emitter+8, or create one (0x3AE2F0 / 0x6861A4); push the position (0x3AE0BC);
       refuse at 50 events playing; 0x3AD358(id, object, name, file, flags); on success object+0x30 += 1
@@ -448,6 +448,27 @@ AlwaysInUse, WaitSecondsBeforeUnloading, SoundBankGroup), <code>StreamingSoundBa
 <code>StreamingGlobalAssetLists</code> (4), <code>StreamingGlobalStateEvents</code> (11) and <code>DlcSuppressLists</code> (2). An
 event whose name matches a record's prefix loads that record's sound bundle, a bare <code>.bndl</code>
 manifest that names the <code>.bnk</code> with no container behind it.</p>
+<p><strong>The bank gate.</strong> 0x3AD888(context, emitter, name, flags) runs before every post, and a false result
+means the event is not posted (0x3AD7AC returns 0). Until the bank system is ready (<code>context+0x121</code>
+clear) it queues the event at <code>context+0xC0</code> and returns false. Then it hashes the name and
+binary-searches a sorted table (<code>context+0x90</code>, 8-byte entries). An event that is not in the table, or
+whose entry has no bank (u16 <code>+0x04</code> = 0xFFFF), plays at once. Otherwise, for the entry's bank (built by
+0x1D2B658: <code>+0x50</code> <code>SoundEventPlaybackStrategy</code>, <code>+0x60</code> <code>Priority</code>, <code>+0x94</code>
+<code>WaitSecondsBeforeUnloading</code> in ms, <code>+0x98</code> <code>AlwaysInUse</code>):</p>
+<ol>
+<li>a bank with byte <code>+0x9C</code> set refuses the event;</li>
+<li>the bank's last-use time <code>+0xAC</code> is stamped;</li>
+<li>a bank not yet requested (<code>+0x9D</code> clear) refuses the event when its size would pass the context's
+   limit (<code>+0x18</code> used, <code>+0x10</code> limit) and its priority is below <code>context+0x1C</code>; otherwise it is marked
+   requested and joins the load list <code>context+0xA8</code>;</li>
+<li>the emitter's id joins the bank's list <code>+0xE0</code>;</li>
+<li>a bank that belongs to an exclusive slot (<code>+0x88</code>, byte <code>+0x99</code>) replaces the slot's previous bank
+   in the map at <code>context+0x48</code>, which is released;</li>
+<li>a loaded bank (<code>+0x9B</code>) plays the event now;</li>
+<li>otherwise the event waits on the bank only when its strategy is <code>PlayWhenLoaded</code> (1) and fewer than
+   20 events are waiting (<code>+0xB0</code>). Under <code>DoNotPlay</code> (2) the event is dropped and only the load goes
+   ahead. <code>DoNotPlay</code> is set on 76 of the 1,958 records, <code>PlayWhenLoaded</code> on 1,882.</li>
+</ol>
 <p><strong>Loading.</strong> A bank is an engine resource: the bank loader (vt_0x22C3850 vf4 0x54FEA4) gets the
 file's bytes, builds a 0x18-byte handle (<code>+0x00</code> the bank id, <code>+0x04</code> size, <code>+0x08</code> data, <code>+0x10</code>
 "not init.bnk", <code>+0x11</code> "not a _Metadata bank") and calls the sound manager's vf32 0x54FF78, which,
@@ -537,8 +558,9 @@ video render-target path 0x335CF4 and the skip prompt 0x17F0E48. The UI video pl
 <code>Video.GotoFrame</code> is handled by 0x17FE1C8.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>Whether the pre-check 0x3AD888 is the streaming-bank prefix match, and what it does when the bank
-  is absent (wait until loaded, or drop the event).</li>
+<li>Whether the bank gate's limit <code>context+0x10</code> is <code>Sound/StreamingSoundBankList.GlobalMemoryBudgetMB</code>
+  (60, with <code>GlobalMemoryCloseToBudgetMB</code> 50), what sets a bank's byte <code>+0x9C</code>, and what replays the
+  events waiting on a bank when it finishes loading.</li>
 <li>The order in which the Wwise file layer searches language folders, packages and loose files.</li>
 <li>Which engine objects own the emitters, and where positions are pushed each frame.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
