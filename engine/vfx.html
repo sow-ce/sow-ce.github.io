@@ -424,13 +424,14 @@ player rig <code>LeftHand</code> / <code>RightHand</code>; the player skeleton's
 </ul>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>Which objects own the three managers outside the client shell. Their time sources are known: in a
-  loaded Lithlad (eight managers in the global list, the client shell's five at <code>+0xA98 .. +0xAB8</code>
-  running on the world, real-time, player, companion and world-UI clocks), one extra manager ran on
-  the UI clock with 50 instances, one on the real-time clock with 10, and one on the clock in slot
-  <code>[base+0x2702560]</code>, with 0. Nothing in the client shell points at them. Two reverse-pointer passes
-  agree on their holders: the third manager's inner object is held at <code>+0x58</code> past vt_0x1FDABD0, and
-  12 or more objects of vt_0x1DB7508 / vt_0x1DB7540 hold the UI clock's wrapper at their <code>+0x10</code>.</li>
+<li>Which object owns the real-time ClientFX manager outside the client shell, and what class
+  vt_0x22F3D48 is. In a loaded Lithlad the global list holds eight managers: the client shell's five
+  at <code>+0xA98 .. +0xAB8</code>, created by 0x1772E1C on the world, real-time, player, companion and world-UI
+  clocks, and three more. One runs on the UI clock (50 instances) and is created by 0x18CC440 (string
+  <code>UIFXMgrParent</code>). One runs on the clock <code>[base+0x2702560]</code> (0 instances) and is embedded at <code>+0x50</code>
+  of a vt_0x22F3D48 object built by 0x17997F8 during subsystem start-up: <code>[wrapper-0x50]</code> reads that
+  vtable on this manager and on none of the other seven. The last runs on the real-time clock (10
+  instances), and its creator is either 0x17E1F0C or vt_0x1FFAFF0 vf16.</li>
 <li>Which of the KeyData slots vf6, vf7, vf8 and vf10 is the background update and which submits to the
   renderer.</li>
 <li>How a pooled run-time object attaches to its instance, and what kinds of parent the instance
