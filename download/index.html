@@ -56,12 +56,13 @@ code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril)}
 .brand-name i{font-style:normal}
 .brand-name em{font-style:italic;font-weight:600;color:var(--accent-hi)}
 .mark-script{animation:kindle 2.6s ease-out both}
-@media (max-width:1120px){.brand-name{font-size:19px}.brand-name b,.brand-name em{display:block}.brand-name i{display:none}.brand-name em{font-size:.88em;margin-top:1px}}
+@media (max-width:1190px){.brand-name{font-size:19px}.brand-name b,.brand-name em{display:block}.brand-name i{display:none}.brand-name em{font-size:.88em;margin-top:1px}}
 @media (max-width:520px){.top .wrap{gap:12px}.brand{gap:8px}.brand svg{width:40px;height:40px}}
+@media (max-width:360px){.brand-name{font-size:17px}.brand svg{width:36px;height:36px}}
 .nav{display:flex;gap:24px}
 .nav a{color:var(--dim);text-decoration:none;font-size:14.5px;font-weight:500}
 .nav a:hover{color:var(--text)}
-@media (max-width:880px){.nav{display:none}}
+@media (max-width:950px){.nav{display:none}}
 
 /* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:8px;text-decoration:none;cursor:pointer;border:1px solid transparent;font-family:var(--f-display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1.1;transition:background .15s,border-color .15s,transform .15s,box-shadow .15s,color .15s}
@@ -89,7 +90,6 @@ h1{font:700 clamp(2.7rem,6.6vw,5.4rem)/1.02 var(--f-display);letter-spacing:-.01
 .dl-note{margin-top:12px;color:var(--dim);font-size:14px}
 .meta-line{margin-top:18px;display:flex;flex-wrap:wrap;justify-content:center;row-gap:4px;font:500 13.5px/1.5 var(--f-mono);color:var(--dim);font-variant-numeric:tabular-nums;text-shadow:0 1px 10px rgba(10,10,14,.95)}
 .meta-line span + span::before{content:"·";margin:0 12px;color:var(--faint)}
-.meta-line span:first-child{color:var(--accent-hi)}
 .notice{display:inline-flex;align-items:center;gap:10px;margin-bottom:18px;padding:7px 14px;border:1px solid var(--accent-deep);border-radius:999px;color:var(--accent-hi);font-size:14px;background:rgba(15,15,20,.7)}
 .notice::before{content:none}
 .owner-hint{margin-top:18px;padding:10px 14px;border:1px dashed var(--accent-deep);border-radius:8px;color:var(--accent-hi);font-size:14px;max-width:34em;background:rgba(15,15,20,.7)}
@@ -215,7 +215,7 @@ section[id]{scroll-margin-top:72px}
 .btn-head{background:transparent;color:var(--text);border-color:var(--accent-deep);font:600 14px/1 var(--f-body);letter-spacing:0;text-transform:none;padding:10px 15px;gap:8px}
 .btn-head:hover{border-color:var(--accent);color:var(--accent-hi);background:rgba(102,191,242,.06)}
 .btn-head .ico{width:17px;height:17px}
-@media (max-width:389px){.btn-head{padding:10px 12px}.btn-head span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
+@media (max-width:449px){.btn-head{padding:10px 12px}.btn-head span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
 
 /* install, written as a plain list */
 .howto{margin:0;padding-left:24px;display:grid;gap:10px;font-size:17px}
@@ -306,7 +306,7 @@ section[id]{scroll-margin-top:72px}
   <div class="wrap">
     <a class="brand" href="../" aria-label="Shadow of War: Community Edition, back to the home page">
       <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mark-metal" gradientUnits="userSpaceOnUse" x1="4" x2="60" y1="0" y2="0"><stop offset="0" stop-color="#6d7788"/><stop offset=".2" stop-color="#f7f9fc"/><stop offset=".45" stop-color="#9aa5b6"/><stop offset=".68" stop-color="#fff"/><stop offset="1" stop-color="#6d7788"/></linearGradient><linearGradient id="mark-back" gradientUnits="userSpaceOnUse" x1="4" x2="60" y1="0" y2="0"><stop offset="0" stop-color="#454d5b"/><stop offset=".5" stop-color="#7f8a9c"/><stop offset="1" stop-color="#3c4351"/></linearGradient><linearGradient id="mark-blade" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="1" y2="46"><stop offset="0" stop-color="#e6f6ff"/><stop offset=".55" stop-color="#66bff2"/><stop offset="1" stop-color="#2a6a9a"/></linearGradient><linearGradient id="mark-blade-dark" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="1" y2="46"><stop offset="0" stop-color="#b9e6ff"/><stop offset=".55" stop-color="#3584bd"/><stop offset="1" stop-color="#1c4a6e"/></linearGradient></defs><g id="mark"><g transform="rotate(-14 32 26)" fill="none"><path d="M4,26A28,11 0 0 1 60,26" stroke="url(#mark-back)" stroke-width="7"/><path d="M4,26A28,11 0 0 1 60,26" stroke="#141820" stroke-width="3.6"/><path class="mark-script" d="M4,26A28,11 0 0 1 60,26" stroke="#66bff2" stroke-opacity=".8" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="3 2 1 2 4 2"/></g><path d="M32,1L36.5,9V45.5H32Z" fill="url(#mark-blade-dark)"/><path d="M32,1L27.5,9V45.5H32Z" fill="url(#mark-blade)"/><path d="M16.5,45H47.5L44.5,49.5H19.5Z" fill="url(#mark-metal)"/><rect x="29.6" y="49.5" width="4.8" height="8.5" fill="#39465a"/><path d="M32,56.8L35.6,60.4L32,64L28.4,60.4Z" fill="#c9d2df"/><g transform="rotate(-14 32 26)" fill="none"><path d="M4,26A28,11 0 0 0 60,26" stroke="url(#mark-metal)" stroke-width="7"/><path d="M4,26A28,11 0 0 0 60,26" stroke="#141820" stroke-width="3.6"/><path class="mark-script" d="M4,26A28,11 0 0 0 60,26" stroke="#8cd9ff" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="3 2 1 2 4 2 1.5 2"/></g></g></svg>
-      <span class="brand-name"><b>Shadow of War<i>:</i></b> <em>Community Edition</em></span>
+      <span class="brand-name"><b>Shadow of War<i>:</i></b> <em>Community Edition (BETA)</em></span>
     </a>
     <nav class="nav" aria-label="Site">
       <a href="../#features">Features</a>
@@ -377,7 +377,7 @@ section[id]{scroll-margin-top:72px}
   <div class="dl-box">
     <a class="btn btn-primary btn-lg is-off" id="dl" aria-disabled="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 20h16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Download mod menu</span></a>
     <p class="dl-status" id="dl-status" role="status" aria-live="polite">Confirm you've read this page first.</p>
-    <p class="dl-file">SoW:CE (BETA) &middot; SoWCE_Setup_20261018.exe &middot; 77.6 MB<br>SHA-256 00334da685a3bf64d028adf13cd096ebe811290ea2782f38131de01d51068371</p>
+    <p class="dl-file">SoWCE_Setup_20261018.exe &middot; 77.6 MB<br>SHA-256 00334da685a3bf64d028adf13cd096ebe811290ea2782f38131de01d51068371</p>
     <p class="dl-next">After the download, follow the <a href="../#install">install steps</a>.</p>
   </div>
 </main>
