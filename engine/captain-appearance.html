@@ -389,7 +389,8 @@ pads). The nine tribe sets cover all four bodies, except that Regal has no Olog 
 <p>A piece record carries <code>Model</code>, <code>Tint</code> (its tint layers), <code>MeshIndexPairs</code>, <code>AppearanceTag</code>,
 <code>BaseWeight</code> and <code>ArmorDataDynamicBundle</code> (its geometry bundle). A design also names its material
 bundle (<code>DynamicBundle</code>, a link to a <code>DynamicResource/BundleDefinition</code>, for example <code>Black_Base</code>),
-an <code>OutOfMemoryBackups</code> design (<code>AD_Black_Shoulders</code> names <code>AD_Sauron_Shoulders</code>) and follower and
+an <code>OutOfMemoryBackups</code> design, used when the piece does not fit the gear budget (<code>AD_Black_Shoulders</code>
+names <code>AD_Sauron_Shoulders</code>; see Resource streaming, "The gear budget") and follower and
 enemy colour overrides.</p>
 <h3 id="items-carry-the-armour">Items carry the armour</h3>
 <p>Beyond the SimpleModel's own pieces, a captain wears armour only as items. The member's inventory
@@ -861,8 +862,6 @@ old look; the open screen also keeps its own summary copies per army (0x16FC1C).
 </ul>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>Who reads a design's <code>OutOfMemoryBackups</code> (<code>AD_Black_Shoulders</code> -&gt; <code>AD_Sauron_Shoulders</code>), and
-  when does the engine fall back to it?</li>
 <li>How a spawned body picks up a rebuilt appearance object, and whether the engine supports a body
   type change on a loaded character; a live comparison of <code>[FM+0x2D8]</code> with the visual's <code>+0xB8</code>
   before and after a level-up would settle the first.</li>
