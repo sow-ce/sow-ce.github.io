@@ -432,7 +432,8 @@ capacity, +0x14 u8 owned}</code> of <code>CPlayerObj</code> (vt_0x1F96818). The 
 </tbody>
 </table>
 <p><strong>The clocks.</strong> The engine keeps a family of scaled clocks, each a holder object with its own vtable
-(vt_0x22F2E90 to vt_0x22F2F10) whose <code>+0x08</code> is the clock state (vt_0x22C2570): <code>+0x10</code> the current
+(vt_0x22F2E90 to vt_0x22F2F10) whose <code>+0x08</code> is the clock state (vt_0x22C2570): <code>+0x08</code> the number
+of objects that use the clock as their time source, <code>+0x10</code> the current
 step in milliseconds (u32) and <code>+0x14</code> the same step in seconds (f32), <code>+0x18</code> the time in u32
 milliseconds and <code>+0x20</code> in f64 seconds, <code>+0x28 / +0x2C</code> the rate's numerator and denominator,
 <code>+0x30</code> the scale, <code>+0x34</code> the effective rate of the last step (f32), <code>+0x38</code> the smallest and
@@ -450,6 +451,11 @@ combat companion <code>[base+0x2702570]</code>, the world UI <code>[base+0x27025
 <strong>real-time clock</strong> <code>[base+0x2702590]</code>. Every clock but the real-time one stops while the game is
 paused: with the game paused, the real-time clock advanced 1,015 ms in one second and the other seven
 not at all. Slow motion scales the first five as channels (see Quests, story and scenes).</p>
+<p>The count at <code>+0x08</code> is a reference count. On each of the 11 live clock states (the eight above and
+three without a slot) the heap holds exactly two more pointers to the state than <code>+0x08</code> says
+(1,258 for 1,256 on the real-time clock, 113,153 for 113,151 on the world clock), so <code>+0x08</code> counts
+the objects that hold the clock: 113,151 on the world clock in a loaded Lithlad, against 31 on the
+player clock, 286 on the world UI clock and 477 on the UI clock.</p>
 <p>A character's time source <code>[char+0x88]</code> is the state of one of these clocks: 114 of 115 characters
 in the spawn manager use the world clock and the player uses the player clock. The object update
 scheduler subtracts that clock's step from each object's countdown (see Threads and the frame), so
@@ -479,8 +485,6 @@ frame). Engine asserts are a write to a null address at 0x819113 with the messag
 (<code>EngineAssert</code> 0x819104).</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>What the clock state's <code>+0x08</code> holds: it differs per clock (31 on the player clock, 440 on the UI
-  clock, 0x1B0A3 on the world clock) and did not change over a second of running.</li>
 <li>Which class vt_0x1DA9640 is (<code>[base+0x26FFB40]</code>, constructor 0x108BB0 through 0x1081AC) beyond
   its shape: a 0x7BC0-byte object with two virtual methods, built by 0x109B44 from a setup object
   that copies a dozen texture handles into it, each marked by a flag bit; the slot was null in a
