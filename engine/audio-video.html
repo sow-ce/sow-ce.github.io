@@ -459,8 +459,10 @@ whose entry has no bank (u16 <code>+0x04</code> = 0xFFFF), plays at once. Otherw
 <li>a bank with byte <code>+0x9C</code> set refuses the event;</li>
 <li>the bank's last-use time <code>+0xAC</code> is stamped;</li>
 <li>a bank not yet requested (<code>+0x9D</code> clear) refuses the event when its size would pass the context's
-   limit (<code>+0x18</code> used, <code>+0x10</code> limit) and its priority is below <code>context+0x1C</code>; otherwise it is marked
-   requested and joins the load list <code>context+0xA8</code>;</li>
+   limit and its priority is below <code>context+0x1C</code>; otherwise it is marked requested and joins the load
+   list <code>context+0xA8</code>. The limit <code>+0x10</code> is <code>GlobalMemoryBudgetMB</code> in bytes and <code>+0x14</code>
+   <code>GlobalMemoryCloseToBudgetMB</code> (62,914,560 and 52,428,800 live, exactly 60 and 50 MiB); <code>+0x18</code> is
+   the amount in use (48.0 MiB in one loaded Lithlad, with 4,596 events in the table);</li>
 <li>the emitter's id joins the bank's list <code>+0xE0</code>;</li>
 <li>a bank that belongs to an exclusive slot (<code>+0x88</code>, byte <code>+0x99</code>) replaces the slot's previous bank
    in the map at <code>context+0x48</code>, which is released;</li>
@@ -558,9 +560,8 @@ video render-target path 0x335CF4 and the skip prompt 0x17F0E48. The UI video pl
 <code>Video.GotoFrame</code> is handled by 0x17FE1C8.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>Whether the bank gate's limit <code>context+0x10</code> is <code>Sound/StreamingSoundBankList.GlobalMemoryBudgetMB</code>
-  (60, with <code>GlobalMemoryCloseToBudgetMB</code> 50), what sets a bank's byte <code>+0x9C</code>, and what replays the
-  events waiting on a bank when it finishes loading.</li>
+<li>What sets a bank's byte <code>+0x9C</code>, and what replays the events waiting on a bank when it finishes
+  loading.</li>
 <li>The order in which the Wwise file layer searches language folders, packages and loose files.</li>
 <li>Which engine objects own the emitters, and where positions are pushed each frame.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
