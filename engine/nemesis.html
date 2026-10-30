@@ -1044,9 +1044,9 @@ which checks the bit, confirms the member still sits at its pool index, nulls th
 the member. Bit 35 is set in one place, 0x61CED0, which assigns a member to a sim event: it copies bit 0
 of the intel mask <code>FM+0x510</code> at that moment. In one campaign all 102 members with bit 35 held that
 mask bit, none of the 75 members without it had bit 35, and 350 members held the mask bit without
-it. Bit 16 is transient: the un-death 0x630644 sets it just before clearing the dead bit, but only 1
-of the 86 members with a return on record (<code>FM+0x500</code> above 0) carried it, so it does not mark a
-returned member.</p>
+it. Bit 16 is set by the un-death 0x630644 just before it clears the dead bit, and that function never
+clears it, but only 1 of the 86 members with a return on record (<code>FM+0x500</code> above 0) carried it, so
+it does not mark a returned member. Use <code>FM+0x500</code> for that.</p>
 <table>
 <thead>
 <tr>
@@ -1739,8 +1739,11 @@ eliminated: the henchmen link effects 0x18316FC / 0x183191C skip such a member.<
 <ul>
 <li>What <code>FM+0x4F8</code> means. The seat function tests it; it held 1 on 2 of 555 members in one campaign,
   both in the InvasionGame pool, and 0 on 527 of 527 in another.</li>
-<li>What clears flag bit 16, which the un-death sets, and what reads flag bit 35. Neither has a resolved
-  getter call, and 60 of the getter's 125 calls pass the bit indirectly.</li>
+<li>Why flag bit 16 is missing from most returned members. It has no saved key, so a load may simply drop
+  it, leaving only members who returned since the last load; comparing the bit before and after a
+  reload would settle it.</li>
+<li>What reads flag bit 35. It has no resolved getter call, and 60 of the getter's 125 calls pass the bit
+  indirectly.</li>
 <li>Whether the role counter at <code>FS+0xB0</code> is the number of times the role was given (it would then
   lower the role's weight by <code>WeightReductionPerUse</code> per use, as the scar table does by its use
   count); the code that reads it is not traced.</li>
