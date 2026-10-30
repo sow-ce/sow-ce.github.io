@@ -358,10 +358,20 @@ length rounded up to 4 (19,993 of 19,993 sampled entries, up to 400 per archive)
    "Decompression failure." unless exactly <code>length</code> bytes come out;</li>
 <li>skips to the next 4-byte boundary.</li>
 </ol>
-<p>In the sample, 638,807 chunks were packed and 31,098 stored. Packed chunks start with the Oodle block
-bytes <code>8C 06</code> (5,287 of 5,910 sampled) or <code>8C 02</code> (623). The first chunk of every one of the 488,752
-entries decodes with the shipped DLL. Over the whole install the stored data is 62.8% of its
+<p>In the sample, 638,807 chunks were packed and 31,098 stored. The first chunk of every one of the
+488,752 entries decodes with the shipped DLL. Over the whole install the stored data is 62.8% of its
 unpacked size.</p>
+<p><strong>Two compressors.</strong> A packed chunk starts with an Oodle block header whose second byte names the
+compressor. The shipped DLL's own <code>OodleLZ_GetChunkCompressor</code> (which this build exports with two
+arguments: the buffer and an <code>int*</code> for the independent flag) and <code>OodleLZ_Compress</code> agree on the
+mapping: <code>8C 06</code> is <strong>Kraken</strong> and <code>8C 02</code> is <strong>LZB16</strong>. Of 543,319 packed chunks in 15,519 entries
+(up to 300 evenly spaced entries in each of the 76 archives), 541,955 are Kraken and 1,364 LZB16, and
+the header names the compressor on every one. The split is by size: every LZB16 chunk unpacks to
+257 - 2,044 bytes, every Kraken chunk to 2,050 bytes or more (98.4% of them to the full 0x10000).
+LZB16 therefore appears only as an entry's last chunk (316) or only chunk (1,048), never as its first
+or a middle one, and in every file type whose length leaves a short tail (<code>.bndl</code>, <code>.embb</code>,
+<code>.texuhd</code>, <code>.mat</code>, <code>.scripts</code> and so on). The reader passes every chunk to <code>OodleLZ_Decompress</code>,
+which dispatches on the header, so a rebuilt chunk may use any compressor the DLL decodes.</p>
 <h3 id="the-path-index-archivepatchloosefiles-txt">The path index (<code>ArchivePatchLooseFiles.txt</code>)</h3>
 <p>37 archives (<code>Patch_01</code> - <code>Patch_11</code>, <code>Patch_13</code> and <code>Patch_DLC1</code> - <code>Patch_DLC5</code> with their <code>_LC</code>
 twins, <code>Global</code>, <code>HotChunk</code>, <code>soundbundles</code>) carry a root file <code>archivepatchloosefiles.txt</code> as
@@ -1199,8 +1209,6 @@ English table has 68,547 keys. A key is <code>StringHash</code> of the key name 
 <li>What the record bytes 1 and 9 encode beyond selecting the chunked reader, and what the archive header
   flags at 0x14 / 0x18 / 0x1C switch: every shipped archive has the same values, so only the code that
   reads <code>archive+0x28..+0x2A</code> and the size words' top bytes can tell.</li>
-<li>Which Oodle decoder the <code>8C 02</code> chunks use; checking the decoder type each chunk reports would
-  settle it.</li>
 <li>What the engine looks up in the hash -&gt; path table besides copying it to the load stage; the
   callers of the merged table at <code>fs+0x80</code> are not traced.</li>
 <li>Whether a loose member always replaces a container section, or only when its archive is above the
