@@ -65,26 +65,26 @@ code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril)}
 .btn.is-off{background:var(--panel-2);color:var(--faint);border-color:var(--edge);box-shadow:none;cursor:not-allowed;transform:none}
 
 /* hero: one centered column over the ring */
-.hero{position:relative;overflow:hidden;isolation:isolate;border-bottom:1px solid var(--edge)}
-.hero-ring{position:absolute;left:50%;top:50%;z-index:-2;width:min(900px,126vw);aspect-ratio:1/1;transform:translate(-50%,-50%);pointer-events:none;opacity:.5}
-.hero-ring svg{display:block;width:100%;height:100%}
-.hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse 42% 46% at 50% 50%,rgba(15,15,20,.9),rgba(15,15,20,.7) 58%,rgba(15,15,20,0) 100%)}
-.hero-center{display:flex;flex-direction:column;align-items:center;text-align:center;padding-block:clamp(76px,11vw,150px)}
+.hero{--ring:min(900px,126vw);position:relative;display:flex;align-items:center;min-height:min(calc(100vh - 66px),948px);overflow:hidden;isolation:isolate;border-bottom:1px solid var(--edge)}
+.hero-ring{position:absolute;left:50%;top:50%;z-index:-2;width:var(--ring);aspect-ratio:1/1;transform:translate(-50%,-50%);pointer-events:none;opacity:.62}
+.hero-ring::before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(closest-side,rgba(102,191,242,0) 52%,rgba(102,191,242,.24) 74%,rgba(102,191,242,0) 100%);animation:breathe 7s ease-in-out infinite alternate}
+.hero-ring svg{position:relative;display:block;width:100%;height:100%}
+.hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(circle calc(var(--ring)*.5) at 50% 50%,rgba(15,15,20,.86) 46%,rgba(15,15,20,.4) 62%,rgba(15,15,20,0) 80%)}
+.hero-center{display:flex;flex-direction:column;align-items:center;text-align:center;padding-block:clamp(56px,6vw,72px)}
 .hero-center > *{max-width:100%}
+@media (max-width:720px){.hero{min-height:0}.hero::after{background:radial-gradient(circle calc(var(--ring)*.5) at 50% 50%,rgba(15,15,20,.84) 62%,rgba(15,15,20,.6) 84%,rgba(15,15,20,.35) 100%)}}
 h1{font:700 clamp(2.7rem,6.6vw,5.4rem)/1.02 var(--f-display);letter-spacing:-.01em;margin-top:18px;text-shadow:0 2px 28px rgba(10,10,14,.85)}
-h1 span{display:block;font-style:italic;font-weight:600;color:var(--accent-hi);font-size:.6em;letter-spacing:.01em;margin-top:.2em}
-h1 span span{display:inline;font-size:1em;margin:0}
-.lead{font-size:clamp(17px,1.5vw,19px);color:var(--dim);max-width:36em;margin-top:22px;text-shadow:0 1px 14px rgba(10,10,14,.9)}
-.cta-row{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:34px}
-.dl-note{margin-top:12px;color:var(--faint);font-size:14px}
-.meta-line{margin-top:26px;display:flex;flex-wrap:wrap;justify-content:center;row-gap:4px;font:500 13.5px/1.5 var(--f-mono);color:var(--dim);font-variant-numeric:tabular-nums;text-shadow:0 1px 10px rgba(10,10,14,.95)}
+.lead{font-size:clamp(18px,1.7vw,21px);color:var(--text);max-width:23em;text-wrap:balance;text-shadow:0 1px 14px rgba(10,10,14,.9)}
+.cta-row{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:28px}
+.dl-note{margin-top:12px;color:var(--dim);font-size:14px}
+.meta-line{margin-top:18px;display:flex;flex-wrap:wrap;justify-content:center;row-gap:4px;font:500 13.5px/1.5 var(--f-mono);color:var(--dim);font-variant-numeric:tabular-nums;text-shadow:0 1px 10px rgba(10,10,14,.95)}
 .meta-line span + span::before{content:"·";margin:0 12px;color:var(--faint)}
+.meta-line span:first-child{color:var(--accent-hi)}
 .notice{display:inline-flex;align-items:center;gap:10px;margin-bottom:18px;padding:7px 14px;border:1px solid var(--accent-deep);border-radius:999px;color:var(--accent-hi);font-size:14px;background:rgba(15,15,20,.7)}
 .notice::before{content:none}
 .owner-hint{margin-top:18px;padding:10px 14px;border:1px dashed var(--accent-deep);border-radius:8px;color:var(--accent-hi);font-size:14px;max-width:34em;background:rgba(15,15,20,.7)}
-.ring-legend{transform-box:view-box;transform-origin:50% 50%;animation:ring-spin 140s linear infinite}
+.ring{animation:ring-spin 100s linear infinite;will-change:transform}
 .ring-legend text{font-family:var(--f-tengwar);font-size:20.4px;fill:var(--accent-hi);white-space:pre;animation:kindle 2.6s ease-out both}
-.ring-glow{animation:breathe 7s ease-in-out infinite alternate}
 @keyframes ring-spin{to{transform:rotate(360deg)}}
 @keyframes kindle{from{opacity:.3}to{opacity:1}}
 @keyframes breathe{from{opacity:.65}to{opacity:1}}
@@ -263,6 +263,7 @@ section[id]{scroll-margin-top:72px}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   *,*::before,*::after{animation:none!important;transition:none!important}
+  .ring{animation:ring-spin 200s linear infinite!important}
 }
 </style>
 <div id="site">
@@ -289,11 +290,6 @@ section[id]{scroll-margin-top:72px}
   <div class="hero-ring" aria-hidden="true">
     <svg class="ring" viewBox="0 0 400 400" focusable="false">
       <defs>
-        <radialGradient id="rg-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="52%" stop-color="#66bff2" stop-opacity="0"/>
-          <stop offset="74%" stop-color="#66bff2" stop-opacity=".24"/>
-          <stop offset="100%" stop-color="#66bff2" stop-opacity="0"/>
-        </radialGradient>
         <linearGradient id="rg-metal" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stop-color="#f8fafd"/>
           <stop offset=".2" stop-color="#b6c0cf"/>
@@ -311,7 +307,6 @@ section[id]{scroll-margin-top:72px}
         <filter id="rg-text-glow" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
         <path id="rg-path" d="M200,55 A145,145 0 1,1 199.99,55"/>
       </defs>
-      <circle class="ring-glow" cx="200" cy="200" r="198" fill="url(#rg-glow)"/>
       <circle cx="200" cy="200" r="150" fill="none" stroke="url(#rg-metal)" stroke-width="62"/>
       <circle cx="200" cy="200" r="180.4" fill="none" stroke="#ffffff" stroke-opacity=".55" stroke-width="1.2"/>
       <circle cx="200" cy="200" r="119.6" fill="none" stroke="url(#rg-inner)" stroke-width="2"/>
@@ -328,7 +323,7 @@ section[id]{scroll-margin-top:72px}
   </div>
   <div class="wrap hero-center">
     <div data-slot="notice"></div>
-    <h1>Shadow of War<span>Community Edition <span data-slot="ver"></span></span></h1>
+    <h1 class="sr">Shadow of War: Community Edition <span data-slot="ver"></span></h1>
     <p class="lead">A mod menu for Middle-earth: Shadow of War on Steam (game version 1.21). Install it with the setup, then press TAB in game to open it.</p>
     <div class="cta-row">
       <span data-slot="dl-lg"></span>
@@ -558,7 +553,7 @@ section[id]{scroll-margin-top:72px}
     fill("dl-sm", dlButton(st, "sm"));
     fill("dl-lg", dlButton(st, "lg"));
     fill("dl-note", '<p class="dl-note">You\'ll read the <a href="download/#disclaimer">risks</a> and tick a short checklist before the download unlocks.</p>');
-    var meta = [r.date ? "Released " + fmtDate(r.date) : "", r.size, "Steam, version 1.21"].filter(Boolean);
+    var meta = [verText(r), r.date ? "Released " + fmtDate(r.date) : "", r.size].filter(Boolean);
     fill("file-meta", meta.map(function (x) { return "<span>" + esc(x) + "</span>"; }).join(""));
     fill("notice", st.notice.trim() ? '<p class="notice">' + esc(st.notice.trim()) + "</p>" : "");
     fill("file-name", esc(r.file || "the setup"));
