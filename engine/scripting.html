@@ -128,7 +128,18 @@ built (0x1D0A294), from <code>+0x80</code> of the VM-creation settings. The engi
 <code>CreateVM</code> 0x1CFE890 is the only caller of both the settings initialiser 0x1D0173C (which writes 0
 there, names the state "Main State" and leaves the field untouched afterwards) and the state
 constructor 0x1D098C0. Modes 1 and 2 are therefore never selected in the shipped game, and the main
-VM runs in mode 0. Fields: A = bits 0-7 (a register, or a flag for EQ / LT / LE / TEST); C =
+VM runs in mode 0.</p>
+<p>The two other loops are generic builds of the same interpreter. They dispatch in two steps, a
+92-byte opcode-to-handler table (0x1D8E12C, 0x1D91308) and then a 61-entry handler table
+(0x1D8E038, 0x1D91214), with identical groupings in both: one handler serves the five call kinds
+(<code>CALL_I</code>, <code>CALL_C</code>, <code>CALL_M</code>, <code>CALL</code>, <code>CALL_I_R1</code>), one the five tail calls, one the three
+<code>GETTABLE</code> forms, one the six <code>SETTABLE</code> forms, and each <code>_BK</code> arithmetic or comparison opcode shares
+its plain twin's handler, as do <code>EQ</code> / <code>EQ_BK</code> and <code>CHECKTYPE_D</code> / <code>GETSLOT_D</code>. The main loop's table
+has 74 distinct targets instead. Mode 2 also checks every fetch: the new instruction pointer must lie
+inside the function's code (<code>[proto+0x20]</code> to <code>+ [proto+0x18] x 4</code>) and be 4-byte aligned, otherwise it
+raises "VM Kernel error: invalid instruction pointer." (0x1D911D7). In all three loops the
+<code>INTRINSIC_*</code> opcodes (31-36) and <code>DATA</code> (76) return straight to the fetch, so no interpreter
+executes an intrinsic. Fields: A = bits 0-7 (a register, or a flag for EQ / LT / LE / TEST); C =
 bits 8-16 (RK: 256 and above = constant K[C - 256]); B = bits 17-24, with bit 25 set by the <code>*_BK</code>
 opcode of a pair (B is then a constant index); Bx = bits 8-24; sBx = Bx - 0xFFFF, relative to the next
 instruction. DATA (op 76) is a word the VM skips; several opcodes own a fixed number of DATA words
@@ -419,10 +430,4 @@ source: 617 of 617 have the same calls and string literals.</p>
 wait (slot 28 0x380FAC -&gt; 0x38105C -&gt; 0x1CF430) is back-pressure for space in the render command ring
 and pumps messages too (0x6EE5D0, dispatch 0x6EE670); both pumps share the re-entrancy byte
 0x277DBB0. Posting to the render ring (0x381FCC posts <code>{0x1EE088, context, function}</code>) uses an
-unlocked bump allocation, so only the main thread may post.</p>
-<h2 id="open-questions">Open questions</h2>
-<ul>
-<li>What the two unused interpreters 0x1D8B378 and 0x1D8E188 are for (their 61-case dispatches cover
-  a smaller opcode set; a debugging or profiling variant of the loop is the usual reason for such
-  copies), and whether they execute the <code>INTRINSIC_*</code> opcodes.</li>
-</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
+unlocked bump allocation, so only the main thread may post.</p><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
