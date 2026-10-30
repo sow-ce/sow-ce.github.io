@@ -325,6 +325,24 @@ placed into an appearance without an item gets no request: its mesh is in memory
 registered resource with no data. The save loader 0x1C112F8 restores non-item pieces
 (<code>smc_nonequipment_record_list</code> -&gt; 0x1162D40) without a request as well. A bundle that is resident
 only because another character's item requested it is released when that item goes away.</p>
+<p><strong>The gear budget.</strong> These requests go through <code>NemesisBundleMgr</code> (<code>[GameManager+0x6C88]</code>, named by
+its console commands <code>NemesisBundleMgr.PrintMemory</code> and <code>PrintDynamicBundleData</code>). Its initialiser
+0x1B42728, run once from the database setup, sets the budget <code>+0x00</code> to
+<code>Faction/Global.NemsisBundleMemoryLimit</code> x 10 (320 x 10 = 3,200) and builds one object (vt_0x1FF6B90,
+constructor 0x1C52B10) for each of the 1,484 <code>DynamicResource/BundleDefinition</code> records, kept in a
+table at <code>+0x08</code> of 16-byte <code>{record, object}</code> entries. An object charges a fixed cost, <code>+0x3C</code>, taken
+from its bundle type's <code>Bundles/Types.MaxMemoryPC</code> and not from the bundle's real size: 10 for
+<code>Flair_1MB</code>, 20 for <code>Flair_2MB</code> and 30 for <code>Flair_3MB</code>, the names being the console figures. All
+1,484 definitions together cost 21,835, so about a seventh of them fit at once.</p>
+<p>Each frame 0x614438 re-evaluates the requests when they have changed (<code>+0x50</code>): it sorts them by
+the object's <code>+0x38</code>, highest first, and adds up their costs. Requests within the budget are loaded
+(0x614CB0); the rest go on a local list, and for each of those 0x1B427E4 walks the armour's and then
+the weapon's <code>OutOfMemoryBackups</code> and takes the first backup whose bundles are all resident already
+(0x1B424BC: for each bundle with an object, 0x614D3C requires a handle, its counters <code>+0x4C</code> and
+<code>+0x50</code> equal and state <code>+0x48</code> 2). The backup goes to the request's owner (0x1C11CD8, 0x1C11CFC). So
+a piece over the budget is replaced by something already in memory, and nothing new is loaded for it.
+The budget applies to this gear path only. <code>Bundles/Policies</code> carries budgets of its own
+(<code>Character_Nemesis</code> 1,600 on PC), which this manager does not read.</p>
 <p><strong>Effects only load through bundles.</strong> An effect reference (for example an attack's <code>AOEFX</code> path)
 never loads anything; the effect system finds resident effects by name, and only a bundle (or
 start-up) makes one resident.</p>
