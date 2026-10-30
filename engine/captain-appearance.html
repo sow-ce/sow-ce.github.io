@@ -287,7 +287,7 @@ size fraction; an entry with no matching range or no <code>Body.Model</code> is 
 <code>Orc_Slim_Body001</code> and <code>Orc_Stk_Body001V2</code>. Changing a member's class therefore re-rolls his body at
 the next build, and a non-orc class gives a non-orc body and head.</p>
 <h3 id="size">Size</h3>
-<p>The in-world size uses the same fraction. 0x7F8488(fm) takes the army (<code>FM+0x180</code>, else <code>FM+0x178</code>),
+<p>The in-world size uses the same fraction. 0x7F8488(fm) takes the army he was born into (<code>FM+0x180</code>, InitialFaction, else <code>FM+0x178</code>),
 the seed and the class, and 0x4E541C returns</p>
 <pre><code>size = min + (max - min) * Unit(Lcg(seed)) + army.ScaleAdditiveModifier
 </code></pre>
