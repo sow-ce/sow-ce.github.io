@@ -544,7 +544,7 @@ no 0x0A byte), <code>+0x08</code> the run, <code>+0x10</code> the instance, <cod
 </tr>
 <tr>
 <td>0x08</td>
-<td>set on every secondary</td>
+<td>set on every secondary, and read by no code: no instruction in either code section tests the byte against a mask holding 0x08, directly or after loading it, and the header word and dword tests with bit 0x800 (15) all test render, physics and archive objects; the same scan finds 701 tests of the byte against 0x10</td>
 </tr>
 <tr>
 <td>0x01</td>
@@ -1345,8 +1345,9 @@ after the next copy. When a copy is refreshed depends on what runs the copier:</
   the instance block, and on which path, is not traced.</li>
 <li>How a merged patch database's records combine with the base's when both define the same record
   (replace, or append under the same name); the merge sizes are traced, the per-record rule is not.</li>
-<li>What record flag 0x08 means (set on every secondary; the file's flag byte is 8 for secondaries), and
-  which container sets flag 0x01 (runs sorted by their own hashes).</li>
+<li>Which container sets record flag 0x01 (runs sorted by their own hashes): no game-database record
+  sets it, and the byte scan that settled flag 0x08 finds 352 tests of some object's byte <code>+0x01</code>
+  against 1, which it cannot tell apart from record tests.</li>
 <li>The meaning of the database's <code>+0x58</code> / <code>+0x60</code>, the type entry's <code>+0x38</code> flags, and whether
   anything checks the build tag at <code>+0x28</code>.</li>
 <li>What the loader's rebasing test for types 12 to 16 is for. No shipped container uses them: the 314
