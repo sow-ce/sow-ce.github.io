@@ -3,9 +3,7 @@
 An in-game mod menu for the Steam release of Middle-earth: Shadow of War (game version 1.21).
 
 - Website: https://sow-ce.github.io/
-- Download: [SoWCE_Setup_20261018.exe](https://github.com/sow-ce/sow-ce.github.io/releases/download/v1.392/SoWCE_Setup_20261018.exe) (latest release)
+- Download: https://sow-ce.github.io/download/ (read the terms and tick the checklist first)
 - Discord: https://discord.gg/shadow-of-war-modding-community-1135521354838458438
 
-Run the setup, start the game from Steam, and press TAB in game.
-
-An unofficial fan project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises.
+An unofficial, experimental fan project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Use of SoW:CE is covered by the terms at https://sow-ce.github.io/download/#terms.
