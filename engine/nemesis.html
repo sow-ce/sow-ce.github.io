@@ -69,7 +69,7 @@ the ambush update 0x6DDBA8.</p>
 </tr>
 <tr>
 <td>+0xB0 / +0xB8</td>
-<td><strong>role use</strong>: 16-byte entries <code>{Faction/Roles/Definitions record, u32 counter, f32 the role's WeightReductionPerUse}</code>, count 914; the counter counts the times the role was given: watched live, 26 counters rose in one tick, each by exactly 1 and each with a member gaining that role (20 existing members, 6 new), and no member gained a role without its counter rising. It reached 740 in a late campaign</td>
+<td><strong>role use</strong>: 16-byte entries <code>{Faction/Roles/Definitions record, u32 counter, f32 the role's WeightReductionPerUse}</code>, count 914; the counter reached 740 in a late campaign whose turn counter read 712, so it is not the turn of last use</td>
 </tr>
 <tr>
 <td>+0xC8 / +0xD0</td>
@@ -1739,12 +1739,12 @@ eliminated: the henchmen link effects 0x18316FC / 0x183191C skip such a member.<
 <ul>
 <li>What <code>FM+0x4F8</code> means. The seat function tests it; it held 1 on 2 of 555 members in one campaign,
   both in the InvasionGame pool, and 0 on 527 of 527 in another.</li>
-<li>Why flag bit 16 is missing from most returned members. A rebuild does not drop it: the bit stayed on
-  the same member while 516 of 528 member objects were rebuilt at new addresses.</li>
+<li>Why flag bit 16, which the un-death sets, is missing from most returned members.</li>
 <li>What reads flag bit 35. It has no resolved getter call, and 60 of the getter's 125 calls pass the bit
   indirectly.</li>
-<li>Whether the role counter at <code>FS+0xB0</code> lowers the role's weight by <code>WeightReductionPerUse</code> per use,
-  as the scar table does by its use count; the code that reads it is not traced.</li>
+<li>Whether the role counter at <code>FS+0xB0</code> is the number of times the role was given (it would then
+  lower the role's weight by <code>WeightReductionPerUse</code> per use, as the scar table does by its use
+  count); the code that reads it is not traced.</li>
 <li>Whether the pool's <code>ImpC_*</code> coefficients are the importance score used when a full pool recycles a
   member.</li>
 <li>Whether the world's resurrection total <code>FS+0x21C</code> is saved with the game, and under which key
