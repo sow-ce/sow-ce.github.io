@@ -894,8 +894,16 @@ role as the in-world test and the entry layout; the rest of the object:</p>
 <td>the <strong>request list</strong>: an intrusive list with a sentinel at <code>+0x98</code> (empty = it points at itself)</td>
 </tr>
 <tr>
+<td>+0x168 / +0x170 / +0x178 / +0x17C</td>
+<td>a <strong>second roster of ambient characters</strong>: a vector (data, end, u32 capacity, owns-buffer byte) of 0x28-byte entries, a polymorphic object at <code>+0x00</code> and the character at <code>+0x20</code></td>
+</tr>
+<tr>
 <td>+0x180</td>
 <td>the ambient budget: a copy of the active <code>AI/Count/Configuration.MaxAmbientAI</code> (0x5C133C)</td>
+</tr>
+<tr>
+<td>+0x18C</td>
+<td>the cursor of a sliced pass over the container at <code>+0x48</code> / <code>+0x50</code>: 0x2735EC resumes from it and resets it to 0 once it passes the container's count</td>
 </tr>
 <tr>
 <td>+0x190</td>
@@ -909,8 +917,25 @@ role as the in-world test and the entry layout; the rest of the object:</p>
 <td>+0x1D0</td>
 <td>a block holding 200 AI slots of 0x148 bytes from <code>+0x98</code></td>
 </tr>
+<tr>
+<td>+0x1E0</td>
+<td>the counter behind the names <code>noname&lt;N&gt;</code> given to characters spawned without a name (0x3FA718 formats the name, then adds 1)</td>
+</tr>
 </tbody>
 </table>
+<p>The second roster's members stay in the ambient count <code>+0x190</code> but are left out of the living-AI
+count: 0x1A93278 (used by <code>ForceAISpots</code>) counts the living entries of the global AI list that it
+does not find there. <code>RemoveAllAmbientAI</code> (0x1A92D54) despawns the main array's characters first
+(character slot 26), then pops this roster from the back and despawns each entry's character the
+same way. 0x4A2D84 erases a given character's entry (called from character slot 17), and 0x4A2DC4
+finds the character there and lowers <code>+0x190</code> by one (called from character slot 128 and from
+0x360988). A spawn (0x1A932F8, which logs <code>Spawned AI %s from Spawner %s</code>) appends to the main array
+and raises <code>+0x190</code>. The roster was empty (begin equal to end) in every one of 219 reads through a
+same-region fast travel and the 20 s after it; the first qword of its buffer then read vt_0x1DAAA20,
+a base vtable that 1,309 constructors and destructors write, which is what an element's destructor
+leaves behind.</p>
+<p>The same fast travel tore the ambient population down and rebuilt it: <code>+0x190</code> fell to 0 and rose
+to 7 within 20 s of arrival, although the region did not change.</p>
 <p>When 0x5C133C copies <code>MaxAmbientAI</code> it also walks the 200 slots and opens the first
 <code>MaxAmbientAI</code> of them (slot byte <code>+0xE8</code> cleared), closing the rest, so a budget above 200 opens no
 more slots. Dead characters leave the array (0 corpses among 107 entries with a fresh corpse at the
@@ -1590,8 +1615,9 @@ makes the player captain 1 or 2, but <code>MissionEnd</code> decides the win on 
 <li>Why a Balrog summoned onto the player's side follows but never fights: its combat tree has no
   <code>CombatCircleNodes</code>, unlike the AI Talion's (<code>AI_Talion_CombatCircle</code>). Comparing the attack
   decision of an AI Talion against an orc with the Balrog's would locate the difference.</li>
-<li>What the spawn manager's pointers at <code>+0x168</code> / <code>+0x170</code> and the counters at <code>+0x184</code> / <code>+0x188</code>
-  / <code>+0x18C</code> hold. In one loaded Lithlad both pointers held the same object (vt_0x1DAAA20) and the
-  counters read 40, 8 and 100 beside the budget of 100 at <code>+0x180</code>; only <code>MaxAmbientAI</code> is copied
-  from <code>AI/Count/Configuration</code> (to <code>+0x180</code>), and <code>+0x18C</code> is written by a single function.</li>
+<li>What puts a character into the spawn manager's second roster at <code>+0x168</code>: no function that
+  loads the manager writes the vector or takes its address to append, so the append goes through
+  another pointer to it. And what the values at <code>+0x184</code> / <code>+0x188</code> are (40 and 8 in one reading,
+  30 and 8 in a later one, both in Lithlad): no code in the offset index reads or writes them
+  directly.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
