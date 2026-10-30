@@ -344,6 +344,14 @@ bytes at <code>+0x50</code>: bytes 0, 1, 2 and 4 are flags, merged by OR, and by
 4. It is then scaled by the requester count: x1.25 at exactly 4, x1.5 at 6 or 7, x1.75 above 8, and
 unchanged at 5 and 8. Recomputed from the live requesters, this formula gives the value in <code>+0x38</code> for
 157 of 157 resident bundles (requester counts 1 to 49).</p>
+<p>The constructor 0x400AB8 copies the five bytes from a struct its caller passes. On the equip and
+re-skin paths 0x400084 fills that struct: byte 0 is always 1, byte 1 is set when the owner reference has
+a <code>+0x40</code>, byte 2 when the owning character has <code>+0x2700</code>, the follower byte <code>+0x23B8</code> or <code>+0x2C04</code> set
+(0x366B88), byte 3 is the member's Player Interaction Score at that moment (0x595364, row 2 column 2 of
+the score object <code>FM+0x150</code>, the dword at <code>+0x38</code>) and byte 4 comes from 0x77F804. The byte is a
+snapshot: on 34 requests of this kind held by spawned captains it was at or below the current score
+every time, and equal on 16. Requests made on the give path (0x4B4C7C) instead take their bytes from
+a struct at <code>+0xF8</code> of the 25-slot item table, and those carry byte 0 clear.</p>
 <p>Each frame 0x614438 re-evaluates the requests when they have changed (<code>+0x50</code>): it sorts them by
 <code>+0x38</code>, highest first, and adds up their costs. Requests within the budget are loaded
 (0x614CB0); the rest go on a local list, and for each of those 0x1B427E4 walks the armour's and then
@@ -444,6 +452,9 @@ accumulates across regions. <code>WorldInfo.MaxBundleSizePC</code> (1096 on PC, 
 only when content is packed; no run-time code reads it.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
+<li>What the give path's flags struct at <code>+0xF8</code> of the 25-slot item table holds. Its requests carry byte 0
+  clear and byte 3 values up to 41, and they are held at <code>+0x108</code> of an object that is not a slot item,
+  so the check that settled the equip path does not reach them.</li>
 <li>The meaning of the resource-data states other than 3 (finalized), and what the parse stage's second
   work vector carries.</li>
 <li>Why the global path table's second field is 0 while the per-bundle name arrays carry 1.</li>
