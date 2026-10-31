@@ -332,8 +332,8 @@ section[id]{scroll-margin-top:72px}
     <li><b>It's experimental.</b> SoW:CE is a highly experimental framework that changes Shadow of War while the game is running. It can crash or freeze the game, break quests, damage or lose saves, and leave your army or progress in a state that can't be undone. Some features have only been tested on a handful of PCs.</li>
     <li><b>Online services haven't been tested with mods.</b> That means Online Vendettas, Online Conquests, online fight pits, leaderboards and anything else that talks to WB's servers. If you use them with SoW:CE, you do so at your own risk. Nobody can say how those servers will respond to a modded game, or what will happen to your WB or Steam account as a result.</li>
     <li><b>Garrison and the Market may not load or work properly.</b> Both rely on WB's servers and on parts of the game that were changed or switched off years ago. They can fail to load, show the wrong content or stop working at any time. Nothing you open, earn or buy through them is guaranteed.</li>
-    <li><b>It changes your game install.</b> The setup adds its own files to the game folder, including a loader in the <code>x64</code> folder. If you install the optional Armory weapons, it also changes two of the game's own files, <code>hotchunk.arch06</code> and <code>x64\default.archcfg</code>. Uninstalling normally puts them back. If another mod changed them in the meantime they're left alone, and Steam's Verify integrity has to restore them.</li>
-    <li><b>Your saves are at risk.</b> Some things you do with the menu get written into your save, and uninstalling SoW:CE doesn't undo them. A save that holds an Armory weapon hasn't been tested without them. SoW:CE backs up your saves when the game starts, but don't rely on that alone. Keep your own copies.</li>
+    <li><b>It adds to your game folder.</b> The setup puts its files in the game's <code>x64\sowframework</code> and <code>Mods</code> folders, and SoW:CE starts the game through its own launcher. It doesn't change the game's own files. If an older version installed the Armory weapons, the update puts <code>hotchunk.arch06</code> and <code>x64\default.archcfg</code> back. If another mod changed them in the meantime they're left alone, and Steam's Verify integrity has to restore them.</li>
+    <li><b>Your saves are at risk.</b> Some things you do with the menu get written into your save, and uninstalling SoW:CE doesn't undo them. A save that holds an Armory weapon from an older version hasn't been tested without it. SoW:CE backs up your saves when the game starts, but don't rely on that alone. Keep your own copies.</li>
     <li><b>Mods can clash.</b> Other mods and tools can conflict with SoW:CE, and nobody has tested every combination.</li>
   </ol>
 
@@ -379,7 +379,7 @@ section[id]{scroll-margin-top:72px}
   <div class="dl-box">
     <a class="btn btn-primary btn-lg is-off" id="dl" aria-disabled="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 20h16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Download mod menu</span></a>
     <p class="dl-status" id="dl-status" role="status" aria-live="polite">Confirm you've read this page first.</p>
-    <p class="dl-file">SoWCE_Setup_20261018.exe &middot; 77.6 MB<br>SHA-256 00334da685a3bf64d028adf13cd096ebe811290ea2782f38131de01d51068371</p>
+    <p class="dl-file">SoWCE_Setup_20261031.exe &middot; 34.5 MB<br>SHA-256 0325fee352586db05ebcee6549f1059cd956761ca3b3b820d54bc17c9628c776</p>
     <p class="dl-next">After the download, follow the <a href="../#install">install steps</a>.</p>
   </div>
 </main>
@@ -402,7 +402,7 @@ section[id]{scroll-margin-top:72px}
 <script>
 (function () {
   "use strict";
-  var LINK = "https://github.com/sow-ce/sow-ce.github.io/releases/download/beta/SoWCE_Setup_20261018.exe";
+  var LINK = "https://github.com/sow-ce/sow-ce.github.io/releases/download/beta/SoWCE_Setup_20261031.exe";
   var terms = document.getElementById("ok-terms");
   var group = document.getElementById("prereqs");
   var boxes = Array.prototype.slice.call(group.querySelectorAll('input[type="checkbox"]'));
