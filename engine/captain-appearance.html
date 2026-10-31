@@ -188,8 +188,273 @@ slot itself:</p>
 </tr>
 </tbody>
 </table>
-<p>ArmorSlots 13 and 14 map to piece slots 16 and 17; no shipped design uses them. The build itself
-fills slot 2 (hair) and slot 5 (body flair), which no design reaches.</p>
+<p>The enum <code>EInventoryArmorSlot</code> (0x7D6E9C, 15 values) names them in order: Helmet, Shoulder, Chest, Arms,
+Pants, Legs, Accessory1, Accessory2, LowLOD, HeadAccessory1, BodyReplacement, HeadReplacement, Ring,
+Accessory3, Accessory4. ArmorSlots 13 and 14 map to piece slots 16 and 17; no shipped design uses them
+(the 1,349 designs stop at ArmorSlot 12). The build itself fills slot 2 (hair) and slot 5 (body flair),
+which no design reaches.</p>
+<h3 id="the-23-piece-slots">The 23 piece slots</h3>
+<p>The names are the engine's own: the stored forms of an appearance for slots 0-15, the slot enum 0x836D18
+for slots 16 and 17, and the character node table 0x2A40950 for the five FX slots. "Built on" is the
+object the model load puts the piece on: 0x4C71D0 sends slots 1, 14 and 15 to the head object when the
+character has one, and every other slot to the body model.</p>
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Offset</th>
+<th>Name</th>
+<th>ArmorSlot</th>
+<th>Design cell</th>
+<th>Built on</th>
+<th>In the save</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>+0x28</td>
+<td><code>BodyModel</code></td>
+<td>10</td>
+<td>none</td>
+<td>body</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>1</td>
+<td>+0x30</td>
+<td><code>HeadModel</code></td>
+<td>11</td>
+<td>none</td>
+<td>head</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>2</td>
+<td>+0x38</td>
+<td><code>HairModel</code></td>
+<td>none</td>
+<td>none</td>
+<td>body</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>3</td>
+<td>+0x40</td>
+<td><code>AccessoryModel1</code></td>
+<td>6</td>
+<td>6</td>
+<td>body</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>4</td>
+<td>+0x48</td>
+<td><code>AccessoryModel2</code></td>
+<td>7</td>
+<td>7</td>
+<td>body</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>5</td>
+<td>+0x50</td>
+<td><code>BodyFlairModel</code></td>
+<td>none</td>
+<td>none</td>
+<td>body</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>6</td>
+<td>+0x58</td>
+<td><code>BodyScarModel</code></td>
+<td>none</td>
+<td>none</td>
+<td>body</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>7</td>
+<td>+0x60</td>
+<td><code>HelmetModel</code></td>
+<td>0</td>
+<td>0</td>
+<td>body</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>8</td>
+<td>+0x68</td>
+<td><code>ArmorShoulder</code></td>
+<td>1</td>
+<td>1</td>
+<td>body</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>9</td>
+<td>+0x70</td>
+<td><code>ArmorChest</code></td>
+<td>2</td>
+<td>2</td>
+<td>body</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>10</td>
+<td>+0x78</td>
+<td><code>ArmorArms</code></td>
+<td>3</td>
+<td>3</td>
+<td>body</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>11</td>
+<td>+0x80</td>
+<td><code>ArmorPants</code></td>
+<td>4</td>
+<td>4</td>
+<td>body</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>12</td>
+<td>+0x88</td>
+<td><code>ArmorLegs</code></td>
+<td>5</td>
+<td>5</td>
+<td>body</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>13</td>
+<td>+0x90</td>
+<td><code>LowLOD</code></td>
+<td>8</td>
+<td>8</td>
+<td>body</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>14</td>
+<td>+0x98</td>
+<td><code>HeadScarModel</code></td>
+<td>none</td>
+<td>none</td>
+<td>head</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>15</td>
+<td>+0xA0</td>
+<td><code>HeadAccessory1</code></td>
+<td>9</td>
+<td>9</td>
+<td>head</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>16</td>
+<td>+0xA8</td>
+<td><code>Accessory3</code></td>
+<td>13</td>
+<td>13</td>
+<td>body</td>
+<td>no</td>
+</tr>
+<tr>
+<td>17</td>
+<td>+0xB0</td>
+<td><code>Accessory4</code></td>
+<td>14</td>
+<td>14</td>
+<td>body</td>
+<td>no</td>
+</tr>
+<tr>
+<td>18-22</td>
+<td>+0xB8 to +0xD8</td>
+<td><code>FX1</code> to <code>FX5</code></td>
+<td>none</td>
+<td>none</td>
+<td>not built</td>
+<td>no</td>
+</tr>
+</tbody>
+</table>
+<p>The model load 0x4C67B0 builds a fixed list of slots, not a range: 0, 5, 6, 8-13, 3, 4, 16 and 17, and
+through 0x103978 slots 1, 14, 7, 2 and 15. 0x36B248 walks all 23 but only refreshes pieces that already
+exist (0x4C6718 returns on an empty model slot), and 0x2EBA60 (copy), 0x369F60 (compare) and 0x36B430
+(tints) walk all 23 as well, so a value in any slot is carried along whether or not it is ever built.</p>
+<h3 id="what-writes-the-array">What writes the array</h3>
+<p>Eight routines write it. SetPieceSlot, the copy 0x2EBA60 and the three load routines below carry
+records; the constructor 0x2EB4B8, the reset 0x2EA718 and 0xD587B0 only zero it. 0xD587B0 does so with
+inlined stores rather than the accessor, then calls the build, which is how a rebuild empties every slot
+the build does not fill. The executable backs that list up three ways. Only 6 functions bounds-check a
+23-element array: 0x36A018, 0x4C62EC, 0xFC93A0 and 0xFC93C0 on this one, 0x1A9A068 and 0x1AE9F18 on
+others. No block fill or block copy has a count of 23 cells or of the whole object, which holds two
+vectors and so cannot be copied raw. And following appearance pointers across 2,984 functions finds no
+other store to a record slot; that walk reproduces all 48 calls to the write accessor 0xFC93A0, but it
+does not follow virtual calls.</p>
+<p>SetPieceSlot is always called with a known slot: the build 0x4C5194 (0-5 and 7), the item application
+through the ArmorSlot map (0x61BBC4, 0x4C61BC; never 2, 5, 6, 14 or 18-22), 0x619C1C for
+<code>Inventory/Flair/BodyModelReplace</code> (3 records; <code>BodySlot</code> 0 is slot 1, 1 is slot 0), 0x1C049D4, which
+empties slots 7-13, the Firebird import 0x1C04F20 (0, 1, 2, 7), 0x79B700 (0, 1, 2) and 0x103CB8 (1).</p>
+<h3 id="the-slots-the-game-barely-uses">The slots the game barely uses</h3>
+<ul>
+<li><strong>Slot 5, <code>BodyFlairModel</code>,</strong> comes from the <code>BodyFlair</code> of a <code>Model/SimpleModel</code> entry. 4 of the 207
+  entries have one: <code>Zhoja</code> and <code>Zhoja_Skirt</code> (<code>Zhoja_Flair</code>), <code>GraftEltariel_Wraith</code> and
+  <code>GraftEltariel_DarkWraith</code> (<code>GraftEltariel_Wraith_Cloak</code>). No orc or olog entry does.</li>
+<li><strong>Slots 6 and 14, the scar slots,</strong> come from Shadow of Mordor, which stored <code>SMC_BodyScarModel</code>,
+  <code>SMC_HeadScarModel</code> and <code>SMC_ScarSetup</code> together and filled them from <code>Model/Scar/Setup</code> (45 records),
+  <code>Model/Scar/Scars</code> (122, such as <code>Orc_Head06_Burn</code> and <code>Orc_Slim_Head04_Eyepatch</code>) and
+  <code>Model/Scar/Types</code> (<code>Wraith</code>, <code>Burn</code>, <code>Pin_Cusion</code>, <code>Sack_Head</code>, <code>Eyepatch</code>, <code>Melee</code>). No <code>Model/Scar</code>
+  category ships here: scars are items under <code>Combat/Scar</code> (see Scars below). The slots
+  stayed in the array, the model load and every stored form, but no run-time route fills them, so only
+  a stored value could. The slot enum still lists <code>BodyScar</code> and skips 14.</li>
+<li><strong>Slots 16 and 17, <code>Accessory3</code> and <code>Accessory4</code>,</strong> are the third and fourth accessory slots, which
+  Mordor's table does not have. The engine groups them with slots 3 and 4: 0x1BEA070 removes all four
+  pieces from the model and 0x1BEA544 restores them from the appearance, on the player's animation
+  commands <code>HIDE_ACCESSORIES</code> and <code>SHOW_ACCESSORIES</code> (0x4CD070). No design uses them and no stored form
+  carries them, so shipped content leaves them empty.</li>
+<li><strong>Slots 18-22, <code>FX1</code> to <code>FX5</code>,</strong> also come from Mordor, whose piece table numbers them 13-17 and whose
+  stored fields omit them. No routine fills them or builds a piece there: the model-piece creator
+  0x4C72B4 is only reached with a known slot up to 17, or with an empty piece from 0x1D641C4.
+  SetPieceSlot with a visual would build one (0x4C6C8C, 0x4C7274), but no caller passes such a slot.</li>
+</ul>
+<h3 id="hiding-pieces">Hiding pieces</h3>
+<p><code>Inventory/ModelHide</code> (7 records) hides slots and weapon slots by count. 0x1C68F08 keeps one counter per
+slot, 18 of them, and calls 0x1BEA4AC when a slot's visibility changes. Its <code>ModelSlots</code> values use the
+slot enum 0x836D18, which has 17 names: <code>Body</code> 0, <code>Head</code> 1, <code>Hair</code> 2, <code>Accessory1</code> 3, <code>Accessory2</code> 4,
+<code>BodyFlair</code> 5, <code>BodyScar</code> 6, <code>Helmet</code> 7, <code>ArmorShoulder</code> 8, <code>ArmorChest</code> 9, <code>ArmorArms</code> 10, <code>ArmorPants</code>
+11, <code>ArmorLegs</code> 12, <code>LowLOD</code> 13, <code>HeadAccessory1</code> 15, <code>Accessory3</code> 16, <code>Accessory4</code> 17. <code>Meatshield</code>,
+<code>Bound_Prisoner</code> and <code>FailSpy_Balcony</code> hide <code>Accessory1</code>. <code>Blinded_Dissolve</code> lists 15 of the names in
+alphabetical order, all but <code>Accessory3</code> and <code>Accessory4</code>, so those two stay visible through it.</p>
+<h3 id="the-character-node-table">The character node table</h3>
+<p>0x47888D0 fills a static table at 0x2A40950: 23 rows of 0x30 bytes, each with a name, readers for the
+<code>&lt;name&gt;_Visible</code> and <code>&lt;name&gt;_AnimatedShape</code> properties, two accessors and the <code>Visible</code> key. The rows
+run Body, Head, Hair, Accessory1, Accessory2, BodyFlair, BodyScar, Helmet, Shoulder, Chest, Arms, Pants,
+Legs, LowLOD, Accessory3, Accessory4, HeadScar, HeadAccessory1, FX1 to FX5. 0x1D641C4 and 0x1D67D20
+index a model directly by row, so rows 14-17 do not line up with slots 14-17: <code>Accessory3_Visible</code> acts
+on slot 14 and <code>HeadScar_Visible</code> on slot 16. Rows 18-22 are what ties <code>FX1</code> to <code>FX5</code> to slots 18-22.</p>
+<p>Live inspection of a running game: slots 6, 14 and 16-22 were empty on all 527 captains (slots 8 and 9
+held a piece on 514) and on 65 spawned characters, and no model of 66 spawned characters had a piece in
+slots 18-22. So none of these slots holds anything in normal play. They are not inert: a record written
+to slot 5, 6, 16 or 17 of a captain's appearance is built on his spawned character alongside slot 4.</p>
+<h3 id="stored-forms">Stored forms</h3>
+<p>An appearance is stored in three forms, and all three stop at slot 15, so slots 16-22 do not survive a
+save and reload.</p>
+<ul>
+<li><strong>The save.</strong> The pool serializer 0x59460C writes each member through 0x594788, which hands the
+  appearance to 0x36BA30: <code>+0x20</code>, <code>+0x170</code>, slots 0-15, design cells 0-5 and 8, the 17 colours and the
+  material-override list. 0x1C0606C reads the same fields back. Design cells 6, 7 and 9-14 are not stored.</li>
+<li><strong>The document form</strong>, keys <code>smc_body_piece_record</code>, <code>smc_bodyfair_piece_record</code>,
+  <code>smc_bodyscar_piece_record</code>, <code>smc_headscar_piece_record</code>, <code>smc_accessory1_piece_record</code> and so on:
+  written by 0x1C06810, read by 0x1C05970.</li>
+<li><strong>The property form</strong>, the names in the table above: written by 0x1C06444, read by 0x1C0546C.</li>
+</ul>
 <p><code>SetPieceSlot(appearance, slot, piece, design, visual)</code> returns early when the slot already holds
 that piece; otherwise it removes the old piece's appearance tags (0x4C64EC), adds the new piece's
 (0x4C647C), writes the design into its cell, and, when a visual is passed, swaps the piece on that
@@ -867,7 +1132,6 @@ old look; the open screen also keeps its own summary copies per army (0x16FC1C).
   before and after a level-up would settle the first.</li>
 <li>How <code>Rogue_BodyTattoo</code> (no material override, so the give path files nothing) applies the Rogue
   body, and which items carry the <code>_LOD</code> painted variants.</li>
-<li>What piece slots 6, 14 and 18-22 hold, if anything; no build step or design writes them.</li>
 <li>How the body-animation marker items (<code>Personality_UniqueBodyAnim_*_IT</code>, no payload) reach the
   animation, and how the <code>ChildItemPicker</code> tint items (<code>IT_Faction_Enemy_Tint</code>) are resolved, since
   the give path reads neither.</li>
