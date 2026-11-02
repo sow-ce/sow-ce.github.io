@@ -53,6 +53,10 @@ code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril)}
 .nav a{color:var(--dim);text-decoration:none;font-size:14.5px;font-weight:500}
 .nav a:hover{color:var(--text)}
 @media (max-width:950px){.nav{display:none}}
+/* Under the brand name, out of the row's flow: the top bar's width cap leaves no room beside the nav. */
+.brand-text{position:relative;min-width:0}
+.brand-stat{position:absolute;left:0;top:100%;color:var(--dim);font-size:12.5px;line-height:1.2;white-space:nowrap;opacity:.8}
+@media (max-width:1190px){.brand-stat{display:none}}
 
 /* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:8px;text-decoration:none;cursor:pointer;border:1px solid transparent;font-family:var(--f-display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1.1;transition:background .15s,border-color .15s,transform .15s,box-shadow .15s,color .15s}
@@ -273,7 +277,10 @@ section[id]{scroll-margin-top:72px}
   <div class="wrap">
     <a class="brand" href="#top" aria-label="Shadow of War: Community Edition, back to the top">
       <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mark-metal" gradientUnits="userSpaceOnUse" x1="4" x2="60" y1="0" y2="0"><stop offset="0" stop-color="#6d7788"/><stop offset=".2" stop-color="#f7f9fc"/><stop offset=".45" stop-color="#9aa5b6"/><stop offset=".68" stop-color="#fff"/><stop offset="1" stop-color="#6d7788"/></linearGradient><linearGradient id="mark-back" gradientUnits="userSpaceOnUse" x1="4" x2="60" y1="0" y2="0"><stop offset="0" stop-color="#454d5b"/><stop offset=".5" stop-color="#7f8a9c"/><stop offset="1" stop-color="#3c4351"/></linearGradient><linearGradient id="mark-blade" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="1" y2="46"><stop offset="0" stop-color="#e6f6ff"/><stop offset=".55" stop-color="#66bff2"/><stop offset="1" stop-color="#2a6a9a"/></linearGradient><linearGradient id="mark-blade-dark" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="1" y2="46"><stop offset="0" stop-color="#b9e6ff"/><stop offset=".55" stop-color="#3584bd"/><stop offset="1" stop-color="#1c4a6e"/></linearGradient></defs><g id="mark"><g transform="rotate(-14 32 26)" fill="none"><path d="M4,26A28,11 0 0 1 60,26" stroke="url(#mark-back)" stroke-width="7"/><path d="M4,26A28,11 0 0 1 60,26" stroke="#141820" stroke-width="3.6"/><path class="mark-script" d="M4,26A28,11 0 0 1 60,26" stroke="#66bff2" stroke-opacity=".8" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="3 2 1 2 4 2"/></g><path d="M32,1L36.5,9V45.5H32Z" fill="url(#mark-blade-dark)"/><path d="M32,1L27.5,9V45.5H32Z" fill="url(#mark-blade)"/><path d="M16.5,45H47.5L44.5,49.5H19.5Z" fill="url(#mark-metal)"/><rect x="29.6" y="49.5" width="4.8" height="8.5" fill="#39465a"/><path d="M32,56.8L35.6,60.4L32,64L28.4,60.4Z" fill="#c9d2df"/><g transform="rotate(-14 32 26)" fill="none"><path d="M4,26A28,11 0 0 0 60,26" stroke="url(#mark-metal)" stroke-width="7"/><path d="M4,26A28,11 0 0 0 60,26" stroke="#141820" stroke-width="3.6"/><path class="mark-script" d="M4,26A28,11 0 0 0 60,26" stroke="#8cd9ff" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="3 2 1 2 4 2 1.5 2"/></g></g></svg>
-      <span class="brand-name"><b>Shadow of War<i>:</i></b> <em>Community Edition <span data-slot="ver"></span></em></span>
+      <span class="brand-text">
+        <span class="brand-name"><b>Shadow of War<i>:</i></b> <em>Community Edition <span data-slot="ver"></span></em></span>
+        <span class="brand-stat" id="site-stat" hidden></span>
+      </span>
     </a>
     <nav class="nav" aria-label="Page sections">
       <a href="#features">Features</a>
@@ -972,6 +979,43 @@ section[id]{scroll-margin-top:72px}
     }).catch(function () {});
   }
   lightUpOwner();
+})();
+
+/* The header's small stat. Downloads come from GitHub's public API, visits from a free public
+   counter named in the terms on the download page, one per browser session. A source that
+   fails is simply left out: the line shows only numbers it really got. */
+(function () {
+  var el = document.getElementById("site-stat");
+  if (!el || !window.fetch) return;
+  var counts = { downloads: null, visits: null };
+  function label(n, word) { return n.toLocaleString("en-US") + " " + word + (n === 1 ? "" : "s"); }
+  function show() {
+    var out = [];
+    if (counts.downloads !== null) out.push(label(counts.downloads, "download"));
+    if (counts.visits !== null) out.push(label(counts.visits, "visit"));
+    el.textContent = out.join(" · ");
+    el.hidden = !out.length;
+  }
+  function json(url) {
+    return fetch(url).then(function (r) {
+      if (!r.ok) throw new Error("status " + r.status);
+      return r.json();
+    });
+  }
+  json("https://api.github.com/repos/sow-ce/sow-ce.github.io/releases/tags/beta").then(function (rel) {
+    counts.downloads = rel.assets.reduce(function (n, a) {
+      return /^SoWCE_Setup_/.test(a.name) ? n + a.download_count : n;
+    }, 0);
+    show();
+  }).catch(function () {});
+  var seen = false;
+  try {
+    seen = sessionStorage.getItem("sowce-visit") === "1";
+    sessionStorage.setItem("sowce-visit", "1");
+  } catch (e) {}
+  json("https://abacus.jasoncameron.dev/" + (seen ? "get" : "hit") + "/sow-ce/visits").then(function (c) {
+    if (typeof c.value === "number") { counts.visits = c.value; show(); }
+  }).catch(function () {});
 })();
 </script>
 </body></html>
