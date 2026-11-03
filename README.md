@@ -1,6 +1,6 @@
 # SoW:CE: Shadow of War Community Edition
 
-An in-game mod menu for the Steam release of Middle-earth: Shadow of War (game version 1.21).
+An in-game mod menu for the Steam and GOG releases of Middle-earth: Shadow of War (game version 1.21).
 
 - Website: https://sow-ce.github.io/
 - Download: https://sow-ce.github.io/download/ (read the risks and tick the checklist first)
