@@ -328,42 +328,44 @@ section[id]{scroll-margin-top:72px}
 <main class="wrap doc">
   <h1>Before you download</h1>
   <p class="doc-lead">SoW:CE is a free, unofficial mod for Middle-earth: Shadow of War. It's experimental and it changes how the game runs, so please read this page before you install it. When you've read it, tick the boxes at the bottom and the download will unlock.</p>
-  <p><a href="#accept">Go to the checklist</a></p>
+  <p><b>Already using SoW:CE?</b> If SoW-CE Tools is on your desktop, you don't need this page: new builds offer themselves when you start the game. If it isn't, you're on an older setup, so download this one once more and install it over the top. Updates take care of themselves from then on.</p>
+  <p><a href="#accept" id="to-accept">Go to the checklist</a></p>
 
   <h2 id="disclaimer">Disclaimer</h2>
   <p>These are the real risks of using SoW:CE. If you aren't comfortable with them, don't install it.</p>
   <ol>
     <li><b>It's experimental.</b> SoW:CE is a highly experimental framework that changes Shadow of War while the game is running. It can crash or freeze the game, break quests, damage or lose saves, and leave your army or progress in a state that can't be undone. Some features have only been tested on a handful of PCs.</li>
-    <li><b>Online services haven't been tested with mods.</b> That means Online Vendettas, Online Conquests, online fight pits, leaderboards and anything else that talks to WB's servers. If you use them with SoW:CE, you do so at your own risk. Nobody can say how those servers will respond to a modded game, or what will happen to your WB or Steam account as a result.</li>
+    <li><b>Online services haven't been tested with mods.</b> That means Online Vendettas, Online Conquests, online fight pits, leaderboards and anything else that talks to WB's servers. If you use them with SoW:CE, you do so at your own risk. Nobody can say how those servers will respond to a modded game, or what will happen to your WB, Steam or GOG account as a result.</li>
     <li><b>Garrison and the Market may not load or work properly.</b> Both rely on WB's servers and on parts of the game that were changed or switched off years ago. They can fail to load, show the wrong content or stop working at any time. Nothing you open, earn or buy through them is guaranteed.</li>
-    <li><b>It adds to your game folder.</b> The setup puts its files in the game's <code>x64\sowframework</code> and <code>Mods</code> folders, and SoW:CE starts the game through its own launcher. It doesn't change the game's own files. If an older version installed the Armory weapons, the update puts <code>hotchunk.arch06</code> and <code>x64\default.archcfg</code> back. If another mod changed them in the meantime they're left alone, and Steam's Verify integrity has to restore them.</li>
+    <li><b>It adds to your game folder.</b> The setup puts its files in the game's <code>x64\sowframework</code> and <code>Mods</code> folders, keeps a copy of itself there for SoW-CE Tools, and SoW:CE starts the game through its own launcher. New builds replace SoW:CE's own files, once you've said yes. It doesn't change the game's own files. If an older version installed the Armory weapons, the update puts <code>hotchunk.arch06</code> and <code>x64\default.archcfg</code> back. If another mod changed them in the meantime they're left alone, and Steam's Verify integrity (or Verify / Repair in GOG Galaxy) has to restore them.</li>
     <li><b>Your saves are at risk.</b> Some things you do with the menu get written into your save, and uninstalling SoW:CE doesn't undo them. A save that holds an Armory weapon from an older version hasn't been tested without it. SoW:CE backs up your saves when the game starts, but don't rely on that alone. Keep your own copies.</li>
     <li><b>Mods can clash.</b> Other mods and tools can conflict with SoW:CE, and nobody has tested every combination.</li>
   </ol>
 
   <h2 id="updates">Remove it before you update</h2>
-  <p>Before any Windows update, graphics driver update or Shadow of War update, do a clean remove. This makes sure nothing of SoW:CE's is in the way of the game's DRM. One tester's game asked to be activated again after a Windows update, and SoW:CE is built for Steam version 1.21 only, so a game update can break it too.</p>
+  <p>Before any Windows update, graphics driver update or Shadow of War update, do a clean remove. This makes sure nothing of SoW:CE's is in the way of the game's DRM. One tester's game asked to be activated again after a Windows update, and SoW:CE is built for game version 1.21 only (Steam, or GOG's Definitive Edition), so a game update can break it too.</p>
   <ol>
     <li>Close the game.</li>
-    <li>Run the setup, click Uninstall at the bottom of the window, tick "Also delete my mod menu settings and logs" and confirm.</li>
-    <li>In Steam, right-click Shadow of War, open Properties, then Installed Files, and click Verify integrity of game files.</li>
-    <li>Install the update, then start the game once from Steam to check it still runs.</li>
-    <li>Run the setup again to reinstall SoW:CE.</li>
+    <li>Open SoW-CE Tools on your desktop, click Uninstall at the bottom of the window, tick "Also delete my mod menu settings and logs" and confirm.</li>
+    <li>If you pasted the Steam launch option into Steam, clear it: right-click Shadow of War, open Properties, and empty the Launch Options box. It names a file that has just gone, so Steam can't start the game until you do.</li>
+    <li>In Steam, right-click Shadow of War, open Properties, then Installed Files, and click Verify integrity of game files. On GOG, open the game's settings menu in GOG Galaxy, choose Manage installation, then Verify / Repair.</li>
+    <li>Install the update, then start the game once from Steam or GOG Galaxy to check it still runs.</li>
+    <li>Run the setup file again to reinstall SoW:CE, or download it from this page.</li>
   </ol>
-  <p>Keep the setup file so you can do this later. If Windows updates on its own and the game won't start or asks to be activated, do the same thing: clean remove first, get the game running by itself, then reinstall.</p>
+  <p>Uninstalling takes SoW-CE Tools with it, so keep the setup file for this, or come back here for a new one. If Windows updates on its own and the game won't start or asks to be activated, do the same thing: clean remove first, get the game running by itself, then reinstall.</p>
 
   <h2 id="terms">Terms of use</h2>
-  <p class="updated">Last updated 1 November 2026</p>
+  <p class="updated">Last updated 2 November 2026</p>
   <p>By downloading or installing SoW:CE, you accept the risks above and the terms below.</p>
   <ol>
-    <li><b>Use at your own risk.</b> SoW:CE is provided "as is", with no warranty of any kind. The mod author isn't responsible for any loss or damage that comes from using it, including lost saves or progress, damaged game files, problems with your PC, losing access to the game or its DLC, or action taken against your WB or Steam account.</li>
-    <li><b>You need your own copy of the game.</b> That means a legitimate copy of Middle-earth: Shadow of War on Steam. Don't use SoW:CE to play a copy you don't own, get DLC you haven't paid for, or get around the game's DRM.</li>
-    <li><b>The game's own terms still apply.</b> WB's terms and the Steam Subscriber Agreement still cover the game and your accounts, and they may not allow mods. Checking them, and accepting that risk, is up to you.</li>
+    <li><b>Use at your own risk.</b> SoW:CE is provided "as is", with no warranty of any kind. The mod author isn't responsible for any loss or damage that comes from using it, including lost saves or progress, damaged game files, problems with your PC, losing access to the game or its DLC, or action taken against your WB, Steam or GOG account.</li>
+    <li><b>You need your own copy of the game.</b> That means a legitimate copy of Middle-earth: Shadow of War on Steam or GOG. Don't use SoW:CE to play a copy you don't own, get DLC you haven't paid for, or get around the game's DRM.</li>
+    <li><b>The game's own terms still apply.</b> WB's terms, and the Steam Subscriber Agreement or GOG's User Agreement, still cover the game and your accounts, and they may not allow mods. Checking them, and accepting that risk, is up to you.</li>
     <li><b>Play fair.</b> Don't use SoW:CE to cheat against other players, harass anyone or interfere with WB's services.</li>
     <li><b>Free to use, not to sell.</b> Screenshots and videos are welcome, but don't sell SoW:CE, charge for access to it, or re-upload it elsewhere without the mod author's permission.</li>
-    <li><b>Unofficial.</b> SoW:CE is a fan project. It isn't affiliated with or endorsed by Warner Bros. Games, Monolith Productions, Middle-earth Enterprises or Valve, and their names and trademarks belong to them. Please don't ask them for help with a modded game.</li>
+    <li><b>Unofficial.</b> SoW:CE is a fan project. It isn't affiliated with or endorsed by Warner Bros. Games, Monolith Productions, Middle-earth Enterprises, Valve or GOG, and their names and trademarks belong to them. Please don't ask them for help with a modded game.</li>
     <li><b>Updates and support.</b> This is a community project, so there's no promise of updates, fixes or support, and it can change or stop at any time. You can find the mod author in the <a href="https://discord.gg/shadow-of-war-modding-community-1135521354838458438" target="_blank" rel="noopener">Shadow of War Modding Community Discord</a>.</li>
-    <li><b>Your data.</b> This site has no accounts, and nothing you tick on this page is saved or sent anywhere. The home page shows a visit count from a free public counter, abacus.jasoncameron.dev: your browser asks it to add one per visit, so that service sees an ordinary web request, and the site only ever gets the total. "Report a problem" in the setup saves a file on your PC. Nothing leaves your PC unless you send it yourself.</li>
+    <li><b>Your data.</b> This site has no accounts. When you download, your browser keeps one note that you accepted this page, so you won't have to tick the boxes again until these terms change. That note stays in your browser and is never sent anywhere. The home page shows a visit count from a free public counter, abacus.jasoncameron.dev: your browser asks it to add one per visit, so that service sees an ordinary web request, and the site only ever gets the total. When you start the game with SoW:CE, it asks this site whether a new build is out. GitHub hosts the site, so GitHub sees an ordinary web request, and nothing about you or your game is sent with it. "Report a problem" saves a file on your PC. Nothing else leaves your PC unless you send it yourself.</li>
   </ol>
 
   <h2 id="accept">Accept and download</h2>
@@ -374,16 +376,16 @@ section[id]{scroll-margin-top:72px}
   <fieldset class="gate" id="prereqs" disabled>
     <legend>Confirm your setup</legend>
     <label class="tick"><input type="checkbox" autocomplete="off"><span>I own a legitimate copy of Shadow of War.</span></label>
-    <label class="tick"><input type="checkbox" autocomplete="off"><span>It's the Steam version, game version 1.21.</span></label>
+    <label class="tick"><input type="checkbox" autocomplete="off"><span>It's the Steam or GOG version, game version 1.21.</span></label>
     <label class="tick"><input type="checkbox" autocomplete="off"><span>All of the game's DLC is downloaded and installed.</span></label>
-    <label class="tick"><input type="checkbox" autocomplete="off"><span>I'm on 64-bit Windows 10 or 11.</span></label>
+    <label class="tick"><input type="checkbox" autocomplete="off"><span>I'm on 64-bit Windows 10 or 11, or I know Linux and the Steam Deck are experimental.</span></label>
     <label class="tick"><input type="checkbox" autocomplete="off"><span>I've made my own backup of my saves.</span></label>
     <label class="tick"><input type="checkbox" autocomplete="off"><span>I'll do a clean remove before any Windows, driver or game update.</span></label>
   </fieldset>
   <div class="dl-box">
     <a class="btn btn-primary btn-lg is-off" id="dl" aria-disabled="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 20h16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Download mod menu</span></a>
     <p class="dl-status" id="dl-status" role="status" aria-live="polite">Confirm you've read this page first.</p>
-    <p class="dl-file">SoWCE_Setup_20261101.exe &middot; 34.5 MB<br>SHA-256 e5ab53adc1d414af0a33643a873b4f9495ac3ed85ab5c690d83961298ebf7392</p>
+    <p class="dl-file">SoWCE_Setup_20261102.exe &middot; 34.6 MB<br>SHA-256 7454f1a234207d63d5b83032c1583ba1941f84d32ec810f100086f47637acf64</p>
     <p class="dl-next">After the download, follow the <a href="../#install">install steps</a>.</p>
   </div>
 </main>
@@ -406,12 +408,24 @@ section[id]{scroll-margin-top:72px}
 <script>
 (function () {
   "use strict";
-  var LINK = "https://github.com/sow-ce/sow-ce.github.io/releases/download/beta/SoWCE_Setup_20261101.exe";
+  var LINK = "https://github.com/sow-ce/sow-ce.github.io/releases/download/beta/SoWCE_Setup_20261102.exe";
   var terms = document.getElementById("ok-terms");
   var group = document.getElementById("prereqs");
   var boxes = Array.prototype.slice.call(group.querySelectorAll('input[type="checkbox"]'));
   var dl = document.getElementById("dl");
   var status = document.getElementById("dl-status");
+
+  // A tester who accepted this page once doesn't tick it all again. The note is the page's
+  // own "Last updated" line, so changing the terms asks everyone again.
+  var KEY = "sowce-accepted";
+  var stamp = document.querySelector(".updated").textContent;
+  var back = false;
+  try { back = localStorage.getItem(KEY) === stamp; } catch (e) { /* storage blocked: tick as usual */ }
+  if (back) {
+    terms.checked = true;
+    boxes.forEach(function (b) { b.checked = true; });
+    document.getElementById("to-accept").textContent = "Go to the download";
+  }
 
   function update() {
     group.disabled = !terms.checked;
@@ -421,7 +435,8 @@ section[id]{scroll-margin-top:72px}
     if (open) {
       dl.href = LINK;
       dl.removeAttribute("aria-disabled");
-      status.textContent = "Download unlocked.";
+      status.textContent = back ? "You accepted this page before on this browser, so the boxes are already ticked."
+        : "Download unlocked.";
     } else {
       dl.removeAttribute("href");
       dl.setAttribute("aria-disabled", "true");
@@ -429,6 +444,10 @@ section[id]{scroll-margin-top:72px}
         : left === 1 ? "1 box left to tick." : left + " boxes left to tick.";
     }
   }
+  dl.addEventListener("click", function () {
+    if (dl.classList.contains("is-off")) { return; }
+    try { localStorage.setItem(KEY, stamp); } catch (e) { /* storage blocked: nothing kept */ }
+  });
   terms.addEventListener("change", update);
   group.addEventListener("change", update);
   window.addEventListener("pageshow", update);
