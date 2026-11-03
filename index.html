@@ -406,9 +406,15 @@ section[id]{scroll-margin-top:72px}
     <ol class="howto">
       <li>Open the <a href="download/">download page</a>, read the risks, tick the checklist and download the setup, <code data-slot="file-name"></code><span data-slot="file-size-text"></span>.</li>
       <li>Close the game, then run the setup. It finds your Steam or GOG install on its own.</li>
-      <li>Click Install, start the game with the new Shadow of War (SoW-CE) shortcut on your desktop, and press TAB.</li>
+      <li>Click Install, start the game the way your copy needs (just below), and press TAB in game.</li>
     </ol>
-    <p class="howto-note">Steam's own Play button starts the game without the mod menu, unless you paste the setup's Steam launch option into Steam once. GOG Galaxy's Play button always starts it without, so on GOG use the shortcut. New builds offer themselves when you start the game, and SoW-CE Tools on your desktop handles repairs, reports and uninstalling. Do a <a href="download/#updates">clean remove</a> before any Windows, driver or game update.</p>
+    <h3 class="plain-h3">Starting the game with SoW:CE</h3>
+    <ul class="reqs">
+      <li><b>Steam on Windows:</b> the Shadow of War (SoW-CE) shortcut on your desktop, or Play with SoW:CE in the setup. Steam's own Play button starts the game without the mod menu, unless you paste the setup's Steam launch option into Steam once (right-click Shadow of War &gt; Properties &gt; General &gt; Launch Options).</li>
+      <li><b>GOG on Windows:</b> the same Shadow of War (SoW-CE) shortcut, or Play with SoW:CE in the setup. GOG Galaxy's Play button always starts the game without the mod menu.</li>
+      <li><b>Linux or Steam Deck:</b> click Copy Steam launch option in the setup, paste it into Shadow of War's Launch Options in Steam once, then use Steam's Play button. This is still experimental, see <a href="#help">Troubleshooting</a>.</li>
+    </ul>
+    <p class="howto-note">New builds offer themselves when you start the game, and SoW-CE Tools on your desktop handles repairs, reports and uninstalling. Do a <a href="download/#updates">clean remove</a> before any Windows, driver or game update.</p>
     <h3 class="plain-h3">You'll need</h3>
     <ul class="reqs">
       <li>A legitimate copy of Middle-earth: Shadow of War on Steam or GOG, game version 1.21 (on GOG, the Definitive Edition)</li>
@@ -458,7 +464,8 @@ section[id]{scroll-margin-top:72px}
       <div class="qa"><h3>Windows says the setup might be unsafe</h3><p>The setup isn't code-signed, so SmartScreen warns about it. Only download it from this site. If you want, check its SHA-256 against the one in <a href="#install">How to install</a>, then click More info and Run anyway.</p></div>
       <div class="qa"><h3>My antivirus removed something</h3><p>New tools that aren't code-signed often get flagged. Add the game's <code>x64\sowframework</code> folder to your antivirus's exceptions, then click Check my install and press Repair.</p></div>
       <div class="qa"><h3>The setup can't find my game</h3><p>Click Change folder and pick the folder with ShadowOfWar.exe in it. To find it, right-click Shadow of War in Steam, choose Manage, then Browse local files, and open the x64 folder. On GOG, open the game's settings menu in GOG Galaxy and choose Manage installation, then Show folder. If you have both copies, the setup has a link to switch between them, next to Change folder.</p></div>
-      <div class="qa"><h3>TAB doesn't open the menu</h3><p>You probably started the game from Steam or GOG Galaxy, which start it without the mod menu. Use the Shadow of War (SoW-CE) shortcut or Play with SoW:CE instead. If you'd rather use Steam's Play button, the setup can copy a launch option for you to paste into Steam once.</p></div>
+      <div class="qa"><h3>TAB doesn't open the menu</h3><p>You probably started the game from Steam or GOG Galaxy, which start it without the mod menu. Use the Shadow of War (SoW-CE) shortcut or Play with SoW:CE instead. If you'd rather use Steam's Play button, the setup can copy a launch option for you to paste into Steam once. GOG Galaxy has no such option, so on GOG use the shortcut.</p></div>
+      <div class="qa"><h3>I have both the Steam and the GOG copy</h3><p>The setup works on one copy at a time. Next to Change folder it has a link to switch to the other copy, so install into each copy you want to play with SoW:CE. Each copy keeps its own saves; to bring your Steam progress over to the GOG copy, see "I moved from Steam to GOG" in the FAQ.</p></div>
       <div class="qa"><h3>The game won't start, or it keeps crashing</h3><p>In SoW-CE Tools, click Fresh config. The next start uses the defaults with every mod off, so you find out whether a saved setting is the cause. Nothing is deleted, and Restore brings your settings back. If that doesn't help, hold Shift while the game starts to play without SoW:CE, and send me a report.</p></div>
       <div class="qa"><h3>'NoneType' object has no attribute 'lower', or error 740</h3><p>Both are fixed. You've got an older setup, so <a href="download/">download the new one</a>.</p></div>
       <div class="qa"><h3>The game asks to be activated after a Windows update</h3><p>Do a clean remove, get the game running by itself, then reinstall. The steps are on the <a href="download/#updates">download page</a>.</p></div>
