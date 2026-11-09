@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' blob: data:; style-src 'unsafe-inline'; script-src 'sha256-tOkE+wTklhL9iJa5zILD/EHVQsUS775dZYqbIcj6pnE='; connect-src 'self' https://sowce-card-exchange.sowce-cards.workers.dev; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' blob: data:; style-src 'unsafe-inline'; script-src 'sha256-Cx0PXJHXbKDWVQFKXWYGvx7WpqDyPUE+XssB+WhAhFc='; connect-src 'self' https://sowce-card-exchange.sowce-cards.workers.dev; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <title>Captain cards - SoW:CE</title>
@@ -330,6 +330,8 @@ section[id]{scroll-margin-top:72px}
 .stage{position:relative;display:grid;justify-items:center;gap:12px}
 .stage-hint{color:var(--faint);font-size:13.5px;text-align:center}
 .stage-btns{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.binder-note{color:var(--faint);font-size:13.5px;text-align:center;max-width:62ch;margin:0 auto}
+.binder-again{border:0;padding:0;background:none;color:var(--accent-hi);font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 
 /* THE CARD (sow_ui_card_view.hpp): perspective on the holder, the body turns, two faces back to back */
 .card3d{position:relative;z-index:1;width:min(100%,440px);aspect-ratio:750/1050;perspective:1300px;cursor:pointer;touch-action:manipulation;outline:none}
@@ -519,9 +521,11 @@ section[id]{scroll-margin-top:72px}
       <p class="stage-hint">Move over the card to tilt it. Click it, or press Enter, to turn it over.</p>
       <div class="stage-btns">
         <button type="button" class="pbtn" id="btn-flip">Turn it over</button>
+        <button type="button" class="pbtn" id="btn-binder" hidden>Put it in my game's binder</button>
         <button type="button" class="pbtn" id="btn-copy">Copy the card's text</button>
         <button type="button" class="pbtn" id="btn-remove">Take it off this list</button>
       </div>
+      <p class="binder-note" id="binder-note" hidden></p>
     </div>
     <div class="cardfacts" id="cards-facts"></div>
   </div>
@@ -1165,7 +1169,9 @@ section[id]{scroll-margin-top:72px}
         continue;
       }
       var url = URL.createObjectURL(new Blob([got.bytes], { type: "image/png" }));
-      list.push({ key: ++seq, file: got.file, url: url, res: got.res, exchange: got.meta || null });
+      // the bytes stay: "Put it in my game's binder" saves this very file (a fetch of the blob would be refused by the
+      // page's own connect-src)
+      list.push({ key: ++seq, file: got.file, url: url, res: got.res, exchange: got.meta || null, bytes: got.bytes });
       ++added;
     }
     showProblems(bad);
@@ -1232,6 +1238,7 @@ section[id]{scroll-margin-top:72px}
     $("btn-flip").textContent = "Turn it over";
     buildBack(d);
     buildFacts(c);
+    binderUi();
     start();
   }
   function flip() {
@@ -1436,6 +1443,125 @@ section[id]{scroll-margin-top:72px}
     try { await navigator.clipboard.writeText(c.res.text); say("The card's text is on your clipboard."); }
     catch (e) { say("Your browser didn't allow copying here."); }
   });
+  // ---- your game's binder (2026-11-09): a card of your own saved straight into x64\sowframework\cards ----
+  // Chrome and Edge let a page write into a folder the visitor picks (the File System Access API). Picked once, the folder
+  // is remembered in this browser (IndexedDB keeps its handle; the browser asks again before a visit's first write). Only
+  // a card dropped here goes, as the very file dropped: a library card is copied in the game (The exchange > Browse),
+  // never from here. A card in that folder is in the binder (since 2026-11-09 the game also watches the folder while its
+  // cards are on screen and welcomes a new card as NEW - BUILT, NOT RUN when this was written, so the page says neither).
+  var binderBtn = $("btn-binder"), binderNote = $("binder-note");
+  var canSave = typeof window.showDirectoryPicker === "function" && typeof indexedDB !== "undefined";
+  var binderDir = null;
+  function handles() {
+    return new Promise(function (ok, no) {
+      var r = indexedDB.open("sowce-cards", 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore("handles"); };
+      r.onsuccess = function () { ok(r.result); };
+      r.onerror = function () { no(r.error); };
+    });
+  }
+  async function remembered() {
+    try {
+      var d = await handles();
+      return await new Promise(function (ok) {
+        var q = d.transaction("handles").objectStore("handles").get("binder");
+        q.onsuccess = function () { ok(q.result || null); };
+        q.onerror = function () { ok(null); };
+      });
+    } catch (e) { return null; }
+  }
+  async function remember(dir) {
+    try {
+      var d = await handles();
+      await new Promise(function (ok) {
+        var t = d.transaction("handles", "readwrite");
+        t.objectStore("handles").put(dir, "binder");
+        t.oncomplete = ok; t.onerror = ok; t.onabort = ok;
+      });
+    } catch (e) { /* not remembered: the folder is asked for again next time */ }
+  }
+  // The cards folder: the one remembered (if the browser still lets this page write there), else the one picked now.
+  async function binderFolder(choose) {
+    if (!choose) {
+      if (!binderDir) binderDir = await remembered();
+      if (binderDir) {
+        var p = "denied";
+        try {
+          p = await binderDir.queryPermission({ mode: "readwrite" });
+          if (p !== "granted") p = await binderDir.requestPermission({ mode: "readwrite" });
+        } catch (e) { p = "denied"; }
+        if (p === "granted") return binderDir;
+      }
+    }
+    var dir = await window.showDirectoryPicker({ id: "sowce-cards", mode: "readwrite", startIn: "documents" });
+    if (String(dir.name).toLowerCase() !== "cards")
+      throw new Error("that folder is \"" + cap(dir.name, 40) + "\". Choose the folder named cards inside your game's x64\\sowframework folder.");
+    binderDir = dir;
+    await remember(dir);
+    return dir;
+  }
+  // The name the game itself would give it (name - tier finish - print - the id's end), letters the folder takes.
+  function binderName(d) {
+    var stem = (d.name || "card") + " - " + R.TIER_NAMES[d.tier] + (d.finish ? " " + R.FINISH_NAMES[d.finish] : "") +
+               (d.print > 1 ? " - print " + d.print : "") + (d.id ? " - " + String(d.id).slice(-6) : "");
+    stem = stem.replace(/[^A-Za-z0-9 '._()-]+/g, "_").replace(/\s+/g, " ").trim().slice(0, 110);
+    return (stem || "card") + ".png";
+  }
+  async function saveToBinder(choose) {
+    var c = list[sel];
+    if (!c || c.exchange || !c.bytes) return;
+    binderBtn.disabled = true;
+    try {
+      var dir = await binderFolder(choose);
+      var name = binderName(c.res.card);
+      var there = null;
+      try { there = await dir.getFileHandle(name); } catch (e) { there = null; }
+      if (there) {
+        var f = await there.getFile();
+        if (f.size === c.bytes.length) { say("It is in your binder already: " + name); return; }
+        name = name.replace(/\.png$/, "") + " (" + Date.now().toString(36) + ").png";
+      }
+      var fh = await dir.getFileHandle(name, { create: true });
+      var w = await fh.createWritable();
+      await w.write(c.bytes);
+      await w.close();
+      say("Saved into your binder as " + name + ".");
+    } catch (e) {
+      if (e && e.name === "AbortError") say("No folder chosen: nothing was saved.");
+      else say("Not saved: " + cap(e && e.message, 200));
+    } finally {
+      binderBtn.disabled = false;
+      binderUi();
+    }
+  }
+  function binderUi() {
+    if (!binderBtn || !binderNote) return;   // a select() before this part of the script ran
+    var c = list[sel];
+    binderBtn.hidden = !(c && !c.exchange && c.bytes && canSave);
+    binderNote.hidden = !c;
+    binderNote.textContent = "";
+    if (!c) return;
+    // (only what every SoW:CE build does: a card in the folder is in the binder. The in-game welcome is not promised here
+    // until it is confirmed in game - the site lists confirmed work only.)
+    if (c.exchange) {
+      binderNote.textContent = "A card from the library: buy a copy in the game, on the Card Exchange. The copy goes into your binder.";
+    } else if (!canSave) {
+      binderNote.textContent = "To put it in your game: save its PNG into x64\\sowframework\\cards in your Shadow of War folder. " +
+                               "(In Chrome or Edge, a button here saves it there for you.)";
+    } else if (!binderDir) {
+      binderNote.textContent = "The first time, choose your game's cards folder: x64\\sowframework\\cards in your Shadow of War folder. " +
+                               "This browser remembers it.";
+    } else {
+      binderNote.appendChild(document.createTextNode("Saves it into the cards folder you chose (" + cap(binderDir.name, 30) + "). "));
+      var again = el("button", "binder-again", "Choose another folder");
+      again.type = "button";
+      again.addEventListener("click", function () { saveToBinder(true); });
+      binderNote.appendChild(again);
+    }
+  }
+  binderBtn.addEventListener("click", function () { saveToBinder(false); });
+  if (canSave) remembered().then(function (d) { binderDir = d; binderUi(); });
+
   $("btn-remove").addEventListener("click", function () {
     var c = list[sel];
     if (!c) return;
@@ -1718,8 +1844,22 @@ section[id]{scroll-margin-top:72px}
   $("lib-q").addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(function () { load(true); }, 400); });
   ["lib-sort", "lib-tier", "lib-finish"].forEach(function (id) { $(id).addEventListener("change", function () { load(true); }); });
   moreBtn.addEventListener("click", function () { load(false); });
+  // A card named in the address - cards/#card=<16 hex digits> (the game's "See it on the website", 2026-11-09) - is held
+  // up as if its tile were clicked. Anything else after the # is ignored.
+  async function openFromHash() {
+    var m = /^#card=([0-9A-Fa-f]{16})$/.exec(location.hash || "");
+    if (!m) return;
+    try {
+      var body = await getJson("/v1/cards/" + m[1].toUpperCase());
+      var row = clean(body.card);
+      if (row) await open(row, document.createElement("button"));
+    } catch (e) {
+      status.textContent = e.message;
+    }
+  }
+  window.addEventListener("hashchange", openFromHash);
   root.hidden = false;
-  spotlight().then(function () { load(true); });
+  spotlight().then(function () { return load(true); }).then(openFromHash);
 })();
 </script>
 </body></html>
