@@ -1,0 +1,1456 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' blob: data:; style-src 'unsafe-inline'; script-src 'sha256-DCuCDzOQC+bJe7eWiQzvIZdkEoVE9/rmHCRrAnXBjd4='; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<title>Captain cards - SoW:CE</title>
+<meta name="description" content="Look at a SoW:CE captain card: drop the PNG to see the captain, his traits and the look he carries. The card never leaves your browser.">
+<meta name="theme-color" content="#66bff2">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SoW:CE">
+<meta property="og:title" content="Captain cards">
+<meta property="og:description" content="Look at a SoW:CE captain card: drop the PNG to see the captain, his traits and the look he carries. The card never leaves your browser.">
+<meta property="og:url" content="https://sow-ce.github.io/cards/">
+<meta property="og:image" content="https://sow-ce.github.io/cards/samples/gruk_uncommon_gold.png">
+<meta property="og:image:width" content="750"><meta property="og:image:height" content="1050">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath transform='rotate(-14 32 26)' d='M3,26A29,12 0 0 1 61,26' fill='none' stroke='%237f8a9c' stroke-width='7'/%3E%3Cpath d='M26,8L32,0L38,8V46H26Z' fill='%238cd9ff'/%3E%3Crect x='14' y='45' width='36' height='6.5' rx='1' fill='%23e9eef6'/%3E%3Crect x='28' y='51' width='8' height='12' fill='%2366bff2'/%3E%3Cpath transform='rotate(-14 32 26)' d='M3,26A29,12 0 0 0 61,26' fill='none' stroke='%23f7f9fc' stroke-width='7'/%3E%3C/svg%3E">
+<link rel="canonical" href="https://sow-ce.github.io/cards/">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<style>
+/* Layout: one dark column in the menu's own Wraith Blue. The hero pairs the download with the
+   Dashboard's mithril ring; the feature list sits beside a copy of the menu's tab rail. */
+:root{
+  --bg:#0f0f14; --bg-deep:#0a0a0e; --panel:#141419; --panel-2:#1b1b22; --edge:#262632; --edge-hi:#34343f;
+  --text:#ebebf0; --dim:#a4a4b1; --faint:#82828f;
+  --accent:#66bff2; --accent-hi:#8cd9ff; --accent-deep:#3373a6; --primary:#2a6a9a; --primary-hi:#3584bd;
+  --mithril:#dde4ef; --ok:#3ecf6e; --warn:#f2bf33; --bad:#f05252;
+  --f-display:"Palatino Linotype",Palatino,"Book Antiqua","Cormorant Garamond",Georgia,serif;
+  --f-body:"Segoe UI","Figtree",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --f-mono:Consolas,"JetBrains Mono",ui-monospace,"Cascadia Mono",monospace;
+  --f-tengwar:"Tengwar Annatar",serif;
+  --max:1180px; --r:10px;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 var(--f-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:31;background:var(--bg)}
+a{color:var(--accent-hi);text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{color:#b8e8ff}
+h1,h2,h3{text-wrap:balance;margin:0}
+p{margin:0}
+code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril)}
+:focus-visible{outline:2px solid var(--accent-hi);outline-offset:3px;border-radius:4px}
+.wrap{width:100%;max-width:var(--max);margin-inline:auto;padding-left:max(clamp(16px,4vw,40px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,4vw,40px),env(safe-area-inset-right,0px))}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:12px;top:-60px;z-index:60;background:var(--panel);color:var(--text);padding:8px 12px;border-radius:6px}
+.skip:focus{top:12px}
+.eyebrow{font:500 12px/1.3 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:rgba(15,15,20,.9);-webkit-backdrop-filter:saturate(1.2) blur(10px);backdrop-filter:saturate(1.2) blur(10px);border-bottom:1px solid var(--edge)}
+.top .wrap{display:flex;align-items:center;gap:24px;min-height:64px}
+.brand{display:flex;align-items:center;gap:11px;color:var(--text);text-decoration:none;margin-right:auto;min-width:0}
+.brand:hover{color:var(--text)}
+.brand svg{width:46px;height:46px;flex:none}
+.brand-name{font:700 22px/1.12 var(--f-display);white-space:nowrap}
+.brand-name b{font-weight:inherit}
+.brand-name i{font-style:normal}
+.brand-name em{font-style:italic;font-weight:600;color:var(--accent-hi)}
+.mark-script{animation:kindle 2.6s ease-out both}
+@media (max-width:1190px){.brand-name{font-size:19px}.brand-name b,.brand-name em{display:block}.brand-name i{display:none}.brand-name em{font-size:.88em;margin-top:1px}}
+@media (max-width:520px){.top .wrap{gap:12px}.brand{gap:8px}.brand svg{width:40px;height:40px}}
+@media (max-width:360px){.brand-name{font-size:17px}.brand svg{width:36px;height:36px}}
+.nav{display:flex;gap:24px}
+.nav a{color:var(--dim);text-decoration:none;font-size:14.5px;font-weight:500}
+.nav a:hover{color:var(--text)}
+@media (max-width:950px){.nav{display:none}}
+/* Under the brand name, out of the row's flow: the top bar's width cap leaves no room beside the nav. */
+.brand-text{position:relative;min-width:0}
+.brand-stat{position:absolute;left:0;top:100%;color:var(--dim);font-size:12.5px;line-height:1.2;white-space:nowrap;opacity:.8}
+@media (max-width:1190px){.brand-stat{display:none}}
+/* What SoW:CE supports: a second, quieter header row on the brand's left edge. It scrolls away under the bar
+   above, so the hero's min-height leaves room for both (66px + 39px), and #top scrolls to the very top. */
+.perks{background:var(--bg-deep);border-bottom:1px solid var(--edge)}
+.perks .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:4px 22px;min-height:38px;padding-block:6px}
+.perks-head{font:500 13px/1.3 var(--f-body);color:var(--faint)}
+.perks ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;align-items:center;gap:4px 20px}
+.perks li{display:flex;align-items:center;gap:7px;color:var(--dim);font-size:13.5px;line-height:1.3;white-space:nowrap}
+.perks svg{width:16px;height:16px;flex:none;fill:none;stroke:var(--accent);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.perks b{font:700 15px/1.2 var(--f-display);color:var(--mithril)}
+.perks small{font-size:12.5px;color:var(--faint)}
+#top{scroll-margin-top:120px}
+@media (max-width:960px){.perks-head{display:none}}
+@media (max-width:820px){.perks small{display:none}.perks ul{gap:4px 16px}}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:8px;text-decoration:none;cursor:pointer;border:1px solid transparent;font-family:var(--f-display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1.1;transition:background .15s,border-color .15s,transform .15s,box-shadow .15s,color .15s}
+.btn .ico{width:1.15em;height:1.15em;flex:none}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary-hi)}
+.btn-primary:hover{background:var(--primary-hi);color:#fff}
+.btn-lg{font-size:clamp(17px,1.6vw,20px);padding:17px 28px;min-height:60px}
+.btn-sm{font-size:13px;padding:9px 15px}
+.btn-ghost{background:transparent;color:var(--text);border-color:var(--edge-hi);font:600 15.5px/1.1 var(--f-body);letter-spacing:0;text-transform:none;padding:16px 22px;min-height:60px}
+.btn-ghost:hover{border-color:var(--accent-deep);color:var(--accent-hi)}
+.btn.is-off{background:var(--panel-2);color:var(--faint);border-color:var(--edge);box-shadow:none;cursor:not-allowed;transform:none}
+
+/* hero: one centered column over the ring */
+.hero{--ring:min(900px,126vw);position:relative;display:flex;align-items:center;min-height:min(calc(100vh - 105px),948px);overflow:hidden;isolation:isolate;border-bottom:1px solid var(--edge)}
+.hero-ring{position:absolute;left:50%;top:50%;z-index:-2;width:var(--ring);aspect-ratio:1/1;transform:translate(-50%,-50%);pointer-events:none;opacity:.62}
+.hero-ring::before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(closest-side,rgba(102,191,242,0) 52%,rgba(102,191,242,.24) 74%,rgba(102,191,242,0) 100%);animation:breathe 7s ease-in-out infinite alternate}
+.hero-ring svg{position:relative;display:block;width:100%;height:100%}
+.hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(circle calc(var(--ring)*.5) at 50% 50%,rgba(15,15,20,.86) 46%,rgba(15,15,20,.4) 62%,rgba(15,15,20,0) 80%)}
+.hero-center{display:flex;flex-direction:column;align-items:center;text-align:center;padding-block:clamp(56px,6vw,72px)}
+.hero-center > *{max-width:100%}
+@media (max-width:720px){.hero{min-height:0}.hero::after{background:radial-gradient(circle calc(var(--ring)*.5) at 50% 50%,rgba(15,15,20,.84) 62%,rgba(15,15,20,.6) 84%,rgba(15,15,20,.35) 100%)}}
+h1{font:700 clamp(2.7rem,6.6vw,5.4rem)/1.02 var(--f-display);letter-spacing:-.01em;margin-top:18px;text-shadow:0 2px 28px rgba(10,10,14,.85)}
+.lead{font-size:clamp(18px,1.7vw,21px);color:var(--text);max-width:23em;text-wrap:balance;text-shadow:0 1px 14px rgba(10,10,14,.9)}
+.cta-row{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:28px}
+.dl-note{margin-top:12px;color:var(--dim);font-size:14px}
+.meta-line{margin-top:18px;display:flex;flex-wrap:wrap;justify-content:center;row-gap:4px;font:500 13.5px/1.5 var(--f-mono);color:var(--dim);font-variant-numeric:tabular-nums;text-shadow:0 1px 10px rgba(10,10,14,.95)}
+.meta-line span + span::before{content:"·";margin:0 12px;color:var(--faint)}
+.notice{display:inline-flex;align-items:center;gap:10px;margin-bottom:18px;padding:7px 14px;border:1px solid var(--accent-deep);border-radius:999px;color:var(--accent-hi);font-size:14px;background:rgba(15,15,20,.7)}
+.notice::before{content:none}
+.owner-hint{margin-top:18px;padding:10px 14px;border:1px dashed var(--accent-deep);border-radius:8px;color:var(--accent-hi);font-size:14px;max-width:34em;background:rgba(15,15,20,.7)}
+.ring{animation:ring-spin 100s linear infinite;will-change:transform}
+.ring-legend text{font-family:var(--f-tengwar);font-size:20.4px;fill:var(--accent-hi);white-space:pre;animation:kindle 2.6s ease-out both}
+@keyframes ring-spin{to{transform:rotate(360deg)}}
+@keyframes kindle{from{opacity:.3}to{opacity:1}}
+@keyframes breathe{from{opacity:.65}to{opacity:1}}
+
+/* facts strip */
+.facts{background:var(--bg-deep);border-bottom:1px solid var(--edge)}
+.facts ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--edge)}
+.facts li{background:var(--bg-deep);padding:22px 20px;display:flex;gap:14px;align-items:baseline;min-width:0}
+.facts li:first-child{padding-left:0}
+.facts b{font:700 28px/1 var(--f-display);color:var(--mithril);flex:none}
+.facts span{color:var(--dim);font-size:14px;line-height:1.4}
+@media (max-width:860px){.facts ul{grid-template-columns:repeat(2,minmax(0,1fr))}.facts li:nth-child(3){padding-left:0}}
+@media (max-width:460px){.facts ul{grid-template-columns:1fr}.facts li{padding-left:0}}
+
+/* sections */
+.section{padding-block:clamp(64px,9vw,112px)}
+section[id]{scroll-margin-top:72px}
+.section-alt{background:var(--bg-deep);border-block:1px solid var(--edge)}
+.sec-head{max-width:46rem;margin-inline:auto;margin-bottom:clamp(28px,4vw,44px);text-align:center}
+.sec-head h2{font:700 clamp(2rem,4vw,3rem)/1.08 var(--f-display);margin-top:12px}
+.sec-lead{color:var(--dim);margin-top:14px;margin-inline:auto;font-size:17px;max-width:40em;text-wrap:balance}
+
+/* features */
+.feat-layout{display:grid;grid-template-columns:232px minmax(0,1fr);gap:clamp(20px,3vw,44px);align-items:start}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 84px);background:var(--panel);border:1px solid var(--edge);border-radius:var(--r);padding:10px}
+.rail-group{font:600 12.5px/1 var(--f-body);color:var(--faint);padding:16px 10px 7px}
+.rail-item{display:flex;width:100%;justify-content:space-between;align-items:center;gap:10px;background:none;border:0;border-radius:6px;padding:8px 10px;color:var(--dim);font:500 14.5px/1.25 var(--f-body);cursor:pointer;text-align:left}
+.rail-item em{font:500 12px/1 var(--f-mono);font-style:normal;color:var(--faint)}
+.rail-item:hover{background:var(--panel-2);color:var(--text)}
+.rail-item[aria-pressed="true"]{background:rgba(102,191,242,.11);color:var(--accent-hi)}
+.rail-item[aria-pressed="true"] em{color:var(--accent)}
+.feat-main{min-width:0}
+.feat-tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.feat-tools input{flex:1 1 260px;min-width:0;background:var(--bg-deep);border:1px solid var(--edge-hi);border-radius:8px;padding:12px 14px;color:var(--text);font:15px var(--f-body)}
+.feat-tools input::placeholder{color:var(--faint)}
+.feat-tools input:focus{border-color:var(--accent-deep);outline:none;box-shadow:0 0 0 3px rgba(102,191,242,.18)}
+.kbd{font:500 12px var(--f-mono);color:var(--dim);border:1px solid var(--edge-hi);border-bottom-width:2px;border-radius:5px;padding:4px 8px;white-space:nowrap}
+.feat-count{color:var(--faint);font:500 12.5px var(--f-mono);margin:20px 0 4px;letter-spacing:.04em;text-align:center}
+.feat-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:40px}
+.feat{padding:18px 0 20px;border-top:1px solid var(--edge);min-width:0;text-align:center}
+.feat-path{font:500 12px/1.4 var(--f-mono);color:var(--faint);letter-spacing:.02em}
+.feat-path .sep{color:var(--accent-deep)}
+.feat h3{font:600 17px/1.35 var(--f-body);margin-top:6px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 9px}
+.feat .d{color:var(--dim);margin-top:6px;font-size:15px;line-height:1.55;text-wrap:balance}
+.tag{font:600 10.5px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;padding:4px 7px;border-radius:4px;border:1px solid currentColor}
+.tag-new{color:var(--accent)}
+.tag-updated{color:var(--ok)}
+.empty{color:var(--dim);padding:22px 0;border-top:1px solid var(--edge);grid-column:1/-1;text-align:center}
+@media (max-width:1060px){.feat-list{grid-template-columns:1fr}}
+@media (max-width:900px){
+  .feat-layout{grid-template-columns:1fr}
+  .rail{position:static;display:flex;gap:6px;overflow-x:auto;padding:8px}
+  .rail-group{display:none}
+  .rail-item{width:auto;flex:none;white-space:nowrap}
+}
+
+/* change log */
+.wrap.narrow{max-width:960px}
+.cl-meta{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 22px;margin-top:14px;font:500 13.5px/1.4 var(--f-mono);color:var(--dim);overflow-wrap:anywhere}
+.cl-sec{padding:22px 0 6px;border-top:1px solid var(--edge);text-align:center}
+.chip{font:700 21px/1.3 var(--f-display);color:var(--k)}
+.chip::before{content:none}
+.cl-new{--k:var(--accent)}.cl-improved{--k:var(--ok)}.cl-fixed{--k:var(--warn)}.cl-issue{--k:var(--bad)}.cl-other{--k:var(--dim)}
+.cl-sec ul{margin:10px auto 0;padding-left:22px;display:grid;gap:8px;min-width:0;width:fit-content;max-width:100%;text-align:left}
+.cl-sec li{color:var(--dim);line-height:1.55}
+.cl-sec li b{color:var(--text);font-weight:600}
+.cl-sec li::marker{color:var(--k)}
+.hist{margin-top:30px;border-top:1px solid var(--edge);padding-top:20px}
+.hist summary{cursor:pointer;color:var(--accent-hi);font-weight:600}
+.hist-ver{margin-top:26px}
+.hist-ver h3{font:700 24px/1.2 var(--f-display)}
+@media (max-width:640px){.cl-sec{grid-template-columns:1fr;gap:12px}}
+
+/* install */
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(16px,2.5vw,28px)}
+.steps li{padding:28px 26px;background:var(--panel);border:1px solid var(--edge);border-radius:var(--r);min-width:0}
+.steps .n{display:block;font:700 46px/1 var(--f-display);color:var(--accent)}
+.steps h3{font:700 23px/1.2 var(--f-display);margin-top:14px}
+.steps p{color:var(--dim);margin-top:8px;font-size:15.5px;overflow-wrap:anywhere}
+.req-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(24px,4vw,56px);margin-top:clamp(36px,5vw,56px)}
+.req-grid h3{font:700 22px/1.2 var(--f-display)}
+.req-grid > div{min-width:0}
+.req dl{margin:16px 0 0;display:grid}
+.req dl div{display:grid;grid-template-columns:110px minmax(0,1fr);gap:14px;padding:12px 0;border-top:1px solid var(--edge)}
+.req dt{color:var(--faint);font:500 12px/1.5 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding-top:2px}
+.req dd{margin:0;color:var(--text)}
+.verify p{color:var(--dim);margin-top:10px}
+.hash{display:flex;gap:8px;align-items:stretch;margin-top:16px}
+.hash code{flex:1;min-width:0;overflow-wrap:anywhere;background:var(--bg-deep);border:1px solid var(--edge-hi);border-radius:8px;padding:11px 13px;font-size:13px;line-height:1.5}
+.btn-copy{flex:none;background:var(--panel-2);color:var(--text);border:1px solid var(--edge-hi);border-radius:8px;padding:0 16px;font:600 14px var(--f-body);cursor:pointer}
+.btn-copy:hover{border-color:var(--accent-deep);color:var(--accent-hi)}
+.small{font-size:14px}
+@media (max-width:860px){.steps,.req-grid{grid-template-columns:1fr}}
+
+/* faq */
+.faq{display:block}
+.qa{padding:24px 0;border-top:1px solid var(--edge);min-width:0;text-align:center}
+.qa h3{font:600 17.5px/1.4 var(--f-body)}
+.qa p{color:var(--dim);margin-top:8px;margin-inline:auto;max-width:44em;text-wrap:balance}
+@media (max-width:860px){.faq{grid-template-columns:1fr}}
+
+/* closing band + footer */
+.final{border-top:1px solid var(--edge);background:radial-gradient(ellipse 70% 120% at 50% 0%,rgba(102,191,242,.11),transparent 62%),var(--bg)}
+.final-inner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:28px;padding-block:clamp(52px,7vw,92px)}
+.final-inner > div{min-width:0;flex:1 1 380px}
+.final h2{font:700 clamp(1.9rem,3.6vw,2.8rem)/1.1 var(--f-display)}
+.final p{color:var(--dim);margin-top:10px;max-width:36em}
+.foot{border-top:1px solid var(--edge);background:var(--bg-deep);padding-block:40px;color:var(--faint);font-size:13.5px}
+.foot-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;justify-items:center;text-align:center}
+.foot-brand{display:flex;align-items:center;gap:10px;font:700 19px/1.25 var(--f-display);color:var(--text)}
+.foot-brand svg{width:40px;height:40px;flex:none}
+.foot-brand em{font-style:italic;font-weight:600;color:var(--accent-hi)}
+.foot-grid p + p{margin-top:8px}
+.foot-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 20px}
+.legal{grid-column:1/-1;max-width:64em;line-height:1.6;padding-top:20px;border-top:1px solid var(--edge);text-wrap:balance}
+@media (max-width:640px){.foot-grid{grid-template-columns:1fr}}
+
+.btn-head{background:transparent;color:var(--text);border-color:var(--accent-deep);font:600 14px/1 var(--f-body);letter-spacing:0;text-transform:none;padding:10px 15px;gap:8px}
+.btn-head:hover{border-color:var(--accent);color:var(--accent-hi);background:rgba(102,191,242,.06)}
+.btn-head .ico{width:17px;height:17px}
+@media (max-width:449px){.btn-head{padding:10px 12px}.btn-head span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
+
+/* install, written as a plain list */
+.howto{margin:0 auto;padding-left:24px;display:grid;gap:10px;font-size:17px;width:fit-content;max-width:min(40em,100%)}
+.howto li::marker{color:var(--accent);font-weight:700}
+.howto-note{color:var(--dim);margin-top:14px;text-align:center;text-wrap:balance}
+.plain-h3{font:700 21px/1.3 var(--f-display);margin-top:38px;text-align:center}
+.reqs{margin:10px auto 0;padding-left:22px;display:grid;gap:6px;color:var(--dim);width:fit-content;max-width:100%}
+.install-sha{text-align:center}
+.install-sha p{color:var(--dim);margin-top:10px}
+
+/* community band */
+.community{border-top:1px solid var(--edge);background:var(--bg-deep)}
+.community-inner{display:flex;flex-direction:column;align-items:center;gap:24px;text-align:center;padding-block:clamp(44px,6vw,76px)}
+.community-inner > div{min-width:0;max-width:100%}
+.community h2{font:700 clamp(1.8rem,3.2vw,2.5rem)/1.1 var(--f-display);margin-top:10px}
+.community-text{color:var(--dim);margin-top:10px;margin-inline:auto;max-width:40em;text-wrap:balance}
+.btn-join{flex:none}
+
+/* owner editor */
+.ed-fab{position:fixed;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:40;display:inline-flex;align-items:center;gap:8px;background:var(--panel);color:var(--text);border:1px solid var(--accent-deep);border-radius:999px;padding:11px 18px;font:600 14px var(--f-body);cursor:pointer;box-shadow:0 12px 30px -8px rgba(0,0,0,.7)}
+.ed-fab:hover{border-color:var(--accent);color:var(--accent-hi)}
+.ed-fab svg{width:16px;height:16px}
+.owner-bar{position:fixed;left:calc(18px + env(safe-area-inset-left,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:40;display:flex;flex-wrap:wrap;align-items:center;gap:10px;max-width:min(520px,calc(100% - 36px));background:var(--panel);border:1px solid var(--warn);border-radius:10px;padding:12px 14px;font-size:14px}
+.owner-bar p{flex:1 1 220px}
+.ed{position:fixed;top:env(safe-area-inset-top,0px);right:0;bottom:0;width:min(560px,100%);z-index:50;background:var(--panel);border-left:1px solid var(--edge-hi);display:flex;flex-direction:column;box-shadow:-30px 0 60px -20px rgba(0,0,0,.75);padding-right:env(safe-area-inset-right,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.ed-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--edge)}
+.ed-head h2{font:700 22px/1.2 var(--f-display)}
+.ed-tabs{display:flex;gap:2px;padding:6px 12px 0;border-bottom:1px solid var(--edge);overflow-x:auto}
+.ed-tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);padding:10px 12px;font:600 14px var(--f-body);cursor:pointer;white-space:nowrap}
+.ed-tab[aria-selected="true"]{color:var(--accent-hi);border-bottom-color:var(--accent)}
+.ed-body{flex:1;overflow-y:auto;padding:18px 20px 26px}
+.ed-pane{display:grid;gap:16px}
+.ed-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fld{display:grid;gap:6px;min-width:0}
+.fld label{font:600 13.5px var(--f-body);color:var(--text)}
+.fld .hint{font-size:12.5px;color:var(--faint);line-height:1.45}
+.fld input,.fld textarea{width:100%;background:var(--bg-deep);border:1px solid var(--edge-hi);border-radius:7px;color:var(--text);padding:10px 12px;font:14px var(--f-body)}
+.fld textarea{font:13px/1.55 var(--f-mono);resize:vertical;min-height:150px}
+.fld input:focus,.fld textarea:focus{outline:none;border-color:var(--accent-deep);box-shadow:0 0 0 3px rgba(102,191,242,.16)}
+.fld.bad input,.fld.bad textarea{border-color:var(--bad)}
+.ed-box{border:1px solid var(--edge);border-radius:8px;padding:14px;display:grid;gap:10px;color:var(--dim);font-size:14px}
+.ed-box b{color:var(--text)}
+.hist-ed{display:grid;gap:6px}
+.hist-ed div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--edge);border-radius:6px;font:13px var(--f-mono);color:var(--dim)}
+.ed-foot{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 20px;border-top:1px solid var(--edge)}
+.ed-status{flex:1 1 220px;font-size:13px;color:var(--dim);min-width:0}
+.ed-status.err{color:var(--bad)}
+.ed-status.ok{color:var(--ok)}
+.ed-btn{background:var(--panel-2);color:var(--text);border:1px solid var(--edge-hi);border-radius:7px;padding:9px 15px;font:600 14px var(--f-body);cursor:pointer}
+.ed-btn:hover{border-color:var(--accent-deep);color:var(--accent-hi)}
+.ed-btn.ed-primary{background:var(--primary);border-color:#4a95cc;color:#fff}
+.ed-btn.ed-primary:hover{background:var(--primary-hi)}
+.ed-btn[disabled]{opacity:.55;cursor:wait}
+@media (max-width:520px){.ed-row{grid-template-columns:1fr}}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .ring{animation:ring-spin 200s linear infinite!important}
+}
+
+/* ---- the card page (cards/cards.src.html): one column, the reader, then the notes ---- */
+.cards-page{padding-block:clamp(32px,6vw,72px)}
+.cards-page h1{font:700 clamp(2.3rem,5vw,3.4rem)/1.1 var(--f-display);text-shadow:none}
+.cards-lead{margin-top:14px;color:var(--dim);font-size:18px;max-width:68ch}
+.cards-noscript{margin-top:14px;color:var(--warn)}
+.drop{position:relative;display:grid;place-items:center;gap:6px;margin-top:28px;padding:30px 18px;border:1.5px dashed var(--edge-hi);border-radius:var(--r);background:var(--panel);text-align:center;cursor:pointer}
+.drop:hover,.drop.is-over{border-color:var(--accent);background:var(--panel-2)}
+.drop:focus-within{outline:2px solid var(--accent-hi);outline-offset:3px}
+.drop-main{font-weight:600}
+.drop-main u{color:var(--accent-hi);text-underline-offset:3px}
+.drop-sub{color:var(--faint);font-size:14px}
+.drop input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.pbtn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--edge-hi);border-radius:8px;background:var(--panel-2);color:var(--text);font:500 14.5px/1.2 var(--f-body);cursor:pointer}
+.pbtn:hover{border-color:var(--accent-deep);background:#20202a}
+.cards-sample-row{margin-top:12px}
+.cards-status{min-height:1.6em;margin-top:12px;color:var(--dim)}
+.cards-problems{margin:6px 0 0;padding-left:20px;color:var(--dim);font-size:15px;display:grid;gap:4px}
+.cards-problems b{color:var(--text);font-weight:600;overflow-wrap:anywhere}
+.cards-strip{display:flex;gap:10px;overflow-x:auto;margin-top:16px;padding-bottom:6px}
+.slot{flex:none;display:grid;justify-items:center;gap:6px;width:98px;padding:8px 6px;border:1px solid var(--edge);border-radius:8px;background:var(--panel);color:var(--dim);font:500 12.5px/1.25 var(--f-body);cursor:pointer}
+.slot:hover{border-color:var(--edge-hi);color:var(--text)}
+.slot.is-on{border-color:var(--accent,var(--accent-hi));color:var(--text)}
+.slot img{width:75px;height:105px;object-fit:contain}
+.slot span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* the viewer: the card on the left, what it holds on the right; stacked on a narrow screen */
+.viewer{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:clamp(24px,4vw,56px);margin-top:30px;align-items:start}
+@media (max-width:880px){.viewer{grid-template-columns:minmax(0,1fr)}}
+.stage{position:relative;display:grid;justify-items:center;gap:12px}
+.stage-hint{color:var(--faint);font-size:13.5px;text-align:center}
+.stage-btns{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+
+/* THE CARD (sow_ui_card_view.hpp): perspective on the holder, the body turns, two faces back to back */
+.card3d{position:relative;z-index:1;width:min(100%,440px);aspect-ratio:750/1050;perspective:1300px;cursor:pointer;touch-action:manipulation;outline:none}
+.card-body{position:absolute;inset:0;transform-style:preserve-3d;will-change:transform}
+.card3d:focus-visible .card-body{outline:2px solid var(--accent-hi);outline-offset:8px;border-radius:4.533%/3.238%}
+.face{position:absolute;inset:0;-webkit-backface-visibility:hidden;backface-visibility:hidden;border-radius:4.533%/3.238%}
+.face img{display:block;max-width:none;user-select:none;-webkit-user-drag:none}
+.frame{position:absolute;inset:0;width:100%;height:100%;
+  /* the frame with its art window cut out: the picture behind is seen through it */
+  clip-path:polygon(evenodd,0 0,100% 0,100% 100%,0 100%,0 0,5.333% 12.19%,94.667% 12.19%,94.667% 82.667%,5.333% 82.667%,5.333% 12.19%)}
+.art-window{position:absolute;left:5.333%;top:12.19%;width:89.333%;height:70.476%;overflow:hidden;background:#000}
+.art{position:absolute;width:111.94%;left:-5.97%;top:-17.297%;transform-origin:50% 47.43%;transform:translate(var(--px,0%),var(--py,0%)) scale(1.05)}
+/* Glare and finish (DrawCard3D): plain alpha blending, the game's alphas. A finish REPLACES the white glare. The band
+   sits at --g along the card's diagonal and follows the tilt; base = the alpha everywhere, band = the extra at the band. */
+.sheen,.glare{position:absolute;inset:0;border-radius:4.533%/3.238%;pointer-events:none}
+.glare{background:linear-gradient(128deg,transparent calc(var(--g,50%) - 20%),rgba(255,255,255,.13) var(--g,50%),transparent calc(var(--g,50%) + 20%))}
+.card3d:not([data-finish="0"]) .glare{display:none}
+.sheen-band{-webkit-mask-image:linear-gradient(128deg,transparent calc(var(--g,50%) - 18%),#000 var(--g,50%),transparent calc(var(--g,50%) + 18%));
+  mask-image:linear-gradient(128deg,transparent calc(var(--g,50%) - 18%),#000 var(--g,50%),transparent calc(var(--g,50%) + 18%))}
+/* Foil: a rainbow (saturation .55) at .08, .38 at the band; its hues turn with the tilt */
+.card3d[data-finish="1"] .sheen{background:linear-gradient(128deg,#ff7373,#ffd773,#a3ff73,#73f1ff,#7385ff,#e373ff,#ff7373);filter:hue-rotate(var(--h,0deg))}
+.card3d[data-finish="1"] .sheen-base{opacity:.08}
+.card3d[data-finish="1"] .sheen-band{opacity:.30}
+/* Gold: warm, strongest on the frame (.12 + .34 at the band); the art keeps its colours (.03 + .14) */
+.card3d[data-finish="2"] .sheen{-webkit-mask-image:none;mask-image:none}
+.card3d[data-finish="2"] .sheen-base{background:linear-gradient(128deg,transparent calc(var(--g,50%) - 18%),rgba(255,214,130,.34) var(--g,50%),transparent calc(var(--g,50%) + 18%)),rgba(255,214,130,.12);
+  clip-path:polygon(evenodd,0 0,100% 0,100% 100%,0 100%,0 0,5.333% 12.19%,94.667% 12.19%,94.667% 82.667%,5.333% 82.667%,5.333% 12.19%)}
+.card3d[data-finish="2"] .sheen-band{background:linear-gradient(128deg,transparent calc(var(--g,50%) - 18%),rgba(255,214,130,.14) var(--g,50%),transparent calc(var(--g,50%) + 18%)),rgba(255,214,130,.03);
+  clip-path:inset(12.19% 5.333% 17.333% 5.333%);border-radius:0}
+/* Mithril: a pale iridescence (saturation .28) at .06, .46 at the band */
+.card3d[data-finish="3"] .sheen{background:linear-gradient(128deg,#b8e3ff,#d3b8ff,#ffe9b8,#b8ffd8,#b8e3ff);filter:hue-rotate(var(--h,0deg))}
+.card3d[data-finish="3"] .sheen-base{opacity:.06}
+.card3d[data-finish="3"] .sheen-band{opacity:.40}
+/* Shadow: a dark band (.32), and a green breath (.16) just past its edge */
+.card3d[data-finish="4"] .sheen-band{background:#000;opacity:.32}
+.card3d[data-finish="4"] .sheen-base{background:rgb(110,255,96);opacity:.16;
+  -webkit-mask-image:linear-gradient(128deg,transparent calc(var(--g,50%) + 8%),#000 calc(var(--g,50%) + 12%),transparent calc(var(--g,50%) + 16%));
+  mask-image:linear-gradient(128deg,transparent calc(var(--g,50%) + 8%),#000 calc(var(--g,50%) + 12%),transparent calc(var(--g,50%) + 16%))}
+.card-shadow{position:absolute;inset:5% 7% -2%;border-radius:6%;background:rgba(0,0,0,.6);filter:blur(22px);pointer-events:none}
+
+/* the back (DrawBack): the band's metal, the dark panel, the game's sizes as a share of the card's width */
+.face.back{transform:rotateY(180deg);container-type:inline-size;padding:2.133%;
+  background:linear-gradient(180deg,var(--band-hi,#ced2d8),var(--band-mid,#8c9299) 45%,var(--band-lo,#3e4248))}
+.card3d[data-finish="3"] .face.back{background:linear-gradient(135deg,rgba(255,200,230,.28),rgba(160,230,255,.28)),linear-gradient(180deg,var(--band-hi),var(--band-mid) 45%,var(--band-lo))}
+.back-inner{position:relative;height:100%;overflow:hidden;border-radius:3.2%/2.3%;background:linear-gradient(180deg,#1a191c,#0a0a0c);
+  box-shadow:inset 0 0 0 .27cqw color-mix(in srgb,var(--accent,#b8bec6) 55%,transparent);padding:2.4cqw 4cqw;color:#c8c6c0;font:400 2.6cqw/1.3 var(--f-body);text-align:left}
+.card3d[data-finish="4"] .back-inner{box-shadow:inset 0 0 0 .27cqw color-mix(in srgb,var(--accent) 55%,transparent),inset 0 0 0 1.1cqw rgba(110,255,96,.35)}
+.b-head{display:flex;justify-content:space-between;align-items:baseline;gap:2cqw;margin:0 -1.6cqw;padding:2.2cqw 2.6cqw;border-radius:1.9cqw;background:linear-gradient(180deg,#28262a,#121114)}
+.b-name{font:700 4.5cqw/1.1 var(--f-display);color:var(--name,#f4f0e6);text-shadow:0 .25cqw .3cqw rgba(0,0,0,.8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.b-tier{flex:none;font:600 2.4cqw/1 var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.back-inner h4{margin:2.6cqw 0 1.3cqw;padding-bottom:.8cqw;border-bottom:.2cqw solid color-mix(in srgb,var(--accent) 40%,transparent);font:600 2.9cqw/1.2 var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.back-inner ul{list-style:none;margin:0;padding:0 0 0 1cqw}
+.b-traits{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 3cqw}
+.b-str li{color:#84d678}.b-weak li{color:#ee786e}
+.back-inner li{font-size:2.5cqw;line-height:1.32;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.b-dim,.back-inner .b-dim{color:#96948e;font-size:2.2cqw}
+.b-foot{position:absolute;left:4cqw;right:4cqw;bottom:2.4cqw;padding-top:1cqw;border-top:.2cqw solid color-mix(in srgb,var(--accent) 35%,transparent);color:#96948e;font-size:2.1cqw}
+.b-foot p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* what the card holds */
+.facts-name{font:700 clamp(1.7rem,3.2vw,2.3rem)/1.15 var(--f-display);overflow-wrap:anywhere}
+.facts-who{margin-top:6px;color:var(--dim)}
+.facts-tier{margin-top:10px;font-weight:600;color:var(--accent,var(--text))}
+.facts-line{margin-top:8px;color:var(--dim);overflow-wrap:anywhere}
+.facts-dim{color:var(--faint);font-size:14.5px}
+.cardfacts h3{margin-top:26px;font:700 1.35rem/1.2 var(--f-display)}
+.layers{display:grid;gap:4px;margin-top:12px}
+.layer{display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px;padding:9px 0;border-top:1px solid var(--edge)}
+@media (max-width:520px){.layer{grid-template-columns:minmax(0,1fr);gap:4px}}
+.layer h4{margin:0;font:600 15px/1.4 var(--f-body);color:var(--text)}
+.layer.is-empty h4{color:var(--faint)}
+.layer ul{list-style:none;margin:0;padding:0;display:grid;gap:3px}
+.layer li{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:15px;color:var(--dim)}
+.layer .what{color:var(--faint);min-width:96px}
+.layer .val{color:var(--text);overflow-wrap:anywhere}
+.swatch{display:inline-block;width:12px;height:12px;margin-right:6px;border:1px solid rgba(255,255,255,.35);border-radius:3px;vertical-align:-1px}
+
+/* the notes under the reader */
+.cards-sec{margin-top:clamp(44px,6vw,72px);max-width:76ch}
+.cards-sec h2{font:700 clamp(1.6rem,3vw,2.1rem)/1.15 var(--f-display);scroll-margin-top:84px}
+.cards-sec p,.cards-sec li{color:var(--dim)}
+.cards-sec p{margin-top:12px}
+.cards-sec ol,.cards-sec ul{margin:14px 0 0;padding-left:24px;display:grid;gap:10px}
+.cards-sec li::marker{color:var(--accent);font-weight:700}
+.cards-sec b{color:var(--text);font-weight:600}
+.cards-sec code{overflow-wrap:anywhere}
+.odds{display:flex;flex-wrap:wrap;gap:18px 40px;margin-top:18px}
+.odds table{border-collapse:collapse;font-size:15px}
+.odds caption{text-align:left;font:700 17px/1.3 var(--f-display);color:var(--text);padding-bottom:6px}
+.odds th,.odds td{padding:5px 14px 5px 0;text-align:left;border-bottom:1px solid var(--edge);color:var(--dim);font-weight:400}
+.odds thead th{color:var(--faint);font-size:13px}
+.odds tbody th{font-weight:600}
+@media (prefers-reduced-motion:reduce){.card-body{will-change:auto}}
+</style></head><body>
+<a class="skip" href="#cards-drop">Skip to the card reader</a>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="../" aria-label="Shadow of War: Community Edition, back to the home page">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mark-metal" gradientUnits="userSpaceOnUse" x1="4" x2="60" y1="0" y2="0"><stop offset="0" stop-color="#6d7788"/><stop offset=".2" stop-color="#f7f9fc"/><stop offset=".45" stop-color="#9aa5b6"/><stop offset=".68" stop-color="#fff"/><stop offset="1" stop-color="#6d7788"/></linearGradient><linearGradient id="mark-back" gradientUnits="userSpaceOnUse" x1="4" x2="60" y1="0" y2="0"><stop offset="0" stop-color="#454d5b"/><stop offset=".5" stop-color="#7f8a9c"/><stop offset="1" stop-color="#3c4351"/></linearGradient><linearGradient id="mark-blade" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="1" y2="46"><stop offset="0" stop-color="#e6f6ff"/><stop offset=".55" stop-color="#66bff2"/><stop offset="1" stop-color="#2a6a9a"/></linearGradient><linearGradient id="mark-blade-dark" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="1" y2="46"><stop offset="0" stop-color="#b9e6ff"/><stop offset=".55" stop-color="#3584bd"/><stop offset="1" stop-color="#1c4a6e"/></linearGradient></defs><g id="mark"><g transform="rotate(-14 32 26)" fill="none"><path d="M4,26A28,11 0 0 1 60,26" stroke="url(#mark-back)" stroke-width="7"/><path d="M4,26A28,11 0 0 1 60,26" stroke="#141820" stroke-width="3.6"/><path class="mark-script" d="M4,26A28,11 0 0 1 60,26" stroke="#66bff2" stroke-opacity=".8" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="3 2 1 2 4 2"/></g><path d="M32,1L36.5,9V45.5H32Z" fill="url(#mark-blade-dark)"/><path d="M32,1L27.5,9V45.5H32Z" fill="url(#mark-blade)"/><path d="M16.5,45H47.5L44.5,49.5H19.5Z" fill="url(#mark-metal)"/><rect x="29.6" y="49.5" width="4.8" height="8.5" fill="#39465a"/><path d="M32,56.8L35.6,60.4L32,64L28.4,60.4Z" fill="#c9d2df"/><g transform="rotate(-14 32 26)" fill="none"><path d="M4,26A28,11 0 0 0 60,26" stroke="url(#mark-metal)" stroke-width="7"/><path d="M4,26A28,11 0 0 0 60,26" stroke="#141820" stroke-width="3.6"/><path class="mark-script" d="M4,26A28,11 0 0 0 60,26" stroke="#8cd9ff" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="3 2 1 2 4 2 1.5 2"/></g></g></svg>
+      <span class="brand-name"><b>Shadow of War<i>:</i></b> <em>Community Edition (BETA)</em></span>
+    </a>
+    <nav class="nav" aria-label="Site">
+      <a href="../#features">Features</a>
+      <a href="../#changelog">Patch notes</a>
+      <a href="../#install">Install</a>
+      <a href="../#faq">FAQ</a>
+      <a href="./" aria-current="page">Captain cards</a>
+    </nav>
+    <a class="btn btn-head" href="https://discord.gg/shadow-of-war-modding-community-1135521354838458438" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Join Discord</span></a>
+  </div>
+</header>
+
+<main class="wrap cards-page" id="main">
+  <h1>Captain cards</h1>
+  <p class="cards-lead">A captain card is a picture of one of your orcs that carries his whole look inside it. Drop one here to hold it up and see what's in it. The file stays on your computer: this page reads it in your browser and can't send it anywhere.</p>
+  <p class="cards-noscript" id="cards-noscript-note">This page needs JavaScript to read a card. Nothing it reads leaves your browser.</p>
+
+  <label class="drop" id="cards-drop" for="cards-input">
+    <input type="file" id="cards-input" accept="image/png,.png" multiple>
+    <span class="drop-main">Drop card PNGs here, or <u>choose files</u></span>
+    <span class="drop-sub">You can paste a card too. Several at once is fine.</span>
+  </label>
+  <p class="cards-sample-row"><button type="button" class="pbtn" id="cards-sample" data-srcs="samples/az-agur_epic.png,samples/az-grels_rare.png,samples/gruk_uncommon_gold.png">Look at some sample cards</button></p>
+  <p class="cards-status" id="cards-status" role="status" aria-live="polite"></p>
+  <ul class="cards-problems" id="cards-problems" hidden></ul>
+  <div class="cards-strip" id="cards-strip" role="group" aria-label="The cards on this page" hidden></div>
+
+  <div class="viewer" id="cards-viewer" hidden>
+    <div class="stage">
+      <div class="card3d" id="card" role="button" tabindex="0" aria-pressed="false" data-finish="0">
+        <div class="card-shadow" id="card-shadow" aria-hidden="true"></div>
+        <div class="card-body" id="card-body">
+          <div class="face front" id="card-front">
+            <div class="art-window"><img class="art" id="card-art" alt="" draggable="false"></div>
+            <img class="frame" id="card-frame" alt="" draggable="false">
+            <div class="sheen sheen-base"></div>
+            <div class="sheen sheen-band"></div>
+            <div class="glare"></div>
+          </div>
+          <div class="face back" id="card-back" aria-hidden="true"><div class="back-inner" id="card-back-inner"></div></div>
+        </div>
+      </div>
+      <p class="stage-hint">Move over the card to tilt it. Click it, or press Enter, to turn it over.</p>
+      <div class="stage-btns">
+        <button type="button" class="pbtn" id="btn-flip">Turn it over</button>
+        <button type="button" class="pbtn" id="btn-copy">Copy the card's text</button>
+        <button type="button" class="pbtn" id="btn-remove">Take it off this list</button>
+      </div>
+    </div>
+    <div class="cardfacts" id="cards-facts"></div>
+  </div>
+
+  <section class="cards-sec" id="make">
+    <h2>Making a card</h2>
+    <p>In the game, right-click a captain on the Army screen to open the Captain Studio, then go to <b>Quick &gt; Cards</b>. Move the picture frame over him and press <b>Make the card</b>. <b>Open a pack</b> rolls him several times and makes a card of each look, then gives him his own look back unless you keep the last one.</p>
+    <p>Every card goes into your binder, which is the folder <code>x64\sowframework\cards</code> in your Shadow of War folder. To share one, send the PNG file itself. <b>Open the exchange</b>, on the same page, puts your cards up so other players can buy copies.</p>
+  </section>
+
+  <section class="cards-sec" id="wear">
+    <h2>Wearing a card</h2>
+    <ol>
+      <li>Put the PNG in <code>x64\sowframework\cards</code>. Any file name works.</li>
+      <li>Open the Captain Studio on the captain who should wear it, then <b>Open the binder</b> on the Cards page.</li>
+      <li>Pick the card and press <b>Wear this look on</b> him. The ticks under the button choose which parts he takes: armour, head and hair, accessories, weapons, colours, effects, scars and paint, size and pose. What you leave unticked stays his own.</li>
+      <li>His body never changes. Armour made for another body is swapped for the same design made for his, and anything with nothing for his body or class stays his own. An accessory the card doesn't have comes off him. <b>Back</b> puts his old look on again.</li>
+    </ol>
+    <p>The ticks, and taking off an accessory the card doesn't have, come with the next update. Until then, <b>Wear this look</b> puts the whole look on him.</p>
+  </section>
+
+  <section class="cards-sec" id="carries">
+    <h2>What a card carries</h2>
+    <p>The picture, the captain's name, class, body, tribe, level and traits as text, and his look as a list of the game's own record names. It doesn't carry your save, your Steam account or your exchange key, and a card from someone else can only change what a look you saved yourself could change.</p>
+    <p>The card holds that data twice: once in the PNG file, and once hidden in the lowest bit of the picture's pixels, so it survives an app that strips a file's extra data. A screenshot of a card, a JPEG or a resized copy loses both.</p>
+  </section>
+
+  <section class="cards-sec" id="trouble">
+    <h2>When a card won't open</h2>
+    <ul>
+      <li><b>It says JPEG, or not a PNG.</b> The file was converted. Ask for the original PNG.</li>
+      <li><b>It says the card data is gone.</b> The picture was edited or re-compressed with loss. The original file still works.</li>
+      <li><b>It opens here but not in the game</b>, or the other way round: tell me on Discord and attach the file.</li>
+    </ul>
+  </section>
+
+  <section class="cards-sec" id="rarity">
+    <h2>Rarity</h2>
+    <p>Every card is a pull. Its tier, finish and power come from the card's id, by the same arithmetic in the game, on the exchange and on this page. Nobody picks them, editing a card's text doesn't change them, and the captain on the card doesn't matter: a plain captain can come out Mythic.</p>
+    <div class="odds">
+      <table><caption>Tiers</caption><thead><tr><th scope="col">Tier</th><th scope="col">Odds</th><th scope="col">Power</th><th scope="col">Base price</th></tr></thead><tbody id="odds-tiers"></tbody></table>
+      <table><caption>Finishes</caption><thead><tr><th scope="col">Finish</th><th scope="col">Odds</th><th scope="col">Price</th></tr></thead><tbody id="odds-finishes"></tbody></table>
+    </div>
+    <p>A copy bought on the exchange gets the next print number, and the more prints go round, the worse a new copy's condition: prints 2 to 5 are near mint, 6 to 15 excellent, 16 to 40 good, 41 to 100 played, and after that worn. The price drops with it.</p>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-grid">
+    <div>
+      <p class="foot-brand"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#mark"/></svg><span>Shadow of War: <em>Community Edition</em> (BETA)</span></p>
+    </div>
+    <nav class="foot-links" aria-label="More">
+      <a href="../">Home</a>
+      <a href="../download/">Download</a>
+      <a href="../#changelog">Patch notes</a>
+      <a href="../#install">Install</a>
+      <a href="../#faq">FAQ</a>
+      <a href="../engine/">Engine reference</a>
+      <a href="https://discord.gg/shadow-of-war-modding-community-1135521354838458438" target="_blank" rel="noopener">Discord</a>
+    </nav>
+    <p class="legal">An unofficial fan project. It is not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises, and Middle-earth: Shadow of War belongs to its owners.</p>
+  </div>
+</footer>
+<script>/* SoW:CE Captain Cards - the card reader of the website's card page (2026-11-08).
+ *
+ * The reading half of framework/sowframework/sdk/sow_card_codec.hpp, line for line where the two must agree:
+ *   - a card is a 750 x 1050 PNG that carries its text twice: the private chunk "caRd" (UTF-8, CRC-checked), and the
+ *     lowest bit of the red, green and blue values inside the art window (x 40, y 128, 670 x 740), row by row, framed
+ *     by "SOWCARD1" + u32 length (little-endian) + text + u32 CRC-32 of the text;
+ *   - the chunk wins; the pixel copy is read only when the chunk is gone (a tool that rewrote the PNG without it);
+ *   - the text is CardFromText's: "SoWCE-Card <format>", key=value lines, then the look as a [look] ... [end] block;
+ *   - format 2: the tier, the finish and the power come from the id (SplitMix64, salted "SOWCECAR"), never the text.
+ * The look block is the Captain Studio's saved look (ui/sow_ui_captain_studio_saved.inl), sorted into the same wear
+ * layers the game's "Wear:" chips use (StudioColourTokenLayer and the cell rules there).
+ *
+ * HOSTILE INPUT: a card comes from anyone. Files over 32 MB, pictures over 4096 px a side, chunks that run past the
+ * file, card text over 64 KB, a pixel copy whose length or CRC does not hold - refused before use. The picture is
+ * unpacked with a size cap (a deflate bomb stops at the size the header promises). Nothing here touches the page:
+ * the page script (cards_page.js) puts every string in with textContent.
+ *
+ * Runs in the browser (window.SoWCards) and under Node (module.exports) for test_cards.mjs. Nothing is sent anywhere.
+ */
+(function (root, factory) {
+  "use strict";
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.SoWCards = factory();
+}(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+
+  // ---- the card's geometry and limits (sow_card_codec.hpp) ----
+  var CARD_W = 750, CARD_H = 1050;
+  var ART_X = 40, ART_Y = 128, ART_W = 670, ART_H = 740;
+  var MAX_TEXT = 64 * 1024, MAX_FILE = 32 * 1024 * 1024, MAX_SIDE = 4096;
+
+  // ---- tiers, finishes, condition, price ----
+  var TIER_NAMES = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic"];
+  var FINISH_NAMES = ["Standard", "Foil", "Gold", "Mithril", "Shadow"];
+  var CONDITION_NAMES = ["Mint", "Near mint", "Excellent", "Good", "Played", "Worn"];
+  var TIER_ODDS = [450, 270, 150, 85, 39, 6];          // per mille
+  var FINISH_ODDS = [0, 200, 70, 25, 5];               // per mille, the rest Standard
+  var POWER_LO = [10, 25, 40, 55, 70, 85];
+  var POWER_HI = [39, 54, 69, 84, 94, 100];
+  var TIER_PRICE = [250, 750, 2000, 5000, 12000, 30000];
+  var FINISH_MULT = [1.0, 1.5, 2.5, 4.0, 8.0];
+  var CONDITION_MULT = [1.0, 0.9, 0.75, 0.55, 0.35, 0.2];
+
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  // C's atoi: leading spaces, a sign, digits; anything else 0
+  function atoi(s) { var n = parseInt(s, 10); return isFinite(n) ? n : 0; }
+
+  // ---- the pull: everything from the id ----
+  var M64 = (BigInt(1) << BigInt(64)) - BigInt(1);
+  function splitmix(st) {
+    st.s = (st.s + BigInt("0x9E3779B97F4A7C15")) & M64;
+    var z = st.s;
+    z = ((z ^ (z >> BigInt(30))) * BigInt("0xBF58476D1CE4E5B9")) & M64;
+    z = ((z ^ (z >> BigInt(27))) * BigInt("0x94D049BB133111EB")) & M64;
+    return z ^ (z >> BigInt(31));
+  }
+  function validId(id) { return typeof id === "string" && /^[0-9A-Fa-f]{16}$/.test(id); }
+  function rollsFromId(id) {
+    if (!validId(id)) return null;
+    var st = { s: BigInt("0x" + id) ^ BigInt("0x534F574345434152") };   // "SOWCECAR"
+    var t = Number(splitmix(st) % BigInt(1000));
+    var tier = 0, acc = 0, k;
+    for (k = TIER_ODDS.length - 1; k >= 1; --k) { acc += TIER_ODDS[k]; if (t < acc) { tier = k; break; } }
+    var f = Number(splitmix(st) % BigInt(1000));
+    var finish = 0;
+    acc = 0;
+    for (k = FINISH_ODDS.length - 1; k >= 1; --k) { acc += FINISH_ODDS[k]; if (f < acc) { finish = k; break; } }
+    var span = BigInt(POWER_HI[tier] - POWER_LO[tier] + 1);
+    var power = POWER_LO[tier] + Number(splitmix(st) % span);
+    return { tier: tier, finish: finish, power: power };
+  }
+  function conditionOf(print) {
+    if (print <= 1) return 0;
+    if (print <= 5) return 1;
+    if (print <= 15) return 2;
+    if (print <= 40) return 3;
+    if (print <= 100) return 4;
+    return 5;
+  }
+  function priceMirian(tier, finish, condition) {
+    tier = clamp(tier | 0, 0, 5); finish = clamp(finish | 0, 0, 4); condition = clamp(condition | 0, 0, 5);
+    var p = TIER_PRICE[tier] * FINISH_MULT[finish] * CONDITION_MULT[condition];
+    return Math.floor(p / 10 + 0.5) * 10;
+  }
+  // "1 in N" for a pull's tier and finish together (the card's back says it)
+  function pullOneIn(tier, finish) {
+    var p = TIER_ODDS[clamp(tier | 0, 0, 5)] / 1000 * (finish <= 0 ? (1000 - 300) / 1000 : FINISH_ODDS[clamp(finish | 0, 0, 4)] / 1000);
+    return p > 0 ? Math.floor(1 / p + 0.5) : 0;
+  }
+
+  // ---- bytes ----
+  var CRC_TABLE = (function () {
+    var t = new Uint32Array(256);
+    for (var i = 0; i < 256; ++i) {
+      var c = i;
+      for (var k = 0; k < 8; ++k) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+      t[i] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(bytes, start, end) {
+    var c = 0xFFFFFFFF;
+    for (var i = start || 0, e = end === undefined ? bytes.length : end; i < e; ++i) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function be32(b, p) { return ((b[p] << 24) | (b[p + 1] << 16) | (b[p + 2] << 8) | b[p + 3]) >>> 0; }
+  function utf8(bytes) { return new TextDecoder("utf-8").decode(bytes); }
+  var PNG_SIG = [137, 80, 78, 71, 13, 10, 26, 10];
+  var NOT_PNG = "not a PNG (a JPEG or a screenshot of a card has lost the captain it carried)";
+
+  // ---- the PNG: its chunks, walked to IEND (PngChunks + PngCardChunk) ----
+  function walkPng(b) {
+    var out = { ok: false, why: "", width: 0, height: 0, depth: 0, colour: 0, interlace: 0, idat: [], text: "", chunkBad: false };
+    if (!(b instanceof Uint8Array) || b.length < 8 + 12) { out.why = NOT_PNG; return out; }
+    if (b.length > MAX_FILE) { out.why = "the file is larger than 32 MB"; return out; }
+    for (var i = 0; i < 8; ++i) {
+      if (b[i] !== PNG_SIG[i]) {
+        out.why = b[0] === 0xFF && b[1] === 0xD8 ? "a JPEG: the card's captain was lost when it was saved as a JPEG" : NOT_PNG;
+        return out;
+      }
+    }
+    var p = 8, sawEnd = false, first = true, sawCard = false;
+    while (p + 12 <= b.length) {
+      var len = be32(b, p);
+      if (len > b.length - p - 12) break;                    // a chunk runs past the file
+      var type = String.fromCharCode(b[p + 4], b[p + 5], b[p + 6], b[p + 7]);
+      if (first) {
+        if (type !== "IHDR" || len < 13) { out.why = "the PNG does not start with its header"; return out; }
+        out.width = be32(b, p + 8);
+        out.height = be32(b, p + 12);
+        out.depth = b[p + 16];
+        out.colour = b[p + 17];
+        out.interlace = b[p + 20];
+        first = false;
+      }
+      if (type === "IDAT") {
+        out.idat.push(b.subarray(p + 8, p + 8 + len));
+      } else if (type === "caRd" && !sawCard) {               // the first card chunk only, as the game reads it
+        sawCard = true;
+        if (len <= MAX_TEXT && crc32(b, p + 4, p + 8 + len) === be32(b, p + 8 + len)) out.text = utf8(b.subarray(p + 8, p + 8 + len));
+        else out.chunkBad = true;
+      }
+      p += 12 + len;
+      if (type === "IEND") { sawEnd = true; break; }
+    }
+    if (!sawEnd) { out.why = "the PNG is cut short or damaged"; return out; }
+    out.ok = true;
+    return out;
+  }
+
+  // ---- the picture: zlib -> scanlines -> RGBA (8-bit RGB or RGBA, not interlaced: what the game writes) ----
+  // The browser's own inflater, read in pieces and stopped at `limit` bytes (a deflate bomb gets no further).
+  async function inflateZlib(data, limit) {
+    if (typeof DecompressionStream === "undefined") throw new Error("this browser cannot unpack a PNG's picture");
+    var reader = new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate")).getReader();
+    var parts = [], total = 0;
+    for (;;) {
+      var r = await reader.read();
+      if (r.done) break;
+      total += r.value.length;
+      if (total > limit) { try { await reader.cancel(); } catch (e) { /* already closed */ } throw new Error("the picture unpacks to more than its size"); }
+      parts.push(r.value);
+    }
+    var out = new Uint8Array(total), at = 0;
+    for (var i = 0; i < parts.length; ++i) { out.set(parts[i], at); at += parts[i].length; }
+    return out;
+  }
+  function concat(chunks) {
+    var n = 0, i;
+    for (i = 0; i < chunks.length; ++i) n += chunks[i].length;
+    var out = new Uint8Array(n), at = 0;
+    for (i = 0; i < chunks.length; ++i) { out.set(chunks[i], at); at += chunks[i].length; }
+    return out;
+  }
+  function plainPng(info) { return info.depth === 8 && (info.colour === 2 || info.colour === 6) && info.interlace === 0; }
+  // Undo the scanline filters (None, Sub, Up, Average, Paeth). null for a damaged picture.
+  function unfilter(info, raw) {
+    var w = info.width, h = info.height, bpp = info.colour === 6 ? 4 : 3, stride = w * bpp;
+    if (raw.length < h * (stride + 1)) return null;
+    var rgba = new Uint8Array(w * h * 4);
+    var prev = new Uint8Array(stride), cur = new Uint8Array(stride), tmp, p = 0, x, y;
+    for (y = 0; y < h; ++y) {
+      var f = raw[p++];
+      if (f > 4) return null;
+      for (x = 0; x < stride; ++x) {
+        var a = x >= bpp ? cur[x - bpp] : 0, up = prev[x], c = x >= bpp ? prev[x - bpp] : 0, v = raw[p++];
+        if (f === 1) v += a;
+        else if (f === 2) v += up;
+        else if (f === 3) v += (a + up) >> 1;
+        else if (f === 4) {
+          var pa = Math.abs(up - c), pb = Math.abs(a - c), pc = Math.abs(a + up - 2 * c);
+          v += pa <= pb && pa <= pc ? a : pb <= pc ? up : c;
+        }
+        cur[x] = v & 255;
+      }
+      var o = y * w * 4;
+      if (bpp === 4) rgba.set(cur, o);
+      else for (x = 0; x < w; ++x) { rgba[o + 4 * x] = cur[3 * x]; rgba[o + 4 * x + 1] = cur[3 * x + 1]; rgba[o + 4 * x + 2] = cur[3 * x + 2]; rgba[o + 4 * x + 3] = 255; }
+      tmp = prev; prev = cur; cur = tmp;
+    }
+    return rgba;
+  }
+  // The picture's RGBA: our own decoder for the plain kind; opts.decodeImage (the page's canvas route) for anything else.
+  async function picturePixels(info, bytes, opts) {
+    if (plainPng(info)) {
+      var bpp = info.colour === 6 ? 4 : 3, expect = info.height * (info.width * bpp + 1);
+      var inflate = opts.inflate || inflateZlib;
+      var raw = await inflate(concat(info.idat), expect);
+      return unfilter(info, raw);
+    }
+    if (opts.decodeImage) return opts.decodeImage(bytes, info.width, info.height);
+    return null;
+  }
+
+  // ---- the pixel copy (ExtractPixels): "" when there is none or it is damaged ----
+  var MAGIC = [83, 79, 87, 67, 65, 82, 68, 49];   // "SOWCARD1"
+  function extractPixels(rgba, w, h) {
+    if (!rgba || w !== CARD_W || h !== CARD_H || rgba.length < w * h * 4) return "";
+    var room = ART_W * ART_H * 3, bit = 0, x = ART_X, y = ART_Y, c = 0;
+    function nextBit() {
+      if (bit >= room) return -1;
+      var v = rgba[(y * w + x) * 4 + c] & 1;
+      ++bit;
+      if (++c === 3) { c = 0; if (++x === ART_X + ART_W) { x = ART_X; ++y; } }
+      return v;
+    }
+    function readBytes(n) {
+      var out = new Uint8Array(n);
+      for (var i = 0; i < n; ++i) {
+        var v = 0;
+        for (var k = 0; k < 8; ++k) { var b = nextBit(); if (b < 0) return null; v = (v << 1) | b; }
+        out[i] = v;
+      }
+      return out;
+    }
+    var head = readBytes(12);
+    if (!head) return "";
+    for (var i = 0; i < 8; ++i) if (head[i] !== MAGIC[i]) return "";
+    var len = (head[8] | (head[9] << 8) | (head[10] << 16) | (head[11] << 24)) >>> 0;
+    if (len === 0 || len > MAX_TEXT || (12 + len + 4) * 8 > room) return "";
+    var body = readBytes(len + 4);
+    if (!body) return "";
+    var crc = (body[len] | (body[len + 1] << 8) | (body[len + 2] << 16) | (body[len + 3] << 24)) >>> 0;
+    if (crc32(body, 0, len) !== crc) return "";
+    return utf8(body.subarray(0, len));
+  }
+
+  // ---- the card text (CardFromText) ----
+  function parseCardText(text) {
+    if (typeof text !== "string") return { ok: false, why: "not a SoW:CE card" };
+    if (text.length > MAX_TEXT) return { ok: false, why: "the card's text is too long" };
+    if (text.indexOf("SoWCE-Card ") !== 0) return { ok: false, why: "not a SoW:CE card" };
+    var lines = text.split("\n");
+    var c = {
+      format: atoi(lines[0].replace(/\r$/, "").slice(11)), id: "", serial: 0, maker: "", made: "", set: "", tier: 0, finish: 0,
+      score: 0, why: [], name: "", rarity: "", rank: "", cls: "", body: "", tribe: "", level: 0, traits: [], notes: [],
+      look: "", pack: "", power: 0, print: 1, mint: "", sig: ""
+    };
+    if (!(c.format >= 1)) return { ok: false, why: "the card's format number is damaged" };
+    var inLook = false, endedLook = false, look = "";
+    for (var i = 1; i < lines.length; ++i) {
+      var line = lines[i];
+      if (line.charAt(line.length - 1) === "\r") line = line.slice(0, -1);
+      if (inLook) {
+        look += line + "\n";
+        if (line === "[end]") { inLook = false; endedLook = true; }
+        continue;
+      }
+      if (line === "[look]") { inLook = true; look = "[look]\n"; continue; }
+      var eq = line.indexOf("=");
+      if (eq < 0) continue;
+      var k = line.slice(0, eq), v = line.slice(eq + 1);
+      switch (k) {
+        case "id": c.id = v; break;
+        case "serial": c.serial = atoi(v); break;
+        case "maker": c.maker = v; break;
+        case "made": c.made = v; break;
+        case "set": c.set = v; break;
+        case "tier": c.tier = clamp(atoi(v), 0, 5); break;
+        case "finish": c.finish = clamp(atoi(v), 0, 4); break;
+        case "score": { var s = parseFloat(v); c.score = isFinite(s) ? s : 0; break; }
+        case "why": if (c.why.length < 32) c.why.push(v); break;
+        case "name": c.name = v; break;
+        case "rarity": c.rarity = v; break;
+        case "rank": c.rank = v; break;
+        case "class": c.cls = v; break;
+        case "body": c.body = v; break;
+        case "tribe": c.tribe = v; break;
+        case "level": c.level = atoi(v); break;
+        case "trait": {
+          var a = v.indexOf("|"), b = a < 0 ? -1 : v.indexOf("|", a + 1);
+          if (a === 1 && b >= 0 && c.traits.length < 64) {
+            var argb = parseInt(v.slice(a + 1, b), 16);
+            c.traits.push({ weak: v.charAt(0) === "W", argb: isFinite(argb) ? argb >>> 0 : 0, name: v.slice(b + 1) });
+          }
+          break;
+        }
+        case "note": if (c.notes.length < 32) c.notes.push(v); break;
+        case "pack": c.pack = v; break;
+        case "power": c.power = atoi(v); break;
+        case "print": c.print = clamp(atoi(v), 1, 1000000); break;
+        case "mint": c.mint = v.length <= 32 ? v : ""; break;
+        case "sig": c.sig = v.length <= 64 ? v : ""; break;
+        default: break;                                        // unknown keys: a newer card stays readable
+      }
+    }
+    if (inLook) return { ok: false, why: "the card's look never ends (damaged)" };
+    if (endedLook) c.look = look;
+    if (c.format >= 2) {                                       // pulled: the id decides, never the text
+      var r = rollsFromId(c.id);
+      if (!r) return { ok: false, why: "the card's id is damaged" };
+      c.tier = r.tier;
+      c.finish = r.finish;
+      c.power = r.power;
+    }
+    if (!c.name && !c.look) return { ok: false, why: "the card names no captain and carries no look" };
+    return { ok: true, card: c };
+  }
+
+  // ---- a whole card file (ReadCard): bytes -> { ok, why, card, text, fromPixels, width, height } ----
+  // opts.inflate(data, limit) and opts.decodeImage(bytes, w, h) replace the browser's own routes (tests, odd PNGs).
+  async function readCard(bytes, opts) {
+    opts = opts || {};
+    var info = walkPng(bytes);
+    if (!info.ok) return { ok: false, why: info.why };
+    if (!info.width || !info.height || info.width > MAX_SIDE || info.height > MAX_SIDE)
+      return { ok: false, why: "the picture is too large or empty" };
+    var text = info.text, fromPixels = false;
+    if (!text && info.width === CARD_W && info.height === CARD_H) {
+      var rgba = null;
+      try { rgba = await picturePixels(info, bytes, opts); } catch (e) { rgba = null; }
+      text = rgba ? extractPixels(rgba, info.width, info.height) : "";
+      fromPixels = !!text;
+    }
+    if (!text) {
+      return {
+        ok: false, width: info.width, height: info.height,
+        why: info.width === CARD_W && info.height === CARD_H
+          ? "a picture of the right size, but its card data is gone (re-compressed, or edited)"
+          : "not a SoW:CE card (no card data; a card is " + CARD_W + " x " + CARD_H + ")"
+      };
+    }
+    var parsed = parseCardText(text);
+    if (!parsed.ok) return { ok: false, why: parsed.why, width: info.width, height: info.height };
+    return { ok: true, card: parsed.card, text: text, fromPixels: fromPixels, width: info.width, height: info.height };
+  }
+
+  // =====================================================================================================================
+  // the look: the Studio's saved-look block, sorted into the game's wear layers
+  // =====================================================================================================================
+  // ArmyRNG::IsUndressPiece: the engine's placeholder pieces that mean ABSENCE
+  function isUndressPiece(n) {
+    return n.indexOf("Smp_Empty") === 0 || n.indexOf("Null") >= 0 || n.indexOf("_empty") >= 0 || n.indexOf("_Empty") >= 0 ||
+           n.indexOf("NoHair") >= 0 || n.indexOf("NoHelm") >= 0;
+  }
+  function recordName(key) { var bar = key.indexOf("|"); return bar >= 0 ? key.slice(bar + 1) : key; }
+  var FAMILY_WORDS = new Set(["Orc", "Olog", "OlogHai", "Ologhai", "Buff", "Slim", "Stk", "Stocky", "Generic", "All"]);
+  // A record name a player can read: "Model/SimpleModelPieces|Orc_Buff_Torturer_Helmet" -> "Torturer Helmet"
+  function prettyRecord(key) {
+    var n = recordName(String(key || ""));
+    if (!n) return "";
+    if (isUndressPiece(n)) return "none (bare)";
+    var parts = n.split("_").filter(function (s) { return s.length > 0; });
+    while (parts.length > 1 && FAMILY_WORDS.has(parts[0])) parts.shift();
+    return parts.map(function (s) { return s.replace(/([a-z])([A-Z])/g, "$1 $2"); }).join(" ");
+  }
+
+  // StudioSavedFromBlock: the block's own keys (unknown ones skipped). null when it is not a block or never ends.
+  function parseLook(block) {
+    if (typeof block !== "string" || !block) return null;
+    var L = { label: "", captain: "", body: "", saved: "", piece: [], design: [], face: "", hair: "", spare: ["", "", ""],
+              wItem: ["", ""], wLook: ["", ""], skin: "", scar: "", wounds: [], colours: "", sized: false, size: 1, pose: "" };
+    for (var k = 0; k < 12; ++k) { L.piece.push(""); L.design.push(""); }
+    var lines = block.split("\n"), inBlock = false, ended = false, m;
+    for (var i = 0; i < lines.length && !ended; ++i) {
+      var line = lines[i].replace(/\r$/, "");
+      if (!line || line.charAt(0) === "#") continue;
+      if (line === "[look]") { inBlock = true; continue; }
+      if (line === "[end]") { ended = inBlock; continue; }
+      var eq = line.indexOf("=");
+      if (!inBlock || eq < 0) continue;
+      var key = line.slice(0, eq), v = line.slice(eq + 1);
+      if (key === "label") L.label = v;
+      else if (key === "captain") L.captain = v;
+      else if (key === "body") L.body = v;
+      else if (key === "saved") L.saved = v;
+      else if (key === "face") L.face = v;
+      else if (key === "hair") L.hair = v;
+      else if (key === "skin") L.skin = v;
+      else if (key === "scar") L.scar = v;
+      else if (key === "colours") L.colours = v;
+      else if (key === "pose") L.pose = v;
+      else if (key === "size") { var s = parseFloat(v); L.sized = s >= 0.3 && s <= 3.0; L.size = L.sized ? s : 1; }
+      else if (key === "wounds") L.wounds = v.split(",").filter(function (w) { return w.length > 0; }).slice(0, 32);
+      else if ((m = /^piece(\d+)$/.exec(key)) && +m[1] < 12) L.piece[+m[1]] = v;
+      else if ((m = /^design(\d+)$/.exec(key)) && +m[1] < 12) L.design[+m[1]] = v;
+      else if ((m = /^spare(\d+)$/.exec(key)) && +m[1] < 3) L.spare[+m[1]] = v;
+      else if ((m = /^witem(\d+)$/.exec(key)) && +m[1] < 2) L.wItem[+m[1]] = v;
+      else if ((m = /^wlook(\d+)$/.exec(key)) && +m[1] < 2) L.wLook[+m[1]] = v;
+    }
+    return ended ? L : null;
+  }
+
+  // The wear layers, in the order of the game's chips (StudioLayer in sow_ui_captain_studio_saved.inl).
+  var LAYERS = [
+    { key: "armour", label: "Armour" }, { key: "head", label: "Head and hair" }, { key: "accessories", label: "Accessories" },
+    { key: "weapons", label: "Weapons" }, { key: "colours", label: "Colours" }, { key: "effects", label: "Effects" },
+    { key: "body", label: "Scars and paint" }, { key: "size", label: "Size and pose" }
+  ];
+  // StudioColourTokenLayer: which layer one token of the colour text belongs to
+  function colourTokenLayer(key) {
+    if (key === "aura" || key === "impale") return "effects";
+    if (key === "scar") return "body";
+    if (key === "weapons" || key === "weaponlock" || key === "wlook" || key === "blood" || key === "shieldown" || key === "wfx" ||
+        key.indexOf("w.") === 0 || key.indexOf("sh.") === 0 || key.indexOf("wt.") === 0 || key.indexOf("st.") === 0)
+      return "weapons";
+    return "colours";
+  }
+  var CELL_LABEL = ["Helmet", "Shoulders", "Chest", "Arms", "Pants", "Legs", "Quiver", "Accessory", "Body LOD", "Face piece", "Body", "Head"];
+  var HEX6 = /^[0-9A-Fa-f]{6}$/;
+  function words(s) { return String(s).replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " "); }
+
+  // The look as rows per layer: [{ key, label, rows: [{ what, value, raw, swatch }] }]. Settings the page has no words
+  // for are counted, never dropped silently.
+  function lookLayers(L) {
+    var out = {}, i;
+    LAYERS.forEach(function (l) { out[l.key] = { key: l.key, label: l.label, rows: [], other: 0 }; });
+    function row(layer, what, value, raw, swatch) { out[layer].rows.push({ what: what, value: value, raw: raw || "", swatch: swatch || "" }); }
+    for (i = 0; i <= 6; ++i) if (L.piece[i]) row("armour", CELL_LABEL[i], prettyRecord(L.piece[i]), recordName(L.piece[i]));
+    if (L.piece[11]) row("head", "Head", prettyRecord(L.piece[11]), recordName(L.piece[11]));
+    if (L.hair) row("head", "Hair", prettyRecord(L.hair), recordName(L.hair));
+    else if (!L.piece[0] || isUndressPiece(recordName(L.piece[0]))) row("head", "Hair", "bald (no hair under a bare head)", "");
+    row("accessories", "Accessory", L.piece[7] ? prettyRecord(L.piece[7]) : "none (his own comes off)", L.piece[7] ? recordName(L.piece[7]) : "");
+    if (L.piece[9]) row("accessories", "Face piece", prettyRecord(L.piece[9]), recordName(L.piece[9]));
+    for (i = 0; i < 3; ++i) if (L.spare[i]) row("accessories", "Accessory " + (i + 2), prettyRecord(L.spare[i]), recordName(L.spare[i]));
+    for (i = 0; i < 2; ++i)
+      if (L.wItem[i] && L.wLook[i]) row("weapons", i ? "Ranged" : "Melee", prettyRecord(L.wLook[i]), recordName(L.wLook[i]));
+    if (L.skin) row("body", "Body paint", L.skin, "");
+    if (L.scar) row("body", "Scar", prettyRecord(L.scar), recordName(L.scar));
+    if (L.wounds.length) row("body", "Wounds", L.wounds.map(prettyRecord).join(", "), L.wounds.join(", "));
+    if (L.sized) row("size", "Size", L.size.toFixed(2), "");
+    if (L.pose) row("size", "Pose", words(L.pose), L.pose);
+    // the colour keeper's text: "key=value|key=value"
+    var tokens = (L.colours || "").split("|"), perPiece = {}, scars = 0;
+    tokens.forEach(function (tok) {
+      if (!tok) return;
+      var eq = tok.indexOf("="), key = eq < 0 ? tok : tok.slice(0, eq), v = eq < 0 ? "" : tok.slice(eq + 1);
+      var layer = colourTokenLayer(key), first = v.split(",")[0];
+      if (key.indexOf("c.") === 0) row("colours", words(key.slice(2)), HEX6.test(first) ? "#" + first.toUpperCase() : "his own", "", HEX6.test(first) ? first : "");
+      else if (key.indexOf("p.") === 0) perPiece[key.split(".")[1]] = 1;
+      else if (key === "look") row("colours", "Colour theme", v);
+      else if (key === "eyelook") row("colours", "Eye look", v);
+      else if (key === "bodylook") row("colours", "Body look theme", v);
+      else if (key === "eye0" || key === "eye1") row("colours", key === "eye0" ? "Left eye" : "Right eye", v);
+      else if (key === "star") row("colours", "Eye light", v.split(",").filter(Boolean).join(", "));
+      else if (key === "glow") row("colours", "Glow", v);
+      else if (key === "glowcolor") row("colours", "Glow colour", v);
+      else if (key === "mark") row("colours", "Marks", v);
+      else if (key === "body") row("colours", "Body look", v);
+      else if (key === "veinpattern") row("colours", "Veins", v);
+      else if (key === "beard") row("colours", "Beard colour", HEX6.test(first) ? "#" + first.toUpperCase() : "his own", "", HEX6.test(first) ? first : "");
+      else if (key === "beardstyle") row("colours", "Beard", v);
+      else if (key === "accessory") row("colours", "Accessory colour", HEX6.test(first) ? "#" + first.toUpperCase() : "his own", "", HEX6.test(first) ? first : "");
+      else if (key === "aura") v.split(",").filter(Boolean).forEach(function (a) { row("effects", "Aura", words(a)); });
+      else if (key === "impale") row("effects", "Stuck in him", v.split(",").filter(Boolean).map(words).join(", "));
+      else if (key === "wfx") row("weapons", "Weapon effect", words(v));
+      else if (key === "wlook") row("weapons", "Weapon colours", v);
+      else if (key === "weapons") row("weapons", "Weapon colour mode", v);
+      else if (key === "blood") row("weapons", "Blood", v.split(",")[0] === "1" ? "on" : "off");
+      else if (key.indexOf("w.") === 0 || key.indexOf("sh.") === 0) {
+        var part = key.indexOf("sh.") === 0 ? "Shield " + key.slice(3) : "Weapon " + key.slice(2);
+        row("weapons", part, HEX6.test(first) ? "#" + first.toUpperCase() : "his own", "", HEX6.test(first) ? first : "");
+      } else if (key === "scar") ++scars;
+      else if (key === "keep" || key === "hide" || key === "bodylock" || key === "weaponlock") return;   // his own, never the card's
+      else out[layer].other++;
+    });
+    var pieces = Object.keys(perPiece).length;
+    if (pieces) row("colours", "Own colours on", pieces + " piece" + (pieces === 1 ? "" : "s"));
+    if (scars) row("body", "Painted scars", String(scars));
+    return LAYERS.map(function (l) { return out[l.key]; });
+  }
+
+  return {
+    CARD_W: CARD_W, CARD_H: CARD_H, ART: { x: ART_X, y: ART_Y, w: ART_W, h: ART_H }, MAX_TEXT: MAX_TEXT, MAX_FILE: MAX_FILE, MAX_SIDE: MAX_SIDE,
+    TIER_NAMES: TIER_NAMES, FINISH_NAMES: FINISH_NAMES, CONDITION_NAMES: CONDITION_NAMES, TIER_ODDS: TIER_ODDS, FINISH_ODDS: FINISH_ODDS,
+    POWER_LO: POWER_LO, POWER_HI: POWER_HI, TIER_PRICE: TIER_PRICE, FINISH_MULT: FINISH_MULT, CONDITION_MULT: CONDITION_MULT,
+    LAYERS: LAYERS,
+    rollsFromId: rollsFromId, validId: validId, conditionOf: conditionOf, priceMirian: priceMirian, pullOneIn: pullOneIn,
+    crc32: crc32, walkPng: walkPng, unfilter: unfilter, extractPixels: extractPixels, parseCardText: parseCardText, inflateZlib: inflateZlib,
+    readCard: readCard, isUndressPiece: isUndressPiece, prettyRecord: prettyRecord, parseLook: parseLook,
+    colourTokenLayer: colourTokenLayer, lookLayers: lookLayers
+  };
+}));
+
+/* SoW:CE Captain Cards - the card page (2026-11-08). Reads cards with cards_reader.js (window.SoWCards) and shows
+ * them the way the game's binder does (framework/sowframework/ui/sow_ui_card_view.hpp): the card tilts toward the
+ * pointer, sways at rest, turns over on a click, its picture sits behind the frame's window (parallax), and a glare
+ * band plus the finish's own sheen (Foil, Gold, Mithril, Shadow) follow the tilt. The colours are the game's
+ * (TierMetal, BandMetal, NameColour).
+ *
+ * Every string from a card goes in with textContent: a card comes from anyone. Nothing is sent anywhere (the page's
+ * content-security policy has no connect-src unless a sample card ships beside it, and then only to this site).
+ */
+(function () {
+  "use strict";
+  var R = window.SoWCards;
+  var MAX_FILES = 40;
+  var reduceMotion = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: false };
+
+  // ---- the game's colours (sow_ui_card_view.hpp) ----
+  var METAL = [
+    { hi: "#ced2d8", mid: "#8c9299", lo: "#3e4248", accent: "#b8bec6" },   // Common
+    { hi: "#bee4b2", mid: "#5dae63", lo: "#244a28", accent: "#7ccb7f" },   // Uncommon
+    { hi: "#bad6f6", mid: "#4a87d2", lo: "#1c3a62", accent: "#6fa8ee" },   // Rare
+    { hi: "#e2c4f8", mid: "#9b59d6", lo: "#3e1e5e", accent: "#b57bea" },   // Epic
+    { hi: "#ffe9aa", mid: "#e6a93a", lo: "#6e440e", accent: "#f4c25a" },   // Legendary
+    { hi: "#ffb8ac", mid: "#d9363e", lo: "#500c12", accent: "#ff6064" }    // Mythic
+  ];
+  var BAND = { 2: { hi: "#fff2c4", mid: "#e8b547", lo: "#7a4e0c" }, 3: { hi: "#f6fcff", mid: "#aac6de", lo: "#50667c" },
+               4: { hi: "#464e46", mid: "#1a1e1a", lo: "#060806" } };
+  var NAME_COLOUR = { 2: "#ffde8c", 3: "#e8f4ff", 4: "#b0ffa0" };
+
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = String(text);
+    return e;
+  }
+  function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+  function cap(s, n) { s = String(s || ""); return s.length > n ? s.slice(0, n - 1) + "…" : s; }
+  function pad4(n) { n = Math.max(0, Math.min(9999, n | 0)); return ("000" + n).slice(-4); }
+
+  var list = [];     // { key, file, url, res }
+  var sel = -1;
+  var seq = 0;
+  var status = $("cards-status");
+  function say(text) { status.textContent = text; }
+
+  // ---- reading files ----
+  // Anything but the plain 8-bit PNG the game writes: the browser's own decoder, with no colour conversion (the pixel
+  // copy lives in the lowest bit of each value). Only used when the file has lost its card chunk.
+  async function decodeImage(bytes, w, h) {
+    if (typeof createImageBitmap !== "function") return null;
+    var bmp = await createImageBitmap(new Blob([bytes], { type: "image/png" }), { colorSpaceConversion: "none", premultiplyAlpha: "none" });
+    if (bmp.width !== w || bmp.height !== h) return null;
+    var c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    var g = c.getContext("2d", { willReadFrequently: true });
+    g.drawImage(bmp, 0, 0);
+    return new Uint8Array(g.getImageData(0, 0, w, h).data.buffer);
+  }
+  async function readOne(file) {
+    var name = cap(file.name || "pasted card", 120);
+    if (file.size > R.MAX_FILE) return { file: name, res: { ok: false, why: "the file is larger than 32 MB" } };
+    var bytes = new Uint8Array(await file.arrayBuffer());
+    var res;
+    try { res = await R.readCard(bytes, { decodeImage: decodeImage }); } catch (e) { res = { ok: false, why: "it could not be read (" + cap(e && e.message, 80) + ")" }; }
+    return { file: name, res: res, bytes: bytes };
+  }
+  async function addFiles(files) {
+    files = Array.prototype.slice.call(files || []);
+    if (!files.length) return;
+    if (files.length > MAX_FILES) { files = files.slice(0, MAX_FILES); }
+    say("Reading " + plural(files.length, "file", "files") + "...");
+    var added = 0, bad = [];
+    for (var i = 0; i < files.length; ++i) {
+      var got = await readOne(files[i]);
+      if (!got.res.ok) { bad.push(got); continue; }
+      if (list.some(function (x) { return x.res.text === got.res.text; })) { bad.push({ file: got.file, res: { why: "already on this list" } }); continue; }
+      var url = URL.createObjectURL(new Blob([got.bytes], { type: "image/png" }));
+      list.push({ key: ++seq, file: got.file, url: url, res: got.res });
+      ++added;
+    }
+    showProblems(bad);
+    if (added) select(list.length - 1);
+    renderStrip();
+    say(added ? plural(added, "card", "cards") + " read." + (bad.length ? " " + plural(bad.length, "file was", "files were") + " not a card (see below the drop area)." : "")
+              : bad.length ? "No card in " + (bad.length === 1 ? "that file" : "those files") + ": see below the drop area." : "");
+  }
+  function showProblems(bad) {
+    var box = $("cards-problems");
+    box.textContent = "";
+    box.hidden = !bad.length;
+    bad.forEach(function (b) {
+      var li = el("li");
+      li.appendChild(el("b", null, b.file));
+      li.appendChild(document.createTextNode(": " + (b.res.why || "not a card")));
+      box.appendChild(li);
+    });
+  }
+
+  // ---- the strip of cards on this page ----
+  function renderStrip() {
+    var strip = $("cards-strip");
+    strip.textContent = "";
+    strip.hidden = list.length < 2;
+    list.forEach(function (c, i) {
+      var b = el("button", "slot" + (i === sel ? " is-on" : ""));
+      b.type = "button";
+      b.setAttribute("aria-pressed", i === sel ? "true" : "false");
+      b.style.setProperty("--accent", METAL[c.res.card.tier].accent);
+      var img = el("img");
+      img.src = c.url;
+      img.alt = "";
+      img.width = 75; img.height = 105;
+      b.appendChild(img);
+      b.appendChild(el("span", null, cap(c.res.card.name || "Unnamed captain", 40)));
+      b.addEventListener("click", function () { select(i); renderStrip(); });
+      strip.appendChild(b);
+    });
+  }
+
+  // ---- the 3D card ----
+  var card = $("card"), body = $("card-body"), shadow = $("card-shadow");
+  var view = { yaw: 0, pitch: 0, flip: 0, tYaw: 0, tPitch: 0, tFlip: 0, hover: false, last: 0, running: false };
+  function select(i) {
+    sel = i;
+    var c = list[i];
+    $("cards-viewer").hidden = !c;
+    if (!c) return;
+    var d = c.res.card;
+    var metal = METAL[d.tier], band = BAND[d.finish] || metal;
+    card.dataset.finish = String(d.finish);
+    card.style.setProperty("--accent", metal.accent);
+    card.style.setProperty("--band-hi", band.hi);
+    card.style.setProperty("--band-mid", band.mid);
+    card.style.setProperty("--band-lo", band.lo);
+    card.style.setProperty("--name", NAME_COLOUR[d.finish] || "#f4f0e6");
+    $("card-art").src = c.url;
+    $("card-frame").src = c.url;
+    card.setAttribute("aria-label", "The card of " + cap(d.name || "an unnamed captain", 60) + ". Press Enter to turn it over.");
+    view.tFlip = 0;                                    // a new card shows its front
+    view.flip = reduceMotion.matches ? 0 : view.flip;
+    card.setAttribute("aria-pressed", "false");
+    $("btn-flip").textContent = "Turn it over";
+    buildBack(d);
+    buildFacts(c);
+    start();
+  }
+  function flip() {
+    view.tFlip = view.tFlip > 0.5 ? 0 : 1;
+    if (reduceMotion.matches) view.flip = view.tFlip;
+    card.setAttribute("aria-pressed", view.tFlip > 0.5 ? "true" : "false");
+    $("btn-flip").textContent = view.tFlip > 0.5 ? "Show the front" : "Turn it over";
+    start();
+  }
+  card.addEventListener("click", flip);
+  card.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); }
+  });
+  card.addEventListener("pointermove", function (e) {
+    var r = card.getBoundingClientRect();
+    var nx = (e.clientX - r.left) / r.width - 0.5, ny = (e.clientY - r.top) / r.height - 0.5;
+    view.hover = true;
+    // the side under the pointer is pushed away (rotateY + pushes the right edge away, rotateX - the bottom)
+    view.tYaw = Math.max(-0.5, Math.min(0.5, nx)) * 0.76;
+    view.tPitch = -Math.max(-0.5, Math.min(0.5, ny)) * 0.56;
+    start();
+  });
+  card.addEventListener("pointerleave", function () { view.hover = false; view.tYaw = 0; view.tPitch = 0; start(); });
+
+  function frame(now) {
+    // the real step, so a slow machine keeps the motion's timing (the easing is exponential: stable at any step);
+    // capped only so a tab that comes back after a while does not jump
+    var dt = view.last ? Math.min(0.25, (now - view.last) / 1000) : 0.016;
+    view.last = now;
+    var still = reduceMotion.matches || document.hidden;
+    if (!view.hover && !still) {                       // a gentle sway at rest
+      var t = now / 1000;
+      view.tYaw = 0.10 * Math.sin(t * 0.6);
+      view.tPitch = 0.05 * Math.sin(t * 0.45 + 1.0);
+    }
+    if (still && !view.hover) { view.tYaw = 0; view.tPitch = 0; }
+    var k = still ? 1 : 1 - Math.exp(-dt * 10), kf = still ? 1 : 1 - Math.exp(-dt * 7);
+    view.yaw += (view.tYaw - view.yaw) * k;
+    view.pitch += (view.tPitch - view.pitch) * k;
+    view.flip += (view.tFlip - view.flip) * kf;
+    apply();
+    var settled = Math.abs(view.flip - view.tFlip) < 0.001 && Math.abs(view.yaw - view.tYaw) < 0.0005 && Math.abs(view.pitch - view.tPitch) < 0.0005;
+    if (sel < 0 || (settled && (still || view.hover))) { view.running = false; view.last = 0; return; }
+    requestAnimationFrame(frame);
+  }
+  function start() {
+    if (view.running) return;
+    view.running = true;
+    requestAnimationFrame(frame);
+  }
+  function apply() {
+    var turn = view.flip * 180;
+    var side = turn > 90 ? -1 : 1;                     // seen from the back the tilt goes the other way
+    var yaw = view.yaw * side, pitch = view.pitch;
+    body.style.transform = "rotateX(" + (pitch * 57.2958).toFixed(3) + "deg) rotateY(" + (turn + yaw * 57.2958).toFixed(3) + "deg)";
+    var g = 0.5 - 1.6 * yaw + 1.1 * pitch;             // where the glare band sits along the diagonal (the game's formula)
+    card.style.setProperty("--g", (g * 100).toFixed(2) + "%");
+    card.style.setProperty("--h", ((0.9 * yaw - 0.7 * pitch) * 360).toFixed(1) + "deg");
+    card.style.setProperty("--px", (-Math.sin(yaw) * 4).toFixed(3) + "%");   // the picture behind the window moves against the frame
+    card.style.setProperty("--py", (Math.sin(pitch) * 4).toFixed(3) + "%");
+    shadow.style.transform = "translate(" + (yaw * 26).toFixed(1) + "px," + (14 - pitch * 22).toFixed(1) + "px) scale(" + (1 + Math.abs(yaw) * 0.08).toFixed(3) + ")";
+    $("card-front").setAttribute("aria-hidden", turn > 90 ? "true" : "false");
+    $("card-back").setAttribute("aria-hidden", turn > 90 ? "false" : "true");
+  }
+  if (reduceMotion.addEventListener) reduceMotion.addEventListener("change", start);
+  document.addEventListener("visibilitychange", start);
+
+  // ---- the back (DrawBack): what the face has no room for ----
+  function buildBack(d) {
+    var back = $("card-back-inner");
+    back.textContent = "";
+    var head = el("div", "b-head");
+    head.appendChild(el("span", "b-name", cap(d.name || "Unnamed captain", 48)));
+    head.appendChild(el("span", "b-tier", R.TIER_NAMES[d.tier] + (d.finish ? "  " + R.FINISH_NAMES[d.finish] : "")));
+    back.appendChild(head);
+    back.appendChild(el("h4", null, "Traits"));
+    var cols = el("div", "b-traits"), s = el("ul", "b-str"), w = el("ul", "b-weak");
+    var ns = 0, nw = 0;
+    d.traits.forEach(function (t) {
+      if (t.weak ? nw >= 14 : ns >= 14) return;
+      (t.weak ? w : s).appendChild(el("li", null, cap(t.name, 60)));
+      if (t.weak) ++nw; else ++ns;
+    });
+    cols.appendChild(s); cols.appendChild(w);
+    back.appendChild(ns || nw ? cols : el("p", "b-dim", "Not read when the card was made"));
+    if (d.notes.length) {
+      back.appendChild(el("h4", null, "The look"));
+      var ul = el("ul", "b-notes");
+      d.notes.forEach(function (n) { ul.appendChild(el("li", null, cap(n, 70))); });
+      back.appendChild(ul);
+    }
+    if (d.why.length) {
+      back.appendChild(el("h4", null, "Why " + R.TIER_NAMES[d.tier] + "  (" + d.score.toFixed(1) + " points)"));
+      var why = el("ul", "b-notes");
+      d.why.forEach(function (x) { why.appendChild(el("li", null, cap(x, 70))); });
+      back.appendChild(why);
+    } else if (d.format >= 2) {
+      back.appendChild(el("h4", null, "The pull"));
+      var pull = el("ul", "b-notes"), cond = R.conditionOf(d.print);
+      pull.appendChild(el("li", null, R.TIER_NAMES[d.tier] + (d.finish ? " " + R.FINISH_NAMES[d.finish] : "") + ": 1 in " + R.pullOneIn(d.tier, d.finish)));
+      pull.appendChild(el("li", null, "Power " + d.power + "  (" + R.TIER_NAMES[d.tier] + " pulls " + R.POWER_LO[d.tier] + " to " + R.POWER_HI[d.tier] + ")"));
+      pull.appendChild(el("li", null, d.print > 1
+        ? "Print " + d.print + " of it: " + R.CONDITION_NAMES[cond] + "  -  worth " + R.priceMirian(d.tier, d.finish, cond) + " Mirian"
+        : "The original: Mint  -  a near-mint copy " + R.priceMirian(d.tier, d.finish, 1) + " Mirian"));
+      pull.appendChild(el("li", "b-dim", d.sig ? "Pulled on the exchange" : "Made offline: shared as a PNG, never on the exchange"));
+      back.appendChild(pull);
+    }
+    var foot = el("div", "b-foot");
+    foot.appendChild(el("p", null, "No. " + pad4(d.serial) + (d.maker ? "  by " + cap(d.maker, 30) : "") + (d.made ? "  " + cap(d.made, 20) : "")));
+    foot.appendChild(el("p", null, cap(d.set || "SoW:CE Captains", 40) + (d.pack ? "  " + cap(d.pack, 40) : "") + (d.id ? "  id " + d.id.toUpperCase() : "")));
+    foot.appendChild(el("p", "b-dim", d.look ? "Drop the card's PNG into x64\\sowframework\\cards to collect it." : "A picture card: it carries no look."));
+    back.appendChild(foot);
+  }
+
+  // ---- the facts beside the card ----
+  // What a ticked layer the card holds nothing for does to him (StudioResolveSaved: an empty head, hair under a helmet or
+  // weapon keeps his; empty colours, effects, paint, scars, wounds, size and pose take ours off and leave his own).
+  var EMPTY_LAYER = {
+    armour: "nothing: his own armour stays",
+    head: "nothing: his own head and hair stay",
+    accessories: "nothing: his accessories come off",
+    weapons: "nothing: his own weapons stay",
+    colours: "none: he goes back to his own colours",
+    effects: "none: auras and stuck weapons from the menu come off (the game's own stay)",
+    body: "none: body paint, scars and wounds from the menu come off; his own stay",
+    size: "none: his own size and Army-screen idle"
+  };
+  function buildFacts(c) {
+    var d = c.res.card, box = $("cards-facts");
+    box.textContent = "";
+    var h = el("h2", "facts-name", cap(d.name || "Unnamed captain", 80));
+    h.style.color = NAME_COLOUR[d.finish] || "";
+    box.appendChild(h);
+    var who = [d.cls, d.body, d.tribe].filter(Boolean).map(function (x) { return cap(x, 40); }).join(", ");
+    var rank = [d.level ? "Level " + d.level : "", cap(d.rarity, 20), (cap(d.rank, 20) || "captain").toLowerCase()].filter(Boolean).join(" ");
+    box.appendChild(el("p", "facts-who", (who ? who + ". " : "") + rank + "."));
+    var tier = el("p", "facts-tier");
+    tier.style.setProperty("--accent", METAL[d.tier].accent);
+    tier.textContent = R.TIER_NAMES[d.tier] + (d.finish ? " " + R.FINISH_NAMES[d.finish] : "") +
+      (d.format >= 2 ? ", power " + d.power + ". A pull of 1 in " + R.pullOneIn(d.tier, d.finish) + "." : ". A first-day card: its tier was earned by points (" + d.score.toFixed(1) + ").");
+    box.appendChild(tier);
+    var lines = [];
+    if (d.format >= 2) {
+      var cond = R.conditionOf(d.print);
+      lines.push(d.print > 1 ? "Print " + d.print + ", " + R.CONDITION_NAMES[cond].toLowerCase() + ": worth " + R.priceMirian(d.tier, d.finish, cond) + " Mirian on the exchange."
+                             : "The original, mint. A near-mint copy sells for " + R.priceMirian(d.tier, d.finish, 1) + " Mirian on the exchange.");
+      lines.push(d.sig ? "Its id was dealt by the exchange, so it can go on the exchange (its maker can put it up)."
+                       : "Made offline: it can be shared as a PNG, never put on the exchange.");
+    }
+    lines.push("No. " + pad4(d.serial) + (d.maker ? " by " + cap(d.maker, 30) : "") + (d.made ? ", made " + cap(d.made, 20) : "") + "." +
+               (d.pack ? " " + cap(d.pack, 40) + "." : "") + (d.id ? " Id " + d.id.toUpperCase() + "." : ""));
+    if (c.res.fromPixels) lines.push("Read from its picture: the file had lost its card data, and the copy hidden in the pixels still had it.");
+    lines.forEach(function (t) { box.appendChild(el("p", "facts-line", t)); });
+
+    box.appendChild(el("h3", null, "What wearing it gives a captain"));
+    var look = d.look ? R.parseLook(d.look) : null;
+    if (!look) {
+      box.appendChild(el("p", "facts-line", d.look ? "Its look could not be read." : "A picture card: it carries no look, so there is nothing to wear."));
+    } else {
+      box.appendChild(el("p", "facts-line facts-dim",
+        "Each part is one of the ticks under Wear this look in the game (from the next update; until then he takes all of it). A part you leave unticked stays his own; a part you tick replaces his, and what the card doesn't have comes off."));
+      var dl = el("div", "layers");
+      R.lookLayers(look).forEach(function (layer) {
+        var sec = el("section", "layer" + (layer.rows.length || layer.other ? "" : " is-empty"));
+        sec.appendChild(el("h4", null, layer.label));
+        var ul = el("ul");
+        layer.rows.forEach(function (r) {
+          var li = el("li");
+          li.appendChild(el("span", "what", r.what));
+          var v = el("span", "val", cap(r.value, 90));
+          if (r.raw) v.title = r.raw;
+          if (r.swatch && /^[0-9A-Fa-f]{6}$/.test(r.swatch)) {
+            var sw = el("i", "swatch");
+            sw.style.backgroundColor = "#" + r.swatch;
+            v.insertBefore(sw, v.firstChild);
+          }
+          li.appendChild(v);
+          ul.appendChild(li);
+        });
+        if (layer.other) ul.appendChild(el("li", "facts-dim", plural(layer.other, "more setting", "more settings")));
+        if (!layer.rows.length && !layer.other) ul.appendChild(el("li", "facts-dim", EMPTY_LAYER[layer.key] || "nothing"));
+        sec.appendChild(ul);
+        dl.appendChild(sec);
+      });
+      box.appendChild(dl);
+      box.appendChild(el("p", "facts-line facts-dim",
+        "His body never changes. Armour made for another body is swapped for the same design made for his, and anything with nothing for his body or class stays his own. Back, in the Studio, puts his old look on again."));
+    }
+  }
+
+  // ---- the buttons ----
+  $("btn-flip").addEventListener("click", flip);
+  $("btn-copy").addEventListener("click", async function () {
+    var c = list[sel];
+    if (!c) return;
+    try { await navigator.clipboard.writeText(c.res.text); say("The card's text is on your clipboard."); }
+    catch (e) { say("Your browser didn't allow copying here."); }
+  });
+  $("btn-remove").addEventListener("click", function () {
+    var c = list[sel];
+    if (!c) return;
+    URL.revokeObjectURL(c.url);
+    list.splice(sel, 1);
+    if (list.length) select(Math.min(sel, list.length - 1));
+    else { sel = -1; $("cards-viewer").hidden = true; }
+    renderStrip();
+    say("Taken off this list.");
+  });
+
+  // ---- getting files in: the picker, a drop anywhere on the page, a paste ----
+  var input = $("cards-input"), zone = $("cards-drop");
+  input.addEventListener("change", function () { addFiles(input.files); input.value = ""; });
+  var depth = 0;
+  window.addEventListener("dragenter", function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, "Files") >= 0) { ++depth; zone.classList.add("is-over"); } });
+  window.addEventListener("dragleave", function () { if (--depth <= 0) { depth = 0; zone.classList.remove("is-over"); } });
+  window.addEventListener("dragover", function (e) { e.preventDefault(); });
+  window.addEventListener("drop", function (e) {
+    e.preventDefault();
+    depth = 0;
+    zone.classList.remove("is-over");
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+  });
+  document.addEventListener("paste", function (e) {
+    var files = e.clipboardData && e.clipboardData.files;
+    if (files && files.length) addFiles(files);
+    else if (e.clipboardData && e.clipboardData.types && Array.prototype.indexOf.call(e.clipboardData.types, "text/plain") >= 0)
+      say("That was text, not a card. Paste the card's PNG file, or drop it here.");
+  });
+  // The sample cards: real cards made in the game, shipped beside this page (samples/*.png, this site only). The last
+  // one is the card shown, and the page's link preview.
+  var sampleBtn = $("cards-sample");
+  if (sampleBtn) {
+    sampleBtn.addEventListener("click", async function () {
+      var names = (sampleBtn.dataset.srcs || "").split(",").filter(function (n) { return /^samples\/[a-z0-9_-]+\.png$/.test(n); });
+      var files = [];
+      for (var i = 0; i < names.length; ++i) {
+        try {
+          var r = await fetch(names[i], { cache: "no-cache" });
+          if (!r.ok) throw new Error("status " + r.status);
+          files.push(new File([await r.blob()], names[i].slice(8), { type: "image/png" }));
+        } catch (e) { /* one missing sample does not stop the others */ }
+      }
+      if (files.length) addFiles(files);
+      else say("The sample cards could not be loaded.");
+    });
+  }
+
+  // ---- the odds table (from the reader's constants: one source with the game's) ----
+  (function () {
+    var t = $("odds-tiers");
+    if (!t) return;
+    R.TIER_NAMES.forEach(function (name, i) {
+      var tr = el("tr"), p = R.TIER_ODDS[i] / 10;
+      var th = el("th", null, name);
+      th.style.color = METAL[i].accent;
+      tr.appendChild(th);
+      tr.appendChild(el("td", null, (p >= 5 ? p.toFixed(p % 1 ? 1 : 0) + " %" : "1 in " + Math.round(1000 / R.TIER_ODDS[i]))));
+      tr.appendChild(el("td", null, R.POWER_LO[i] + " to " + R.POWER_HI[i]));
+      tr.appendChild(el("td", null, R.TIER_PRICE[i].toLocaleString("en") + " Mirian"));
+      t.appendChild(tr);
+    });
+    var f = $("odds-finishes");
+    R.FINISH_NAMES.forEach(function (name, i) {
+      if (!i) return;
+      var tr = el("tr");
+      tr.appendChild(el("th", null, name));
+      tr.appendChild(el("td", null, "1 in " + Math.round(1000 / R.FINISH_ODDS[i])));
+      tr.appendChild(el("td", null, "x" + R.FINISH_MULT[i]));
+      f.appendChild(tr);
+    });
+  })();
+  $("cards-noscript-note").hidden = true;
+  say("");
+})();
+</script>
+</body></html>
