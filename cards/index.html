@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' blob: data:; style-src 'unsafe-inline'; script-src 'sha256-DCuCDzOQC+bJe7eWiQzvIZdkEoVE9/rmHCRrAnXBjd4='; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' blob: data:; style-src 'unsafe-inline'; script-src 'sha256-ajsoQAPP2IQJGRpRKb1GJ8ZiKZk/E3svstDAlqc0RhY='; connect-src 'self' https://sowce-card-exchange.sowce-cards.workers.dev; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <title>Captain cards - SoW:CE</title>
@@ -407,6 +407,33 @@ section[id]{scroll-margin-top:72px}
 .layer .val{color:var(--text);overflow-wrap:anywhere}
 .swatch{display:inline-block;width:12px;height:12px;margin-right:6px;border:1px solid rgba(255,255,255,.35);border-radius:3px;vertical-align:-1px}
 
+/* the library */
+.lib{margin-top:30px}
+.lib h2,.own-head{font:700 clamp(1.6rem,3vw,2.1rem)/1.15 var(--f-display)}
+.lib-intro,.own-note{margin-top:10px;color:var(--dim);max-width:76ch}
+.lib-intro b{color:var(--text);font-weight:600}
+.lib-week{margin-top:20px;padding:16px 18px;border:1px solid var(--edge);border-radius:var(--r);background:var(--panel)}
+.lib-week h3{font:700 1.3rem/1.2 var(--f-display)}
+.lib-week .lib-week-sub{margin-top:16px;font-size:1.05rem}
+.lib-dim{color:var(--faint);font-size:14.5px;margin-top:4px}
+.lib-week-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}
+.lib-tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.lib-tools input,.lib-tools select{padding:8px 10px;border:1px solid var(--edge-hi);border-radius:8px;background:var(--panel-2);color:var(--text);font:400 15px/1.2 var(--f-body)}
+.lib-tools input{flex:1 1 260px;min-width:0}
+.lib-status{min-height:1.5em;margin-top:10px;color:var(--dim)}
+.lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:6px}
+.lib-card{display:grid;gap:4px;justify-items:start;padding:8px;border:1px solid var(--edge);border-radius:10px;background:var(--panel);color:var(--text);text-align:left;cursor:pointer;min-width:0}
+.lib-card:hover{border-color:var(--accent,var(--edge-hi))}
+.lib-card.is-busy{opacity:.6;cursor:progress}
+.lib-week-row .lib-card{width:160px}
+.lib-pic{display:block;width:100%;aspect-ratio:188/263;border-radius:6px;background:var(--bg-deep);overflow:hidden}
+.lib-pic img{display:block;width:100%;height:100%;object-fit:cover}
+.lib-pic.is-missing{background:repeating-linear-gradient(135deg,var(--bg-deep) 0 8px,var(--panel-2) 8px 16px)}
+.lib-name{max-width:100%;font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lib-sub{max-width:100%;color:var(--accent,var(--faint));font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lib-more{margin-top:14px}
+.own-head{margin-top:clamp(44px,6vw,64px)}
+
 /* the notes under the reader */
 .cards-sec{margin-top:clamp(44px,6vw,72px);max-width:76ch}
 .cards-sec h2{font:700 clamp(1.6rem,3vw,2.1rem)/1.15 var(--f-display);scroll-margin-top:84px}
@@ -444,9 +471,26 @@ section[id]{scroll-margin-top:72px}
 
 <main class="wrap cards-page" id="main">
   <h1>Captain cards</h1>
-  <p class="cards-lead">A captain card is a picture of one of your orcs that carries his whole look inside it. Drop one here to hold it up and see what's in it. The file stays on your computer: this page reads it in your browser and can't send it anywhere.</p>
+  <p class="cards-lead">A captain card is a picture of one of your orcs that carries his whole look inside it. Below is the library of orcs players have shared from the game, and under it you can hold up a card of your own.</p>
   <p class="cards-noscript" id="cards-noscript-note">This page needs JavaScript to read a card. Nothing it reads leaves your browser.</p>
 
+  <section class="lib" id="library" data-exchange="https://sowce-card-exchange.sowce-cards.workers.dev" hidden>
+    <h2>The library</h2>
+    <p class="lib-intro">Orcs players have put up from the game. Click one to hold it up. To share your own, make a card in the game and put it up with <b>Open the exchange</b> on the Cards page; to get one of these, find it in the same window and buy a copy for Mirian. Its maker earns half.</p>
+    <div class="lib-week" id="lib-week" hidden></div>
+    <div class="lib-tools">
+      <input type="search" id="lib-q" placeholder="Search a name, maker, class or tribe" aria-label="Search the library" maxlength="40">
+      <select id="lib-sort" aria-label="Order"><option value="new">Newest first</option><option value="popular">Most copied</option></select>
+      <select id="lib-tier" aria-label="Tier"><option value="">Every tier</option><option value="0">Common</option><option value="1">Uncommon</option><option value="2">Rare</option><option value="3">Epic</option><option value="4">Legendary</option><option value="5">Mythic</option></select>
+      <select id="lib-finish" aria-label="Finish"><option value="">Every finish</option><option value="0">Standard</option><option value="1">Foil</option><option value="2">Gold</option><option value="3">Mithril</option><option value="4">Shadow</option></select>
+    </div>
+    <p class="lib-status" id="lib-status" role="status" aria-live="polite"></p>
+    <div class="lib-grid" id="lib-grid"></div>
+    <button type="button" class="pbtn lib-more" id="lib-more" hidden>Show more</button>
+  </section>
+
+  <h2 class="own-head" id="own">Look at a card of your own</h2>
+  <p class="own-note">Your card stays on your computer: this page reads the file in your browser and never sends it anywhere.</p>
   <label class="drop" id="cards-drop" for="cards-input">
     <input type="file" id="cards-input" accept="image/png,.png" multiple>
     <span class="drop-main">Drop card PNGs here, or <u>choose files</u></span>
@@ -502,6 +546,7 @@ section[id]{scroll-margin-top:72px}
   <section class="cards-sec" id="carries">
     <h2>What a card carries</h2>
     <p>The picture, the captain's name, class, body, tribe, level and traits as text, and his look as a list of the game's own record names. It doesn't carry your save, your Steam account or your exchange key, and a card from someone else can only change what a look you saved yourself could change.</p>
+    <p>When you put a card up from the game, the library keeps its picture, the captain's name and the maker name you chose (or none). It keeps no account: the game proves a card is yours with a key that stays on your PC.</p>
     <p>The card holds that data twice: once in the PNG file, and once hidden in the lowest bit of the picture's pixels, so it survives an app that strips a file's extra data. A screenshot of a card, a JPEG or a resized copy loses both.</p>
   </section>
 
@@ -1102,18 +1147,26 @@ section[id]{scroll-margin-top:72px}
     try { res = await R.readCard(bytes, { decodeImage: decodeImage }); } catch (e) { res = { ok: false, why: "it could not be read (" + cap(e && e.message, 80) + ")" }; }
     return { file: name, res: res, bytes: bytes };
   }
-  async function addFiles(files) {
+  // metas[i]: what the Card Exchange says of files[i] (a card from the library), else undefined.
+  async function addFiles(files, metas) {
     files = Array.prototype.slice.call(files || []);
+    metas = metas || [];
     if (!files.length) return;
     if (files.length > MAX_FILES) { files = files.slice(0, MAX_FILES); }
     say("Reading " + plural(files.length, "file", "files") + "...");
     var added = 0, bad = [];
     for (var i = 0; i < files.length; ++i) {
       var got = await readOne(files[i]);
+      got.meta = metas[i];
       if (!got.res.ok) { bad.push(got); continue; }
-      if (list.some(function (x) { return x.res.text === got.res.text; })) { bad.push({ file: got.file, res: { why: "already on this list" } }); continue; }
+      var already = list.findIndex(function (x) { return x.res.text === got.res.text; });
+      if (already >= 0) {
+        if (got.meta) { list[already].exchange = got.meta; select(already); renderStrip(); continue; }   // a library card again: show it
+        bad.push({ file: got.file, res: { why: "already on this list" } });
+        continue;
+      }
       var url = URL.createObjectURL(new Blob([got.bytes], { type: "image/png" }));
-      list.push({ key: ++seq, file: got.file, url: url, res: got.res });
+      list.push({ key: ++seq, file: got.file, url: url, res: got.res, exchange: got.meta || null });
       ++added;
     }
     showProblems(bad);
@@ -1331,6 +1384,12 @@ section[id]{scroll-margin-top:72px}
     }
     lines.push("No. " + pad4(d.serial) + (d.maker ? " by " + cap(d.maker, 30) : "") + (d.made ? ", made " + cap(d.made, 20) : "") + "." +
                (d.pack ? " " + cap(d.pack, 40) + "." : "") + (d.id ? " Id " + d.id.toUpperCase() + "." : ""));
+    if (c.exchange) {                                   // a card from the library: what the exchange says of it now
+      var x = c.exchange, nx = x.next || {};
+      lines.push("In the library: " + plural(x.copies | 0, "copy", "copies") + " bought so far. The next copy is print " + (nx.print | 0) +
+                 " (" + String(nx.conditionName || "").toLowerCase() + "), " + (nx.price | 0) + " Mirian.");
+      lines.push("To get it: in the game, Captain Studio > Quick > Cards > Open the exchange, search for “" + cap(d.name, 48) + "” and buy a copy.");
+    }
     if (c.res.fromPixels) lines.push("Read from its picture: the file had lost its card data, and the copy hidden in the pixels still had it.");
     lines.forEach(function (t) { box.appendChild(el("p", "facts-line", t)); });
 
@@ -1451,8 +1510,217 @@ section[id]{scroll-margin-top:72px}
       f.appendChild(tr);
     });
   })();
+  // the library (cards_library.js) hands its cards to the same viewer
+  window.SoWCardsPage = { addFiles: addFiles, viewer: function () { return $("cards-viewer"); } };
   $("cards-noscript-note").hidden = true;
   say("");
+})();
+
+/* SoW:CE Captain Cards - the library on the website (2026-11-08, user: "a library so users can upload and share
+ * their orcs"; uploads stay in the game, copies are bought in the game).
+ *
+ * It READS the Card Exchange (releases/CardExchange): the listing (GET /v1/cards: 30 a page, newest or most copied,
+ * tier, finish, search), Orc of the Week (GET /v1/spotlight), each card's thumbnail and, on a click, its full picture,
+ * which goes into the page's own viewer (window.SoWCardsPage, cards_page.js) with what the exchange says of it. The
+ * exchange answers this site's address only, for these reads only; it cannot be written from a web page.
+ *
+ * Budget: the exchange runs on a free plan (100,000 picture reads a day). Nothing is fetched before it is shown: one
+ * page of thumbnails at a time, a full picture only on a click. Every string from the exchange goes in with
+ * textContent; ids are checked before they go into a URL.
+ */
+(function () {
+  "use strict";
+  var root = document.getElementById("library");
+  if (!root) return;
+  var BASE = root.dataset.exchange || "";
+  if (!/^https:\/\/[a-z0-9.-]+$/.test(BASE)) { root.hidden = true; return; }
+  var R = window.SoWCards;
+  var ID = /^[0-9A-F]{16}$/;
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = String(text);
+    return e;
+  }
+  function cap(s, n) { s = String(s || ""); return s.length > n ? s.slice(0, n - 1) + "…" : s; }
+  var ACCENT = ["#b8bec6", "#7ccb7f", "#6fa8ee", "#b57bea", "#f4c25a", "#ff6064"];
+
+  var state = { page: 0, more: false, busy: false, thumbs: [] };
+  var grid = $("lib-grid"), status = $("lib-status"), moreBtn = $("lib-more");
+
+  function why(r, body) {
+    if (r && r.status === 429) return "The library is busy right now. Try again in a minute.";
+    if (body && body.why) return "The library said: " + cap(body.why, 120) + ".";
+    return "The library didn't answer. Try again later.";
+  }
+  async function getJson(path) {
+    var r = await fetch(BASE + path, { mode: "cors", credentials: "omit", referrerPolicy: "no-referrer" });
+    var body = null;
+    try { body = await r.json(); } catch (e) { body = null; }
+    if (!r.ok || !body || body.ok === false) throw new Error(why(r, body));
+    return body;
+  }
+  async function getPng(id, kind) {
+    if (!ID.test(id)) throw new Error("bad card id");
+    var r = await fetch(BASE + "/v1/cards/" + id + "/" + kind, { mode: "cors", credentials: "omit", referrerPolicy: "no-referrer" });
+    if (!r.ok) {
+      var body = null;
+      try { body = await r.json(); } catch (e) { body = null; }
+      throw new Error(why(r, body));
+    }
+    var b = await r.blob();
+    if (b.size > R.MAX_FILE) throw new Error("the picture is too large");
+    return b;
+  }
+  function clean(row) {   // only the fields the page shows, each a plain string or number
+    if (!row || !ID.test(String(row.id || "").toUpperCase())) return null;
+    var nx = row.next || {};
+    return {
+      id: String(row.id).toUpperCase(), name: String(row.name || ""), maker: String(row.maker || ""),
+      tier: Math.max(0, Math.min(5, row.tier | 0)), finish: Math.max(0, Math.min(4, row.finish | 0)), power: row.power | 0,
+      cls: String(row.cls || ""), tribe: String(row.tribe || ""), body: String(row.body || ""), level: row.level | 0,
+      copies: row.copies | 0, uploaded: String(row.uploaded || ""),
+      next: { print: nx.print | 0, conditionName: String(nx.conditionName || ""), price: nx.price | 0 }
+    };
+  }
+
+  // ---- a card tile: thumbnail (loaded when shown), name, tier ----
+  // bucket: the list its thumbnail is tracked in (the listing's is cleared by a new search, the week's never)
+  function tile(row, extra, bucket) {
+    var b = el("button", "lib-card");
+    b.type = "button";
+    b.style.setProperty("--accent", ACCENT[row.tier]);
+    var pic = el("span", "lib-pic");
+    var img = el("img");
+    img.alt = "";
+    img.width = 188; img.height = 263;
+    img.loading = "lazy";
+    pic.appendChild(img);
+    b.appendChild(pic);
+    b.appendChild(el("span", "lib-name", cap(row.name || "Unnamed captain", 40)));
+    b.appendChild(el("span", "lib-sub", R.TIER_NAMES[row.tier] + (row.finish ? " " + R.FINISH_NAMES[row.finish] : "") +
+      (extra ? "  ·  " + extra : "  ·  " + row.copies + (row.copies === 1 ? " copy" : " copies"))));
+    if (row.maker) b.title = "Made by " + cap(row.maker, 30);
+    b.addEventListener("click", function () { open(row, b); });
+    (bucket || state.thumbs).push({ img: img, id: row.id });
+    return b;
+  }
+  // thumbnails: six at a time, each a blob URL (the page's policy allows pictures from blob: and this site only)
+  async function loadThumbs(list) {
+    var queue = list.slice(), running = 0;
+    await new Promise(function (done) {
+      function next() {
+        if (!queue.length && !running) { done(); return; }
+        while (running < 6 && queue.length) {
+          var t = queue.shift();
+          ++running;
+          getPng(t.id, "thumb.png").then(function (blob) {
+            this.img.src = URL.createObjectURL(blob);
+          }.bind(t)).catch(function () {
+            this.img.closest(".lib-pic").classList.add("is-missing");
+          }.bind(t)).then(function () { --running; next(); });
+        }
+      }
+      next();
+    });
+  }
+  // a click: the full card into the page's viewer, with what the exchange says of it
+  async function open(row, btn) {
+    if (btn.classList.contains("is-busy")) return;
+    btn.classList.add("is-busy");
+    status.textContent = "Fetching " + cap(row.name, 40) + "...";
+    try {
+      var blob = await getPng(row.id, "card.png");
+      await window.SoWCardsPage.addFiles([new File([blob], cap(row.name || "card", 60) + ".png", { type: "image/png" })], [row]);
+      status.textContent = "";
+      var v = window.SoWCardsPage.viewer();
+      if (v && !v.hidden) v.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (e) {
+      status.textContent = e.message;
+    } finally {
+      btn.classList.remove("is-busy");
+    }
+  }
+
+  // ---- the listing ----
+  function query(page) {
+    var q = "/v1/cards?page=" + page + "&sort=" + ($("lib-sort").value === "popular" ? "popular" : "new");
+    var tier = $("lib-tier").value, finish = $("lib-finish").value, text = $("lib-q").value.trim().slice(0, 40);
+    if (/^[0-5]$/.test(tier)) q += "&tier=" + tier;
+    if (/^[0-4]$/.test(finish)) q += "&finish=" + finish;
+    if (text) q += "&q=" + encodeURIComponent(text);
+    return q;
+  }
+  async function load(reset) {
+    if (state.busy) return;
+    state.busy = true;
+    if (reset) {
+      state.page = 0;
+      state.thumbs.forEach(function (t) { if (t.img.src) URL.revokeObjectURL(t.img.src); });
+      state.thumbs = [];
+      grid.textContent = "";
+    }
+    status.textContent = "Asking the library...";
+    moreBtn.hidden = true;
+    try {
+      var body = await getJson(query(state.page));
+      var rows = (body.cards || []).map(clean).filter(Boolean);
+      var start = state.thumbs.length;
+      rows.forEach(function (row) { grid.appendChild(tile(row)); });
+      state.more = !!body.more;
+      moreBtn.hidden = !state.more;
+      status.textContent = grid.children.length ? "" : (state.page === 0 && !$("lib-q").value && !$("lib-tier").value && !$("lib-finish").value
+        ? "The library is empty so far. Be the first: put a card up from the game." : "No card matches.");
+      state.page += 1;
+      await loadThumbs(state.thumbs.slice(start));
+    } catch (e) {
+      status.textContent = e.message;
+    } finally {
+      state.busy = false;
+    }
+  }
+
+  // ---- Orc of the Week ----
+  async function spotlight() {
+    var box = $("lib-week");
+    try {
+      var body = await getJson("/v1/spotlight");
+      var orc = body.orc && body.orc.listing ? clean(body.orc.listing) : null;
+      var leaders = (body.leaders || []).map(clean).filter(Boolean);
+      if (!orc && !leaders.length) return;
+      var week = [];
+      box.textContent = "";
+      box.hidden = false;
+      if (orc) {
+        var head = el("div", "lib-week-head");
+        head.appendChild(el("h3", null, "Orc of the Week"));
+        var o = body.orc;
+        head.appendChild(el("p", "lib-dim", o.picked === "host" ? "Picked by the host for the week of " + cap(o.week, 10) + "."
+          : "The week of " + cap(o.week, 10) + ": " + (o.buyers | 0) + " player" + ((o.buyers | 0) === 1 ? "" : "s") + " bought a copy, " +
+            (o.viewers | 0) + " held it up."));
+        box.appendChild(head);
+        var row = el("div", "lib-week-row");
+        row.appendChild(tile(orc, null, week));
+        box.appendChild(row);
+      }
+      if (leaders.length) {
+        box.appendChild(el("h3", "lib-week-sub", "Leading this week"));
+        var lr = el("div", "lib-week-row");
+        leaders.forEach(function (l) { lr.appendChild(tile(l, null, week)); });
+        box.appendChild(lr);
+      }
+      await loadThumbs(week);
+    } catch (e) { /* no spotlight: the listing below still shows */ }
+  }
+
+  // ---- controls ----
+  var timer = 0;
+  $("lib-q").addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(function () { load(true); }, 400); });
+  ["lib-sort", "lib-tier", "lib-finish"].forEach(function (id) { $(id).addEventListener("change", function () { load(true); }); });
+  moreBtn.addEventListener("click", function () { load(false); });
+  root.hidden = false;
+  spotlight().then(function () { load(true); });
 })();
 </script>
 </body></html>
