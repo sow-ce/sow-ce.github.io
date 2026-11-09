@@ -59,17 +59,19 @@ code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril)}
 .brand-name i{font-style:normal}
 .brand-name em{font-style:italic;font-weight:600;color:var(--accent-hi)}
 .mark-script{animation:kindle 2.6s ease-out both}
-@media (max-width:1190px){.brand-name{font-size:19px}.brand-name b,.brand-name em{display:block}.brand-name i{display:none}.brand-name em{font-size:.88em;margin-top:1px}}
+@media (max-width:1440px){.brand-name{font-size:19px}.brand-name b,.brand-name em{display:block}.brand-name i{display:none}.brand-name em{font-size:.88em;margin-top:1px}}
 @media (max-width:520px){.top .wrap{gap:12px}.brand{gap:8px}.brand svg{width:40px;height:40px}}
 @media (max-width:360px){.brand-name{font-size:17px}.brand svg{width:36px;height:36px}}
 .nav{display:flex;gap:24px}
+.nav a{white-space:nowrap}
+@media (max-width:1440px){.nav{gap:16px}.nav a{font-size:14px}}
 .nav a{color:var(--dim);text-decoration:none;font-size:14.5px;font-weight:500}
 .nav a:hover{color:var(--text)}
-@media (max-width:950px){.nav{display:none}}
+@media (max-width:1040px){.nav{display:none}}
 /* Under the brand name, out of the row's flow: the top bar's width cap leaves no room beside the nav. */
 .brand-text{position:relative;min-width:0}
 .brand-stat{position:absolute;left:0;top:100%;color:var(--dim);font-size:12.5px;line-height:1.2;white-space:nowrap;opacity:.8}
-@media (max-width:1190px){.brand-stat{display:none}}
+@media (max-width:1440px){.brand-stat{display:none}}
 /* What SoW:CE supports: a second, quieter header row on the brand's left edge. It scrolls away under the bar
    above, so the hero's min-height leaves room for both (66px + 39px), and #top scrolls to the very top. */
 .perks{background:var(--bg-deep);border-bottom:1px solid var(--edge)}
