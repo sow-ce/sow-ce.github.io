@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' blob: data:; style-src 'unsafe-inline'; script-src 'sha256-ajsoQAPP2IQJGRpRKb1GJ8ZiKZk/E3svstDAlqc0RhY='; connect-src 'self' https://sowce-card-exchange.sowce-cards.workers.dev; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' blob: data:; style-src 'unsafe-inline'; script-src 'sha256-tOkE+wTklhL9iJa5zILD/EHVQsUS775dZYqbIcj6pnE='; connect-src 'self' https://sowce-card-exchange.sowce-cards.workers.dev; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <title>Captain cards - SoW:CE</title>
@@ -540,7 +540,6 @@ section[id]{scroll-margin-top:72px}
       <li>Pick the card and press <b>Wear this look on</b> him. The ticks under the button choose which parts he takes: armour, head and hair, accessories, weapons, colours, effects, scars and paint, size and pose. What you leave unticked stays his own.</li>
       <li>His body never changes. Armour made for another body is swapped for the same design made for his, and anything with nothing for his body or class stays his own. An accessory the card doesn't have comes off him. <b>Back</b> puts his old look on again.</li>
     </ol>
-    <p>The ticks, and taking off an accessory the card doesn't have, come with the next update. Until then, <b>Wear this look</b> puts the whole look on him.</p>
   </section>
 
   <section class="cards-sec" id="carries">
@@ -1399,7 +1398,7 @@ section[id]{scroll-margin-top:72px}
       box.appendChild(el("p", "facts-line", d.look ? "Its look could not be read." : "A picture card: it carries no look, so there is nothing to wear."));
     } else {
       box.appendChild(el("p", "facts-line facts-dim",
-        "Each part is one of the ticks under Wear this look in the game (from the next update; until then he takes all of it). A part you leave unticked stays his own; a part you tick replaces his, and what the card doesn't have comes off."));
+        "Each part is one of the ticks under Wear this look in the game. A part you leave unticked stays his own; a part you tick replaces his, and what the card doesn't have comes off."));
       var dl = el("div", "layers");
       R.lookLayers(look).forEach(function (layer) {
         var sec = el("section", "layer" + (layer.rows.length || layer.other ? "" : " is-empty"));
