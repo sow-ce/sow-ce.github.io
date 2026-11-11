@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' blob: data:; style-src 'unsafe-inline'; script-src 'sha256-Cx0PXJHXbKDWVQFKXWYGvx7WpqDyPUE+XssB+WhAhFc='; connect-src 'self' https://sowce-card-exchange.sowce-cards.workers.dev; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' blob: data:; style-src 'unsafe-inline'; script-src 'sha256-JldlEZMSuXSMigt90BNI+2y+0APZUu752eDGPSsmiF0='; connect-src 'self' https://sowce-card-exchange.sowce-cards.workers.dev; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <title>Captain cards - SoW:CE</title>
@@ -367,7 +367,7 @@ section[id]{scroll-margin-top:72px}
 .card3d[data-finish="3"] .sheen-band{opacity:.40}
 /* Shadow: a dark band (.32), and a green breath (.16) just past its edge */
 .card3d[data-finish="4"] .sheen-band{background:#000;opacity:.32}
-.card3d[data-finish="4"] .sheen-base{background:rgb(110,255,96);opacity:.16;
+.card3d[data-finish="4"] .sheen-base{background:rgb(70,240,150);opacity:.18;
   -webkit-mask-image:linear-gradient(128deg,transparent calc(var(--g,50%) + 8%),#000 calc(var(--g,50%) + 12%),transparent calc(var(--g,50%) + 16%));
   mask-image:linear-gradient(128deg,transparent calc(var(--g,50%) + 8%),#000 calc(var(--g,50%) + 12%),transparent calc(var(--g,50%) + 16%))}
 .card-shadow{position:absolute;inset:5% 7% -2%;border-radius:6%;background:rgba(0,0,0,.6);filter:blur(22px);pointer-events:none}
@@ -378,7 +378,7 @@ section[id]{scroll-margin-top:72px}
 .card3d[data-finish="3"] .face.back{background:linear-gradient(135deg,rgba(255,200,230,.28),rgba(160,230,255,.28)),linear-gradient(180deg,var(--band-hi),var(--band-mid) 45%,var(--band-lo))}
 .back-inner{position:relative;height:100%;overflow:hidden;border-radius:3.2%/2.3%;background:linear-gradient(180deg,#1a191c,#0a0a0c);
   box-shadow:inset 0 0 0 .27cqw color-mix(in srgb,var(--accent,#b8bec6) 55%,transparent);padding:2.4cqw 4cqw;color:#c8c6c0;font:400 2.6cqw/1.3 var(--f-body);text-align:left}
-.card3d[data-finish="4"] .back-inner{box-shadow:inset 0 0 0 .27cqw color-mix(in srgb,var(--accent) 55%,transparent),inset 0 0 0 1.1cqw rgba(110,255,96,.35)}
+.card3d[data-finish="4"] .back-inner{box-shadow:inset 0 0 0 .27cqw color-mix(in srgb,var(--accent) 55%,transparent),inset 0 0 0 1.1cqw rgba(70,240,150,.35)}
 .b-head{display:flex;justify-content:space-between;align-items:baseline;gap:2cqw;margin:0 -1.6cqw;padding:2.2cqw 2.6cqw;border-radius:1.9cqw;background:linear-gradient(180deg,#28262a,#121114)}
 .b-name{font:700 4.5cqw/1.1 var(--f-display);color:var(--name,#f4f0e6);text-shadow:0 .25cqw .3cqw rgba(0,0,0,.8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .b-tier{flex:none;font:600 2.4cqw/1 var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
@@ -1097,6 +1097,12 @@ section[id]{scroll-margin-top:72px}
   "use strict";
   var R = window.SoWCards;
   var MAX_FILES = 40;
+  // The SoW:CE update after the 2026-11-08 one (its launcher has the sowce:// link mode and its setup registers sowce://,
+  // its Captain Studio has a Cards tab of its own). False until that update is out: then the page offers sowce:// links -
+  // the cards folder, a library card on the game's Card Exchange - and names the Studio's new Cards tab. Flip it to true
+  // in the release that ships that update (memory update-for-testers).
+  var NEW_UPDATE = true;
+  var STUDIO_CARDS = NEW_UPDATE ? "Captain Studio > Cards" : "Captain Studio > Quick > Cards";
   var reduceMotion = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: false };
 
   // ---- the game's colours (sow_ui_card_view.hpp) ----
@@ -1109,8 +1115,8 @@ section[id]{scroll-margin-top:72px}
     { hi: "#ffb8ac", mid: "#d9363e", lo: "#500c12", accent: "#ff6064" }    // Mythic
   ];
   var BAND = { 2: { hi: "#fff2c4", mid: "#e8b547", lo: "#7a4e0c" }, 3: { hi: "#f6fcff", mid: "#aac6de", lo: "#50667c" },
-               4: { hi: "#464e46", mid: "#1a1e1a", lo: "#060806" } };
-  var NAME_COLOUR = { 2: "#ffde8c", 3: "#e8f4ff", 4: "#b0ffa0" };
+               4: { hi: "#342e2e", mid: "#100d0d", lo: "#020202" } };   // Shadow: obsidian (2026-11-09, the game's BandMetal)
+  var NAME_COLOUR = { 2: "#ffde8c", 3: "#e8f4ff", 4: "#d6ffe8" };          // Shadow: the Wraith light's core
 
   var $ = function (id) { return document.getElementById(id); };
   function el(tag, cls, text) {
@@ -1394,10 +1400,20 @@ section[id]{scroll-margin-top:72px}
       var x = c.exchange, nx = x.next || {};
       lines.push("In the library: " + plural(x.copies | 0, "copy", "copies") + " bought so far. The next copy is print " + (nx.print | 0) +
                  " (" + String(nx.conditionName || "").toLowerCase() + "), " + (nx.price | 0) + " Mirian.");
-      lines.push("To get it: in the game, Captain Studio > Quick > Cards > Open the exchange, search for “" + cap(d.name, 48) + "” and buy a copy.");
+      lines.push("To get it: in the game, " + STUDIO_CARDS + " > Open the exchange, search for “" + cap(d.name, 48) + "” and buy a copy.");
     }
     if (c.res.fromPixels) lines.push("Read from its picture: the file had lost its card data, and the copy hidden in the pixels still had it.");
     lines.forEach(function (t) { box.appendChild(el("p", "facts-line", t)); });
+    // sowce:// (2026-11-09): the game's Card Exchange on this very card, while the game runs with SoW:CE
+    // (framework/sowframework/proxy/sowce_boot_link.hpp). The id is checked here and again by the game.
+    if (NEW_UPDATE && c.exchange && /^[0-9A-Fa-f]{16}$/.test(String(d.id || ""))) {
+      var go = el("a", "binder-again", "Open it on the Card Exchange in my game");
+      go.href = "sowce://exchange/" + String(d.id).toUpperCase();
+      go.title = "Needs Shadow of War running with SoW:CE (installed by the SoW:CE setup, which turns these links on).";
+      var gp = el("p", "facts-line");
+      gp.appendChild(go);
+      box.appendChild(gp);
+    }
 
     box.appendChild(el("h3", null, "What wearing it gives a captain"));
     var look = d.look ? R.parseLook(d.look) : null;
@@ -1534,6 +1550,15 @@ section[id]{scroll-margin-top:72px}
       binderUi();
     }
   }
+  // sowce://cards (2026-11-09): the cards folder opens in Explorer - after NEW_UPDATE, whose setup turns the link on.
+  function folderLink() {
+    if (!NEW_UPDATE) return;
+    binderNote.appendChild(document.createTextNode(" "));
+    var a = el("a", "binder-again", "Open my cards folder");
+    a.href = "sowce://cards";
+    a.title = "Opens x64\\sowframework\\cards in Explorer (the SoW:CE setup turns these links on).";
+    binderNote.appendChild(a);
+  }
   function binderUi() {
     if (!binderBtn || !binderNote) return;   // a select() before this part of the script ran
     var c = list[sel];
@@ -1548,15 +1573,18 @@ section[id]{scroll-margin-top:72px}
     } else if (!canSave) {
       binderNote.textContent = "To put it in your game: save its PNG into x64\\sowframework\\cards in your Shadow of War folder. " +
                                "(In Chrome or Edge, a button here saves it there for you.)";
+      folderLink();
     } else if (!binderDir) {
       binderNote.textContent = "The first time, choose your game's cards folder: x64\\sowframework\\cards in your Shadow of War folder. " +
                                "This browser remembers it.";
+      folderLink();
     } else {
       binderNote.appendChild(document.createTextNode("Saves it into the cards folder you chose (" + cap(binderDir.name, 30) + "). "));
       var again = el("button", "binder-again", "Choose another folder");
       again.type = "button";
       again.addEventListener("click", function () { saveToBinder(true); });
       binderNote.appendChild(again);
+      folderLink();
     }
   }
   binderBtn.addEventListener("click", function () { saveToBinder(false); });
