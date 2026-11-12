@@ -57,8 +57,14 @@ code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril)}
 .brand-name em{font-style:italic;font-weight:600;color:var(--accent-hi)}
 .mark-script{animation:kindle 2.6s ease-out both}
 @media (max-width:1440px){.brand-name{font-size:19px}.brand-name b,.brand-name em{display:block}.brand-name i{display:none}.brand-name em{font-size:.88em;margin-top:1px}}
+/* The one-line title, six links and the button need ~1,192px (Palatino); the page column leaves 1,100. Above 1440px the
+   bar and the row under it get a wider column (1,320 inside). The exact complement of the 1440 query: a zoomed
+   1440.5px window gets one layout or the other, never neither. */
+@media not all and (max-width:1440px){.top .wrap,.perks .wrap{max-width:1400px}}
+.top [data-slot="head-cta"]{flex:none}
 @media (max-width:520px){.top .wrap{gap:12px}.brand{gap:8px}.brand svg{width:40px;height:40px}}
 @media (max-width:360px){.brand-name{font-size:17px}.brand svg{width:36px;height:36px}}
+@media (max-width:340px){.brand-name{font-size:15.5px}.brand svg{width:32px;height:32px}}
 .nav{display:flex;gap:24px}
 .nav a{white-space:nowrap}
 @media (max-width:1440px){.nav{gap:16px}.nav a{font-size:14px}}
@@ -231,10 +237,10 @@ section[id]{scroll-margin-top:72px}
 .legal{grid-column:1/-1;max-width:64em;line-height:1.6;padding-top:20px;border-top:1px solid var(--edge);text-wrap:balance}
 @media (max-width:640px){.foot-grid{grid-template-columns:1fr}}
 
-.btn-head{background:transparent;color:var(--text);border-color:var(--accent-deep);font:600 14px/1 var(--f-body);letter-spacing:0;text-transform:none;padding:10px 15px;gap:8px}
+.btn-head{background:transparent;color:var(--text);border-color:var(--accent-deep);font:600 14px/1 var(--f-body);letter-spacing:0;text-transform:none;padding:10px 15px;gap:8px;white-space:nowrap}
 .btn-head:hover{border-color:var(--accent);color:var(--accent-hi);background:rgba(102,191,242,.06)}
 .btn-head .ico{width:17px;height:17px}
-@media (max-width:449px){.btn-head{padding:10px 12px}.btn-head span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
+@media (max-width:520px){.btn-head{padding:10px 12px}.btn-head span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
 
 /* install, written as a plain list */
 .howto{margin:0 auto;padding-left:24px;display:grid;gap:10px;font-size:17px;width:fit-content;max-width:min(40em,100%)}
