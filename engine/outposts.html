@@ -1,0 +1,578 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Outposts, strongholds and fortress upgrades - Shadow of War engine reference</title><meta name="description" content="How the game&#x27;s outposts work across every layer: the engine&#x27;s own name for them (strongholds), the per-outpost switch and the warchief missions it gates, Lithlad&#x27;s outposts as seats of an army, the fortress-upgrade table every army keeps and who picks it, the spawn-scenario tables that fill a stronghold, the world scripts that drive them, and the world map that draws them."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="outposts.html" class="cur" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="outposts-strongholds-and-fortress-upgrades">Outposts, strongholds and fortress upgrades</h1><p class=\"lede\">How the game&#x27;s outposts work across every layer: the engine&#x27;s own name for them (strongholds), the per-outpost switch and the warchief missions it gates, Lithlad&#x27;s outposts as seats of an army, the fortress-upgrade table every army keeps and who picks it, the spawn-scenario tables that fill a stronghold, the world scripts that drive them, and the world map that draws them.</p>
+<p>Every region has outposts: warchief strongholds whose missions, map zones and signal fires follow one saved switch
+each, and in Lithlad five outposts that are seats of an army with a commander and a reward. The engine's data and
+scripts mostly call them strongholds; the population inside one is shaped by spawn-scenario tables, and a fortress
+keeps a table of upgrades that its army's tribe and warchiefs choose.</p>
+<p>The army, seats and faction events are in The Nemesis system; quests and the campaign store in Quests, story and
+scenes; spawning in AI; the map's interface in User interface.</p>
+<h2 id="two-names-for-one-thing">Two names for one thing</h2>
+<p>The game's text says "outpost"; most of the spawn data and the world scripts say "stronghold". Across the shipped
+database, 2,335 record names in 131 categories contain either word. The spawn tables are almost all strongholds:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Records named for strongholds / outposts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AI/SpawnAmbient/SpawnScenario</code></td>
+<td>13 (<code>StrongholdBattle</code>, <code>StrongholdDynamic</code>, <code>StrongholdEventLarge</code> ...)</td>
+</tr>
+<tr>
+<td><code>AI/SpawnAmbient/SpawnScenarioCategory</code></td>
+<td>28 (<code>Stronghold</code>, <code>StrongholdDaytime</code>, <code>StrongholdDummyArcher</code>, <code>OutpostCaravan</code>, <code>OutpostRanging</code>, <code>OutpostSentry</code> ...)</td>
+</tr>
+<tr>
+<td><code>AI/SpawnAmbient/SpawnScenarioSetup</code></td>
+<td>78 (<code>CapCheckStronghold</code>, <code>CapStaticStronghold</code> ...)</td>
+</tr>
+<tr>
+<td><code>AI/SpawnAmbient/SpawnScenarioOverrideList</code></td>
+<td>21 of 142 (<code>Stronghold</code>, <code>StrongholdCenter</code>, <code>StrongholdSlaughter</code>, <code>OutpostCoreStrict</code>, <code>OutpostLargeStrict</code>, <code>PlayerControlledSH_DLC4</code> ...)</td>
+</tr>
+<tr>
+<td><code>AI/SpawnAmbient/Predicates</code></td>
+<td>15 (<code>StrongholdCaptain</code>, <code>Stronghold_40M</code> ... <code>Stronghold_150M</code>, with and without line of sight)</td>
+</tr>
+<tr>
+<td><code>AI/SpawnAmbient/Removal</code></td>
+<td>7 (<code>StrongholdCaptain</code>, <code>Stronghold_Removal50M</code> ... <code>Stronghold_Removal150M</code>)</td>
+</tr>
+<tr>
+<td><code>AI/SpawnAmbient/NodeTags</code></td>
+<td>13 (<code>Stronghold_Core</code>, <code>Stronghold_Leader</code>, <code>Outpost_Guard</code>, <code>Outpost_Captain</code> ...)</td>
+</tr>
+<tr>
+<td><code>AI/SpawnAmbient/Locations</code> / <code>AlarmAreas</code></td>
+<td>29 / 23, one or more per outpost (<code>IS_Outpost_Harbor</code>, <code>D_Outpost_East</code> ...)</td>
+</tr>
+</tbody>
+</table>
+<p>The rest is the game around them: 1,000+ audio and dialogue names, 174 inventory items (rewards, intel, the outpost
+boosts), 120 quest variable predicates, 88 sim events with their participants, 73 quest lists, 31 map canvases, 27
+interface game-state predicates, 18 remote scripts (<code>EnableAllOutposts</code>, <code>DisableAllOutposts</code> ...). In the
+executable, 103 functions carry an outpost or stronghold name in their own strings or field registrations: 8 schema
+builders, 33 field registrars, 45 field bindings and 11 string users. One script binding is exposed:
+<code>Faction::GetOutpostCount_PlayerFollowerOrEmpty</code> (implementation 0xF647F0).</p>
+<h2 id="the-outpost-switch-and-the-warchief-missions">The outpost switch and the warchief missions</h2>
+<p>Each region's warchiefs live at outposts: Lithlad <code>DE_Outpost_Central / East / North / NorthWest / West</code>, Núrnen
+<code>I_Outpost_Harbor / Lighthouse / RiverRuins</code>, Cirith Ungol <code>MP_Outpost_Arena / LostHearth / Shelob</code>, Seregost
+<code>SM_Outpost_ArmyCamp / FrozenLake / Summit</code>, Gorgoroth <code>V_Outpost_BlackIron / Camp / Ledge</code>, Minas Ithil
+<code>MIOutpost_01..05</code>. Each has one boolean in <code>GameData/Variables</code>, true by default. It is saved state.</p>
+<ul>
+<li><strong>Its only writer</strong> is the world script method <code>DeactivateOutpost</code> in the regions' spawn-condition layers, called
+  from a warchief mission's end paths (the warchief killed, one of seven domination events, branded; never a death
+  threat) and only when the active quest is on that outpost's own list. Nothing in the shipped scripts sets one back
+  to true. Counted over the script copies the game loads (a later patch archive's copy replaces an earlier one, 1,403
+  of the 2,679 distinct script bodies): 193 bodies name a switch, with 748 <code>SetValue(false)</code> calls, every one inside
+  <code>DeactivateOutpost</code> (34 bodies, 22 switches each), and 0 <code>SetValue(true)</code>.</li>
+<li><strong>Its readers:</strong> the region's stronghold controller (below) subscribes to the variable's change event; the 889
+  <code>GetValue</code> reads are all in side-activity layers' <code>CheckMapCanvas</code> (caravans, guarded caragors, camps, feasts, war
+  councils, labour, supplies, drills), which run only while the outpost is active.</li>
+<li><strong>The missions.</strong> At a world turn, a captain seated in the region's captain rows generates <code>&lt;R&gt;_Outpost_OP&lt;n&gt;</code> when
+  its <code>GlobalVarPredicate</code> passes (0x5935DC; in Lithlad the switch AND NOT the outpost's DLC capture flag). Each event
+  weighs 999 against 0, so one per outpost per army. The generating captain must pass the job
+  <code>SC_Subject_OutpostCommander</code> himself (0x61EF8C -&gt; 0x61FC88 -&gt; 0x622170, job matcher 0xF9BB20): captain rank, enemy,
+  alive, not a prisoner, spy or vow holder, not on another sim event (<code>FM+0x4F0</code>), not an Easterling, not tagged
+  <code>OP&lt;n&gt;_UnfinishedBusiness</code>, no revenge within 3 turns, not a bodyguard, not in the world, not on a DLC outpost seat.
+  The event binds to a placed quest whose predicates pass (0x597884 -&gt; 0x19EFAB4), so a mission is offered only while
+  its region is loaded. The quests are <code>SpawnCondition</code> quests (<code>&lt;R&gt;_SC_OP&lt;n&gt;_KillArchers</code>, <code>_KillBerserkers</code>,
+  <code>_SustainedAlarm</code>, <code>_RapidStealth</code> ...); <code>Quest/Types::SpawnCondition</code> is replayable, so completion blocks nothing
+  and the switch is the only lock. Variant gates such as <code>DE_Outpost_01_Berserkers</code> add a class unlock
+  (<code>BerserkersUnlocked</code>) to the outpost's gate.</li>
+<li><strong>The zone</strong> on the map is <code>Interface/MapCanvasSettings::&lt;R&gt;_ZoneMap_&lt;X&gt;</code> (Núrnen 3, Cirith Ungol 3, Seregost 3,
+  Gorgoroth 3, Minas Ithil 6, Lithlad 5). Its game-state predicate is the outpost's own switch, so a zone is drawn
+  while the outpost is active and dropped once it is cleared.</li>
+<li><strong>Where an outpost is:</strong> the centre of its commander spawn points, <code>AISpawnerAmbientQuestJob</code> objects such as
+  <code>SC_Sp_&lt;nn&gt;.OutpostCmdr</code> in the region's <code>spawnconditions_op&lt;n&gt;</code> layer (116 placed objects carry "Outpost" in their
+  name, every one a quest-job spawner; the points of one outpost spread 22 to 91 m).</li>
+<li>Setting a switch back to true through the engine's own variable setter (0x59A1D8 on <code>[GM+0x6C58]</code>) relights the
+  signal fires at once (the controller's change handler) and the outpost's missions are offered again from a later
+  world turn.</li>
+<li>In Desolation of Mordor's mode (<code>DLC_DLC4Active</code>) the same <code>DeactivateOutpost</code> captures instead of clearing: a win
+  sets <code>DLC4_OPCaptured_&lt;X&gt;</code> true and the outpost's <code>D_OP_*</code> areas player-owned, and leaves <code>DE_Outpost_&lt;X&gt;</code> true.</li>
+</ul>
+<h2 id="the-stronghold-controller">The stronghold controller</h2>
+<p>One world-script class, <code>strongholdcontrol</code>, runs both the fortresses and the warchief outposts of the five base
+regions (its own comment: "Set to a default value so that outposts don't do fort stuff!"); Lithlad uses
+<code>strongholdcontroldlc</code>. The copy each region loads is the same 926-line body.</p>
+<ul>
+<li><strong>Start.</strong> A fortress calls <code>FortStatusInit(&lt;Region&gt;Fort)</code> once (4 regions); each outpost's relay object
+  (<code>srO&lt;X&gt;Control</code>, after a 1 s delay) calls <code>OutpostStatusInit(&lt;switch&gt;)</code>, 17 in the base regions. In Lithlad each
+  outpost runs <code>FortStatusInit(DLC4_OPCaptured_&lt;X&gt;)</code> and then <code>OutpostStatusInit(DE_Outpost_&lt;X&gt;)</code>.</li>
+<li><strong>What the switch drives:</strong> only the outpost's <code>AINodeElevateTransientAlarm</code> nodes (its signal fires). The map
+  canvas calls are commented out ("handled entirely in the DB"): the zone follows its own game-state predicate.
+  An outpost also stays dark while <code>StoryState</code> is below <code>minStoryState</code> (a per-placement property, 100 by default),
+  re-checked on every story-state change.</li>
+<li><strong>The alarm.</strong> Orcs that reach the signal fire raise the area's alarm. Above Low, the controller adds the
+  <code>HighAlarm</code> spawn override list (training dummies, dummy archers and the arena categories off) and the red alarm
+  canvases; at the second and third high waves it fires a fear burst: every tagged enemy flees, or 40 % of them when a
+  captain is present. A warchief mission raises the alarm to High when its commander spawns and resets it to Low when
+  the objective ends.</li>
+<li><strong>An owner change</strong> in a base region swaps only the map style (<code>Strongholds</code> versus the <code>Friendly_*</code> canvases) and
+  the gate logic. No spawner, override list or garrison changes there; garrisons that follow the owner exist only in
+  Lithlad. On a loss the script writes the cave style to the main canvas variable (<code>localMC</code>) where the cave canvas
+  variable (<code>localCaveMC</code>) is meant, in every loaded copy.</li>
+<li><strong>All outposts at once.</strong> The remote scripts <code>DisableAllOutposts</code> and <code>EnableAllOutposts</code> are fired 160 times in
+  101 loaded script bodies: story missions, DLC missions, tribe fights and statues silence every outpost when they
+  start and release them at cleanup. The controller's enable path respects each outpost's switch.</li>
+<li><strong>Calls into the engine</strong> from the outpost scripts: <code>AISpawnManager:AddScenarioOverrideRecord</code> /
+  <code>RemoveScenarioOverrideRecord</code>; <code>Faction:GetAreaPlayerOwned</code>, <code>SetAreaPlayerOwned</code>,
+  <code>GetOutpostCount_PlayerFollowerOrEmpty</code>, <code>VacateLocationList</code>, <code>CreateFactionMemberBuilder</code>,
+  <code>AddFactionSimEventPicker</code>, <code>AddFactionEventJobSourceAndOther</code>, <code>IsEventOnEventList</code>; <code>System:ActivateRemoteScript</code>,
+  <code>SetAlarmLevel</code>, <code>ElevateAlarmLevel</code>, <code>GetObjectsWithTag</code>, <code>IsDayTime</code>; and the game-data variables' <code>GetValue</code>,
+  <code>SetValue</code> and change events.</li>
+<li><strong>Class unlocks.</strong> The mission-variant predicates <code>&lt;R&gt;_Outpost_0&lt;n&gt;_&lt;Unit&gt;</code> are the outpost's switch AND
+  <code>&lt;Unit&gt;Unlocked</code> AND NOT the capture flag. The same <code>&lt;Unit&gt;Unlocked</code> booleans gate the AI templates themselves
+  (<code>BerserkersUnlocked</code> has 98 users, <code>AI/Templates::Orc_Berserker</code> among them): they decide which orc classes any
+  garrison can contain.</li>
+</ul>
+<h2 id="spawn-scenarios-and-override-lists">Spawn scenarios and override lists</h2>
+<p>What stands in a stronghold is ambient spawning: spawn scenarios (<code>AI/SpawnAmbient/SpawnScenario</code>) grouped into
+categories (<code>SpawnScenarioCategory</code>) and filled through setups (<code>SpawnScenarioSetup</code>). An override list
+(<code>AI/SpawnAmbient/SpawnScenarioOverrideList</code>: <code>Priority</code>, <code>Overrides</code>, <code>CategoryOverrides</code>) changes them inside a
+<code>ScenarioOverrideVolume</code> or for as long as a script holds it (<code>AISpawnManager:AddScenarioOverrideRecord</code>). It names
+no unit types; it switches and caps scenarios and categories:</p>
+<table>
+<thead>
+<tr>
+<th>Entry (<code>_Structures...</code>)</th>
+<th>Fields</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SpawnScenarioCategoryOverride</code></td>
+<td><code>CategoryType</code> (a category), <code>ForceEnabledStatus</code> (a <code>Combat/Predicates/Bool</code>: <code>True</code>, <code>False</code>, or none to leave it), <code>MaxConcurrentAI</code>, <code>MaxConcurrentSetup</code>, <code>Priority</code>, <code>MinDistance</code>, <code>AutoCooldownChance</code> (-1 = leave as is)</td>
+</tr>
+<tr>
+<td><code>SpawnScenarioOverride</code></td>
+<td><code>ScenarioType</code> (one scenario), <code>disable</code>, <code>MaxConcurrent</code>, <code>MaxConcurrentAI</code>, <code>FrequencyDecay</code>, <code>Priority</code></td>
+</tr>
+</tbody>
+</table>
+<p>Three lists, as read from a running game and the shipped data:</p>
+<table>
+<thead>
+<tr>
+<th>List</th>
+<th>Priority</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Stronghold</code></td>
+<td>4</td>
+<td>categories <code>Wilderness</code> and <code>AmbStartGraug</code> off, <code>AmbSentries</code> capped at 3 bodies, <code>AmbColumn</code> at 4, <code>SHOnlyEvent</code> and <code>FortPlayerWelcomeBlocker</code> on; the scenario <code>AIBlockout</code> disabled (<code>MaxConcurrent</code> 0)</td>
+</tr>
+<tr>
+<td><code>HighAlarm</code></td>
+<td>8</td>
+<td><code>StrongholdDummy</code>, <code>StrongholdDummyArcher</code> and <code>Arena</code> off; <code>StrongholdDynamic</code> and <code>StrongholdDynamicArcher</code> listed with every field left as is</td>
+</tr>
+<tr>
+<td><code>PlayerControlledSH_DLC4</code></td>
+<td>1</td>
+<td><code>Orcs</code> off, <code>StrongholdEasterling</code> on: who guards a held Lithlad outpost</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The tables never name a unit.</strong> A setup (<code>SpawnScenarioSetup</code>: <code>ScenarioType</code>, <code>ScenarioCategories</code>,
+<code>RequiredAITypes</code>, <code>Priority</code>, global and instance cooldowns, <code>MaxConcurrent</code>, <code>MaxConcurrentAI</code>, <code>MinDistance</code>,
+<code>StartDisabled</code>, <code>ForceAISpots</code>, <code>ForceNextScenario</code>, <code>IgnoreMaxConcurrent</code>, <code>AllowFailedSpawn</code>) belongs to a
+scenario (<code>SpawnScenario</code>: <code>ScenarioCategories</code>, <code>Priority</code>, <code>FrequencyDecay</code>, <code>MaxConcurrent</code>, <code>MaxConcurrentAI</code>,
+<code>StartDisabled</code>), and a category carries only <code>MaxConcurrentAI</code>. The shipped data has 151 categories, 53 scenarios and
+282 setups, 87 of them stronghold or outpost setups. <code>RequiredAITypes</code> points at <code>{AITemplate, NumRequired}</code> entries:
+all 114 of them in the shipped data have no template and require 0 (a running game agrees). What spawns is decided by
+the spawners placed in each outpost's layers and the AI types they hold; categories and override lists only decide
+which placed scenarios run and how many bodies they may field.</p>
+<p>The code that applies them is one module of about 200 functions that reads every field of the override lists, both
+entry kinds and the setups. It is called from the <code>ScenarioOverrideVolume</code> class (vtable 0x1FB4BA0), a placed volume
+whose <code>+0x120</code> holds its override list, and from the setup code.</p>
+<p>The stronghold vocabulary around them: distance predicates <code>Stronghold_40M</code> to <code>Stronghold_150M</code> (with and without
+line of sight), despawn rules <code>Stronghold_Removal50M</code> to <code>Stronghold_Removal150M</code> and <code>StrongholdCaptain</code>, node tags
+<code>Stronghold_Core</code>, <code>Stronghold_Leader</code>, <code>Stronghold_Gather</code>, <code>Outpost_Guard</code>, <code>Outpost_Captain</code>, <code>Outpost_Defense</code>.</p>
+<h2 id="lithlad-s-outposts-seats-of-an-army">Lithlad's outposts: seats of an army</h2>
+<p>Desolation of Mordor's five Lithlad outposts are records of <code>Faction/Outposts</code> (fields <code>Row</code>, <code>Column</code>, <code>UIName</code>,
+<code>GlobalVarToSet</code>, <code>CreateSimEventOnDie</code>, <code>CreateSimEventOnVacate</code>, <code>PlayerOwnedItemGiverPicker</code>): seats in an army's
+row table that a captain holds as the outpost's commander.</p>
+<ul>
+<li><strong>The capture flag.</strong> <code>GlobalVarToSet</code> (<code>DLC4_OPCaptured_&lt;X&gt;</code>) is written by the faction system through the boolean
+  setter 0x59A1D8, which fires the variable's change event. Its binding 0x100F4C0 has 5 callers: 0xFE2E90 (a seat
+  change: true when the new holder is a player follower, false otherwise; true on vacate, then
+  <code>CreateSimEventOnVacate</code>), 0xFD4DE0 and 0xFDCAB0 (bulk false), 0xFE0A60 (recompute) and 0x1010750 (a setter
+  wrapper).</li>
+<li><strong>The garrison follows the owner.</strong> Each outpost's gameplay layer has a controller (script object
+  <code>outpostcontroldlc</code>) that runs <code>OutpostStatusInit</code> on the capture flag: with the player as owner it switches on a
+  <code>ScenarioOverrideVolume</code> (vtable 0x1FB4BA0, <code>+0x120</code> -&gt; the override list <code>PlayerControlledSH_DLC4</code>) and shows the
+  outpost's faction-member props; with Sauron as owner the volume is off and the props hidden.</li>
+<li><strong>The reward.</strong> <code>PlayerOwnedItemGiverPicker</code> names <code>DLC4_OutpostItems</code>: 16 givers
+  (<code>Faction/Outposts/ItemGiver::OutpostBoost_&lt;X&gt;</code>), each with 3 entries selected by the commander's rarity
+  (<code>RequiredRarity</code>), and each entry's <code>Items</code> hold a <code>CombatType</code> filter (the player, or a mercenary class) and the
+  items to give (33 <code>OutpostReward_*</code> items whose passive stat modifications are the boost).</li>
+<li><strong>Who has outposts.</strong> <code>Faction/Definition.Outposts</code> lists the five on 2 of the 38 armies, <code>Faction_desert_DLC4</code> and
+  <code>Faction_desert_mercs_DLC4</code>. <code>Quest/FactionOutpostPredicate::DLC4_AllOutpostsOwned</code> asks for 5 seats held by a
+  player follower, dead or empty (the count <code>Faction::GetOutpostCount_PlayerFollowerOrEmpty</code> returns);
+  <code>DLC4_NotAllOutpostsOwned</code> for 0 to 4.</li>
+<li><strong>The spawn areas change hands too.</strong> <code>Faction/AreaOwnershipTransform::DLC4_Outpost_&lt;X&gt;_To_Player</code> sets the
+  outpost's <code>AI/SpawnAmbient/Areas</code> player-owned (1) and <code>_To_Sauron</code> sets them back (2): <code>D_OP_Umbral</code> (West),
+  <code>D_OP_SorrowSea</code> (North), <code>D_OP_SouthWatch</code> (North-West), <code>D_OP_SootGulch</code> (East), <code>D_OP_Stillwind</code> and
+  <code>D_OP_Stillwind_A</code> (Central). The fortresses use the same mechanism (<code>&lt;Region&gt;_FortAreas_to_Player</code> /
+  <code>_to_Sauron</code>, 10 records). <code>DLC4_Outpost_N_To_Sauron</code> holds no area entry, so the North outpost's area is never
+  returned through its transform.</li>
+<li><strong>Two systems on one spot.</strong> The warchief outpost's gate in Lithlad is <code>DE_Outpost_&lt;X&gt; == true AND
+  DLC4_OPCaptured_&lt;X&gt; == false</code>, and its mission generation uses the same gate: held by the player the spot runs the
+  seat system, lost it runs the warchief system.</li>
+<li>No shipped record has an enemy captain attack a player-held outpost commander: a job's
+  <code>MustBeAssignedToOutpostPosition</code> (0 ignore, 1 must hold a DLC outpost seat, 2 must not) is 2 on 245 of 849 jobs,
+  including every duel and power-struggle job, and the job matcher rejects at 0xF9F5BF. An outpost is lost only when
+  its commander dies or leaves the seat.</li>
+</ul>
+<h2 id="fortress-upgrades-one-table-per-army">Fortress upgrades: one table per army</h2>
+<p>Every army keeps one fort-upgrade set at <code>[armyCtx+0x40]</code>, where <code>armyCtx</code> is an army context (an entry of the
+faction system's context map at <code>FS+0x98</code>, plus 8):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>pointer</td>
+<td>a table of 16-byte rows <code>{UpgradeType record, Definition record}</code> indexed by the UpgradeType's record index (28 rows)</td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>u32</td>
+<td>the row count</td>
+</tr>
+<tr>
+<td>+0x10</td>
+<td>pointer</td>
+<td>the category of the upgrade-type records (0x107A74 asserts "Bad record index" for a type from another category)</td>
+</tr>
+<tr>
+<td>+0x18 / +0x20</td>
+<td>pointers</td>
+<td>a vector of the <code>Faction/FortUpgrade/Definitions</code> the army has unlocked</td>
+</tr>
+</tbody>
+</table>
+<p>The read path is 0x4F6644 (does an army hold every upgrade of a <code>Faction/FortUpgrade/Group</code>; the fortress's defence
+rating adds a warchief's group contribution only when it does) -&gt; 0x4F66D8 (the army context for a faction)
+-&gt; 0x10681C -&gt; 0x107A74. In a loaded late campaign, 31 of 38 contexts held this table. An enemy fortress fills one
+<code>Defense_*</code> row per family: 6 of 6 rows on each of the two enemy-held fortresses, 0 on each of the four whose
+Overlord served the player.</p>
+<p><strong>Who chooses.</strong> <code>Faction/FortUpgrade/PickerEntry</code> records select a definition by the fort's tribe list
+(<code>IncludedTribe</code> -&gt; <code>Faction/Tribes/Lists</code>) or by a warchief's trait marker list. The tribe lists group the tribes:</p>
+<table>
+<thead>
+<tr>
+<th>List</th>
+<th>Tribes</th>
+<th>Army</th>
+<th>Beasts</th>
+<th>Siege beasts</th>
+<th>Archers</th>
+<th>Battlefield</th>
+<th>Structures</th>
+<th>First assault wave</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Beast</td>
+<td>Feral</td>
+<td>Berserker</td>
+<td>Caragors</td>
+<td>Fire</td>
+<td>Farsight</td>
+<td>Poison mines</td>
+<td>Fire spouts</td>
+<td>Cavalry</td>
+</tr>
+<tr>
+<td>Black</td>
+<td>Dark, Nazgul Twins</td>
+<td>Spearman</td>
+<td>Graugs</td>
+<td>Curse</td>
+<td>Spikes</td>
+<td>Poison mines</td>
+<td>Poison spouts</td>
+<td>Sappers</td>
+</tr>
+<tr>
+<td>Industrial</td>
+<td>Machine</td>
+<td>Defender</td>
+<td>Gronds</td>
+<td>Poison</td>
+<td>Fire</td>
+<td>Fire mines</td>
+<td>Iron gates</td>
+<td>Sappers</td>
+</tr>
+<tr>
+<td>Mystic_Fort</td>
+<td>Sorcerous, Undead</td>
+<td>Berserker</td>
+<td>Graugs</td>
+<td>Curse</td>
+<td>Fire</td>
+<td>Poison mines</td>
+<td>Fire spouts</td>
+<td>Ologs</td>
+</tr>
+<tr>
+<td>Outlaw</td>
+<td>Outlaw</td>
+<td>Berserker</td>
+<td>Graugs</td>
+<td>Poison</td>
+<td>Farsight</td>
+<td>Poison mines</td>
+<td>Poison spouts</td>
+<td>Sappers</td>
+</tr>
+<tr>
+<td>Regal</td>
+<td>Marauder</td>
+<td>Spearman</td>
+<td>Gronds</td>
+<td>Poison</td>
+<td>Farsight</td>
+<td>Fire mines</td>
+<td>Poison spouts</td>
+<td>Cavalry</td>
+</tr>
+<tr>
+<td>Slaughterhouse</td>
+<td>Slaughter</td>
+<td>Spearman</td>
+<td>Gronds</td>
+<td>Curse</td>
+<td>Spikes</td>
+<td>Fire mines</td>
+<td>Iron gates</td>
+<td>Sappers</td>
+</tr>
+<tr>
+<td>Torturer</td>
+<td>Terror</td>
+<td>Berserker</td>
+<td>Caragors</td>
+<td>Fire</td>
+<td>Spikes</td>
+<td>Fire mines</td>
+<td>Fire spouts</td>
+<td>Ologs</td>
+</tr>
+<tr>
+<td>Warmonger</td>
+<td>Warmonger, Bruz, Nazgul Twins</td>
+<td>Defender</td>
+<td>Caragors</td>
+<td>Fire</td>
+<td>Spikes</td>
+<td>Poison mines</td>
+<td>Iron gates</td>
+<td>Cavalry</td>
+</tr>
+</tbody>
+</table>
+<p>The trait markers add their own picks: <code>MarkerList_IsBerserker</code> -&gt; the berserker host, <code>IsBeastMaster</code> -&gt; caragors,
+<code>IsDestroyer</code> -&gt; graugs, <code>IsMarksman</code> -&gt; farsight archers, <code>IsTank</code> -&gt; the defender host or iron gates, <code>IsTracker</code>
+-&gt; the spearman host, <code>StatusEffect_Fire / _Poison / _Curse</code> -&gt; that element's picks, <code>IsAssassin</code> -&gt; poison mines or
+spouts, <code>IsCommander</code> -&gt; fire mines.</p>
+<p><strong>What a pick does.</strong> <code>FortAssault/Modifiers</code> keyed on the definition hold a <code>Makeup</code> (<code>AISetup</code>, <code>Count</code>, <code>Weight</code>,
+<code>Priority</code>, <code>SpawnOnlyOnce</code>, <code>NeverRemove</code>), and the <code>FortAssault/AISetup</code> names an AI type:</p>
+<table>
+<thead>
+<tr>
+<th>Family</th>
+<th>Effect during a siege</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Army</td>
+<td>the garrison weighted to that class (<code>FU_Berserker</code>, <code>FU_Defender</code>, <code>FU_Spearman</code>: count 0, a weight; 9 modifiers each)</td>
+</tr>
+<tr>
+<td>Siege beasts</td>
+<td><code>FU_SiegeBeast</code>, 4, spawned once: a graugapult with the element's item</td>
+</tr>
+<tr>
+<td>Beasts</td>
+<td>caragors <code>FU_Caragor</code> 6 (wargs), gronds <code>FU_Drake</code> 2 (the drake), graugs <code>FU_Graug</code> 1</td>
+</tr>
+<tr>
+<td>Archers, structures, battlefield</td>
+<td>no modifier: battlement items (<code>FM_Archers_Battlements</code>) and the fortress's own gates, spouts, mines and drums</td>
+</tr>
+</tbody>
+</table>
+<p>Prices are <code>Faction/FortUpgrade/Group.CurrencyAmount</code> in the player's currency item: walls 1,000 / 3,000 / 7,500;
+structures 750 / 750 / 1,100; army 800; siege beasts 875; beasts 950; archers 1,025; battlefield 1,100.</p>
+<p><strong>A graugapult is a tamed graug and an item list.</strong> The AI types <code>Troll_Graugapult</code>, <code>_Poison</code> and <code>_Curse</code> all build
+the template <code>Troll_Tame</code>; what makes the siege beast is <code>GruntPlayerAllyItems</code> / <code>GruntPlayerEnemyItems</code> (the list
+used depends on the side): <code>Graug_A_Pult</code>, <code>Wep_Graug_A_Pult</code>, <code>Troll_Graugapult_Marker</code>,
+<code>Troll_Graugapult_Disabled_SetRenderID</code>, the four box items and the element (<code>FM_Siege_FireBeast</code> on
+<code>Troll_Graugapult</code>, which also carries <code>Attack_Structures</code>; <code>FM_Siege_CurseBeast</code> on <code>_Curse</code>).</p>
+<p><strong>An AI type's side.</strong> Orc types carry it in <code>GruntPlayerFollowerStatus</code>: 0 enemy or wild, 1 a player follower,
+2 the area's owner, 3 an invader, 4 and 5 the two sides of a fortress assault. Beasts carry it in <code>GruntBrandStatus</code>
+instead: the <code>*_Branded</code> types (<code>Warg_Brown_Branded</code>, <code>Troll_Branded</code>, <code>FellBeast_Branded</code> ...) read follower status
+0 and brand status 1.</p>
+<h2 id="the-world-map">The world map</h2>
+<p>The world map is a model of the region drawn far below the world. Its object is <code>[base+0x26FFAC8]</code> (vtable
+0x1F715F8; null while the map is closed):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0xAC</td>
+<td>position (about (0, -24200, 0))</td>
+</tr>
+<tr>
+<td>+0xB8</td>
+<td>rotation (quaternion)</td>
+</tr>
+<tr>
+<td>+0x2AC / +0x2B0</td>
+<td>the model's size in x and z (512 in every region read)</td>
+</tr>
+<tr>
+<td>+0x2B4 / +0x2B8</td>
+<td>the height range</td>
+</tr>
+<tr>
+<td>+0x2C0</td>
+<td>the region record</td>
+</tr>
+</tbody>
+</table>
+<p>0xD11D10 converts a point on the model to the world: the point is taken into the model's local space, <code>u = local.x /
+sizeX + 0.5</code> (and the same for z), and <code>world = rect.min + (rect.max - rect.min) * u</code>. The rectangles come from a
+table at <code>[[CGameClientShell+0x8C8]+0x10]</code> (to <code>+0x18</code>): 0x110-byte entries <code>{hash, path at +4, info at +0x108}</code>,
+with the rectangle at <code>info+0x18</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Region</th>
+<th>Rectangle (min x, min z, max x, max z)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>desert</td>
+<td>-73950.6, -83550.3, 56049.4, 46449.7</td>
+</tr>
+<tr>
+<td>island</td>
+<td>-88000.7, -50000.0, 55000.0, 93000.9</td>
+</tr>
+<tr>
+<td>minasithil</td>
+<td>-55450.1, -53099.7, 43549.9, 45900.3</td>
+</tr>
+<tr>
+<td>mtnpass</td>
+<td>-66001.9, -74401.9, 63200.0, 54800.0</td>
+</tr>
+<tr>
+<td>snowmtn</td>
+<td>-47999.9, -62999.9, 48000.1, 33000.1</td>
+</tr>
+<tr>
+<td>volcano</td>
+<td>-60000.5, -10000.8, 60000.3, 110000.0</td>
+</tr>
+</tbody>
+</table>
+<p>The map camera is <code>[[base+0x26FFB08]+0xA8]</code> (vtable 0x1DB1F48): <code>+0x158</code> position, <code>+0x164</code> rotation, <code>+0x174</code> and
+<code>+0x178</code> the horizontal and vertical fields of view in radians, <code>+0xD0</code> the gameplay camera; the renderer's per-draw
+projection agrees with it (P00 1.1309, P11 2.1445 at 3840 x 2025). The cursor is in pixels at
+<code>[[CGameClientShell+0xE38]+0xEC]</code> / <code>+0xF0</code>, the viewport at <code>[CGameClientShell+0xC00]</code>. The camera list at
+<code>[[CGameClientShell+0xE38]+0x220]</code> holds a free camera (vtable 0x22F4E18, unused by default) and the HUD minimap's
+camera (vtable 0x22F4F20).</p>
+<p><strong>The waypoint.</strong> The current target lives at <code>[GM+0x6C80]</code>: <code>+0x20</code> its type (7 a point, 1 a tracked target),
+<code>+0x10</code> position, <code>+0x28</code> region, <code>+0x90</code> its marker. The map's SPACE action (0x18E9AD4 -&gt; 0x189286C) sets a point
+with 0x17A98AC(targets, &amp;position, region record); <code>System::ClearCurrentTarget</code> is 0x17A8C5C. The action handler keeps
+the hovered target as a variant at <code>[layer+0xA78]</code> (types 0, 1, 3, 6, 7) and the region at <code>[layer+0xA10]</code>
+(0x18003A0 finds the map object by its <code>+0x2C0</code>). The waypoint's marker (vtable 0x1DC0708) holds
+<code>NavMarkerTypes::UserWaypoint</code> at <code>+0x38</code> and <code>MapDisplay/Targets::UserWaypoint</code> at <code>+0xE0</code>. <code>NavMarker::SetType</code>
+(0x1162DE4) skips an unchanged type (0x3576A4); its body 0x3576B8 re-reads the default map target and the HUD
+configuration, sets up the marker's effect (0x357CD4), writes the type into its widget (<code>[marker+0x60]+0x2C0</code>) and
+sets the rebuild flag (<code>+0x48 |= 1</code>). The legend's outpost glyph is <code>Interface/Menu/MenuTreeNode/Legend::Outposts</code>
+(<code>interface\textures\hud\glyph\outpost.tex</code>).</p>
+<p><strong>Outposts on the map's own data.</strong> The world map lights outposts through material parameters:
+<code>Interface/Menu/MenuLayer/WorldMap.OutpostStateParameters</code> holds one entry, <code>k_vOwned4567</code> (ownership) and
+<code>k_vSelected4567</code> (selection), with four outpost slots of which two are bound (<code>DE_Outpost_Central</code>,
+<code>DE_Outpost_West</code>). The zone map plays <code>d4_menu_zonemap_outpost_over</code> when the cursor is over an outpost
+(<code>3DZoneMap.OutpostSFX</code>) and steps an outpost's widget through stages of 2, 2 and 1 seconds
+(<code>Interface/Shared.ZoneMapWidgetOutpostStageDurations</code>). Of the 103 map canvases, every outpost zone and the
+<code>Stronghold_ZoneMap</code>, <code>Stronghold_Cave</code> and <code>Stronghold_Alarm1</code> to <code>3</code> canvases carry the enemy colours (zone fill
+0xE6A41606, outline 0xFFA41606); <code>Friendly_Strongholds</code> and <code>Friendly_Stronghold_Cave</code> the friendly ones (0xE609D5ED,
+0xFF09D5ED).</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>How <code>Priority</code> resolves two override lists that cover one place, and which scenarios and setups each
+  <code>Stronghold*</code> category holds (and so which AI types it can field).</li>
+<li>What a category-override entry with every field left as is does (<code>HighAlarm</code> lists <code>StrongholdDynamic</code> and
+  <code>StrongholdDynamicArcher</code> that way): a placeholder, or the list's own priority applied to the category.</li>
+<li>Which override list each outpost's <code>sovOutpost</code> volume holds (its <code>+0x120</code>), and which remote scripts the
+  controller's relays listen to.</li>
+<li>Whether repeated <code>OutpostStatusInit</code> calls stack change handlers on the same variable.</li>
+<li>What, if anything, changes a base region's outpost garrison when the region's fortress changes hands: no outpost
+  script does; a candidate is an area-ownership predicate in the spawn data.</li>
+<li>Whether Gorgoroth's own <code>EnableAllOutposts</code> listener, which ignores the outpost switch, is in a layer the retail game
+  loads.</li>
+<li>Whether the string <code>FactionOutpostChunk</code> (returned by an 8-byte function reached only through a function pointer)
+  names a chunk of the save file, and what it holds.</li>
+<li>Whether the world map's material has a <code>k_vOwned0123</code> twin for four more outposts, and what the unbound slots of
+  <code>k_vOwned4567</code> draw.</li>
+<li>What the North outpost's missing <code>_To_Sauron</code> area entry changes when Sauron retakes it.</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
