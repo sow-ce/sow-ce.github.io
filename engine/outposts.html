@@ -263,6 +263,14 @@ row table that a captain holds as the outpost's commander.</p>
 <li><strong>Two systems on one spot.</strong> The warchief outpost's gate in Lithlad is <code>DE_Outpost_&lt;X&gt; == true AND
   DLC4_OPCaptured_&lt;X&gt; == false</code>, and its mission generation uses the same gate: held by the player the spot runs the
   seat system, lost it runs the warchief system.</li>
+<li><strong>The intro.</strong> <code>Presentation/Events::DLC4_Outpost_Intro_EVT</code> (priority <code>Quest_Urgent</code>, blocks fast travel) has one
+  sequence of nine elements: a camera cut that disables the player (<code>DLC4_Outpost_Teleport_Hold_ELM</code>, which teleports
+  nothing), the outpost's fixed frames, a start camera and its voice, an identify hold, then the enter-zone camera and
+  the return transition <code>DLC4_Outpost_Return_TR</code>. Its predicate assumes no target (<code>Target_Empty_OPR</code>). The frames
+  are per outpost (<code>DLC4_Outpost_&lt;X&gt;_WF1_Begin</code> / <code>_End</code> / <code>_RTP</code>), chosen through the camera pools
+  <code>DLC4_Outpost_Begin_CP</code>, <code>_End_CP</code> and <code>_RTP_CP</code>, whose predicates <code>Outpost_&lt;X&gt;_CPR</code> require the assault mission's
+  camera type <code>D4OA_&lt;X&gt;_CT</code>: the intro frames the right outpost only when it is queued with that camera type. The one
+  relay named for outposts, <code>Presentation/Relays::PS_Outpost_Intro_00</code>, has no event and no camera type.</li>
 <li>No shipped record has an enemy captain attack a player-held outpost commander: a job's
   <code>MustBeAssignedToOutpostPosition</code> (0 ignore, 1 must hold a DLC outpost seat, 2 must not) is 2 on 245 of 849 jobs,
   including every duel and power-struggle job, and the job matcher rejects at 0xF9F5BF. An outpost is lost only when
