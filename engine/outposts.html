@@ -222,6 +222,13 @@ which placed scenarios run and how many bodies they may field.</p>
 <p>The code that applies them is one module of about 200 functions that reads every field of the override lists, both
 entry kinds and the setups. It is called from the <code>ScenarioOverrideVolume</code> class (vtable 0x1FB4BA0), a placed volume
 whose <code>+0x120</code> holds its override list, and from the setup code.</p>
+<p><strong>How lists compete.</strong> 0x5ED360 resolves the overrides per running scenario: the spawn manager keeps its running
+scenarios in a table (<code>[mgr]</code>, count <code>[mgr+8]</code>, 0x60-byte entries with the scenario record at <code>+8</code>) and the active
+override lists in a vector at <code>[mgr+0x10130]</code> to <code>[mgr+0x10138]</code>. For each scenario it walks the lists and considers
+a list only when its <code>Priority</code> is strictly above the best one applied so far, so the highest priority wins and a tie
+goes to the earlier list. Inside the winning list, the direct <code>Overrides</code> entry for that scenario applies first, then
+the first <code>CategoryOverrides</code> entry whose category contains the scenario. A scenario no list mentions gets its own
+values back. The list priority is read in three places (0x5ED1B8, 0x5ED360, 0x5ED50C).</p>
 <p>The stronghold vocabulary around them: distance predicates <code>Stronghold_40M</code> to <code>Stronghold_150M</code> (with and without
 line of sight), despawn rules <code>Stronghold_Removal50M</code> to <code>Stronghold_Removal150M</code> and <code>StrongholdCaptain</code>, node tags
 <code>Stronghold_Core</code>, <code>Stronghold_Leader</code>, <code>Stronghold_Gather</code>, <code>Outpost_Guard</code>, <code>Outpost_Captain</code>, <code>Outpost_Defense</code>.</p>
@@ -551,7 +558,9 @@ sets the rebuild flag (<code>+0x48 |= 1</code>). The legend's outpost glyph is <
 <p><strong>Outposts on the map's own data.</strong> The world map lights outposts through material parameters:
 <code>Interface/Menu/MenuLayer/WorldMap.OutpostStateParameters</code> holds one entry, <code>k_vOwned4567</code> (ownership) and
 <code>k_vSelected4567</code> (selection), with four outpost slots of which two are bound (<code>DE_Outpost_Central</code>,
-<code>DE_Outpost_West</code>). The zone map plays <code>d4_menu_zonemap_outpost_over</code> when the cursor is over an outpost
+<code>DE_Outpost_West</code>). The world map's update applies it (0xF252F0, together with the <code>DLC4AreaMaterial</code> region
+material) only when 0xD0B350 passes, which compares the current game mode against the name "DLC4": the lighting runs
+in Desolation of Mordor's own mode and never in the campaign. The zone map plays <code>d4_menu_zonemap_outpost_over</code> when the cursor is over an outpost
 (<code>3DZoneMap.OutpostSFX</code>) and steps an outpost's widget through stages of 2, 2 and 1 seconds
 (<code>Interface/Shared.ZoneMapWidgetOutpostStageDurations</code>). Of the 103 map canvases, every outpost zone and the
 <code>Stronghold_ZoneMap</code>, <code>Stronghold_Cave</code> and <code>Stronghold_Alarm1</code> to <code>3</code> canvases carry the enemy colours (zone fill
@@ -559,8 +568,7 @@ sets the rebuild flag (<code>+0x48 |= 1</code>). The legend's outpost glyph is <
 0xFF09D5ED).</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>How <code>Priority</code> resolves two override lists that cover one place, and which scenarios and setups each
-  <code>Stronghold*</code> category holds (and so which AI types it can field).</li>
+<li>Which placed spawners (and so which AI types) each outpost's layers hold, region by region.</li>
 <li>What a category-override entry with every field left as is does (<code>HighAlarm</code> lists <code>StrongholdDynamic</code> and
   <code>StrongholdDynamicArcher</code> that way): a placeholder, or the list's own priority applied to the category.</li>
 <li>Which override list each outpost's <code>sovOutpost</code> volume holds (its <code>+0x120</code>), and which remote scripts the
@@ -572,7 +580,7 @@ sets the rebuild flag (<code>+0x48 |= 1</code>). The legend's outpost glyph is <
   loads.</li>
 <li>Whether the string <code>FactionOutpostChunk</code> (returned by an 8-byte function reached only through a function pointer)
   names a chunk of the save file, and what it holds.</li>
-<li>Whether the world map's material has a <code>k_vOwned0123</code> twin for four more outposts, and what the unbound slots of
-  <code>k_vOwned4567</code> draw.</li>
+<li>Whether the world map's material has a <code>k_vOwned0123</code> twin, and what the unbound slots of <code>k_vOwned4567</code> draw in
+  Desolation of Mordor's mode.</li>
 <li>What the North outpost's missing <code>_To_Sauron</code> area entry changes when Sauron retakes it.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
