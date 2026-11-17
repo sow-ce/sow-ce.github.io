@@ -574,6 +574,15 @@ in Desolation of Mordor's own mode and never in the campaign. The zone map plays
 <code>Stronghold_ZoneMap</code>, <code>Stronghold_Cave</code> and <code>Stronghold_Alarm1</code> to <code>3</code> canvases carry the enemy colours (zone fill
 0xE6A41606, outline 0xFFA41606); <code>Friendly_Strongholds</code> and <code>Friendly_Stronghold_Cave</code> the friendly ones (0xE609D5ED,
 0xFF09D5ED).</p>
+<h2 id="the-generic-banner">The generic banner</h2>
+<p>The interface keeps a generic two-line banner that any text can fill. The script binding
+<code>CPlayerObj::DEMO_ShowGenericBanner</code> (a press-demo leftover, stub 0x1B80E20, two arguments: the player and a string
+key) is a jump to 0x1892F34(_, key, 0, 0). That function (37 bytes, two callers, first argument unused) takes the
+banner manager at <code>[[UIManager+0x30]+0xE0]</code> (nothing happens while <code>UIManager+0x30</code> is null) and calls
+0xE604C(manager, key, secondKey, flag). Each key goes through the string lookup 0x471F2C, the same table all game
+text uses, into a wide-character buffer, and 0xE7A98 (string "GenericAux") shows the banner: the first key's text as
+the title and, when a second key is given and its text is not empty, that text as the second line. The banner
+appears beside the minimap.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
 <li>Which placed spawners (and so which AI types) each outpost's layers hold, region by region.</li>
