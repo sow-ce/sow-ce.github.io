@@ -126,7 +126,9 @@ mannerisms that never appear on the card); one-of-a-kind features (<code>GangOrP
 resistant against vulnerable or mortal to one element; every <code>&lt;X&gt;_Fear_Hate</code>; <code>BeastSlayerOrDismount</code>;
 <code>AggressiveUnAgressive</code>; <code>LastChanceModifiers</code>; <code>RepositionMoveAway</code>; <code>VaultBreaker</code>;
 <code>BodyguardDefeat</code>; <code>HateBossDefeat</code>; <code>KillOtherCaptain</code>; <code>WeakByHate_PinningShot</code>; <code>Alone_Fear</code>;
-<code>Blocks</code>).</p>
+<code>Blocks</code>). No rarity picker (<code>Picker_OrcRarity_*</code>, 3), advanced-class picker
+(<code>Picker_BaseStrength_&lt;advanced class&gt;</code>, 10) or class-bonus picker (<code>Picker_BaseStrength_&lt;class&gt;</code>, 6) carries a group, so the group test never refuses a second one: a member holding
+two advanced-class slots has both <code>BaseStrength_*</code> traits active (one such member read live).</p>
 <p><strong>The first option he qualifies for wins.</strong> <code>Picker_GangOfDoppelgangers</code> (flags 0x83: level and a
 campaign gate; group <code>GangOrPet</code>; excluded markers <code>Marker_SpecialButterfly</code>, <code>Marker_Deranged</code>)
 lists <code>Quirk_HasGang_Doppelgangers_Elite</code> (minimum level 35) before
