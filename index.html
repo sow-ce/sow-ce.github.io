@@ -95,23 +95,20 @@ code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril)}
 @media (min-width:1301px){.perk-split{display:block}}
 @media (max-width:520px){.perks .perk-list li{font-size:14.5px;padding:4px 11px 4px 6px}.perks .perk-list svg{width:16px;height:16px}}
 /* save transfers trifecta (2026-11-17) */
-.svx-wrap{max-width:1000px;margin-inline:auto}
+/* compact, in the hero, plain lines */
+.svx-fig{margin:30px auto 0;width:min(380px,92%)}
+.svx-fig figcaption{margin-top:6px;font-size:14px;color:var(--dim);text-shadow:0 1px 12px rgba(10,10,14,.95),0 0 4px rgba(10,10,14,.9)}
 .svx{display:block;width:100%;height:auto;overflow:visible}
-.svx-node rect{fill:url(#svx-pill);stroke:rgba(102,191,242,.6);stroke-width:2;filter:drop-shadow(0 0 14px rgba(102,191,242,.22))}
-.svx-node text{font:700 38px var(--f-display);fill:var(--mithril)}
+.svx-node rect{fill:url(#svx-pill);stroke:rgba(102,191,242,.6);stroke-width:2.5;filter:drop-shadow(0 0 10px rgba(102,191,242,.2))}
+.svx-node text{font:700 40px var(--f-display);fill:var(--mithril)}
 .svx-check circle{fill:var(--ok)}
 .svx-check path{fill:none;stroke:#07120b;stroke-width:4.4;stroke-linecap:round;stroke-linejoin:round}
-.svx-rail{fill:none;stroke:rgba(102,191,242,.32);stroke-width:3}
+.svx-rail{fill:none;stroke:rgba(140,217,255,.8);stroke-width:5;stroke-linecap:round}
 .svx-head{fill:var(--accent-hi)}
-.svx-flow{fill:none;stroke:var(--accent-hi);stroke-width:6;stroke-linecap:round;stroke-dasharray:0 26;filter:url(#svx-glow);animation:svx-flow 1.4s linear infinite}
-@keyframes svx-flow{to{stroke-dashoffset:-26}}
-.svx-spoke{fill:none;stroke:rgba(102,191,242,.30);stroke-width:2;stroke-dasharray:3 9}
-.svx-hub-bg{fill:#0c0f16;filter:drop-shadow(0 0 22px rgba(102,191,242,.35))}
-.svx-hub-in{stroke:rgba(102,191,242,.45);stroke-width:1.5}
-.svx-brand{font:700 38px var(--f-display);fill:var(--mithril)}
+.svx-hub-bg{fill:#0c0f16;filter:drop-shadow(0 0 16px rgba(102,191,242,.3))}
+.svx-hub-in{stroke:rgba(102,191,242,.45);stroke-width:2}
+.svx-brand{font:700 44px var(--f-display);fill:var(--mithril)}
 .svx-colon{fill:var(--accent-hi)}
-.svx-sub{font:600 15px var(--f-mono);letter-spacing:.32em;fill:var(--accent-hi)}
-@media (prefers-reduced-motion:reduce){.svx-flow{animation:none}}
 
 /* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:8px;text-decoration:none;cursor:pointer;border:1px solid transparent;font-family:var(--f-display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1.1;transition:background .15s,border-color .15s,transform .15s,box-shadow .15s,color .15s}
@@ -418,70 +415,36 @@ section[id]{scroll-margin-top:72px}
     <div data-slot="dl-note"></div>
     <p class="meta-line" data-slot="file-meta"></p>
     <div data-slot="owner-hint"></div>
+    <!-- SAVES-FIGURE -->
+    <figure class="svx-fig">
+      <svg class="svx" viewBox="0 44 1200 650" role="img" aria-labelledby="svx-title">
+        <title id="svx-title">Saves copy both ways between Steam, GOG and the Microsoft Store</title>
+        <defs>
+          <marker id="svx-arrow" viewBox="0 0 12 12" refX="10" refY="6" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" orient="auto-start-reverse"><path d="M1 1.5L10.5 6L1 10.5z" class="svx-head"/></marker>
+          <linearGradient id="svx-metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8fafd"/><stop offset=".22" stop-color="#b6c0cf"/><stop offset=".45" stop-color="#eff3f9"/><stop offset=".62" stop-color="#7c8799"/><stop offset=".82" stop-color="#d6dde8"/><stop offset="1" stop-color="#5f6979"/></linearGradient>
+          <linearGradient id="svx-pill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d2633"/><stop offset="1" stop-color="#11151d"/></linearGradient>
+          <radialGradient id="svx-halo"><stop offset="0" stop-color="#66bff2" stop-opacity=".22"/><stop offset="1" stop-color="#66bff2" stop-opacity="0"/></radialGradient>
+        </defs>
+        <circle cx="600" cy="453" r="220" fill="url(#svx-halo)"/>
+        <path class="svx-rail" d="M563.6 180.2L267.6 568.2" marker-end="url(#svx-arrow)"/>
+        <path class="svx-rail" d="M256.4 559.8L552.4 171.8" marker-end="url(#svx-arrow)"/>
+        <path class="svx-rail" d="M647.6 171.8L943.6 559.8" marker-end="url(#svx-arrow)"/>
+        <path class="svx-rail" d="M932.4 568.2L636.4 180.2" marker-end="url(#svx-arrow)"/>
+        <path class="svx-rail" d="M367 612L743 612" marker-end="url(#svx-arrow)"/>
+        <path class="svx-rail" d="M743 628L367 628" marker-end="url(#svx-arrow)"/>
+        <circle cx="600" cy="453" r="98" class="svx-hub-bg"/>
+        <circle cx="600" cy="453" r="92" fill="none" stroke="url(#svx-metal)" stroke-width="9"/>
+        <circle cx="600" cy="453" r="80" fill="none" class="svx-hub-in"/>
+        <text x="600" y="468" text-anchor="middle" class="svx-brand">SoW<tspan class="svx-colon">:</tspan>CE</text>
+        <g class="svx-node"><rect x="475" y="72" width="250" height="96" rx="48"/><g class="svx-check" transform="translate(527 120)"><circle r="21"/><path d="M-8.6 0.6l5.6 5.6 11.4-12"/></g><text x="561" y="133">Steam</text></g>
+        <g class="svx-node"><rect x="110" y="572" width="220" height="96" rx="48"/><g class="svx-check" transform="translate(162 620)"><circle r="21"/><path d="M-8.6 0.6l5.6 5.6 11.4-12"/></g><text x="196" y="633">GOG</text></g>
+        <g class="svx-node"><rect x="765" y="572" width="430" height="96" rx="48"/><g class="svx-check" transform="translate(817 620)"><circle r="21"/><path d="M-8.6 0.6l5.6 5.6 11.4-12"/></g><text x="851" y="633">Microsoft Store</text></g>
+      </svg>
+      <figcaption>Copy your saves between all three, both ways</figcaption>
+    </figure>
+    <!-- /SAVES-FIGURE -->
   </div>
 </section>
-
-<!-- SAVES-SECTION -->
-<section class="section section-alt saves" id="saves">
-  <div class="wrap">
-    <header class="sec-head">
-      <h2>Your saves go with you</h2>
-      <p class="sec-lead">The SoW:CE setup copies your progress between the Steam, GOG and Microsoft Store copies, in every direction. Each file is checked before it's written, and whatever it replaces is backed up first.</p>
-    </header>
-    <div class="svx-wrap">
-<svg class="svx" viewBox="0 44 1200 650" role="img" aria-labelledby="svx-title svx-desc">
-  <title id="svx-title">Save transfers between Steam, GOG and the Microsoft Store</title>
-  <desc id="svx-desc">Saves copy both ways between Steam and GOG, between Steam and the Microsoft Store, and between GOG and the Microsoft Store, with SoW:CE in the middle.</desc>
-  <defs>
-    <marker id="svx-arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M1 1.5L10.5 6L1 10.5z" class="svx-head"/></marker>
-    <linearGradient id="svx-metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8fafd"/><stop offset=".22" stop-color="#b6c0cf"/><stop offset=".45" stop-color="#eff3f9"/><stop offset=".62" stop-color="#7c8799"/><stop offset=".82" stop-color="#d6dde8"/><stop offset="1" stop-color="#5f6979"/></linearGradient>
-    <linearGradient id="svx-pill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d2633"/><stop offset="1" stop-color="#11151d"/></linearGradient>
-    <radialGradient id="svx-halo"><stop offset="0" stop-color="#66bff2" stop-opacity=".28"/><stop offset="1" stop-color="#66bff2" stop-opacity="0"/></radialGradient>
-    <filter id="svx-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="1200" height="720"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-  </defs>
-  <circle cx="600" cy="453" r="230" fill="url(#svx-halo)"/>
-  <path class="svx-spoke" d="M600 357L600 184"/>
-  <path class="svx-spoke" d="M505 495L353 561"/>
-  <path class="svx-spoke" d="M695 495L861 568"/>
-  <path class="svx-rail" d="M563.6 180.2L267.6 568.2" marker-end="url(#svx-arrow)"/>
-  <path class="svx-flow" d="M563.6 180.2L267.6 568.2"/>
-  <path class="svx-rail" d="M256.4 559.8L552.4 171.8" marker-end="url(#svx-arrow)"/>
-  <path class="svx-flow" d="M256.4 559.8L552.4 171.8"/>
-  <path class="svx-rail" d="M647.6 171.8L943.6 559.8" marker-end="url(#svx-arrow)"/>
-  <path class="svx-flow" d="M647.6 171.8L943.6 559.8"/>
-  <path class="svx-rail" d="M932.4 568.2L636.4 180.2" marker-end="url(#svx-arrow)"/>
-  <path class="svx-flow" d="M932.4 568.2L636.4 180.2"/>
-  <path class="svx-rail" d="M367 613L743 613" marker-end="url(#svx-arrow)"/>
-  <path class="svx-flow" d="M367 613L743 613"/>
-  <path class="svx-rail" d="M743 627L367 627" marker-end="url(#svx-arrow)"/>
-  <path class="svx-flow" d="M743 627L367 627"/>
-  <g class="svx-hub">
-    <circle cx="600" cy="453" r="98" class="svx-hub-bg"/>
-    <circle cx="600" cy="453" r="92" fill="none" stroke="url(#svx-metal)" stroke-width="9"/>
-    <circle cx="600" cy="453" r="80" fill="none" class="svx-hub-in"/>
-    <text x="600" y="459" text-anchor="middle" class="svx-brand">SoW<tspan class="svx-colon">:</tspan>CE</text>
-    <text x="600" y="489" text-anchor="middle" class="svx-sub">SAVES</text>
-  </g>
-  <g class="svx-node" id="svx-steam">
-    <rect x="475" y="72" width="250" height="96" rx="48"/>
-    <g class="svx-check" transform="translate(527 120)"><circle r="21"/><path d="M-8.6 0.6l5.6 5.6 11.4-12"/></g>
-    <text x="561" y="133">Steam</text>
-  </g>
-  <g class="svx-node" id="svx-gog">
-    <rect x="110" y="572" width="220" height="96" rx="48"/>
-    <g class="svx-check" transform="translate(162 620)"><circle r="21"/><path d="M-8.6 0.6l5.6 5.6 11.4-12"/></g>
-    <text x="196" y="633">GOG</text>
-  </g>
-  <g class="svx-node" id="svx-store">
-    <rect x="765" y="572" width="430" height="96" rx="48"/>
-    <g class="svx-check" transform="translate(817 620)"><circle r="21"/><path d="M-8.6 0.6l5.6 5.6 11.4-12"/></g>
-    <text x="851" y="633">Microsoft Store</text>
-  </g>
-</svg>
-    </div>
-  </div>
-</section>
-<!-- /SAVES-SECTION -->
 
 <section class="section" id="features">
   <div class="wrap">
