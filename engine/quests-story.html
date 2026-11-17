@@ -150,6 +150,77 @@ ambush). After his story ambush the character becomes a captain of the current r
 role, rarity) and <code>FM+0x190</code> is cleared. A built copy is saved.</p>
 <p>A queued ambush fires only in its own region: the request's <code>+0x18</code> must equal the current
 region's faction <code>[FS+0x1B8]</code> (0x6DD92C, "The faction has changed"); otherwise it is retried.</p>
+<h3 id="what-a-preset-gives">What a preset gives</h3>
+<p>In one late campaign, twelve built copies of seven story characters (found by their name string id at
+<code>FM+0x170</code>) agree with their presets field by field:</p>
+<table>
+<thead>
+<tr>
+<th>Preset field</th>
+<th>Member</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Name</code></td>
+<td><code>+0x170</code></td>
+<td>a string key (<code>Bruz_CharName</code>, <code>OrcName_Unique_Forthog</code>, or an ordinary <code>OrcNameGen1st_*</code>); the member holds its P919 id</td>
+</tr>
+<tr>
+<td><code>OverrideModel</code></td>
+<td><code>+0x278</code> (class)</td>
+<td>the model's own <code>CombatTree</code> is the tree the body fights with in the world</td>
+</tr>
+<tr>
+<td><code>CombatTree</code></td>
+<td><code>+0x188</code> (army tree)</td>
+<td>12 of 12 copies hold their preset's tree, which can differ from the model's: Zog's model fights with <code>AI_Zog</code> while <code>+0x188</code> holds <code>AI_Spearman</code>; the Ranger's model is <code>GP_Ranger</code>, his army tree <code>AI_Olog_Infantry</code></td>
+</tr>
+<tr>
+<td><code>RoleList</code> -&gt; <code>Roles[0]</code></td>
+<td><code>+0x318</code></td>
+<td>the title and the role items (Bruz's mauled head, <code>olog_mauled_head_Bruz</code>, is a role item); the role's <code>Tribes</code> entry names the tribe at <code>+0x328</code> (<code>TribeDef_Bruz</code> is Bruz's own)</td>
+</tr>
+<tr>
+<td>the role's <code>ForcedPersonality</code>, else the preset's <code>Personality</code></td>
+<td><code>+0x270</code></td>
+<td>Bruz's three brothers carry personalities of their own (<code>SpecialButterfly_411_Baz</code>, <code>_412_Gaz</code>, <code>_413_Daz</code>)</td>
+</tr>
+<tr>
+<td><code>PickerTraits</code></td>
+<td>the trait slots</td>
+<td>a preset without <code>EnableTraitChanges</code> gives exactly its list (Bruz 11 of 11, the Ranger 7 of 7, the Shadows of the Past warchiefs 22 on 22 and 24 on 25); with it the member carries more (Zog 36 to 37 on 15, Baz 34 on 2)</td>
+</tr>
+</tbody>
+</table>
+<p>Rarity and the advanced class are ordinary pickers on the list (<code>Picker_OrcRarity_*</code>,
+<code>Picker_BaseStrength_&lt;advanced class&gt;</code>), or the preset's <code>RewardLists</code> name a <code>Specialization_&lt;advanced class&gt;</code>
+reward. A preset whose list names no rarity picker leaves <code>+0x390</code> null: six of the seven such copies read
+(Bruz, the Ranger, the Shadows of the Past warchiefs), the seventh, back from death, is Common. Zog's first
+preset lists <code>Picker_OrcRarity_Common</code>, and his three copies are Common. Each boss tree these presets use names a <code>DefaultAITemplate</code>
+(<code>GP_Bruz</code> -&gt; <code>GP_Bruz</code>, <code>AI_Zog</code> -&gt; <code>Orc_Zog</code>, <code>AI_Forthog</code> -&gt; <code>Orc_Forthog</code>, <code>GP_Ranger</code> -&gt;
+<code>OlogHai_Infantry</code>), the template that summoning and member spawns take from the army tree. Their class
+models are linked only by their presets and their AI templates.</p>
+<p>The Shadows of the Past missions (<code>StatueOfThePast_&lt;region&gt;_SC</code>) each have a warchief preset
+<code>SotP_&lt;region&gt;_SC</code> with a class model of its own (<code>SOTP&lt;region&gt;_Orc_&lt;class&gt;Warchief</code>) and two bodyguard
+presets.</p>
+<h3 id="quest-jobs-pick-members-by-role">Quest jobs pick members by role</h3>
+<p>A <code>Quest/Jobs/Definition</code> takes an existing member through <code>IncludedRole</code> / <code>ExcludedRole</code> (role lists),
+<code>RequiredPresetFactionMember</code> with <code>CanBePresetFactionMember</code>, <code>IncludedCharacterType</code>, <code>MustBeAlive</code>,
+<code>RowRank</code>, <code>MustBeAssignedToOutpostPosition</code> and similar tests, or builds one (<code>FactionMemberBuilder</code>,
+<code>FactionMemberBuilderChance</code>); <code>AliasJob</code> names the job whose member it shares. Every role list that names a
+story character's role, and every record that names those lists, shows three patterns:</p>
+<ul>
+<li>The characters' own story jobs require the preset member itself: <code>Rat2_Bruz</code> / <code>Rat2Replay_Bruz</code>
+  (<code>GP_Bruz</code> / <code>GPR_RB2_Bruz</code>) and <code>Rat2_Ranger</code> / <code>Rat2Replay_Ranger</code> (<code>GP_Ranger</code> / <code>GPR_RB2_Ranger</code>).</li>
+<li><code>Special_Butterfly_Roles</code> (Bruz and his three brothers) is excluded by 27 jobs (mission subjects and their
+  opponents, side-quest captains, <code>Rat3_Enemy1</code> to <code>5</code>, <code>Rat3_Executioner</code>), and <code>GP_RoleCategory_Bruz</code> by four
+  more (<code>Finale_EnemyOlog</code>, <code>Captain_Gondor4</code>, <code>GonSide2_Captain</code>, <code>GonSide3_Captain</code>): these jobs never draw them.</li>
+<li>Two jobs include a unique's role without requiring the preset: <code>GP_Bruz_Volcano_PostRelease</code> (alias
+  <code>PS_Subject</code>, Bruz's role category) and <code>PC_ShamedCaptain_ContextAmbJob</code> (<code>RoleCategory_Shamed_Unashamed_Daz</code>).
+  The selection reads the member's role, so any member that holds the role passes that test.</li>
+</ul>
 <h2 id="betrayal-and-region-ownership">Betrayal and region ownership</h2>
 <p>The shipped data never lets the player's Overlord betray: all 18 betrayal ambush definitions list
 Overlord in <code>ExcludedRowRanks</code> (91 of 100 ambush definitions do), the betrayal job
@@ -465,4 +536,7 @@ character.</p>
   held many different small values.</li>
 <li>Whether the warchief intro's lines are personality dialogue (they did not play on a plain grunt).</li>
 <li>What the 56 placeholder movies of the third story DLC stand in for at run time (see Audio and video).</li>
+<li>Where the traits beyond a preset's list come from when the preset sets <code>EnableTraitChanges</code>: two built
+  copies of Zog at the preset's level 20 carry 36 traits on 15 listed pickers (a third, at level 42, 37), Baz
+  34 on 2. The build adding them would match Zog's count at his starting level; later events are not ruled out.</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
