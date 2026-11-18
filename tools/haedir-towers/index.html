@@ -1,11 +1,11 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Haedir Towers - SoW:CE Tools</title>
-<meta name="description" content="Purifies the Haedirs so you don&#x27;t have to climb them again on every new save. Do all 15 at once or one region at a time, and turn them back to Sauron&#x27;s whenever you like.">
+<meta name="description" content="Purifies the Haedirs without climbing them, all 15 at once or one region at a time, and can turn them back to Sauron&#x27;s.">
 <meta name="theme-color" content="#66bff2">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="SoW:CE">
 <meta property="og:title" content="Haedir Towers - SoW:CE Tools">
-<meta property="og:description" content="Purifies the Haedirs so you don&#x27;t have to climb them again on every new save. Do all 15 at once or one region at a time, and turn them back to Sauron&#x27;s whenever you like.">
+<meta property="og:description" content="Purifies the Haedirs without climbing them, all 15 at once or one region at a time, and can turn them back to Sauron&#x27;s.">
 <meta property="og:url" content="https://sow-ce.github.io/tools/haedir-towers/">
 <meta property="og:image" content="https://sow-ce.github.io/tools/haedir-towers/purified.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -423,7 +423,7 @@ section[id]{scroll-margin-top:72px}
 <main class="wrap tl-doc" id="main">
   <p class="tl-crumb"><a href="../">Tools</a> / Haedir Towers</p>
   <h1>Haedir Towers</h1>
-  <p class="tl-lead">Purifies the Haedirs so you don&#x27;t have to climb them again on every new save. Do all 15 at once or one region at a time, and turn them back to Sauron&#x27;s whenever you like.</p>
+  <p class="tl-lead">Purifies the Haedirs without climbing them, all 15 at once or one region at a time, and can turn them back to Sauron&#x27;s.</p>
   <ul class="tl-works" aria-label="Works with"><li><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9.2"/><path d="M5.8 10.4l2.8 2.8 5.6-6"/></svg>Steam</li><li><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9.2"/><path d="M5.8 10.4l2.8 2.8 5.6-6"/></svg>GOG</li><li><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9.2"/><path d="M5.8 10.4l2.8 2.8 5.6-6"/></svg>Microsoft Store</li></ul>
   <p class="tl-meta">Version 1.0 &middot; 18 November 2026 &middot; 10.7 MB &middot; Shadow of War 1.21 &middot; 1 download</p>
   <div class="tl-shots">
@@ -431,10 +431,10 @@ section[id]{scroll-margin-top:72px}
     <figure><a href="evil.jpg" target="_blank" rel="noopener"><img src="evil.jpg" alt="A Haedir still held by Sauron, a fiery orange eye above the tower and its map marker at 294 ft." loading="lazy" decoding="async"></a><figcaption>Still Sauron&#x27;s</figcaption></figure>
   </div>
   <div class="tl-text">
-    <p>Someone on our Discord got tired of hunting down every Haedir on each new save, so I made this. Press a button and the towers end up the same as if you&#x27;d climbed them yourself. Each one gets its fast travel point and map marker, the blue flame comes up, and they count toward the region&#x27;s Haedir challenge.</p>
-    <p>It&#x27;s a separate program, a bit like a trainer. It doesn&#x27;t install anything and never touches your game files. It only changes the game&#x27;s memory while it&#x27;s open, and once the game saves, the towers stay purified.</p>
+    <p>This is a mod that purifies the Haedirs in Shadow of War without climbing them, either all 15 at once or the three in a single region. Each tower ends up exactly as if you had climbed it: its fast travel point and map marker are unlocked, the blue flame appears, and it counts toward the region&#x27;s Haedir challenge. It can also turn towers back to Sauron&#x27;s.</p>
+    <p>It runs as a separate program alongside the game. Nothing is installed and no game files are changed. It edits the game&#x27;s memory while it is open, and the result is kept in your save.</p>
   </div>
-  <figure class="tl-window"><a href="tool_window.png" target="_blank" rel="noopener"><img src="tool_window.png" alt="The Haedir Towers window: connected to the game with a save loaded, every region showing 3 of 3 purified, with Purify and Evil buttons per region and Purify all 15, Make all evil and Undo my changes below." loading="lazy" decoding="async"></a><figcaption>The program with a save loaded. All 15 were already purified on this one.</figcaption></figure>
+  <figure class="tl-window"><a href="tool_window.png" target="_blank" rel="noopener"><img src="tool_window.png" alt="The Haedir Towers window: connected to the game with a save loaded, every region showing 3 of 3 purified, with Purify and Evil buttons per region and Purify all 15, Make all evil and Undo my changes below." loading="lazy" decoding="async"></a><figcaption>The program with a save loaded (all 15 already purified on this save).</figcaption></figure>
   <section class="tl-dl" id="download" aria-labelledby="dl-head">
     <h2 id="dl-head">Download</h2>
     <ul class="tl-risks">
@@ -448,23 +448,23 @@ section[id]{scroll-margin-top:72px}
   </section>
   <h2 id="use">How to use it</h2>
   <ol class="tl-steps">
-    <li>Unzip it anywhere you like.</li>
+    <li>Unzip the folder anywhere.</li>
     <li>Start the game and load your save.</li>
-    <li>Run SOWCE_HaedirTowers.exe. If you get &quot;Access denied&quot;, right-click it and run it as administrator.</li>
-    <li>Each region shows how many of its Haedirs are already purified. Hit &quot;Purify all 15&quot;, or &quot;Purify&quot; next to a single region.</li>
-    <li>Fast travel to a different region, or quit to the main menu and hit Continue. That&#x27;s when the game hands out the fast travel points and map markers.</li>
-    <li>The blue flames come up as each area loads. You can close the program once you&#x27;re done.</li>
+    <li>Run SOWCE_HaedirTowers.exe. If Windows reports &quot;Access denied&quot;, run it as administrator.</li>
+    <li>Each region shows how many of its Haedirs are already purified. Click &quot;Purify all 15&quot;, or &quot;Purify&quot; next to a single region.</li>
+    <li>Fast travel to a different region, or quit to the main menu and choose Continue. The game then grants the fast travel points and map markers.</li>
+    <li>The blue flames appear as each area loads. The program can be closed once you&#x27;re done.</li>
   </ol>
   <h2 id="know">Good to know</h2>
   <ul class="tl-points">
-    <li>It won&#x27;t purify anything until you&#x27;ve done the story&#x27;s first Haedir yourself, in Minas Ithil right after the prologue, because that mission needs you to climb one. There&#x27;s a Testing box that skips this check, but only use it on a save you don&#x27;t mind losing.</li>
-    <li>Evil and Make all evil do the opposite. The flame goes back to Sauron&#x27;s the next time the area loads, and you can purify that tower again at its seeing stone. Fast travel to it stays, though. Only the game itself can take a fast travel point away.</li>
-    <li>Undo my changes puts back whatever the program changed since you opened it, as long as the game is still running.</li>
-    <li>You still have to look through a tower&#x27;s seeing stone to reveal the collectibles around it.</li>
-    <li>The Haedir achievement only checks when you purify a tower by hand. If you still want it, do it region by region and leave one tower to climb.</li>
-    <li>It won&#x27;t do anything during an Online Conquest, or before a save is loaded.</li>
+    <li>Purifying is only available after you have completed the story&#x27;s first Haedir yourself (in Minas Ithil, right after the prologue), because that mission requires climbing one. A Testing box skips this check; only use it on a save you can afford to lose.</li>
+    <li>Evil and Make all evil do the opposite. The flame goes back to Sauron&#x27;s the next time the area loads, and the tower can be purified again at its seeing stone. Fast travel to it remains available, since only the game itself can remove a fast travel point.</li>
+    <li>Undo my changes reverts everything the program changed since it was opened, as long as the game is still running.</li>
+    <li>Collectibles around a tower are still revealed by looking through its seeing stone.</li>
+    <li>The Haedir achievement is only checked when a tower is purified by hand. To still earn it, purify region by region and leave one tower to climb.</li>
+    <li>It does nothing during an Online Conquest or before a save is loaded.</li>
     <li>Lithlad has no Haedirs in the story, so it isn&#x27;t in the list.</li>
-    <li>Windows might warn you the first time you run it, because it isn&#x27;t code-signed. The source and build.bat are in the zip if you&#x27;d rather read it or build the exe yourself.</li>
+    <li>Windows may show a warning the first time it runs, because the program isn&#x27;t code-signed. The source code and build.bat are included in the zip for anyone who wants to review it or build the exe themselves.</li>
   </ul>
   <h2 id="new">What's new</h2>
   <div class="tl-ver">
@@ -473,8 +473,8 @@ section[id]{scroll-margin-top:72px}
     <ul><li>Purify all 15 Haedirs, or one region&#x27;s three.</li><li>Evil and Make all evil, to turn them back to Sauron&#x27;s.</li><li>Undo my changes.</li><li>Works with the Steam, GOG and Microsoft Store copies, game version 1.21.</li></ul>
   </div>
   <h2 id="how">How it works</h2>
-  <p class="tl-how">A purified Haedir comes down to one value the game keeps in your save: whether that tower&#x27;s seeing stone is yours. Climbing a tower and looking through the stone flips it, and that&#x27;s the same value this program flips. The game takes it from there. Every time you load into a world it gives you the fast travel point of any stone you own but don&#x27;t have yet, and each tower picks its flame from that value when its area loads.</p>
-  <p class="tl-help">Something not working? Let me know on <a href="https://discord.gg/shadow-of-war-modding-community-1135521354838458438" target="_blank" rel="noopener">Discord</a>.</p>
+  <p class="tl-how">A purified Haedir comes down to one value the game keeps in your save: whether that tower&#x27;s seeing stone is yours. Climbing a tower and looking through the stone sets it, and this program sets the same value. The game handles the rest. Each time you load into a world it grants the fast travel point of every owned stone you don&#x27;t have yet, and each tower picks its flame from that value when its area loads.</p>
+  <p class="tl-help">Found a problem? Report it on <a href="https://discord.gg/shadow-of-war-modding-community-1135521354838458438" target="_blank" rel="noopener">Discord</a>.</p>
 </main>
 
 <footer class="foot">
