@@ -60,6 +60,8 @@ code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril)}
 @media (max-width:1440px){.nav{gap:16px}.nav a{font-size:14px}}
 .nav a{color:var(--dim);text-decoration:none;font-size:14.5px;font-weight:500}
 .nav a:hover{color:var(--text)}
+/* Seven links (with Tools) leave the title 13 px at 1041 px (site_header_check, 2026-11-18): closer links there */
+@media (max-width:1100px){.nav:has(> a:nth-of-type(7)){gap:12px}}
 @media (max-width:1040px){.nav{display:none}}
 /* Under the brand name, out of the row's flow: the top bar's width cap leaves no room beside the nav. */
 .brand-text{position:relative;min-width:0}
@@ -341,6 +343,7 @@ section[id]{scroll-margin-top:72px}
       <a href="#faq">FAQ</a>
       <a href="engine/">Engine reference</a>
       <a href="cards/">Captain cards</a>
+      <!--NAV-TOOLS--><a href="tools/">Tools</a><!--/NAV-TOOLS-->
     </nav>
     <span data-slot="head-cta"></span>
   </div>
