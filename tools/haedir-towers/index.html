@@ -45,10 +45,15 @@ code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril)}
 .skip:focus{top:12px}
 .eyebrow{font:500 12px/1.3 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
 
-/* header */
+/* header (2026-11-18, user: separators between the links, "split half of them on left - right symmetrical and have
+   the 'Shadow of war' banner part in the middle centered"). The brand sits in the middle column of a
+   1fr | auto | 1fr grid, so it is centred on the bar whatever the sides hold. Left: the home page's sections; right:
+   the other pages, then Join Discord at the far edge. Both link groups hug the brand and come out about equally
+   wide. A 1px separator sits in the middle of each gap. Up to 1040px the links hide and the bar is brand left,
+   button right, as before. scripts/studio/site_header_check.py measures every width and both font sets. */
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:rgba(15,15,20,.9);-webkit-backdrop-filter:saturate(1.2) blur(10px);backdrop-filter:saturate(1.2) blur(10px);border-bottom:1px solid var(--edge)}
-.top .wrap{display:flex;align-items:center;gap:24px;min-height:64px}
-.brand{display:flex;align-items:center;gap:11px;color:var(--text);text-decoration:none;margin-right:auto;min-width:0}
+.top .wrap{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;column-gap:34px;min-height:64px}
+.brand{grid-column:2;display:flex;align-items:center;gap:11px;color:var(--text);text-decoration:none;min-width:0}
 .brand:hover{color:var(--text)}
 .brand svg{width:46px;height:46px;flex:none}
 .brand-name{font:700 22px/1.12 var(--f-display);white-space:nowrap}
@@ -56,27 +61,30 @@ code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril)}
 .brand-name i{font-style:normal}
 .brand-name em{font-style:italic;font-weight:600;color:var(--accent-hi)}
 .mark-script{animation:kindle 2.6s ease-out both}
-@media (max-width:1440px){.brand-name{font-size:19px}.brand-name b,.brand-name em{display:block}.brand-name i{display:none}.brand-name em{font-size:.88em;margin-top:1px}}
-/* The one-line title, six links and the button need ~1,192px (Palatino); the page column leaves 1,100. Above 1440px the
-   bar and the row under it get a wider column (1,320 inside). The exact complement of the 1440 query: a zoomed
-   1440.5px window gets one layout or the other, never neither. */
-@media not all and (max-width:1440px){.top .wrap,.perks .wrap{max-width:1400px}}
+.top-r{grid-column:3;display:flex;align-items:center;gap:24px;min-width:0}
+.top-r > :last-child{margin-left:auto;flex:none}
+.nav{--nav-gap:30px;display:flex;align-items:center;gap:var(--nav-gap)}
+.nav-l{grid-column:1;justify-self:end}
+.nav a{position:relative;white-space:nowrap;color:var(--dim);text-decoration:none;font-size:14.5px;font-weight:500}
+.nav a:hover{color:var(--text)}
+.nav a + a::before{content:"";position:absolute;top:50%;left:calc(var(--nav-gap) / -2 - .5px);width:1px;height:15px;margin-top:-7.5px;background:rgba(164,164,177,.34);pointer-events:none}
+/* The bar gets more room than the page column above 1440px (the row under it keeps 1400). The exact complement of the
+   1440 query: a zoomed 1440.5px window gets one layout or the other, never neither. */
+@media not all and (max-width:1440px){.top .wrap{max-width:1720px}.perks .wrap{max-width:1400px}}
+@media (max-width:1600px){.brand-name{font-size:19px}.brand-name b,.brand-name em{display:block}.brand-name i{display:none}.brand-name em{font-size:.88em;margin-top:1px}}
+@media (max-width:1440px){.top .wrap{column-gap:24px}.nav{--nav-gap:24px}.nav a{font-size:14px}.top-r{gap:18px}}
+/* 1041-1240px: three links and the labelled button no longer fit beside the brand (nav->button 14px, the button past
+   the bar's edge from 1100px, site_header_check 2026-11-18): the button shows its icon only, as on phones. */
+@media (max-width:1240px){.top .wrap{column-gap:18px}.nav{--nav-gap:18px}.top-r{gap:16px}.top-r .btn-head{padding:10px 12px}.top-r .btn-head span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
+@media (max-width:1040px){.top .wrap{display:flex;gap:24px}.brand{margin-right:auto}.nav{display:none}.top-r{flex:none}}
 .top [data-slot="head-cta"]{flex:none}
 @media (max-width:520px){.top .wrap{gap:12px}.brand{gap:8px}.brand svg{width:40px;height:40px}}
 @media (max-width:360px){.brand-name{font-size:17px}.brand svg{width:36px;height:36px}}
 @media (max-width:340px){.brand-name{font-size:15.5px}.brand svg{width:32px;height:32px}}
-.nav{display:flex;gap:24px}
-.nav a{white-space:nowrap}
-@media (max-width:1440px){.nav{gap:16px}.nav a{font-size:14px}}
-.nav a{color:var(--dim);text-decoration:none;font-size:14.5px;font-weight:500}
-.nav a:hover{color:var(--text)}
-/* Seven links (with Tools) leave the title 13 px at 1041 px (site_header_check, 2026-11-18): closer links there */
-@media (max-width:1100px){.nav:has(> a:nth-of-type(7)){gap:12px}}
-@media (max-width:1040px){.nav{display:none}}
-/* Under the brand name, out of the row's flow: the top bar's width cap leaves no room beside the nav. */
+/* Under the brand name, out of the row's flow, centred under it: only with the one-line title. */
 .brand-text{position:relative;min-width:0}
-.brand-stat{position:absolute;left:0;top:100%;color:var(--dim);font-size:12.5px;line-height:1.2;white-space:nowrap;opacity:.8}
-@media (max-width:1440px){.brand-stat{display:none}}
+.brand-stat{position:absolute;left:50%;top:100%;transform:translateX(-50%);color:var(--dim);font-size:12.5px;line-height:1.2;white-space:nowrap;opacity:.8}
+@media (max-width:1600px){.brand-stat{display:none}}
 /* What SoW:CE supports: a second, quieter header row on the brand's left edge. It scrolls away under the bar
    above, so the hero's min-height leaves room for both (66px + 39px), and #top scrolls to the very top. */
 .perks{background:var(--bg-deep);border-bottom:1px solid var(--edge)}
@@ -391,20 +399,24 @@ section[id]{scroll-margin-top:72px}
 <a class="skip" href="#main">Skip to the content</a>
 <header class="top">
   <div class="wrap">
-    <a class="brand" href="../../" aria-label="Shadow of War: Community Edition, back to the home page">
-      <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mark-metal" gradientUnits="userSpaceOnUse" x1="4" x2="60" y1="0" y2="0"><stop offset="0" stop-color="#6d7788"/><stop offset=".2" stop-color="#f7f9fc"/><stop offset=".45" stop-color="#9aa5b6"/><stop offset=".68" stop-color="#fff"/><stop offset="1" stop-color="#6d7788"/></linearGradient><linearGradient id="mark-back" gradientUnits="userSpaceOnUse" x1="4" x2="60" y1="0" y2="0"><stop offset="0" stop-color="#454d5b"/><stop offset=".5" stop-color="#7f8a9c"/><stop offset="1" stop-color="#3c4351"/></linearGradient><linearGradient id="mark-blade" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="1" y2="46"><stop offset="0" stop-color="#e6f6ff"/><stop offset=".55" stop-color="#66bff2"/><stop offset="1" stop-color="#2a6a9a"/></linearGradient><linearGradient id="mark-blade-dark" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="1" y2="46"><stop offset="0" stop-color="#b9e6ff"/><stop offset=".55" stop-color="#3584bd"/><stop offset="1" stop-color="#1c4a6e"/></linearGradient></defs><g id="mark"><g transform="rotate(-14 32 26)" fill="none"><path d="M4,26A28,11 0 0 1 60,26" stroke="url(#mark-back)" stroke-width="7"/><path d="M4,26A28,11 0 0 1 60,26" stroke="#141820" stroke-width="3.6"/><path class="mark-script" d="M4,26A28,11 0 0 1 60,26" stroke="#66bff2" stroke-opacity=".8" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="3 2 1 2 4 2"/></g><path d="M32,1L36.5,9V45.5H32Z" fill="url(#mark-blade-dark)"/><path d="M32,1L27.5,9V45.5H32Z" fill="url(#mark-blade)"/><path d="M16.5,45H47.5L44.5,49.5H19.5Z" fill="url(#mark-metal)"/><rect x="29.6" y="49.5" width="4.8" height="8.5" fill="#39465a"/><path d="M32,56.8L35.6,60.4L32,64L28.4,60.4Z" fill="#c9d2df"/><g transform="rotate(-14 32 26)" fill="none"><path d="M4,26A28,11 0 0 0 60,26" stroke="url(#mark-metal)" stroke-width="7"/><path d="M4,26A28,11 0 0 0 60,26" stroke="#141820" stroke-width="3.6"/><path class="mark-script" d="M4,26A28,11 0 0 0 60,26" stroke="#8cd9ff" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="3 2 1 2 4 2 1.5 2"/></g></g></svg>
-      <span class="brand-name"><b>Shadow of War<i>:</i></b> <em>Community Edition (BETA)</em></span>
-    </a>
-    <nav class="nav" aria-label="Site">
+    <nav class="nav nav-l" aria-label="Home page sections">
       <a href="../../#features">Features</a>
       <a href="../../#changelog">Patch notes</a>
       <a href="../../#install">Install</a>
       <a href="../../#faq">FAQ</a>
-      <a href="../../engine/">Engine reference</a>
-      <a href="../../cards/">Captain cards</a>
-      <!--NAV-TOOLS--><a href="../../tools/" aria-current="page">Tools</a><!--/NAV-TOOLS-->
     </nav>
-    <a class="btn btn-head" href="https://discord.gg/shadow-of-war-modding-community-1135521354838458438" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Join Discord</span></a>
+    <a class="brand" href="../../" aria-label="Shadow of War: Community Edition, back to the home page">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mark-metal" gradientUnits="userSpaceOnUse" x1="4" x2="60" y1="0" y2="0"><stop offset="0" stop-color="#6d7788"/><stop offset=".2" stop-color="#f7f9fc"/><stop offset=".45" stop-color="#9aa5b6"/><stop offset=".68" stop-color="#fff"/><stop offset="1" stop-color="#6d7788"/></linearGradient><linearGradient id="mark-back" gradientUnits="userSpaceOnUse" x1="4" x2="60" y1="0" y2="0"><stop offset="0" stop-color="#454d5b"/><stop offset=".5" stop-color="#7f8a9c"/><stop offset="1" stop-color="#3c4351"/></linearGradient><linearGradient id="mark-blade" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="1" y2="46"><stop offset="0" stop-color="#e6f6ff"/><stop offset=".55" stop-color="#66bff2"/><stop offset="1" stop-color="#2a6a9a"/></linearGradient><linearGradient id="mark-blade-dark" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="1" y2="46"><stop offset="0" stop-color="#b9e6ff"/><stop offset=".55" stop-color="#3584bd"/><stop offset="1" stop-color="#1c4a6e"/></linearGradient></defs><g id="mark"><g transform="rotate(-14 32 26)" fill="none"><path d="M4,26A28,11 0 0 1 60,26" stroke="url(#mark-back)" stroke-width="7"/><path d="M4,26A28,11 0 0 1 60,26" stroke="#141820" stroke-width="3.6"/><path class="mark-script" d="M4,26A28,11 0 0 1 60,26" stroke="#66bff2" stroke-opacity=".8" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="3 2 1 2 4 2"/></g><path d="M32,1L36.5,9V45.5H32Z" fill="url(#mark-blade-dark)"/><path d="M32,1L27.5,9V45.5H32Z" fill="url(#mark-blade)"/><path d="M16.5,45H47.5L44.5,49.5H19.5Z" fill="url(#mark-metal)"/><rect x="29.6" y="49.5" width="4.8" height="8.5" fill="#39465a"/><path d="M32,56.8L35.6,60.4L32,64L28.4,60.4Z" fill="#c9d2df"/><g transform="rotate(-14 32 26)" fill="none"><path d="M4,26A28,11 0 0 0 60,26" stroke="url(#mark-metal)" stroke-width="7"/><path d="M4,26A28,11 0 0 0 60,26" stroke="#141820" stroke-width="3.6"/><path class="mark-script" d="M4,26A28,11 0 0 0 60,26" stroke="#8cd9ff" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="3 2 1 2 4 2 1.5 2"/></g></g></svg>
+      <span class="brand-name"><b>Shadow of War<i>:</i></b> <em>Community Edition (BETA)</em></span>
+    </a>
+    <div class="top-r">
+      <nav class="nav nav-r" aria-label="More pages">
+        <a href="../../engine/">Engine reference</a>
+        <a href="../../cards/">Captain cards</a>
+        <!--NAV-TOOLS--><a href="../../tools/" aria-current="page">Tools</a><!--/NAV-TOOLS-->
+      </nav>
+      <a class="btn btn-head" href="https://discord.gg/shadow-of-war-modding-community-1135521354838458438" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Join Discord</span></a>
+    </div>
   </div>
 </header>
 
@@ -413,7 +425,7 @@ section[id]{scroll-margin-top:72px}
   <h1>Haedir Towers</h1>
   <p class="tl-lead">Purifies the Haedirs so you don&#x27;t have to climb them again on every new save. Do all 15 at once or one region at a time, and turn them back to Sauron&#x27;s whenever you like.</p>
   <ul class="tl-works" aria-label="Works with"><li><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9.2"/><path d="M5.8 10.4l2.8 2.8 5.6-6"/></svg>Steam</li><li><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9.2"/><path d="M5.8 10.4l2.8 2.8 5.6-6"/></svg>GOG</li><li><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9.2"/><path d="M5.8 10.4l2.8 2.8 5.6-6"/></svg>Microsoft Store</li></ul>
-  <p class="tl-meta">Version 1.0 &middot; 18 November 2026 &middot; 10.7 MB &middot; Shadow of War 1.21 &middot; 0 downloads</p>
+  <p class="tl-meta">Version 1.0 &middot; 18 November 2026 &middot; 10.7 MB &middot; Shadow of War 1.21 &middot; 1 download</p>
   <div class="tl-shots">
     <figure><a href="purified.jpg" target="_blank" rel="noopener"><img src="purified.jpg" alt="A purified Haedir at night, Celebrimbor&#x27;s blue eye burning above the tower, seen in wraith vision." loading="lazy" decoding="async"></a><figcaption>Purified, with Celebrimbor&#x27;s blue eye</figcaption></figure>
     <figure><a href="evil.jpg" target="_blank" rel="noopener"><img src="evil.jpg" alt="A Haedir still held by Sauron, a fiery orange eye above the tower and its map marker at 294 ft." loading="lazy" decoding="async"></a><figcaption>Still Sauron&#x27;s</figcaption></figure>
