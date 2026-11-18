@@ -70,6 +70,8 @@ code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril)}
 @media (max-width:1440px){.nav{gap:16px}.nav a{font-size:14px}}
 .nav a{color:var(--dim);text-decoration:none;font-size:14.5px;font-weight:500}
 .nav a:hover{color:var(--text)}
+/* Seven links (with Tools) leave the title 13 px at 1041 px (site_header_check, 2026-11-18): closer links there */
+@media (max-width:1100px){.nav:has(> a:nth-of-type(7)){gap:12px}}
 @media (max-width:1040px){.nav{display:none}}
 /* Under the brand name, out of the row's flow: the top bar's width cap leaves no room beside the nav. */
 .brand-text{position:relative;min-width:0}
@@ -373,6 +375,7 @@ section[id]{scroll-margin-top:72px}
       <a href="../#faq">FAQ</a>
       <a href="../engine/">Engine reference</a>
       <a href="../cards/">Captain cards</a>
+      <!--NAV-TOOLS--><a href="../tools/">Tools</a><!--/NAV-TOOLS-->
     </nav>
     <a class="btn btn-head" href="https://discord.gg/shadow-of-war-modding-community-1135521354838458438" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Join Discord</span></a>
   </div>
@@ -454,6 +457,7 @@ section[id]{scroll-margin-top:72px}
       <a href="../#install">Install</a>
       <a href="../#faq">FAQ</a>
       <a href="../cards/">Captain cards</a>
+      <!--NAV-TOOLS--><a href="../tools/">Tools</a><!--/NAV-TOOLS-->
       <a href="https://discord.gg/shadow-of-war-modding-community-1135521354838458438" target="_blank" rel="noopener">Discord</a>
     </nav>
     <p class="legal">An unofficial fan project. It is not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises, and Middle-earth: Shadow of War belongs to its owners.</p>
