@@ -185,6 +185,23 @@ and nemesis as War captains. It is compiled from <code>...\KRAKEN_CODE_STREAM\so
 (log tag <code>[NEMESISFORGE]:</code>; the logger is compiled out of the shipping build). The captains come from the
 publisher's online service, never from Mordor's local save, and they enter the game through two story
 missions.</p>
+<h3 id="shadow-of-mordor-s-side">Shadow of Mordor's side</h3>
+<p>The two games never exchange data directly: neither executable names the other game, and the profile id
+Shadow of War can attach to its request (<code>FirebirdProfileID</code>, <code>[0x2A364F0]</code>) is a static string initialised
+empty that no code writes, so the request identifies the player by platform user id only. Shadow of Mordor
+reaches the publisher's earlier online platform, Agora (<code>Social/Agora</code>, <code>AgoraUserDataMgr</code>,
+<code>ProfileAttributeData</code>); Shadow of War reaches its successor; the publisher's servers joined the two through
+the player's account.</p>
+<p>In Shadow of Mordor the Nemesis Forge is a game mode, <code>GameModes/NemesisForge</code>, started from the main menu
+(<code>MM_NemesisForge</code>), with its own restart, continue and quit prompts, a pause page and an add-on description.
+It has its own army, <code>Orc_Faction_NemesisForge</code>: 32 tracked members, the five orc classes, and rows of 5
+warchiefs and 8, 7 and 5 captains placed in the Sea of Nurnen. <code>CanPopulateNemesisForge</code> is true on exactly
+the two campaign armies (<code>Orc_Faction_BG</code>, <code>Orc_Faction_SoN</code>) and false on the downloadable and challenge
+armies, while <code>NemesisForgeFromThisFaction</code> is true only on the forge army, and the Sea of Nurnen's side
+missions (trials, duels, beast hunts, riots, executions, assassinations, recruitment, feasts, betrayals,
+rescues) list the forge army among their required factions. A debug command,
+<code>DebugSpawnAI.NemesisForge.FetchNemesis</code>, is described as querying the forge nemesis from Agora. Shadow of
+Mordor does not use Shadow of War's key names: the 13-key reply was built on the server.</p>
 <h3 id="the-switch-and-the-request">The switch and the request</h3>
 <p>The title configuration's boolean <code>nemesis_forge</code> is stored at <code>[GM+0x6D48]+0xD1</code> by the configuration
 parser 0x18368B0 (next to <code>challenges_enabled</code> at <code>+0xD0</code> and <code>conquests</code> at <code>+0xD2</code>). The check 0x1B3ABFC
@@ -496,6 +513,8 @@ executable also names <code>NemesisForge.Override.ClearAll</code>, the configura
 <li>What creates members with creation codes 0 and 1 (FactionMember <code>+0x520</code>).</li>
 <li>What <code>NemesisForge.Override.ClearAll</code> resets, and what <code>User.OwnsShadowOfMordor</code> gates.</li>
 <li>How the two mission scripts use <code>GP_Gon2NemForgeCheck</code> and the banner item.</li>
+<li>How Shadow of Mordor's forge mode chooses the follower and the nemesis it hands over, and what it stores
+  on the online platform.</li>
 <li>Whether some of War's orc geometry is Mordor geometry carried over (the broom and the Beheader
   helmet have identical level-of-detail counts in both games).</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
