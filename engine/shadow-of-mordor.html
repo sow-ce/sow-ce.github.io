@@ -359,6 +359,13 @@ in the payload.</p>
 <p>With a valid payload the filler creates the captain from it (0xF636F0), keys the job to him and sends a
 telemetry event (0x1B2CC68, event type 42, with <code>is_follower</code>). Without one, the job's builder record makes
 an ordinary captain, so both missions play the same either way.</p>
+<p>The missions' world scripts stage the result. In "Damaged" (<code>ratbag3_RA03_SO_Script.Follower1Spawn</code>, with
+the prefab <code>followercage.prefab06c</code>) the ally waits in a cage; the script fires the faction event
+<code>AddNemesisAlly</code> (one level more, and the sim-event tag <code>NemesisAlly</code>) and adds the sim event picker
+<code>NemesisAlly_EnterHierarchy</code>, whose duels bring him into the hierarchy. In "The Arena"
+(<code>gondor2_Go02_SO_Script.Captain4Spawn</code>) the nemesis is the fourth captain, and the script uses the items
+<code>GP_Gon2NemForgeCheck</code> and <code>NemesisStory_NemesisForge_AuxBanner_IT</code>, whose UI data
+<code>NemesisStoryUI_NemesisForge</code> gives his nemesis story a banner (<code>UI_Nemesis_Forge</code>, "Nemesis").</p>
 <h3 id="the-conversion">The conversion</h3>
 <p>0xF636F0 takes the army of the current region and calls 0xFD51A0, which takes a member from the
 army's pool, sets his faction and calls 0x1BC05D0. That runs the conversion 0x1C6369C and then the
@@ -488,7 +495,7 @@ executable also names <code>NemesisForge.Override.ClearAll</code>, the configura
 <li>Whether the replayed body, head, hair and colours equal a generated captain's look in Shadow of Mordor.</li>
 <li>What creates members with creation codes 0 and 1 (FactionMember <code>+0x520</code>).</li>
 <li>What <code>NemesisForge.Override.ClearAll</code> resets, and what <code>User.OwnsShadowOfMordor</code> gates.</li>
-<li>Which content uses the sim event picker <code>NemesisAlly_EnterHierarchy</code>.</li>
+<li>How the two mission scripts use <code>GP_Gon2NemForgeCheck</code> and the banner item.</li>
 <li>Whether some of War's orc geometry is Mordor geometry carried over (the broom and the Beheader
   helmet have identical level-of-detail counts in both games).</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
