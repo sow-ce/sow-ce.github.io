@@ -192,16 +192,33 @@ empty that no code writes, so the request identifies the player by platform user
 reaches the publisher's earlier online platform, Agora (<code>Social/Agora</code>, <code>AgoraUserDataMgr</code>,
 <code>ProfileAttributeData</code>); Shadow of War reaches its successor; the publisher's servers joined the two through
 the player's account.</p>
-<p>In Shadow of Mordor the Nemesis Forge is a game mode, <code>GameModes/NemesisForge</code>, started from the main menu
-(<code>MM_NemesisForge</code>), with its own restart, continue and quit prompts, a pause page and an add-on description.
-It has its own army, <code>Orc_Faction_NemesisForge</code>: 32 tracked members, the five orc classes, and rows of 5
+<p>In Shadow of Mordor the Nemesis Forge is a Conquest mode. <code>Conquest/Definition::NemesisForge</code> (one of eight
+Conquest definitions) names the world <code>SeaOfNurnen</code>, the game mode <code>GameModes::NemesisForge</code>, the army
+<code>Orc_Faction_NemesisForge</code>, the difficulty range <code>Region_SeaOfNurnen</code> and the tutorial <code>NemesisForge_Intro</code>,
+and serializes its faction with the mode's save. It awards nothing, keeps no leaderboard, and has no
+goal: its completion counts (warchief and captain kills) and failure limits (time, deaths) are all -1. The
+game mode sets <code>CanGainXP</code>, <code>CanSpendCurrency</code>, <code>AllowRuneSlotPurchases</code> and
+<code>AllowRuneSlotUnlockPresentation</code> to false and <code>EnableNemesisNavMakers</code>, <code>CanScriptRegionFaction</code> and its
+own <code>NemesisForgeQuitConfirm</code> to true, with the inventory type <code>DLC1</code>: Talion does not progress there.</p>
+<p>The mode is started from the main menu (<code>MM_NemesisForge</code>, whose enable test reads two bytes of the active
+user's object at <code>+0x3A0</code>: <code>+0x1BB</code> and <code>+0x1BC</code>), with its own restart, continue and quit prompts, a pause
+page and an add-on description. Its army has 32 tracked members, the five orc classes, and rows of 5
 warchiefs and 8, 7 and 5 captains placed in the Sea of Nurnen. <code>CanPopulateNemesisForge</code> is true on exactly
-the two campaign armies (<code>Orc_Faction_BG</code>, <code>Orc_Faction_SoN</code>) and false on the downloadable and challenge
-armies, while <code>NemesisForgeFromThisFaction</code> is true only on the forge army, and the Sea of Nurnen's side
-missions (trials, duels, beast hunts, riots, executions, assassinations, recruitment, feasts, betrayals,
-rescues) list the forge army among their required factions. A debug command,
-<code>DebugSpawnAI.NemesisForge.FetchNemesis</code>, is described as querying the forge nemesis from Agora. Shadow of
-Mordor does not use Shadow of War's key names: the 13-key reply was built on the server.</p>
+the two campaign armies (<code>Orc_Faction_BG</code>, <code>Orc_Faction_SoN</code>, of 12 factions) and false on the downloadable
+and challenge armies, while <code>NemesisForgeFromThisFaction</code> is true only on the forge army. 65 of the game's
+503 quests list the forge army among their required factions, all of them Sea of Nurnen side missions
+(trials, duels, beast hunts, riots, executions, assassinations, recruitment, feasts, betrayals, rescues).
+In this mode the Army screen shows two extra states on a living member whose <code>Nemesis</code> state is true:
+<code>NemesisNonBranded</code> and <code>NemesisBranded</code>.</p>
+<p>A captain is serialized as a key / value document (0x8558C0, read back by 0x855F70) of about 60 keys:
+among them <code>FactionRecord</code>, <code>NPCProfileGuid</code>, <code>RowNumber</code>, <code>ColumnNumber</code>, <code>CombatTree</code>, <code>Role</code>,
+<code>RandomSeed</code>, <code>Personality</code>, <code>NameStringIDHash</code>, <code>XPLevel</code>, <code>Trait</code>, <code>IsDead</code>, <code>HasVow</code>, <code>AppliedScarType</code>
+and the death and resurrection records. The faction serializer (0x8EE2B0, <code>FACTIONDATA</code>) writes every member
+this way for saves. A debug tool writes a single captain to a file named <code>&lt;name&gt;_&lt;date&gt;.orc</code> (0x91A800) and
+lists and loads such files, behind the debug command set. Another debug command,
+<code>DebugSpawnAI.NemesisForge.FetchNemesis</code>, is described as querying the forge nemesis from Agora, and the
+debug spawner keeps a forge-nemesis key and a forge-follower key. Shadow of Mordor does not use Shadow of
+War's 13 key names: the reply was built on the server.</p>
 <h3 id="the-switch-and-the-request">The switch and the request</h3>
 <p>The title configuration's boolean <code>nemesis_forge</code> is stored at <code>[GM+0x6D48]+0xD1</code> by the configuration
 parser 0x18368B0 (next to <code>challenges_enabled</code> at <code>+0xD0</code> and <code>conquests</code> at <code>+0xD2</code>). The check 0x1B3ABFC
@@ -513,8 +530,10 @@ executable also names <code>NemesisForge.Override.ClearAll</code>, the configura
 <li>What creates members with creation codes 0 and 1 (FactionMember <code>+0x520</code>).</li>
 <li>What <code>NemesisForge.Override.ClearAll</code> resets, and what <code>User.OwnsShadowOfMordor</code> gates.</li>
 <li>How the two mission scripts use <code>GP_Gon2NemForgeCheck</code> and the banner item.</li>
-<li>How Shadow of Mordor's forge mode chooses the follower and the nemesis it hands over, and what it stores
-  on the online platform.</li>
+<li>Whether the two Army-screen states (<code>NemesisNonBranded</code>, <code>NemesisBranded</code>) mark the nemesis and the
+  follower that are handed over, what sets a member's <code>Nemesis</code> state, and what the forge mode stores on
+  the online platform.</li>
+<li>Which code fills the forge army from the two campaign armies.</li>
 <li>Whether some of War's orc geometry is Mordor geometry carried over (the broom and the Beheader
   helmet have identical level-of-detail counts in both games).</li>
 </ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
