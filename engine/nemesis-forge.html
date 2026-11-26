@@ -1,0 +1,679 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Nemesis Forge: imported captains - Shadow of War engine reference</title><meta name="description" content="Shadow of War&#x27;s own importer for a player&#x27;s Shadow of Mordor captains: the title-configuration switch, the check at world entry, the two captains the online reply stores, the 13-key payload, the two story jobs that use them, the import through the pool, the conversion tables and the builder, the creation mark and the introduction sim event, the look replayed from the seed with Mordor&#x27;s own generator, Shadow of Mordor&#x27;s captain document, War&#x27;s member documents and their readers, and the console commands."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="builds.html" data-p="builds">Game builds: Steam, GOG and Microsoft Store</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="nemesis-forge.html" class="cur" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="haedirs.html" data-p="haedirs">Haedirs: towers, seeing stones and fast travel</a>
+<a href="outposts.html" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="the-nemesis-forge-imported-captains">The Nemesis Forge: imported captains</h1><p class=\"lede\">Shadow of War&#x27;s own importer for a player&#x27;s Shadow of Mordor captains: the title-configuration switch, the check at world entry, the two captains the online reply stores, the 13-key payload, the two story jobs that use them, the import through the pool, the conversion tables and the builder, the creation mark and the introduction sim event, the look replayed from the seed with Mordor&#x27;s own generator, Shadow of Mordor&#x27;s captain document, War&#x27;s member documents and their readers, and the console commands.</p>
+<p>Shadow of War ships an importer, the Nemesis Forge, that rebuilds a player's Shadow of Mordor follower and
+nemesis as War captains (Mordor is "Firebird" and War "Kraken" in its names; compiled from
+<code>...\KRAKEN_CODE_STREAM\source\Game\Shared\NemesisForgeUtils.cpp</code>, log tag <code>[NEMESISFORGE]:</code>, the logger
+compiled out of the shipping build). The captains came from the
+publisher's online service, never from Mordor's files, and enter the game through two story missions; the
+import itself is an ordinary member build fed by a 13-key payload and a set of conversion tables.</p>
+<h2 id="the-chain">The chain</h2>
+<pre><code>title configuration key nemesis_forge (bool) -&gt; parser 0x18368B0 -&gt; [GM+0x6D48]+0xD1
+world entry 0x1E3E78 (its only caller) -&gt; check 0x1B3ABFC on the online manager [GM+0x6D30]
+  stop if a captain is already stored (+0x38, +0x80) or Invasion/Settings.HaltNemesisForgeCheckPredicate holds
+  -&gt; request 0x1B3AA94: stop unless the switch is on; stop while one is in flight (+0x28)
+  -&gt; reply 0x1B3D500: Follower[0].attributes -&gt; parser 0x1B3A148 -&gt; +0x30 ; Nemesis[0].attributes -&gt; +0x78
+quest job filler 0x1BD40C4 (a story mission's job setup)
+  -&gt; UseNemesisForgeAlly (Rat3_Ally1, &quot;Damaged&quot;) takes +0x30 ; UseNemesisForgeNemesis (CapChief_HighPIS, &quot;The Arena&quot;)
+     takes +0x78 ; no valid payload -&gt; the job fills the ordinary way
+  -&gt; 0xF636F0(FS, payload, job context) -&gt; 0xFD51A0(the region army's context, payload, ...) -&gt; 0x1BC05D0
+     -&gt; conversion 0x1C6369C -&gt; builder 0x1BBF928 -&gt; its Firebird look branch 0x1C04F20 -&gt; FM+0x520 = 4
+     -&gt; creation sim event NemesisAlly_Levels (a PromoteEmpty event seats him) ; telemetry 0x1B2CC68 (event 42)
+</code></pre>
+<h2 id="the-switch-and-the-check">The switch and the check</h2>
+<p>The title configuration's boolean <code>nemesis_forge</code> is stored at <code>[GM+0x6D48]+0xD1</code> by the configuration
+parser 0x18368B0 (at 0x1836A6F, through the bool reader 0x17C6F50; its neighbours are <code>ssc_version</code> <code>+0xC8</code>,
+<code>garrison_size</code> <code>+0xCC</code>, <code>challenges_enabled</code> <code>+0xD0</code>, <code>conquests</code> <code>+0xD2</code>, <code>purchase_system</code> <code>+0xD4</code> and
+<code>ps2_epoch</code> <code>+0xD8</code>). The same parser reads two keys named for the import's telemetry event,
+<code>Events_NemesisForgeImportEnabled</code> and <code>Events_NemesisForgeImportSampled</code>.</p>
+<p>The check 0x1B3ABFC has one caller, the world-entry routine 0x1E3E78 (<code>[ENTER_WORLD_HANG_DETECTED]</code>). It
+returns while either stored captain is valid, and once the halt predicate holds:
+<code>Interface/Predicates/GameState::IsPastNemesisForgeUsage</code>, a <code>_StructuresUIGameDataPredicates</code>
+{<code>GameData/Variables::StoryState</code>, <code>GameData/Predicate::StoryState_300+</code>}, true from StoryState 300, the
+end of the campaign. Otherwise it tail-jumps to the request 0x1B3AA94, which returns unless the switch is
+set and no request is in flight. The request carries the player's <code>FirebirdProfileID</code> (when one is
+known), the platform user id, the platform and the web environment, and registers 0x1B32CD0 as its
+completion handler. <code>FirebirdProfileID</code> (<code>[0x2A364F0]</code>) is a static string initialised empty (0xC2D10,
+default at 0x1DB10E0) that no code writes (its 3 references are the initialiser, its exit cleanup
+0x10820B0 and the request), so the request identifies the player by platform user id only. The game
+therefore asks on every world entry until it holds a captain or the campaign is over.</p>
+<p>The online manager <code>[GM+0x6D30]</code> (see Saves, the store and the network layer) keeps the forge's state:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x28</td>
+<td>u8, a request is in flight (set by 0x1B3AA94, cleared by 0x1B3D500)</td>
+</tr>
+<tr>
+<td>+0x30</td>
+<td>the follower payload (0x48 bytes; valid byte at <code>+0x38</code>)</td>
+</tr>
+<tr>
+<td>+0x78</td>
+<td>the nemesis payload (0x48 bytes; valid byte at <code>+0x80</code>)</td>
+</tr>
+<tr>
+<td>+0x468</td>
+<td>the <code>Invasion/Settings</code> record (<code>HaltNemesisForgeCheckPredicate</code>)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="the-reply-and-the-payload">The reply and the payload</h2>
+<p>On success the handler 0x1B3D500 checks that element 1 of the result is a map (engine value type 6),
+reads its <code>Follower</code> and <code>Nemesis</code> lists, and passes the <code>attributes</code> map of each list's first object to
+the parser; on failure it only clears <code>+0x28</code>. The parser 0x1B3A148 fills a payload object (vt_0x1FCB338,
+0x48 bytes) from exactly 13 keys and sets its valid byte last:</p>
+<table>
+<thead>
+<tr>
+<th>Payload</th>
+<th>Key</th>
+<th>Type</th>
+<th>Used by the conversion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x08</td>
+<td>(valid)</td>
+<td>u8 = 1</td>
+<td>tested by every consumer</td>
+</tr>
+<tr>
+<td>+0x0C</td>
+<td><code>CombatTreeRecord</code></td>
+<td>name hash</td>
+<td>the class template and War's <code>Combat/Tree</code></td>
+</tr>
+<tr>
+<td>+0x10</td>
+<td><code>FactionRecord</code></td>
+<td>name hash</td>
+<td>never; the parser stores the tree's value here (0x1B3A1AC reads the tree key's register)</td>
+</tr>
+<tr>
+<td>+0x14</td>
+<td><code>NameStringIdHash</code></td>
+<td>name hash</td>
+<td>the name, when War's string store has it</td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td><code>PersonalityRecord</code></td>
+<td>name hash</td>
+<td><code>FirebirdFactionPersonality</code> (no fallback)</td>
+</tr>
+<tr>
+<td>+0x1C</td>
+<td><code>RoleRecord</code></td>
+<td>name hash</td>
+<td><code>FirebirdFactionRole</code>, else War's own roles</td>
+</tr>
+<tr>
+<td>+0x20</td>
+<td><code>RowRecord</code></td>
+<td>name hash</td>
+<td>never</td>
+</tr>
+<tr>
+<td>+0x24</td>
+<td><code>ScarTypeRecord</code></td>
+<td>name hash</td>
+<td><code>FirebirdModelScarType</code></td>
+</tr>
+<tr>
+<td>+0x28</td>
+<td><code>ISCurrent</code></td>
+<td>int</td>
+<td>never</td>
+</tr>
+<tr>
+<td>+0x2C</td>
+<td><code>MenaceLevel</code></td>
+<td>int</td>
+<td>the level</td>
+</tr>
+<tr>
+<td>+0x30</td>
+<td><code>RandomSeed</code></td>
+<td>u64</td>
+<td>the look, and the builder specification's <code>+0x170</code></td>
+</tr>
+<tr>
+<td>+0x38</td>
+<td><code>IsBranded</code></td>
+<td>bool</td>
+<td>the player's follower (specification <code>+0x17D</code>)</td>
+</tr>
+<tr>
+<td>+0x39</td>
+<td><code>IsWarchief</code></td>
+<td>bool</td>
+<td>never</td>
+</tr>
+<tr>
+<td>+0x3C / +0x40</td>
+<td><code>TraitList</code></td>
+<td>count, pointer to 32-bit hashes</td>
+<td>the traits</td>
+</tr>
+</tbody>
+</table>
+<p>Every record value is the 32-bit name hash of a Shadow of Mordor record. No look, colour or memory
+travels: the look is rebuilt from the seed.</p>
+<h2 id="the-two-jobs-and-the-two-missions">The two jobs and the two missions</h2>
+<p><code>Quest/Jobs/Definition</code> (849 records) has three bools the job filler 0x1BD40C4 tests before filling a job
+the ordinary way: <code>UseNemesisForgeNemesis</code> (0x1BD3494), <code>UseNemesisForgeAlly</code> (0x1BD344C) and
+<code>UseOnlineArenaOpponent</code> (0xF729F0 -&gt; 0xFA2F60, the online arena). One job carries each forge flag:</p>
+<table>
+<thead>
+<tr>
+<th>Job</th>
+<th>Flag</th>
+<th>Takes</th>
+<th>Setup -&gt; quest</th>
+<th>Ordinary builder</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Rat3_Ally1</code></td>
+<td>Ally</td>
+<td>the follower</td>
+<td><code>Rat3_Captains</code> -&gt; <code>Quest/Quests::Ratbag3</code>, "Damaged" (an allied captain while the player retakes the fortress from Brûz)</td>
+<td><code>Rat3_BackupAlly1</code> (all 5 trees, Captain armour, <code>MinLevel</code> 12, enters through <code>Builder_EnterHierarchy_Rat3</code>)</td>
+<td>row rank Captain, a living player follower, no ologs; reward <code>Ratbag3_ProtectAgainstForgeAlly</code>, a marker the hierarchy-duel jobs <code>NemesisAlly_Other*</code> exclude</td>
+</tr>
+<tr>
+<td><code>CapChief_HighPIS</code></td>
+<td>Nemesis</td>
+<td>the nemesis</td>
+<td><code>Gon2_Fighters</code> -&gt; <code>Quest/Quests::Gondor2</code>, "The Arena" (Minas Ithil's arena)</td>
+<td><code>CapChief_HighPIS</code> (5 trees, <code>Roles_who_are_unimportant</code>, <code>MinLevel</code> 14, reward <code>GP_Gondor2_Cap1</code>)</td>
+<td><code>AlwaysUseBuilderRecord</code>; the setup awards intel level 2</td>
+</tr>
+</tbody>
+</table>
+<p>With a valid payload the filler makes the captain, <code>fm = 0xF636F0([GM+0x6C68], payload, job context)</code>,
+keys the job to him (<code>{FM+0x178, FM+0x174}</code>) and sends the telemetry event 0x1B2CC68(<code>[GM+0x6D18]</code>, fm,
+is_follower). Without one, the job's builder record makes an ordinary captain, so both missions play the
+same either way, and the forge only ever showed in those two missions, before StoryState 300.</p>
+<p>The missions' world scripts stage the result (2 classes, 7 of the 2,679 script bodies):</p>
+<ul>
+<li><strong>"Damaged"</strong> (<code>worlds\retail\island\sectionsandlayers\narrativequests\ratbag3.scripts</code>, class
+  <code>ratbag3_RA03_SO_Script</code>, method <code>Follower1Spawn</code>, prefab <code>followercage.prefab06c</code>): the ally waits in a
+  cage. The script fires the faction event <code>AddNemesisAlly</code> (one level more and the sim-event tag
+  <code>NemesisAlly</code>, which is never removed; the member is the ambusher), adds the sim-event picker
+  <code>NemesisAlly_EnterHierarchy</code> (<code>Faction.AddFactionSimEventPicker</code>: the duels <code>DuelIntoHierarchy_NemesisAlly</code>
+  and <code>_NoFol</code> that bring him into the hierarchy) and gives <code>Item_Quirk_Fearless</code>,
+  <code>Item_InfiniteBleedOut</code> and <code>GP_Nemesis_PreventDespawnAttacks</code>.</li>
+<li><strong>"The Arena"</strong> (<code>worlds\retail\minasithil\sectionsandlayers\narrativequests\gondor2.scripts</code>, class
+  <code>gondor2_Go02_SO_Script</code>, method <code>Captain4Spawn</code>, prefab <code>gondor2_gangspot.prefab06c</code>): the nemesis is
+  the fourth captain; the script uses <code>GP_Gon2NemForgeCheck</code> (a saved marker item with no data test of
+  its own) and <code>NemesisStory_NemesisForge_AuxBanner_IT</code> (saved; its UI data <code>NemesisStoryUI_NemesisForge</code>,
+  name <code>UI_Nemesis_Forge</code> = "Nemesis", gives his nemesis story a banner), plus the arena champion items.</li>
+</ul>
+<p>The forge's own records: 11 <code>Faction/Events/Events</code> (<code>AddNemesisAlly</code>, <code>AddNemesisAllyLevels</code>, and the
+<code>DuelFrom_NemesisAlly_*</code>, <code>PromoteDead_NemesisAlly_*</code> and <code>PromoteEmpty_NemesisAlly_*</code> families), 5
+<code>Faction/Events/SimEvent</code> (<code>DuelIntoHierarchy_NemesisAlly</code>, <code>_NoFol</code>, <code>NemesisAlly_Levels</code>,
+<code>PromoteDead_NemesisAlly</code>, <code>PromoteEmpty_NemesisAlly</code>), 3 sim-event participants and 3 quest jobs
+(<code>NemesisAlly</code>, <code>NemesisAlly_Other</code>, <code>NemesisAlly_Other_NonFol</code>), 2 sim-event pickers
+(<code>NemesisAlly_EnterHierarchy</code>, <code>NemesisAlly_Levels</code>), the tag <code>NemesisAlly</code> with its list and tag mod, and
+110 <code>NemesisForge_Role_*</code> titles in <code>Faction/Roles/Definitions</code>, the War targets made for Mordor's titles.</p>
+<h2 id="the-import">The import</h2>
+<ul>
+<li><strong>The pool.</strong> 0xF636F0(FS, payload, r8) takes the current region's army (<code>FS+0x1B8</code> -&gt; its context) and
+  tail-jumps to 0xFD51A0(context, payload, r8), which allocates a member in the army's pool (0x1BD2E20; r8
+  is the job context, 0 from the console), sets <code>FM+0x178</code> and, when empty, <code>FM+0x180</code>, calls 0x1BC05D0,
+  and removes the member again when his name hash is one of five keys reserved for Ratbag.</li>
+<li><strong>The conversion</strong> 0x1C6369C fills the builder's specification:</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Conversion</th>
+<th>Specification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>tree</td>
+<td>the template (0x1C76C68) and War's <code>Combat/Tree</code> (0x1C76C0C, 0x1C4EDC0), both found with the same hash</td>
+<td>class</td>
+</tr>
+<tr>
+<td>seed</td>
+<td>copied</td>
+<td><code>+0x170</code></td>
+</tr>
+<tr>
+<td>personality</td>
+<td><code>FirebirdFactionPersonality.KrakenPersonality</code> (0x1C76F10; no row maps to nothing, 0x1C62B24)</td>
+<td></td>
+</tr>
+<tr>
+<td>role</td>
+<td><code>FirebirdFactionRole.KrakenRole</code> (0x1C770BC); a hash with no row is searched again in War's <code>Faction/Roles/Definitions</code> by the same hash, so a Mordor title War also has comes through as War's</td>
+<td><code>+0x148</code></td>
+</tr>
+<tr>
+<td>level</td>
+<td><code>max(MinXPLevel, MenaceLevel + 1) - 1</code> (0x114FFD0 is an unsigned maximum; every template's <code>MinXPLevel</code> is 14, so never below level 13, shown 14)</td>
+<td><code>+0x178</code></td>
+</tr>
+<tr>
+<td><code>IsBranded</code></td>
+<td>copied</td>
+<td><code>+0x17D</code></td>
+</tr>
+<tr>
+<td>name</td>
+<td>kept (0x1C62ABC) only when War's string store has the hash (its slot 8, a has-test); otherwise the builder gives him a War name</td>
+<td></td>
+</tr>
+<tr>
+<td>scar type</td>
+<td><code>FirebirdModelScarType.KrakenScarType</code> (0x1C77158)</td>
+<td><code>+0x158</code></td>
+</tr>
+<tr>
+<td>traits</td>
+<td>each through <code>FirebirdFactionTrait.KrakenTraitPicker</code> (0x1C774B8; a trait with no row skipped) -&gt; 0x1C62AA4, then the template's <code>TraitMarkers</code> (<code>Marker_OrcRarity_Legendary</code>, 0x1C4EE48)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>The builder</strong> 0x1BBF928 then runs as for any builder-made member, and for an import its Firebird look
+  branch 0x1C04F20 (below).</li>
+<li><strong>The creation mark</strong> <code>FM+0x520</code> (u8, saved by 0x594788 and loaded by 0x1BC0F2C) records how a member
+  was made: 0x1BC00C8 writes 0, 0x1BC02AC 1, the builder build 0x1BBF928 2, the preset path 0x1BC06C0 3 and
+  the forge's 0x1BC05D0 4, after the builder's 2, so an import reads 4.</li>
+<li><strong>The introduction.</strong> The template's <code>CreationSimEventPicker</code> <code>NemesisAlly_Levels</code> (job <code>NemesisAlly</code>,
+  tag list <code>NemesisAlly</code>) runs the sim event <code>NemesisAlly_Levels</code>: participants <code>NemesisAlly</code>,
+  <code>PromoteEmpty_*</code> events, the subject always wins, world-UI presentations, nav markers always shown. That
+  event seats him in an empty seat; the payload's <code>RowRecord</code> is never read.</li>
+</ul>
+<p><strong>How the tables are searched.</strong> <code>vt_0x1FBD460::vf3</code> stores the categories the import uses at
+0x26FFEE8 .. 0x26FFF28 (templates <code>[0x26FFEE8]</code>, roles <code>[0x26FFF18]</code> then War's own <code>[0x2701D70]</code>, traits
+<code>[0x26FFF20]</code>, personalities <code>[0x26FFF28]</code>). Every lookup is a binary search of the category's record
+array by hash (0x1C77018: <code>BinarySearch([cat+0x38], hash, [cat+0x28])</code>) that ignores the category's
+"unsorted" byte <code>+0x30</code>; all six Firebird tables ship sorted. Rows the engine's <code>gamedb_patch</code> merge
+appends to a category are therefore in the table the import searches, but are found only where their hash
+sorts; and because one hash picks both the template and the tree, a template can be replaced by name (the
+merge's override, 0x4BAB60 -&gt; 0x17675FC) but not added for a single captain.</p>
+<h2 id="the-look-mordor-s-generator-replayed">The look: Mordor's generator, replayed</h2>
+<p>The payload has no look; the builder's branch 0x1C04F20 (one caller, at 0x1BBFA6E) rebuilds one by
+replaying Shadow of Mordor's own generator over the Firebird tables, from <code>RandomSeed</code>:</p>
+<ul>
+<li><strong>Scale:</strong> <code>t = float32(low32(xorshift64(seed))) * 2^-32</code> (0x1C5B76C -&gt; 0x17956D4, shifts 13, 7, 17;
+  the constant 2^-32 at 0x202ED88), Mordor's size rule.</li>
+<li><strong>The random stream:</strong> 0x1C76F8C(rng, min, max), the engine's 64-bit generator <code>state = state *
+  0x0BB38435 + 0x3619636B</code>, value <code>(state &gt;&gt; 32) / 4294967295.0</code> scaled into [min, max], starting at the
+  seed itself. The same constants sit at 136 places in Mordor's executable and 86 in War's.</li>
+<li><strong>Picks</strong> (0x1C767E0): the weights summed in float32, nothing when the total is under 1e-4, one draw in
+  [0, total], the first entry whose running sum reaches it; at most 32 entries, in record order.</li>
+<li><strong>Order, as Mordor draws:</strong> body (0x1C76238: the template's <code>Models</code> entries whose <code>RequiredScaleRange</code>,
+  a float-pool pair, holds t and that have a body piece, weighted by the piece's <code>SelectionWeight</code>), armour
+  (a spent draw), head (0x1C763EC, the entry's heads), helmet (spent), hair (0x1C7632C, only with
+  <code>CanApplyHair</code>: the head's hair pieces), legs (spent), one spent draw per <code>NumAccessories</code>, then nine
+  colours.</li>
+<li><strong>Colours</strong> (0x1C7686C and its eight siblings -&gt; 0x1C7664C): a weighted pick of a Firebird colour entry
+  (0x1C76B24) gives a War colour setup (<code>KrakenColorSetup</code>) and a colour id (<code>ColorId</code>, one of 15: Red,
+  White, Fleshtone, Grey, Black, Blue, Brown, Yellow, Blue_Rare, Charcoal, White_Rare, Green, Brown_Rare,
+  Green_Rare, Purple). War's entry of that setup with that <code>FirebirdColorId</code> (94 of War's 542 colour
+  entries carry one) is rolled (0x1158AC, <code>HueDeltaRange</code>) on a copy of the state, and then the Firebird
+  entry's <code>NumRandomCalls</code> draws are spent on the real state to stay in step with Mordor's colour roll.
+  Each entry's <code>AppearanceTag</code> is applied (0x2EA128). The palette entry is chosen through 0x2EBB4C before
+  each tint: skin 0, eye 1, clothing 7, tattoo 3, paint 4, hair 2, armour 1 to 5 and armour 2 to 6; the
+  leg-leather roll goes to a local the branch drops, so 8 of Mordor's 9 colours land.</li>
+<li><strong>What lands:</strong> the template's base model (<code>orc_anim_base</code>) at appearance <code>+0x20</code>, the head record at
+  <code>+0x170</code>, the combat tree, the body type at <code>+0x00</code>, and <code>SetPieceSlot</code> 0x4C62EC for slot 0 (the body's
+  <code>KrakenModelPiece</code>), slot 1 (the <code>Head</code> of the <code>KrakenHead</code> record), slot 2 (hair), with slot 7 cleared.
+  Armour, helmet, legs and accessories are not carried: their draws only keep the stream aligned.</li>
+</ul>
+<p>For a Berserker the body is <code>Smp_Orc_Buff_Torso01</code> for t in [0, 0.5] and <code>Smp_Orc_Stk_Torso01</code> for [0.5,
+1.0]: the Berserker's and the Defender's Slim entries have no body row, so War draws such a captain Buff.
+Templates without <code>CanApplyHair</code> (Berserker, Defender) never get hair. The entries are full per body:
+11 of 11 hold 10 heads, every entry of one body lists the same 10, and Archer and Spearman have one Slim
+entry; the limit is the 30 head rows (24 War heads).</p>
+<p><strong>The replay equals Mordor's own roll.</strong> Read live from 48 captains of a Mordor campaign army, 28 are
+"plain generated" (his head record is in the head list of an entry whose body is his body): his own seed
+draws his head for 23 of 28 and his body for 26 of 28. The control, seeds swapped between captains of the
+same class, draws the head for 17 of 253 (6.7%) and the body for 180 of 428 (42.1%, mostly the scale
+band). The other 20 wear heads that have no Firebird row (17 <code>DLC1_</code>, <code>DLC2_</code> and <code>GI_</code> heads,
+<code>GraugRider</code> twice, <code>OrcBuff16</code>): Monolith's tables carry the base game's generated heads only. Because
+the look depends on nothing but the seed and the template, the seed in the payload decides the face an
+import wears.</p>
+<h2 id="the-tables">The tables</h2>
+<p>The 11 <code>NemesisForge/*</code> categories and their structures (secondaries / primaries):</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Rows</th>
+<th>Fields</th>
+<th>Examples</th>
+<th>Read by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FirebirdSimpleModel</code></td>
+<td>5</td>
+<td><code>Base</code>, <code>Models</code>, nine <code>*Tint</code>, <code>PaintChance</code>, <code>TattooChance</code>, <code>CanApplyHair</code>, <code>MinXPLevel</code> 14, <code>TraitMarkers</code> (Legendary), <code>CreationSimEventPicker</code></td>
+<td>the Mordor orc classes <code>AI_Archer</code>, <code>AI_Berserker</code>, <code>AI_Defender</code>, <code>AI_Infantry</code>, <code>AI_Spearman</code></td>
+<td><code>[0x26FFEE8]</code> by tree hash; the conversion and the look</td>
+</tr>
+<tr>
+<td><code>_StructuresFirebirdModelSimpleModelEntry</code></td>
+<td>1 / 11</td>
+<td><code>Body</code>, <code>BodyType</code>, <code>Head</code> (list), <code>NumAccessories</code>, <code>RequiredScaleRange</code></td>
+<td></td>
+<td>0x1C76238</td>
+</tr>
+<tr>
+<td><code>FirebirdSimpleModelPiece</code></td>
+<td>76</td>
+<td><code>KrakenModelPiece</code>, <code>SelectionWeight</code></td>
+<td><code>Smp_Orc_Buff_Hair01_Head03_01</code></td>
+<td>body and hair</td>
+</tr>
+<tr>
+<td><code>FirebirdSimpleModelHead</code></td>
+<td>30</td>
+<td><code>KrakenHead</code>, <code>SelectionWeight</code>, <code>Hair</code></td>
+<td><code>OrcStk03</code></td>
+<td>0x1C763EC</td>
+</tr>
+<tr>
+<td><code>FirebirdSimpleModelColorSetup</code></td>
+<td>11</td>
+<td><code>Entries</code></td>
+<td><code>Orc_Infantry_Skin_Color</code>, <code>Orc_Hair_Color</code>, <code>Armor_Color_01_Grey</code></td>
+<td>0x1C76B24</td>
+</tr>
+<tr>
+<td><code>_StructuresFirebirdSimpleModelColorEntry</code></td>
+<td>1 / 31</td>
+<td><code>ColorId</code>, <code>KrakenColorSetup</code>, <code>NumRandomCalls</code>, <code>SelectionWeight</code></td>
+<td></td>
+<td>0x1C7664C</td>
+</tr>
+<tr>
+<td><code>FirebirdSimpleModelColorId</code></td>
+<td>15</td>
+<td>(none)</td>
+<td><code>Red</code>, <code>White</code>, <code>Fleshtone</code>, <code>Grey</code>, <code>Black</code>, <code>Blue</code></td>
+<td>the ids</td>
+</tr>
+<tr>
+<td><code>FirebirdFactionTrait</code></td>
+<td>83</td>
+<td><code>KrakenTraitPicker</code></td>
+<td><code>Ground_Pound</code>, <code>Flaming_Weapon_Spearman</code>, <code>Monster_Slayer</code>, <code>Quirk_Aggressive</code></td>
+<td><code>[0x26FFF20]</code>, 0x1C774B8</td>
+</tr>
+<tr>
+<td><code>FirebirdFactionPersonality</code></td>
+<td>12</td>
+<td><code>KrakenPersonality</code></td>
+<td><code>Clever_Sniveling</code>, <code>Psychotic</code>, <code>Commanding_1</code></td>
+<td><code>[0x26FFF28]</code>, 0x1C76F10</td>
+</tr>
+<tr>
+<td><code>FirebirdFactionRole</code></td>
+<td>131</td>
+<td><code>KrakenRole</code></td>
+<td><code>Role_LimpLeg</code>, <code>Role_GrogBurner</code>, <code>Role_NeckSnapper</code>, <code>Role_Massive_DLC2</code></td>
+<td><code>[0x26FFF18]</code> then <code>[0x2701D70]</code>, 0x1C770BC</td>
+</tr>
+<tr>
+<td><code>FirebirdModelScarType</code></td>
+<td>6</td>
+<td><code>KrakenScarType</code></td>
+<td><code>Wraith</code>, <code>Burn</code>, <code>Pin_Cusion</code>, <code>Sack_Head</code>, <code>Eyepatch</code>, <code>Melee</code></td>
+<td>0x1C77158</td>
+</tr>
+</tbody>
+</table>
+<p>Plus <code>_StructuresSimpleModelColorEntry.FirebirdColorId</code> on War's own colour entries (94 of 542),
+<code>Quest/Jobs/Definition.UseNemesisForgeAlly</code> / <code>.UseNemesisForgeNemesis</code> and
+<code>Invasion/Settings.HaltNemesisForgeCheckPredicate</code>. The scar types map Wraith to Curse, Sack_Head to
+Sack_Head and Eyepatch to EyeGouge; Melee, Burn and Pin_Cusion have no War type (3 of 6).</p>
+<p><strong>What the tables can carry</strong>, over 48 captains of a Mordor save: traits 596 of 732 (of the 136 left, 83
+are markers, 28 traits Mordor hides and 25 have no War counterpart); body 35 of 48, head 28 of 48, hair 10
+of 14; armour pieces, legs and faction helmets none (War ships none of Mordor's armour). The import hands
+War a trait picker, and of the 34 Mordor traits that have a War trait but no Firebird row, none has a
+shipped single-trait picker (132 of War's 493 pickers hold one trait).</p>
+<h2 id="shadow-of-mordor-s-side">Shadow of Mordor's side</h2>
+<p>The two games never exchange data directly: no string in Mordor's executable names War (<code>Kraken</code>,
+<code>ShadowOfWar</code>, <code>Shadow of War</code> or War's request: 0 hits, where the same scan finds 13 <code>NemesisForge</code>
+strings), War never reads Mordor's files, and War's request carries no Mordor profile id (above). Shadow of
+Mordor reached the publisher's earlier online platform, Agora (<code>Social/Agora</code>, <code>AgoraUserDataMgr</code>,
+<code>ProfileAttributeData</code>), Shadow of War its successor, and the publisher's servers joined the two through
+the player's account. Mordor's document does not use the payload's 13 key names (it writes <code>CombatTree</code>,
+<code>Role</code>, <code>XPLevel</code> where the payload has <code>CombatTreeRecord</code>, <code>RoleRecord</code>, <code>MenaceLevel</code>): the reply was
+assembled by the service. The addresses in this section and the next are in Mordor's executable.</p>
+<p><strong>A Conquest mode.</strong> In Shadow of Mordor the Nemesis Forge is <code>Conquest/Definition::NemesisForge</code>, one of
+eight Conquest definitions (<code>BG_Easy</code>, <code>_Medium</code>, <code>_Hard</code>, <code>_Random</code>, <code>SON_LordOfTheHunt</code>, <code>_Lithariel</code>,
+<code>_BrightLord</code> and <code>NemesisForge</code>): world <code>WorldInfo::SeaOfNurnen</code>, game mode <code>GameModes::NemesisForge</code>, army
+<code>Orc_Faction_NemesisForge</code>, difficulty range <code>Region_SeaOfNurnen</code>, tutorial <code>NemesisForge_Intro</code>, active
+variable <code>ConquestActive</code>, <code>UseFactionSerialize</code> true, no loot, no leaderboard, no award, an empty unlock
+predicate, and completion counts (warchief and captain kills) and failure limits (time, deaths) all -1: an
+endless sandbox with no goal (text <code>Conquest_Mode_NemesisForge</code>, failed header <code>DLC_ChallengeMode_Failed</code>).
+The game mode (one of 13, with the Conquest modes' 38 fields: default world <code>SeaOfNurnen</code>, inventory type
+<code>DLC1</code>, <code>Type</code> 4, <code>UIAreaState</code> 3, <code>CanSave</code>) turns off, against Conquest, <code>CanGainXP</code>, <code>CanSpendCurrency</code>,
+<code>AllowRuneSlotPurchases</code> and <code>AllowRuneSlotUnlockPresentation</code>, and turns on <code>EnableNemesisNavMakers</code>,
+<code>CanScriptRegionFaction</code>, <code>FOWRevealFastTravelMsg</code> and a flag of its own, <code>NemesisForgeQuitConfirm</code>: Talion
+does not progress there; the army is the point.</p>
+<p><strong>The army</strong> <code>Orc_Faction_NemesisForge</code> is serialized, tracks 32 members of the five orc classes, uses the
+event setup <code>OrcFaction_NemesisForge</code> (the standard <code>Active*</code> events) and has the rows
+<code>NemesisForge_Row_warchiefs</code> (5 seats), <code>_2</code> (8), <code>_3</code> (7) and <code>_4</code> (5) at Sea of Nurnen locations.
+<code>CanPopulateNemesisForge</code> is true on exactly the two campaign armies, <code>Orc_Faction_BG</code> and
+<code>Orc_Faction_SoN</code> (of 12 armies; false on the downloadable and Conquest armies), and
+<code>NemesisForgeFromThisFaction</code> only on the forge army. 65 of Mordor's 503 quests list the forge army among
+their required factions, all Sea of Nurnen side missions (trials 5, duels 10, beast hunts 5, riots 5,
+executions 5, assassinations 5, recruitment 5, feasts 5, betrayals 8, outcast rescues 12). In this mode the
+Army screen has two states of its own, <code>NemesisNonBranded</code> and <code>NemesisBranded</code>
+(<code>MemberState::NemesisForge</code> requires the game mode): a living member whose <code>Nemesis</code> state is true,
+split by <code>BrandedTarget</code> false or true.</p>
+<p><strong>The main-menu entry</strong> <code>MM_NemesisForge</code> registers four handlers in the main menu's table (0x68C1E0,
+through 0x5E68B0, by kind): 0 the enable gate 0x688F30, 4 the start 0x689F80 (the mode found by the name
+"NemesisForge"), 2 the card 0x68C1B0 -&gt; 0x68B940 (a save card: an empty-save field, a <code>Nemesis</code> field,
+<code>DLC_NemesisForge_Available_Desc</code>, the save status, an install-progress check), and 6 a dialog (0x68A400,
+id 0x7F) when the menu's <code>+0xBFA</code> is set; the restart and continue prompts are 0x689390 and the pause page
+<code>Pause_Skills_NemesisForge</code> (0x6A8770) tests the mode by name. The gate reads the active user
+(<code>p = [base+0x18F1228]+0x10</code>, slot = u32 <code>[p]</code>, 6 = none, user = <code>[[[p+8] + slot x 8] + 8]</code>), takes the
+object at <code>[user+0x3A0]</code> (getter 0x4E8790) and opens only when its bytes <code>+0x1BB</code> and <code>+0x1BC</code> are both
+non-zero. In a running Mordor at its main menu both read 0, so the entry is closed; the only instruction
+in the executable with displacement 0x1BB is the gate's own read (0x1BC has 116), so whatever set them wrote
+through a wider store, a copy or a table.</p>
+<p><strong>Debug tools.</strong> <code>DebugSpawnAI</code> (0x53AD00) holds a forge-nemesis key at <code>+0x178</code> and a forge-follower key
+at <code>+0x188</code> (<code>{faction record, index}</code>, tested by 0x868F90) and offers "Spawn NemesisForge - Nemesis /
+Follower"; the debug command <code>DebugSpawnAI.NemesisForge.FetchNemesis</code> is described as querying the forge
+nemesis from Agora. A single captain can be saved to and loaded from an <code>.orc</code> file through
+<code>Profile/Commands::DebugFactionMemberSave</code>, <code>Load</code> and <code>List</code>, enabled only in the debug command sets
+(menu layers <code>FactionMemberSave</code>, <code>FactionMemberList</code>, <code>FactionMemberLoad</code>, linked from no normal menu).</p>
+<h2 id="shadow-of-mordor-s-captain-document">Shadow of Mordor's captain document</h2>
+<p>The captain document, the form a Mordor captain is written in, has 99 keys. Its writer 0x8558C0 writes 54
+keys from the member: <code>FactionRecord</code> (<code>+0x58</code>),
+<code>FactionID</code> (<code>+0x54</code>), <code>NPCProfileGuid</code> (<code>+0x2F0</code>, u64), <code>RowNumber</code> (the index of his row record <code>+0x88</code>
+in his army's <code>Rows</code>, or 0xFF), <code>ColumnNumber</code> (<code>+0x3A0</code>, u8), <code>CanSave</code> (always 1), <code>CombatTree</code> (<code>+0x60</code>),
+<code>Role</code> (<code>+0x2B8</code>), <code>RandomSeed</code> (<code>+0x48</code>), <code>Personality</code> (<code>+0x90</code>), <code>NameStringIDHash</code> (<code>+0x50</code>), <code>Name</code> (its
+text), <code>Location</code> (<code>+0x2C0</code>), <code>XPLevel</code> (<code>+0x340</code>), <code>TraitLevel</code> (<code>+0x344</code>), <code>PlayerKills</code> (<code>+0x348</code>),
+twenty bits of the flag dword <code>+0x3A4</code> (<code>IsDead</code> 2, <code>KilledByPlayer</code> 3, <code>CanResurrect</code> 4,
+<code>PresentedToPlayer</code> 5, <code>SpawnConditionComplete</code> 9 and its previous value 10, <code>HasVow</code> 12, <code>IsSevered</code> 17,
+<code>IsSquealer</code> 18, <code>GangLeader</code> 19, <code>GangLeaderMatchClass</code> 20, <code>HasNemesisTrait</code> 21, <code>IsMockDead</code> 23,
+<code>RevengeTarget</code> 26, <code>WasEverPreset</code> 27, <code>OnlySpawnWithBoss</code> 29; <code>IsResurrected</code> = bit 0), one <code>Trait</code> key
+per trait (<code>+0x70</code>), the interaction scores (<code>+0x384</code> / <code>+0x388</code>), one <code>FactionEvent</code> key per history entry
+(<code>+0x2A0</code>, stride 0x10), <code>OverrideCharacterModel</code> (<code>+0x98</code>), <code>IntelDataLevel</code> (<code>+0x3AA</code>), <code>SpawnCondition</code>,
+<code>PreSetRecord</code>, <code>Purpose</code>, <code>PurposeStringIDHash</code>, <code>PurposeTimeOut</code>, <code>ResurrectionScarType</code> (<code>+0x2D0</code>),
+<code>AppliedScarType</code> (<code>+0x2D8</code>), <code>LastDeathType</code>, the encounter indices, <code>CanInterrogateAbout</code>,
+<code>ResurrectionCount</code> (<code>+0x394</code>), <code>LastDeathCharacterType</code>, <code>LastDeathAttack</code> and <code>LastDeathPlayerKiller</code>.
+Then two scar keys (<code>CFactionMemberScars_Scar</code> / <code>_Brand</code>, from <code>+0x290</code> / <code>+0x298</code>), and the look block's
+own 43 keys: 20 records (<code>SMC_BaseModel</code>, <code>BodyModel</code>, <code>BodyModelOriginal</code>, <code>BodyFlairModel</code>,
+<code>HeadSimpleModel</code>, <code>HeadModel</code>, <code>LegsModel</code>, <code>HelmetModel</code>, <code>FactionMemberHelmetModel</code>, <code>HairModel</code>,
+<code>ArmorSet</code>, <code>ArmorModel1</code> to <code>4</code>, <code>AccessoryModel1</code> and <code>2</code>, <code>HeadScarModel</code>, <code>BodyScarModel</code>,
+<code>ScarSetup</code>), 9 ARGB colours (<code>SkinTint</code>, <code>EyeColor</code>, <code>ClothingColor</code>, <code>TattooColor</code>, <code>PaintColor</code>,
+<code>HairColor</code>, <code>ArmorColor1</code> and <code>2</code>, <code>LegLeatherColor</code>; alpha 0xFF = shown, as in War), 12 mesh-group
+bytes written as four keys each, up to 4 appearance tags and up to 8 flairs. Its users are the faction save
+(0x8EE2B0, <code>FACTIONDATA</code>), a debug export of one captain to a <code>&lt;name&gt;_&lt;date&gt;.orc</code> file (0x91A800) and the
+presentation recorder (0x5FBA10, a text file). The number writers differ in sign: 0x5F9BA0 stores type 3,
+printed <code>"%s = %lu"</code>, and 0x5F9BE0 type 4, printed <code>"%s = %ld"</code>.</p>
+<p>The document is read back by 0x855F70, which also takes the member's index, army, row, seat and GUID.
+Mordor's own apply over an existing member is the reader 0x863040 (675 instructions; used by its save load,
+the <code>.orc</code> load 0x91ACB0 and the presentation load 0x5FB6E0), which reads 44 of the 54 member keys and then
+the look (0x886830).
+A missing key resets its cell (every getter defaults to 0), and the trait and event lists are emptied
+before their keys are read, so an apply is a whole document. Exceptions: <code>IntelDataLevel</code> only ever
+rises, and <code>CanResurrect</code>, <code>ResurrectionScarType</code> and <code>AppliedScarType</code> are written by the writer and read
+by no code. The reader never touches the member's index, army, row, seat or GUID. The document is text:
+lines split on <code>\n</code>, every space, tab and carriage return removed, <code>#</code> starts a comment, <code>[Name]</code> opens a
+section, and keys and values keep 63 characters.</p>
+<h2 id="war-s-documents-for-a-whole-member">War's documents for a whole member</h2>
+<p>War keeps four doors through which a whole member can be written or read: the binary save (0x594788 /
+0x1BC0F2C, see The Nemesis system), the online member document (exporter 0x1BC5044, importer 0x1BC21B4,
+57 keys read), and a capitalised member document with a writer 0x1BC45A8 and a reader 0x1BC159C. The last
+one descends from Mordor's: of the reader's 61 key and node names, 29 are spelled exactly as in Mordor's 54,
+but War groups them into nodes where Mordor is flat.</p>
+<p><strong>Two document classes.</strong> The SAVE document (constructor 0x18786F0, 0x18 bytes; nodes 0x40, properties
+0x60, values 0x70) is built by the writer's API (add child 0x1878CA0 and the setters); the LOAD document
+(constructor 0x1878608, 0x30 bytes: a parser-state stack, then the top nodes; nodes 0x20, properties 0x20,
+values 0x108 with a 0x100-byte text) is read by the getters (find child 0x18791F0 / 0x1879358). The only
+bridge between them is text:</p>
+<ul>
+<li><strong>Writing:</strong> a named node 0x187A580 writes <code>"\n" NAME " = {\n"</code>, its properties one tab deeper, then
+  <code>"}\n"</code>; a property 0x187A654 writes <code>"%s = "</code> and its value, or for several values <code>"%s = [\n"</code>, one
+  per line, then <code>"]\n"</code>; a value 0x187A824 writes a record as its name (<code>[rec+0x20]</code> when <code>[rec+1] &amp; 2</code>,
+  0x18BDB0, else empty), integers as <code>%llu</code>, <code>%lld</code>, <code>%lu</code> or <code>%ld</code>, booleans as True / False, a string's
+  first 0x7F characters, and a child node in braces. The text save is 0x187A3CC (0x187AAFC -&gt; <code>fwrite</code>).</li>
+<li><strong>Reading:</strong> the text load 0x1879AC4(path, unused, callback, context) opens the file and the parser
+  0x1879B48(document, {begin, end}) splits lines on <code>\n</code>; 0x187A2F4 strips every space, tab and carriage
+  return and <code>#</code> comments; a normalised line index reaching 0x400 is the engine's assert.</li>
+</ul>
+<p><strong>The reader is a whole-member re-initialiser.</strong> 0x1BC159C(fm, node) reads the nodes <code>Identity</code>
+(<code>CombatTree</code>, <code>Role</code>, <code>PreviousRole</code>, <code>BuilderInstance</code>, <code>Tribe</code>, <code>RandomSeed</code>, <code>Personality</code>,
+<code>NameStringIDHash</code>, <code>CharacterModel</code>, <code>PreSetRecord</code>), <code>Flags</code> (<code>Location</code>, <code>LocationArea</code>, <code>XPLevel</code> ...
+<code>PlayerFleeCount</code>, 24 flag bits through the bare bit setter 0x1156740, <code>IntelDataLevel</code> (raise only),
+<code>RevengeType</code>, <code>Purpose</code>, <code>ResurrectionCount</code>, the last-death keys and the scar types), <code>PIS</code>,
+<code>Relationships</code> (<code>BossID</code>), <code>EventHistory</code>, <code>SMCStorage</code>, <code>HierarchyMenuOverrides</code>, <code>Inventory</code> and
+<code>Traits</code>. A record is read by name from one category table per key (0x187985C: the name's hash, then a
+binary search of <code>[table+0x38]</code> over <code>[table+0x28]</code>; trees <code>[0x2700960]</code>, roles <code>[0x2701D70]</code>,
+personalities <code>[0x2701A88]</code>, models <code>[0x27018B8]</code>, presets <code>[0x2701D08]</code>, tribes <code>[0x2701D80]</code>) and stored
+without a null test; inside a node a missing key writes null, and a missing node is skipped. Between nodes
+it always destroys his relationship objects, frees his appearance object and makes a new one before
+<code>SMCStorage</code> (0x2EB59C, 0x2EB490, 0x2EB56C at 0x1BC1D19 .. 0x1BC1D42, so <code>[FM+0x2D8]</code> changes), destroys
+and rebuilds his 25 items and re-dresses him (0x61BAD4), and empties his active traits and re-adds his
+pickers (0x7CD03C; the trait rebuild decides every slot again). A partial document therefore leaves him
+with an empty look. Its last step 0x1BC3554 (138 instructions): under flag bit 1 it clears bits 1, 11 and
+26 and unlinks his body (<code>FM+0x28</code>, the character at <code>[FM+0x48]</code>) without despawn events; it destroys the
+quest handles at <code>FM+0x3B8</code>, sets <code>FM+0x518</code> to 0xFFFF, clears bits 23 and 47 (and 6 and 46), runs the trait
+rebuild with reason 0, the rarity and the importance, zeroes <code>FM+0x3A8</code>, <code>+0x388</code>, <code>+0x470</code> and <code>+0x380</code>,
+sets <code>FM+0x51C</code> to 1 and <code>+0x51F</code> to 0, and applies <code>Faction/Global.ModelFixups</code>. Its callers are the
+member factory 0xF99FF0, the presentation loader 0x182AFBC, 0x1C619FC and 0x1C69B58; every chain that feeds
+it a document from outside starts at a console command, the debug member load or the <code>[FS+0x250]</code>
+request. Monolith's own brackets are 0x61AE80 / 0x7C9DC4 around it (the sync-action debugger's load) and
+0x1B5F4B0(FS) after it (the load-member event). The member copy 0x1BB936C is not an apply: it unlinks the
+body and copies the seat, the army and the whole flag word.</p>
+<p><strong>The look sub-reader</strong> 0x1C0546C(look, node) reads <code>BaseModel</code>, <code>HeadSimpleModel</code>, <code>BodyModel</code>,
+<code>HeadModel</code>, <code>HairModel</code>, <code>AccessoryModel1</code> and <code>2</code>, <code>BodyFlairModel</code>, <code>BodyScarModel</code>, <code>HelmetModel</code>,
+<code>HeadAccessory1</code>, <code>ArmorShoulder</code>, <code>ArmorChest</code>, <code>ArmorArms</code>, <code>ArmorPants</code>, <code>ArmorLegs</code>, <code>LowLOD</code>,
+<code>HeadScarModel</code>, the colours <code>SkinTint</code>, <code>EyeColor</code>, <code>HairColor</code>, <code>TattooColor</code>, <code>PaintColor</code>, <code>Metal</code>,
+<code>Leather</code>, <code>Cloth</code>, <code>Bone</code>, <code>TrimColor</code> and their <code>Faction*</code> twins: 11 model keys and 5 colour keys are
+Mordor's names without <code>SMC_</code>, and the armour is cut differently (Mordor's set, <code>ArmorModel1</code> to <code>4</code> and
+legs against War's five armour slots).</p>
+<p><strong>Dormant doors.</strong> The console command <code>FactionMember.Load</code> (0x1C5B9DC) parses the file, but its callback
+0x1C5B4B0 only fetches the current target (0x16A550): the apply step is compiled out. <code>FactionMember.Save</code>
+(0x1C5BAC4) still writes <code>FACTIONMEMBER_SINGLESAVE</code> through 0x1BC45A8 to a text file. The data-driven
+loader <code>Faction/Events/Setup.LoadMemberEvent</code> -&gt; 0x1B5D4BC -&gt; 0x1C61AD8(FS, fm, name) (the path through the
+platform storage interface <code>[0x26FEFD0]</code> slots 7, 15 and 17, <code>_wfopen_s</code>, a whole-file read, a binary parse,
+then <code>FACTIONMEMBER</code> -&gt; 0x1C619FC: the reader plus the row's <code>DemoImportFactionEvents</code>) runs only while
+<code>[FS+0x250]</code> is set, and it read 0 in a live campaign; the faction system's tick has an asynchronous form of
+the same request (0x1E2BC4 -&gt; 0x1E34FC). The GameDB still holds <code>Profile/Commands::DebugFactionMemberSave</code>
+(left key, left on the pad) and <code>DebugFactionMemberLoad</code> (right).</p>
+<h2 id="console-commands-and-leftovers">Console commands and leftovers</h2>
+<ul>
+<li><code>NemesisForge.CreateFollower</code> (0x1C775EC) and <code>NemesisForge.CreateNemesis</code> (0x1C77604) create the stored
+  follower or nemesis at once through 0x1C77514: when the payload is valid, 0xF636F0(FS, payload, 0) makes
+  the captain, then 0x1B5EE34(FS, fm) -&gt; 0x1C28018 makes him his army's interrogation subject (the context's
+  <code>+0x160</code> = his key, cleared instead when he is dead), fires the army's
+  <code>EventSetup.SetInterrogationSubjectEvent</code> and refreshes the old and the new subject. The quest path takes
+  that step for neither captain, and neither path seats him: the quest path leaves the seat to the
+  introduction sim event. The commands are registered by 0xCC460 and torn down by 0x10892D0.</li>
+<li><code>NemesisForge.Override.ClearAll</code> is a console entry referenced only from a command table (0x267DA68).</li>
+<li>Telemetry 0x1B2CC68 (<code>[GM+0x6D18]</code>) sends event type 42 (<code>NemesisForgeImport</code> in the event-name table
+  0x716210) with <code>is_follower</code>, <code>npc_role</code>, <code>npc_type</code>, <code>npc_advanced_class</code>, <code>npc_full_name</code> and
+  <code>npc_guid</code>, behind the telemetry switches.</li>
+<li>Other names: a player-profile property <code>User.OwnsShadowOfMordor</code> (a data table at 0x266EDF8, no code
+  use traced), <code>Interface/Movies::FirebirdFrontEndLoop</code> (<code>frontendloop.vid</code>), <code>AI/Count::Firebird</code> and
+  <code>Model/SimpleModelColorSetup::Firebird_Orc_Eye_Color_Grey</code>.</li>
+</ul>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Why some Mordor captains wear a head their own seed did not draw (3 of the 28 plain captains): something
+  in Mordor appears to re-pick heads after generation; reading Mordor's later head writers would settle it.</li>
+<li>Whether War's 13 payload keys are a server-side rename of Mordor's document keys (<code>CombatTree</code> -&gt;
+  <code>CombatTreeRecord</code>, <code>Role</code> -&gt; <code>RoleRecord</code>, <code>AppliedScarType</code> -&gt; <code>ScarTypeRecord</code>, <code>XPLevel</code> -&gt;
+  <code>MenaceLevel</code>), and whether Mordor's Army-screen states <code>NemesisNonBranded</code> / <code>NemesisBranded</code> mark the
+  nemesis and the follower that were handed over (non-branded as the nemesis, branded as the follower
+  with <code>IsBranded</code>); what sets a member's <code>Nemesis</code> state is not read.</li>
+<li>Which code fills Mordor's forge army from the two campaign armies: the readers of
+  <code>CanPopulateNemesisForge</code> sit behind Mordor's cached schema tables (its static schema 0x1974A40 is
+  referenced only by its builder 0xA87AB0 and a data registry slot), and what the mode stored on the online
+  platform, and how, was not found in the client.</li>
+<li>The exact success reply: element 0 of the result list and the value types used for the 13 keys (the
+  parser's readers accept any integer tag through 0x7DFBF8).</li>
+<li>What removes an imported member that no sim event has seated: of six captains imported through the
+  console route and left unseated, five were gone minutes later and their members reused. Two candidates:
+  the next import's interrogation-subject step, or the pool's recycling of its least important unseated
+  member at the next allocation.</li>
+<li>What creates members with creation marks 0 (0x1BC0084 -&gt; 0x1BC00C8) and 1 (0x1C1CDAC -&gt; 0x1BC02AC).</li>
+<li>What <code>NemesisForge.Override.ClearAll</code> clears, whether <code>User.OwnsShadowOfMordor</code> gated anything, and what
+  the two mission scripts do with <code>GP_Gon2NemForgeCheck</code> and the banner item (only the names the scripts
+  hold were read, not their lines).</li>
+<li>Whether anything besides the member holds the appearance object the member reader frees: a world body
+  draws from its own copy (the bind copy 0x40EF82 -&gt; 0x2EBA60).</li>
+</ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
