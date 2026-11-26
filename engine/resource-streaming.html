@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -73,28 +73,33 @@
 with <code>GetFileAttributesW(directory + path)</code>; a hit stops the archive search, and the loader opens the
 loose file itself (0x529BF8 -&gt; <code>GetLooseFilePath</code> 0x52A2F8). The retail game already mounts its
 <code>Game\</code> folder as the last entry; that is how the cinematic <code>.vib</code> movies ship as loose files.</p>
-<p><code>Mount(fs, Source** out, path, unused, index)</code> is 0xC28560. A folder becomes a directory source; a
+<p><code>Mount(fs, Source** out, path, unused, index)</code> is 0xC28560. A folder becomes a directory source. A
 file that exists (0x52A42C) becomes an archive tree, opened by 0x11AE014, which keeps the path as given
-at <code>archive+0x50</code>; a path that names nothing is skipped without a message. An archive's first file,
+at <code>archive+0x50</code>. A path that names nothing is skipped without a message. An archive's first file,
 <code>archivepatchloosefiles.txt</code>, is its path index: Mount merges it into the hash -&gt; path table at
 <code>fs+0x80</code> (lookup 0x3DDAD8, merge 0x1182428) and recomputes the scan bound. An index past the end of
 the vector mounts at the top (0xC28818). There is no unmount method.</p>
-<p>Mount has three callers. The file-system setup 0x119717C (from the shell initialisation 0x117CF30)
-first mounts every <code>-arch &lt;path&gt;</code> command-line argument at index 0, before it reads the config list;
-then it mounts the config list's lines through 0x1197418 -&gt; 0x11972C8, each in front of the nearest
-earlier line's archive (index from 0xC34960), so the first line, <code>..\Game</code>, ends last and every later
-line stacks above the one before: the list's "file search order is from the bottom up". At run time
-the file system's "mount at the top" method (vt_0x22BF9C8 vf2, the object at <code>[base+0x26FF048]</code>) is
-called by 0x1848A50 for the archives the online service downloads into the player's profile folder.
-In one running game the vector held 89 entries (capacity 96): 74 archives from the config list (the
-14 lines naming missing files skipped), the six downloaded packs at the top, and <code>..\Game\</code> last.</p>
-<p>A mount affects the next load of a path only: a resource the game already holds, or keeps cached
+<p>Mount has three callers:</p>
+<ul>
+<li><strong>The command line.</strong> The file-system setup 0x119717C (called from the shell initialization
+  0x117CF30) first mounts every <code>-arch &lt;path&gt;</code> argument at index 0, before it reads the config list.</li>
+<li><strong>The config list.</strong> The same setup then mounts the list's lines through 0x1197418 -&gt; 0x11972C8,
+  each in front of the nearest earlier line's archive (the index comes from 0xC34960). The first line,
+  <code>..\Game</code>, therefore ends last, and every later line stacks above the one before it: this is the
+  list's "file search order is from the bottom up".</li>
+<li><strong>Downloaded content.</strong> At run time the file system's "mount at the top" method (vt_0x22BF9C8 vf2,
+  the object at <code>[base+0x26FF048]</code>) is called by 0x1848A50 for the archives the online service
+  downloads into the player's profile folder.</li>
+</ul>
+<p>In one running game the vector held 89 entries (capacity 96): 74 archives from the config list, with
+the 14 lines that name missing files skipped; the six downloaded packs at the top; and <code>..\Game\</code> last.</p>
+<p>A mount affects only the next load of a path. A resource the game already holds, or keeps cached
 without references, is handed back as it is (see Reloading below), and a fast travel does not re-read
 it. Every open walks the vector from the top (the resource open stage 0x3DD648 -&gt; 0x3DD8FC -&gt;
-0x3DD9F8): an archive answers from memory through its folder table's binary search (0x3DDAB8); a
+0x3DD9F8). An archive answers from memory, through a binary search of its folder table (0x3DDAB8). A
 directory source first checks its extension filter (0x3DDC18, a list of hashes of the text after the
-last dot, empty unless set, and Mount leaves it empty) and then tries a real file open (0x3DDCBC builds
-the path, 0xC3C1B0 opens it).</p>
+last dot, which is empty unless set, and Mount leaves it empty) and then tries a real file open
+(0x3DDCBC builds the path, 0xC3C1B0 opens it).</p>
 <h2 id="hashing-names">Hashing names</h2>
 <p>Paths and names are hashed with <code>StringHash</code> 0x423E70: <code>h = h * 919 + LUT[c]</code> over the bytes, with
 the 256-byte table at 0x1DB50D0 (it folds case, so the hash is case-insensitive). The same hash names
@@ -232,7 +237,7 @@ its reference count (a <code>make_shared</code> layout) and has no vtable:</p>
 </tr>
 <tr>
 <td>+0x08</td>
-<td>u8 cancelled: every stage skips a cancelled request</td>
+<td>u8 canceled: every stage skips a canceled request</td>
 </tr>
 <tr>
 <td>+0x10</td>
@@ -265,10 +270,10 @@ its reference count (a <code>make_shared</code> layout) and has no vtable:</p>
 <li><strong>Submit</strong> 0x3DDDEC queues the request on the open stage (or straight on the load stage when the
    open thread is off). Producers include the texture streamer 0x3DD45C and the bundle content job
    0x3DB5E4.</li>
-<li><strong>Open</strong> 0x3DD588: picks the path (resource <code>+0x28</code>, or the bundle's <code>.embb</code>), waits on a
+<li><strong>Open</strong> 0x3DD588: picks the path (resource <code>+0x28</code>, or the bundle's <code>.embb</code>) and waits on a
    semaphore at <code>core+0x7B8</code> that bounds how many files are open at once (0x1184864 creates it with an
-   initial and maximum count of 32, the u32 at 0x262AAA0), opens the file through the
-   file system and passes the request to the load stage.</li>
+   initial and maximum count of 32, the u32 at 0x262AAA0). It then opens the file through the file
+   system and passes the request to the load stage.</li>
 <li><strong>Load</strong> 0x2D3444: a resource is read into new resource data (0x3DCFDC, 0x3DCF80) and passed to
    the parse stage (0x3DD248); a bundle content request goes to the bundle loader 0x3DBE50 with the
    path table below.</li>
@@ -283,8 +288,8 @@ high-resolution tiers.</p>
 against 33 and 32 for the load queues: the backlog builds in front of the file open.</p>
 <h3 id="the-path-table">The path table</h3>
 <p>The load stage carries the engine's global name table at <code>+0xD8</code> (<code>core+0x1D0</code>): a vector of
-<code>{u32 hash, u32 0, char* path}</code> sorted by hash, 30,639 rows in a loaded region. 503 of 503 sampled
-keys equal the hash of their path, and every row is in order. It names every kind of streamed file
+<code>{u32 hash, u32 0, char* path}</code> sorted by hash, 30,639 rows in a loaded region. Every sampled
+key (503 of 503) equals the hash of its path, and every row is in order. It names every kind of streamed file
 (<code>.fxp</code>, <code>.tex</code>, <code>.bnk</code>, <code>.bndl</code>, <code>.anix</code>, <code>.vol.inst</code>, presentation bundles in every language). The
 load stage passes it to the bundle content loader. It is a row-for-row copy of the file system's
 hash -&gt; path table (<code>fs+0x80</code>), which <code>Mount</code> builds from the path index file each archive may carry
@@ -357,37 +362,37 @@ world contexts and placed objects are unchanged. In a loaded region the registry
 bundles, and every character bundle the region uses is already resident.</p>
 <h3 id="how-a-bundle-s-content-becomes-resources">How a bundle's content becomes resources</h3>
 <p><strong>Manifests are sorted lists.</strong> Every shipped manifest lists its entries sorted by the P919 hash of
-the path as an unsigned number, then by the path compared case-insensitively: 806 of 806 loaded
-manifests, 62,270 entries, the stored hash equal to the path's P919 on every one. The parsed manifest
-is reached as bundle <code>+0x20</code> (the manifest resource) -&gt; <code>+0x08</code> -&gt; <code>[+0]</code> -&gt; <code>+0x10</code>, a block whose
-<code>+0x0C</code> is the bundle path's hash, <code>+0x18 / +0x20</code> the entry list <code>{u32 hash, pad, char* path}</code> and
-<code>+0x28 / +0x30</code> the size list.</p>
+the path as an unsigned number, then by the path compared case-insensitively. This holds for 806 of
+806 loaded manifests (62,270 entries), and every stored hash equals the P919 of its path. The parsed
+manifest is reached as bundle <code>+0x20</code> (the manifest resource) -&gt; <code>+0x08</code> -&gt; <code>[+0]</code> -&gt; <code>+0x10</code>, a block
+whose <code>+0x0C</code> is the bundle path's hash, <code>+0x18 / +0x20</code> the entry list <code>{u32 hash, pad, char* path}</code>
+and <code>+0x28 / +0x30</code> the size list.</p>
 <p><strong>The content loader is set algebra over sorted lists.</strong> 0x3DBE50 -&gt; 0x3DC04C runs
 <code>std::set_intersection</code> (0x3E0218) and <code>std::set_difference</code> (0x3DC388, 0x3DC3E0) over the
 container's sections, the manifest and the load stage's path table, with the comparator 0x11B5AD4
 (hash, then <code>_stricmp</code>). The content's first vector (<code>content+0x00 / +0x08</code>, resources made by
 0x3E0628) is B = (sections and manifest) minus the path table: what the container itself supplies. The
 second (<code>content+0x20 / +0x28</code>, 0x3E03B8) is A = the manifest minus B: entries that come from
-elsewhere. 398 of 877 loaded bundles hold such entries, shipped ones among them, so the second vector
+elsewhere. Of 877 loaded bundles, 398 hold such entries, shipped ones among them, so the second vector
 is not a "still loading" list. A path in the path table is therefore never taken from the container:
 a file at that path in any mounted archive replaces the bundle's copy.</p>
 <p><strong>The first claim decides.</strong> Each A entry goes through 0x3E00FC, which adds a reference and a claim
-(<code>+0x34</code>) and, on the first claim only, sets flag 0x10 and requests the resource as a file of its own
-(0x2D40A4). Container bytes reach resources through 0x11B5D14, one forward pass over the <code>.embb</code>
-sections in file order against the first vector (<code>_stricmp</code> on the resource path, progress in
-<code>content+0x18</code>); 0x1CD4A3C loads a section only when the claim count goes from 0 to 1 (or its type is
-in a force mask), clearing flag bit 0, raising <code>+0x60</code> and calling the type's loader. Every later
-claimant is skipped, so whichever bundle claims a resource first decides its data for as long as
-anyone holds it. A manifest out of order breaks the set operations: entries fall into A, each is
-requested as a file, and those that are not files of their own load empty and stay empty until every
-claim on them is dropped.</p>
+(<code>+0x34</code>); on the first claim only, it also sets flag 0x10 and requests the resource as a file of its
+own (0x2D40A4). Container bytes reach resources through 0x11B5D14, a single forward pass over the
+<code>.embb</code> sections in file order against the first vector (<code>_stricmp</code> on the resource path, with the
+progress kept in <code>content+0x18</code>). 0x1CD4A3C loads a section only when the claim count goes from 0 to 1,
+or when its type is in a force mask: it clears flag bit 0, raises <code>+0x60</code> and calls the type's loader.
+Every later claimant is skipped, so whichever bundle claims a resource first decides its data for as
+long as anyone holds it. A manifest out of order breaks the set operations: its entries fall into A,
+each is requested as a file, and those that are not files of their own load empty and stay empty until
+every claim on them is dropped.</p>
 <p><strong>Shader trees are loose files that bundles list.</strong> A shader tree (<code>.fxo</code>, tag <code>SRHR</code>) ships as a
-loose archive entry, and 1,433 of 183,631 shipped manifests list at least one (9,381 rows), the
-bundle's container usually carrying a copy as a section as well. Being a file of its own, a tree falls
-into A and is requested standalone; the container's copy is skipped. A material only registers the
-trees it names: unless a loaded bundle lists a tree (or it is loaded at start-up), the tree stays
-registered with no data and the material draws nothing.</p>
-<p><strong>Gear needs two bundles.</strong> An armour piece's geometry lives in <code>&lt;piece&gt;_g.bndl</code> (<code>.mesh</code>, <code>.skel</code>,
+loose archive entry. Of the 183,631 shipped manifests, 1,433 list at least one (9,381 rows in all), and
+the bundle's container usually carries a copy as a section as well. Because the tree is a file of its
+own, it falls into A and is requested standalone, and the container's copy is skipped. A material
+only registers the trees it names: unless a loaded bundle lists a tree, or the tree is loaded at
+start-up, it stays registered with no data and the material draws nothing.</p>
+<p><strong>Gear needs two bundles.</strong> An armor piece's geometry lives in <code>&lt;piece&gt;_g.bndl</code> (<code>.mesh</code>, <code>.skel</code>,
 <code>.anix</code>) and its material and textures in a set-wide <code>&lt;set&gt;_&lt;slot&gt;_m.bndl</code> named by the design
 record (<code>Inventory/ArmorData</code> field <code>DynamicBundle</code>). The engine loads both through a gear load
 request (vt_0x1DB4F78, constructor 0x400AB8) that is created only for an equipped item (give path
@@ -397,7 +402,7 @@ registered resource with no data. The save loader 0x1C112F8 restores non-item pi
 (<code>smc_nonequipment_record_list</code> -&gt; 0x1162D40) without a request as well. A bundle that is resident
 only because another character's item requested it is released when that item goes away.</p>
 <p><strong>The gear budget.</strong> These requests go through <code>NemesisBundleMgr</code> (<code>[GameManager+0x6C88]</code>, named by
-its console commands <code>NemesisBundleMgr.PrintMemory</code> and <code>PrintDynamicBundleData</code>). Its initialiser
+its console commands <code>NemesisBundleMgr.PrintMemory</code> and <code>PrintDynamicBundleData</code>). Its initializer
 0x1B42728, run once from the database setup, sets the budget <code>+0x00</code> to
 <code>Faction/Global.NemsisBundleMemoryLimit</code> x 10 (320 x 10 = 3,200) and builds one object (vt_0x1FF6B90,
 constructor 0x1C52B10) for each of the 1,484 <code>DynamicResource/BundleDefinition</code> records, kept in a
@@ -416,19 +421,46 @@ bytes at <code>+0x50</code>: bytes 0, 1, 2 and 4 are flags, merged by OR, and by
 unchanged at 5 and 8. Recomputed from the live requesters, this formula gives the value in <code>+0x38</code> for
 157 of 157 resident bundles (requester counts 1 to 49).</p>
 <p>The constructor 0x400AB8 copies the five bytes from a struct its caller passes. On the equip and
-re-skin paths 0x400084 fills that struct: byte 0 is always 1, byte 1 is set when the owner reference has
-a <code>+0x40</code>, byte 2 when the owning character has <code>+0x2700</code>, the follower byte <code>+0x23B8</code> or <code>+0x2C04</code> set
-(0x366B88), byte 3 is the member's Player Interaction Score at that moment (0x595364, row 2 column 2 of
-the score object <code>FM+0x150</code>, the dword at <code>+0x38</code>) and byte 4 comes from 0x77F804. The byte is a
-snapshot: on 34 requests of this kind held by spawned captains it was at or below the current score
+re-skin paths, 0x400084 fills that struct:</p>
+<table>
+<thead>
+<tr>
+<th>Byte</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>always 1</td>
+</tr>
+<tr>
+<td>1</td>
+<td>set when the owner reference has a <code>+0x40</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>set when the owning character has <code>+0x2700</code>, the follower byte <code>+0x23B8</code> or <code>+0x2C04</code> set (0x366B88)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>the member's Player Interaction Score at that moment (0x595364, row 2 column 2 of the score object <code>FM+0x150</code>, the dword at <code>+0x38</code>)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>from 0x77F804</td>
+</tr>
+</tbody>
+</table>
+<p>The score byte is a snapshot: on 34 requests of this kind held by spawned captains it was at or below the current score
 every time, and equal on 16. Requests made on the give path (0x4B4C7C) instead take their bytes from
 a struct at <code>+0xF8</code> of the 25-slot item table, and those carry byte 0 clear.</p>
 <p>Each frame 0x614438 re-evaluates the requests when they have changed (<code>+0x50</code>): it sorts them by
 <code>+0x38</code>, highest first, and adds up their costs. Requests within the budget are loaded
-(0x614CB0); the rest go on a local list, and for each of those 0x1B427E4 walks the armour's and then
-the weapon's <code>OutOfMemoryBackups</code> and takes the first backup whose bundles are all resident already
-(0x1B424BC: for each bundle with an object, 0x614D3C requires a handle, its counters <code>+0x4C</code> and
-<code>+0x50</code> equal and state <code>+0x48</code> 2). The backup goes to the request's owner (0x1C11CD8, 0x1C11CFC). So
+(0x614CB0), and the rest go on a local list. For each of those, 0x1B427E4 walks the armor's and then
+the weapon's <code>OutOfMemoryBackups</code> and takes the first backup whose bundles are all resident already.
+(In 0x1B424BC, for each bundle with an object, 0x614D3C requires a handle, its counters <code>+0x4C</code> and
+<code>+0x50</code> equal, and the state <code>+0x48</code> equal to 2.) The backup goes to the request's owner (0x1C11CD8, 0x1C11CFC). So
 a piece over the budget is replaced by something already in memory, and nothing new is loaded for it.
 The budget applies to this gear path only. <code>Bundles/Policies</code> carries budgets of its own
 (<code>Character_Nemesis</code> 1,600 on PC), which this manager does not read.</p>
@@ -443,13 +475,18 @@ until the game restarts. A missing file, by contrast, is harmless. The effect da
 are sorted by the hash of their path (371 of 371), and the loader binary-searches them (0x115B4D4).</p>
 <h2 id="reloading">Reloading</h2>
 <p><strong>The engine's hot reload.</strong> <code>ResourceMgr::Reload</code> 0x119F4BC(owner, path), slot 7 of the I/O owner
-vt_0x22C0FF8 (owner = <code>[base+0x2A86750] - 0x30</code>), reloads one resource while the game runs. Its filter
-0x119EB60 refuses <code>.gamedb</code>, and <code>.anix</code> / <code>.objres</code> according to two engine switch bytes (0x262B50A,
-0x262B509); the lookup 0x17AE1C refuses a resource with no references; 0x1188A00 clears every
-registered bundle's loaded counters; and <code>CResource::Reload</code> 0x3E0AE0 takes the lock, sets flag 8 and
-queues the resource through 0x2D40A4. Nothing in the executable calls it. Its siblings are slot 6
-(0x5D5A000 -&gt; 0xC2A880, reload by path prefix) and slot 8 (0x119F528 -&gt; 0x119DA54 -&gt; 0x11B5F74, reload
-by resource-type mask, bundle by bundle, asking each bundle's content again).</p>
+vt_0x22C0FF8 (owner = <code>[base+0x2A86750] - 0x30</code>), reloads one resource while the game runs. It works
+in four steps:</p>
+<ol>
+<li>the filter 0x119EB60 refuses <code>.gamedb</code>, and refuses <code>.anix</code> and <code>.objres</code> according to two engine
+   switch bytes (0x262B50A, 0x262B509);</li>
+<li>the lookup 0x17AE1C refuses a resource that has no references;</li>
+<li>0x1188A00 clears every registered bundle's loaded counters;</li>
+<li><code>CResource::Reload</code> 0x3E0AE0 takes the lock, sets flag 8 and queues the resource through 0x2D40A4.</li>
+</ol>
+<p>Nothing in the executable calls it. It has two siblings: slot 6 (0x5D5A000 -&gt; 0xC2A880) reloads by
+path prefix, and slot 8 (0x119F528 -&gt; 0x119DA54 -&gt; 0x11B5F74) reloads by resource-type mask, bundle by
+bundle, asking for each bundle's content again.</p>
 <p><strong>The per-frame processor</strong> 0x2D3E10 (its queue served by 0x2D35E8) acts on a queued resource by its
 state:</p>
 <table>
@@ -482,12 +519,12 @@ state:</p>
 </tr>
 </tbody>
 </table>
-<p>The parser thread runs the type's parse (0x3DD3C4; for a texture the texture type's vf4 0x5018A4
-creates the Direct3D texture), and the finish 0x3E0BD4 must run on the render thread ("Finalize can
-only be called on the Render Thread!", 0x4C2610). Reloading a 5.6 MB texture this way took about
-14 ms from empty to whole, with a new data object and a new <code>ID3D11Texture2D</code> and the references and
-flags unchanged. A changed file mounted under the texture's path reached the screen on the reload,
-with no travel.</p>
+<p>The parser thread runs the type's parse (0x3DD3C4); for a texture, the texture type's vf4 0x5018A4
+creates the Direct3D texture. The finish, 0x3E0BD4, must run on the render thread ("Finalize can only
+be called on the Render Thread!", 0x4C2610). Reloading a 5.6 MB texture this way took about 14 ms from
+empty to whole: the resource received a new data object and a new <code>ID3D11Texture2D</code>, while its
+references and flags stayed unchanged. A changed file mounted under the texture's path reached the
+screen with that reload, without any travel.</p>
 <h2 id="creature-bundles">Creature bundles</h2>
 <p><code>CharacterBundleMgr</code> (<code>CharacterBundleMgr.cpp</code>) is <code>MainScene+0x868</code> (<code>[base+0x26FFAB0]+0x868</code>). It
 decides which creature models are in memory.</p>
@@ -533,10 +570,10 @@ decides which creature models are in memory.</p>
 </tr>
 </tbody>
 </table>
-<p><code>IsBundleLoaded</code> 0x1665B4 asks 0x166630(entry + 8), which answers 0 while the requested byte is
-clear, else the first bundle whose state (vf5) is neither 3 nor 4, else 3; the entry counts as loaded
-when the answer is 3 or 4, so a bundle that failed (4) counts as loaded and one still streaming (1 or
-2) does not.</p>
+<p><code>IsBundleLoaded</code> 0x1665B4 asks 0x166630(entry + 8). That answers 0 while the requested byte is
+clear; otherwise it answers the state (vf5) of the first bundle whose state is neither 3 nor 4, or 3
+when there is no such bundle. The entry counts as loaded when the answer is 3 or 4, so a bundle that
+failed (4) counts as loaded and one still streaming (1 or 2) does not.</p>
 <p>The update 0x4B4FFC runs when the dirty byte is set. The world set is the provider's list; the
 override set is the first override list (or the default list) with the records of the always, world
 and build sets removed (0xE9F280 swap-removes them), so no record is owned twice. The reconcile
@@ -578,7 +615,7 @@ their data is always resident. The chain from a spawn channel to its bundle is p
 <code>LoadOverrideBundle</code> and <code>LoadDefaultBundleList</code> (command table at 0x2674408); quests unload their
 overrides when they end.</p>
 <h3 id="memory">Memory</h3>
-<p>The engine's own byte count understates the real cost of a single bundle and overstates a burst:
+<p>The engine's own byte count understates the real cost of a single bundle and overstates a burst.
 <code>Nazgul_base</code> (36.0 MB by the engine's count) added 120 MB of committed memory and 120 MB of video
 memory, while 129 bundles requested at once (622 -&gt; 4,337 MB by the engine's count) added only 571 MB of
 video memory and 665 MB of commit, because they share resources. Bundle loads do not consume the
