@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>User interface: Scaleform, menus and the debug menu - Shadow of War engine reference</title><meta name="description" content="How the game builds and draws its interface: the UI manager, the generic view host and the UI render list, the Scaleform movies and the node API that drives them, the string database and its markup, glyph and colour tokens, menus, selections and the prompt bar as GameDB data, nav markers and the nameplate, the HUD, the Army screen&#x27;s 3D stage, highlight, target, Details panel, camera and mercenary screen, the title, save-select and loading screens, and Monolith&#x27;s developer debug menu with the cheat backend and console behind it."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>User interface: Scaleform, menus and the debug menu - Shadow of War engine reference</title><meta name="description" content="How the game builds and draws its interface: the UI manager, the generic view host and the UI render list; the Scaleform movies and the node API that drives them; the string database with its markup, glyph and color tokens; menus, selections and the prompt bar as GameDB data; nav markers and the nameplate; the HUD; the Army screen&#x27;s 3D stage, highlight, target, Details panel, camera and mercenary screen; the title, save-select and loading screens; and Monolith&#x27;s developer debug menu with the cheat backend and console behind it."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -34,13 +34,13 @@
 <a href="ui.html" class="cur" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
 <a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
-<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="user-interface-scaleform-menus-and-the-debug-menu">User interface: Scaleform, menus and the debug menu</h1><p class=\"lede\">How the game builds and draws its interface: the UI manager, the generic view host and the UI render list, the Scaleform movies and the node API that drives them, the string database and its markup, glyph and colour tokens, menus, selections and the prompt bar as GameDB data, nav markers and the nameplate, the HUD, the Army screen&#x27;s 3D stage, highlight, target, Details panel, camera and mercenary screen, the title, save-select and loading screens, and Monolith&#x27;s developer debug menu with the cheat backend and console behind it.</p>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="user-interface-scaleform-menus-and-the-debug-menu">User interface: Scaleform, menus and the debug menu</h1><p class=\"lede\">How the game builds and draws its interface: the UI manager, the generic view host and the UI render list; the Scaleform movies and the node API that drives them; the string database with its markup, glyph and color tokens; menus, selections and the prompt bar as GameDB data; nav markers and the nameplate; the HUD; the Army screen&#x27;s 3D stage, highlight, target, Details panel, camera and mercenary screen; the title, save-select and loading screens; and Monolith&#x27;s developer debug menu with the cheat backend and console behind it.</p>
 <p>The interface is a set of Scaleform GFx movies that the engine drives entirely from code and data:
 the movies hold artwork and timelines, while the GameDB holds menu layers, element placement, prompts, HUD
 states, text tokens and cameras. This chapter follows the stack from the UI manager down to a single movie clip
 and a single line of text, then covers nav markers, the Army screen's 3D stage and its camera, the title and
-loading screens and the developer debug menu that shipped without its controller; the mission start screen has
-its own chapter (The mission start screen).</p>
+loading screens and the developer debug menu that shipped without its controller. The mission start screen has
+its own chapter, The mission start screen.</p>
 <h2 id="the-ui-stack">The UI stack</h2>
 <h3 id="the-ui-manager">The UI manager</h3>
 <p>The UI manager is <code>[base+0x26FFB08]</code> (vt_0x1F7A878, a class with three virtual methods; see Engine
@@ -92,7 +92,7 @@ core). 0x1889674 stores the object in that slot and creates its members; <code>C
 </tr>
 <tr>
 <td>+0x220</td>
-<td>the UI viewport as an int32 rectangle {left, top, right, bottom}; view initialisation takes its width and height from it</td>
+<td>the UI viewport as an int32 rectangle {left, top, right, bottom}; view initialization takes its width and height from it</td>
 </tr>
 <tr>
 <td>+0x240</td>
@@ -104,7 +104,7 @@ core). 0x1889674 stores the object in that slot and creates its members; <code>C
 </tr>
 <tr>
 <td>+0x2FB</td>
-<td>byte: setting a target is allowed (<code>IsInterrogationAllowed</code>, read at 0x1DDC9D; see Mark Target)</td>
+<td>byte: setting a target is allowed (<code>IsInterrogationAllowed</code>, read at 0x1DDC9D; see Mark Target below)</td>
 </tr>
 <tr>
 <td>+0x318</td>
@@ -126,19 +126,19 @@ predicate's <code>IncludedTopMenuLayers</code> / <code>ExcludedTopMenuLayers</co
 record, not the layer object.</p>
 <p><strong>There is no UI thread in a running game.</strong> The UI manager's constructor also creates a thread object
 named <code>UIThread</code> (0x1889460 -&gt; 0x193856C; vt_0x22F94B8 with the shared thread methods, vf8 the name,
-vf9 the stub 0x19385BC, vf10 a 0x4000-byte stack), but it is never started: the shared thread start 0x529500 has 30
-call sites, and each starts another object (the named threads of Threads and the frame, a Bink worker, a
-queue worker and two event workers on static objects). The object sits at <code>UIManager+0x08</code>. The UI's own console commands live in the source file
-<code>CUIThread.cpp</code>. The UI's per-frame work shows on the main thread instead: the HUD's <code>CUIMgr::Render</code>
-(0x1AB28C) runs inside the main scene's render submission, the nav-marker loop 0x1C4AEC runs on the main thread (its
-frame 0x2A9228 in 1.6% of 3,000 main-thread samples, in 0 of 1,938 render-thread samples), the menu selection's prompt
-rebuild runs from the client update (below), and captured movie frames reach the render thread through the main
-thread's command ring (below).</p>
+vf9 the stub 0x19385BC, vf10 a 0x4000-byte stack), but it is never started. The shared thread start 0x529500 has 30
+call sites, and each starts another object: the named threads of Threads and the frame, a Bink worker, a
+queue worker and two event workers on static objects. The object sits at <code>UIManager+0x08</code>, and the UI's own console
+commands live in the source file <code>CUIThread.cpp</code>. The UI's per-frame work is done on the main thread instead. The
+HUD's <code>CUIMgr::Render</code> (0x1AB28C) runs inside the main scene's render submission. The nav-marker loop 0x1C4AEC runs on
+the main thread: its frame 0x2A9228 appears in 1.6% of 3,000 main-thread samples and in 0 of 1,938 render-thread
+samples. The menu selection's prompt rebuild runs from the client update (below), and captured movie frames reach the
+render thread through the main thread's command ring (below).</p>
 <p><strong>The UI state machine</strong> is vt_0x1F74D30: vf2 is the handler (state, event), and the current state is at
 <code>UIManager+0x240</code>. State 12 (<code>HierarchyTransition</code>, the move into and out of the Army screen) enters at 0x437514,
 updates at 0x437594 and exits at 0x4375F0. Its update waits on the world-UI owner's busy test 0x19C36A8, but the wait
 is capped: the duration <code>[0x2671338]</code> is 20.0 seconds, armed by 0x49F9C8 and expired by 0x16CFA4 on the real-time
-clock (1,508 ms measured per 1.5 s).</p>
+clock (a measured 1,508 ms per 1.5 s).</p>
 <h3 id="views-the-generic-host-and-the-factory">Views: the generic host and the factory</h3>
 <p>A view is a <code>CUIBaseView</code> (vt_0x1F7CD48, 0x60 bytes). The factory 0x1889250(<code>&amp;view</code>, 0, <code>&amp;record</code>,
 <code>&amp;index</code>) allocates one and calls the constructor 0x18CAA38(view, record, index). The host is generic: it
@@ -189,7 +189,7 @@ builds any record of <code>Interface/GFX/UI</code>.</p>
 <tr>
 <td><code>Player</code></td>
 <td>primary 2 (<code>interface\flash\sp.gfx</code>)</td>
-<td>the same four, plus five additional bundles (<code>worlduidata</code>, <code>ingame_tex</code>, <code>store_icon</code> ...)</td>
+<td>the same four, plus five additional bundles (among them <code>worlduidata</code>, <code>ingame_tex</code> and <code>store_icon</code>)</td>
 <td>yes (index 1)</td>
 </tr>
 <tr>
@@ -218,28 +218,28 @@ one view per entry into <code>UIManager+0x360</code>. <code>PreLoad</code> and <
 <code>_Structuresuiflash.File</code> is empty; it stores the index at <code>layer+0x30</code> and the flash record at
 <code>layer+0x48</code>. The view's methods then do the rest:</p>
 <ul>
-<li><strong>vf1 0x18CB7DC, initialise.</strong> 0x18CBBA4 waits until the required and additional bundles are
+<li><strong>vf1 0x18CB7DC, initialize.</strong> 0x18CBBA4 waits until the required and additional bundles are
   resident and the movie file (<code>_Structuresuiflash.File</code>, opened through the engine interface's vf13
-  service) is loaded into a movie definition at <code>layer+0x40</code>. 0x18CAD78 then creates the movie: the view
-  index becomes a <strong>movie mode</strong> (0 -&gt; 1, 1 -&gt; 2, 2 -&gt; 4, anything else -&gt; 2), the definition's vf4
+  service) is loaded into a movie definition at <code>layer+0x40</code>. 0x18CAD78 then creates the movie. The view
+  index becomes a <strong>movie mode</strong> (0 -&gt; 1, 1 -&gt; 2, 2 -&gt; 4, anything else -&gt; 2). The definition's vf4
   0x11BBE3C(mode) (vt_0x22C2B00) builds a 0x3938-byte movie wrapper (vt_0x1E6EE80, constructor
-  0x11BC268) stored at <code>layer+0x38</code>, and the record's <code>EdgeAA</code>, <code>MaxCurvePixelError</code>, <code>StrokeQuality</code> and
-  <code>BackgroundAlpha</code> are applied to it. The method is called until the wrapper exists. It also fills the wrapper's
-  glyph table (see Text).</li>
-<li><strong>vf2 0x2A92A4, advance.</strong> Takes the frame step from the layer's timer (<code>[layer+0x58]+0x14</code>) and calls
-  the wrapper's vf4.</li>
+  0x11BC268), which is stored at <code>layer+0x38</code>, and the record's <code>EdgeAA</code>, <code>MaxCurvePixelError</code>, <code>StrokeQuality</code>
+  and <code>BackgroundAlpha</code> are applied to it. The method is called until the wrapper exists. It also fills the
+  wrapper's glyph table (see Text below).</li>
+<li><strong>vf2 0x2A92A4, advance.</strong> The method takes the frame step from the layer's timer (<code>[layer+0x58]+0x14</code>) and
+  calls the wrapper's vf4.</li>
 </ul>
 <p>The engine advances only the views it owns in <code>UIManager+0x360</code>; a view built outside that list draws
 nothing until its vf2 is called.</p>
 <h3 id="the-movie-wrapper-and-the-ui-render-list">The movie wrapper and the UI render list</h3>
 <p>The wrapper's <code>+0x18</code> is the GFx movie and <code>+0x38</code> its render ID. Its vf4 0x47D78F0 is one UI frame:</p>
 <ol>
-<li><code>movie-&gt;vf24</code> Advance(step, 2, 0), then <code>movie-&gt;vf25</code> Capture(1), which returns the captured frame.</li>
+<li>It calls <code>movie-&gt;vf24</code> Advance(step, 2, 0), then <code>movie-&gt;vf25</code> Capture(1), which returns the captured frame.</li>
 <li>0x115226C posts a 0x28-byte command on the main thread's render command ring 0x272E8D8 (see Threads
    and the frame): <code>{+0x00 thunk 0x65086C, +0x08 the UI render list, +0x10 method 0x650888, +0x18 u32
    render ID, +0x20 frame}</code>. On the render thread 0x650888 locks the list and stores the frame into the
    entry with that ID.</li>
-<li>0x251E00(ring, 0), then 0x2AA3A8 runs the wrapper's callback queue at <code>+0x3920</code>.</li>
+<li>It calls 0x251E00(ring, 0); then 0x2AA3A8 runs the wrapper's callback queue at <code>+0x3920</code>.</li>
 </ol>
 <p>The <strong>UI render list</strong> is a static object at 0x272EB20:</p>
 <table>
@@ -307,22 +307,22 @@ and shows the title and, when its text is not empty, the second line (details in
 upgrades).</p>
 <h3 id="widget-effects">Widget effects</h3>
 <p>The save-select screen's row frames and prompt bar, and the HUD's bars, are not Scaleform art but 3D ClientFX effects
-drawn beneath the Scaleform views. A menu widget
-that names an <code>FXList</code> hands its node to the UI effects manager <code>[UIManager+0x58]</code>: 0x15747C(node, fxList, 0) -&gt;
-0x157DF8 fills a 0x190-byte entry {<code>+0x00</code> node handle, <code>+0x138</code> FX list, <code>+0x140</code> state (1 create, 2 running, 3 stop,
-4 kill), <code>+0x144</code> index} and stores the index in the node (<code>+0xD0</code>, node vf2 / vf3 0x157FB0); 0x157890(node) retires it
-(state 3). 0x2249E8 (from 0x224430) builds the effect: the save-select screen's prompt bar, for example, is the widget
+drawn beneath the Scaleform views. A menu widget that names an <code>FXList</code> hands its node to the UI effects manager
+<code>[UIManager+0x58]</code>. The call 0x15747C(node, fxList, 0) -&gt; 0x157DF8 fills a 0x190-byte entry {<code>+0x00</code> node handle,
+<code>+0x138</code> FX list, <code>+0x140</code> state (1 create, 2 running, 3 stop, 4 kill), <code>+0x144</code> index} and stores the index in the
+node (<code>+0xD0</code>, node vf2 / vf3 0x157FB0); 0x157890(node) retires the entry (state 3). 0x2249E8 (from 0x224430) builds
+the effect. The save-select screen's prompt bar, for example, is the widget
 <code>Interface/Menu/MenuWidget/Prompt::DifficultyPrompt</code> (symbol <code>LIB-PromptBanner</code>, attached from the library, FX list
-<code>Interface/ElementFXList::Difficulty_PromptBar</code>) whose box is <code>_StructuresUIFXData</code> {UIFX
+<code>Interface/ElementFXList::Difficulty_PromptBar</code>), whose box is <code>_StructuresUIFXData</code> {UIFX
 <code>Client/ClientFXSequence::Store_PromptBar</code> = <code>fx\ui\menuitems\store_promptbar.fxp</code>, depth 26.5, <code>TrackRotation</code>}.
-At the title screen the manager held 23 entries (the save rows' frames <code>DifficultySelect</code> /
-<code>DifficultySelect_Highlight</code> among them). A menu widget's state is at <code>+0xDC</code> (0 out, 1 off, 2 in, 3 on), its record at
-<code>+0xE8</code> and its clip's output handle at <code>+0x58</code>; <code>UI_Widget_d</code> 0x3293D0 attaches the clip (node slot 76, or slot 83
+At the title screen the manager held 23 entries, among them the save rows' frames <code>DifficultySelect</code> /
+<code>DifficultySelect_Highlight</code>. A menu widget's state is at <code>+0xDC</code> (0 out, 1 off, 2 in, 3 on), its record at <code>+0xE8</code>
+and its clip's output handle at <code>+0x58</code>. <code>UI_Widget_d</code> 0x3293D0 attaches the clip (node slot 76, or slot 83
 GetMember when the symbol is not taken from the library), and 0x46DC80 hands the node and the FX list to the manager.</p>
 <h2 id="scaleform-movies">Scaleform movies</h2>
 <h3 id="where-they-ship">Where they ship</h3>
-<p>The base game's movies are sections of three bundles in <code>UI_Assets.arch06</code> (2,269 containers scanned,
-19 movies found):</p>
+<p>The base game's movies are sections of three bundles in <code>UI_Assets.arch06</code>; a scan of its 2,269 containers finds
+19 movies:</p>
 <ul>
 <li><code>interface\bundles\ingame.embb</code> holds 17: the component library, the HUD (<code>sphud.gfx</code>), the Army
   screen (<code>hierarchy.gfx</code>), upgrades, skills, swords, progression, minimap, zone map, message boxes,
@@ -512,7 +512,8 @@ cannot be moved once constructed, and its destructor 0x1C68FC releases the node.
 </table>
 <p>The text setters share 0x710ADC(movie, value, text, html), which sets the member <code>htmlText</code> when the last argument
 is 1 and <code>text</code> when it is 0: vf103 passes 0, vf106 passes 1. When the string contains <code>{</code>, both first set the plain
-text <code>TestStr</code> and call vf108 to size the field's picture substitutions before setting the real text (see Text).</p>
+text <code>TestStr</code> and call vf108 to size the field's picture substitutions before setting the real text (see Text
+below).</p>
 <p>Interface elements are found by name through <code>Interface/Elements</code> (0x32A774): an element record names
 its library symbol (<code>SymbolName</code>), an effect list and an <code>Interface/ElementAttribute</code> placement.</p>
 <h3 id="the-attach-node-lifetime-rule">The attach-node lifetime rule</h3>
@@ -522,45 +523,45 @@ an <code>onUnload</code> listener at <code>node+0xA0</code> whose callback is 0x
 0x1C318C) releases the listener and, while <code>+0x58</code> is set, invokes <code>removeMovieClip</code> on the clip. If the
 clip is unloaded some other way (removed, or its parent removed), 0x7941C4 clears <code>+0x58</code> first, so a
 clip is never removed twice. Lookup nodes (GetMember vf83 / vf84, <code>_root</code>) never set the owner byte.</p>
-<p>So releasing an attach handle removes the clip, and a lookup handle for the same clip is a different
+<p>Releasing an attach handle therefore removes the clip, while a lookup handle for the same clip is a different
 node whose release leaves the clip alone. Code that keeps attached clips on screen must hold their attach
 handles (and release children before parents).</p>
 <h2 id="text">Text</h2>
 <h3 id="the-string-database">The string database</h3>
-<p>All game text is looked up by key in the string database <code>[base+0x2702000]</code> (vt_0x2008F70). It is a list of loaded
-string tables (the list at <code>+0x10</code>; a table is its list node minus 0x40: <code>+0x0C</code> the row count, <code>+0x10</code> the rows,
-<code>+0x18</code> the narrow rows, <code>+0x30</code> the UTF-16 text). A row is {u32 key hash, u32 text offset in UTF-16 units}, sorted by
-hash, and the hash is the key's case-insensitive P919 (see GameDB); a table's lookup 0x472104 binary-searches its rows
-(0x472134). 0x471F2C takes a key string, hashes it and returns the text; the store's vf8 answers whether a hash exists,
-and vf8 and vf9 take the first table in the list that holds it. Because the key is hashed from its content, a key
+<p>All game text is looked up by key in the string database <code>[base+0x2702000]</code> (vt_0x2008F70). The database is a list
+of loaded string tables (the list at <code>+0x10</code>). A table is its list node minus 0x40, with <code>+0x0C</code> the row count, <code>+0x10</code>
+the rows, <code>+0x18</code> the narrow rows and <code>+0x30</code> the UTF-16 text. A row is {u32 key hash, u32 text offset in UTF-16
+units}; the rows are sorted by hash, and the hash is the key's case-insensitive P919 (see GameDB). A table's lookup
+0x472104 binary-searches its rows (0x472134). 0x471F2C takes a key string, hashes it and returns the text. The store's
+vf8 answers whether a hash exists, and vf8 and vf9 take the first table in the list that holds it. Because the key is hashed from its content, a key
 string can live anywhere in memory. The tables are the shipped per-language files
 (<code>database\string\&lt;language&gt;\string.strdb</code>, see Archives and file formats). Table-shaped data also lies elsewhere on
 the heap (one such copy lacked keys that the listed table holds); the game reads the tables reached through the
 database's own list.</p>
-<h3 id="format-arguments-colour-runs-and-tokens">Format arguments, colour runs and tokens</h3>
+<h3 id="format-arguments-color-runs-and-tokens">Format arguments, color runs and tokens</h3>
 <p>Text carries three kinds of markup, resolved in this order:</p>
 <ol>
 <li><strong>Format arguments</strong> (<code>{1!s}</code>, <code>{1!d}</code>, <code>{1!.0f}</code>, <code>{1!ls}</code>) are filled by the game's formatter
    (<code>Str_WBFormatMessageT</code>).</li>
-<li><strong>Action and alias tokens</strong> are replaced by <code>ReplaceActionsWithDevices</code> 0x2995F8 (named by its own assert string;
-   reached through the UI callback 0x299520 that <code>CInterfaceMgr::Init</code> registers: <code>$KEY</code> strings are looked up and any
-   text is run through it). For each <code>{name}</code>:
+<li><strong>Action and alias tokens</strong> are replaced by <code>ReplaceActionsWithDevices</code> 0x2995F8, named by its own assert string.
+   It is reached through the UI callback 0x299520 that <code>CInterfaceMgr::Init</code> registers, which looks up <code>$KEY</code> strings
+   and runs any text through it. For each <code>{name}</code>:
    - an input-action name (one of the 377 actions) becomes the button bound to it: <code>{&lt;Device&gt;}</code> when that button
-     has a text glyph, else its <code>PCKey</code> string;
-   - a <code>Profile/ActionAlias</code> record becomes its <code>FontColor</code> as a <code>&lt;font color&gt;</code> run (0xD06CF0), else its gamepad or
-     keyboard-and-mouse string, which is run through the pass again;
+     has a text glyph, otherwise its <code>PCKey</code> string;
+   - a <code>Profile/ActionAlias</code> record becomes its <code>FontColor</code> as a <code>&lt;font color&gt;</code> run (0xD06CF0), otherwise its gamepad
+     or keyboard-and-mouse string, which is run through the pass again;
    - anything else is copied back unchanged.</li>
 <li><strong>Picture tokens</strong> left in the text are drawn by Scaleform's image substitution (below).</li>
 </ol>
-<p>A letter key has no text glyph (<code>KeyG</code>: <code>TextFieldGlyphReplacement</code> off, device code 71), so the game prints its
-string, <code>IDS_Key_G</code> = <code>{Color_Player}[G]&lt;/font&gt;</code>: the cyan bracketed key is the game's own key style in text.</p>
-<p><strong>The colour aliases</strong> (<code>Profile/ActionAlias.FontColor</code> -&gt; <code>Interface/Color.COLOR</code>, ARGB, with their uses in the
-shipped English strings):</p>
+<p>A letter key has no text glyph (<code>KeyG</code> has <code>TextFieldGlyphReplacement</code> off and device code 71), so the game prints
+its string, <code>IDS_Key_G</code> = <code>{Color_Player}[G]&lt;/font&gt;</code>. The cyan bracketed key is the game's own style for a key in text.</p>
+<p><strong>The color aliases.</strong> An alias's <code>Profile/ActionAlias.FontColor</code> leads to an <code>Interface/Color.COLOR</code> value (ARGB).
+The table gives each alias's color and its uses in the shipped English strings:</p>
 <table>
 <thead>
 <tr>
 <th>Alias</th>
-<th>Colour</th>
+<th>Color</th>
 <th>Uses</th>
 </tr>
 </thead>
@@ -625,49 +626,48 @@ shipped English strings):</p>
 <h3 id="pictures-in-text">Pictures in text</h3>
 <p>A picture inside a line of text is a Scaleform image substitution, set up per view.</p>
 <ul>
-<li><strong>The glyph table.</strong> Each owned view's initialise method (vf1 0x18CB7DC) fills its movie wrapper's glyph table: first
+<li><strong>The glyph table.</strong> Each owned view's initialize method (vf1 0x18CB7DC) fills its movie wrapper's glyph table: first
   every <code>Profile/Inputs/PC/Buttons</code> record with <code>TextFieldGlyphReplacement</code> on (27 of 155: the gamepad buttons and the
   mouse) under the token <code>{&lt;Device&gt;}</code> (wrapper vf37 formats <code>{%d}</code>), then every <code>Interface/GlyphReplacement</code> record
   (133) under its <code>TokenText</code>.</li>
-<li><strong>AddGlyph</strong> is wrapper vf38 0x11BCF78(wrapper, token <code>wchar_t*</code>, texture path <code>char*</code>). It returns at once once the
+<li><strong>AddGlyph</strong> is wrapper vf38 0x11BCF78(wrapper, token <code>wchar_t*</code>, texture path <code>char*</code>). It returns at once when the
   table holds 256 entries (<code>cmp [rcx+0xA0], 0x100</code>). It gets the texture's handle (0x1BEAAC, get-or-create), its data
-  object <code>[[handle+8]]</code> (0x3DF304 -&gt; 0x3DF388) and from <code>[obj+0x10]</code> (0x3DF2B8) the width and height words
-  <code>+0x52</code> / <code>+0x54</code>, with no null check, so a texture that nothing has loaded faults there. It stores width and height
-  in a 0x38-byte entry (entries from <code>+0xA8</code>, 0x469A5C), makes <code>img://&lt;texture&gt;</code> a BitmapData (0x11BED8C, main thread
+  object <code>[[handle+8]]</code> (0x3DF304 -&gt; 0x3DF388) and, from <code>[obj+0x10]</code> (0x3DF2B8), the width and height words
+  <code>+0x52</code> / <code>+0x54</code>. There is no null check, so a texture that nothing has loaded faults there. It stores width and
+  height in a 0x38-byte entry (entries from <code>+0xA8</code>, 0x469A5C), makes <code>img://&lt;texture&gt;</code> a BitmapData (0x11BED8C, main thread
   only) and pushes {image, subString, width, height, baseLineY = texture height x 0.8} onto <code>_root._GlyphData</code>
   (<code>+0x38A8</code>). The wrapper's constructor 0x11BC268 publishes <code>_root.RegisterGlyphs</code> and <code>_GlyphData</code>. The engine has no
   call that removes an entry.</li>
-<li><strong>Sized to each field's font.</strong> A text set with a <code>{</code> in it (above) calls vf108 -&gt; 0x4697D0: the font's
-  <code>getTextExtent("W").ascent</code> x 1.2 is every picture's height, height times the entry's aspect its width, then
-  <code>setImageSubstitutions(null)</code> and <code>setImageSubstitutions(_GlyphData)</code>. A wide picture therefore becomes a strip one
-  text line high.</li>
-<li><strong>The tokens.</strong> <code>TokenText</code> is a wide string capped at 15 characters, braces included (<code>{BrokenCaptain}</code> fills it;
-  hence the shipped <code>{LegendarySkul}</code>), and the
-  record name need not match it: <code>SocialCurrencyIcon</code> is <code>{Spoils}</code>, <code>CurrencyCoin</code> is <code>{Coin}</code>, <code>CurrencyIcon</code> is
-  <code>{M}</code>, and <code>PremiumCurrencyIcon</code>'s <code>{G}</code> is the Gold icon, not the G key. Matched by <code>TokenText</code> (what Scaleform
-  matches), the shipped strings use 95 of the 133 tokens 851 times in 593 strings, 185 of those uses in strings that
-  also carry format arguments. A record instance holds <code>+0x00</code> <code>ReplacementTexture</code>, <code>+0x08</code>
-  <code>PCMousePrimarySwapTexture</code>, <code>+0x10</code> <code>TokenText</code>.</li>
-<li><strong>The glyph textures ship inside UI bundles.</strong> Of 12 that a bundle-membership index placed in no bundle, 9 of 9
-  checked sit inside patch bundles (<code>Patch_DLC4</code>'s <code>interface\bundles\gfx\ingame.bndl</code> and <code>ingame_navmarkers.bndl</code>,
-  <code>Patch_05</code>'s <code>store_icon.bndl</code>), found by parsing 19,525 bundle manifests of five archives; the views' initialisation
-  waits for those bundles, so AddGlyph's unchecked read meets a loaded texture.</li>
+<li><strong>Sized to each field's font.</strong> Setting a text that contains a <code>{</code> (above) calls vf108 -&gt; 0x4697D0. Every
+  picture's height is the font's <code>getTextExtent("W").ascent</code> x 1.2, and its width is that height times the entry's
+  aspect; the function then calls <code>setImageSubstitutions(null)</code> and <code>setImageSubstitutions(_GlyphData)</code>. A wide picture
+  therefore becomes a strip one text line high.</li>
+<li><strong>The tokens.</strong> <code>TokenText</code> is a wide string capped at 15 characters, braces included: <code>{BrokenCaptain}</code> fills it,
+  which accounts for the shipped <code>{LegendarySkul}</code>. The record name need not match the token: <code>SocialCurrencyIcon</code> is
+  <code>{Spoils}</code>, <code>CurrencyCoin</code> is <code>{Coin}</code>, <code>CurrencyIcon</code> is <code>{M}</code>, and <code>PremiumCurrencyIcon</code>'s <code>{G}</code> is the Gold icon,
+  not the G key. Counted by <code>TokenText</code>, which is what Scaleform matches, the shipped strings use 95 of the 133 tokens
+  851 times in 593 strings; 185 of those uses are in strings that also carry format arguments. A record instance holds
+  <code>+0x00</code> <code>ReplacementTexture</code>, <code>+0x08</code> <code>PCMousePrimarySwapTexture</code> and <code>+0x10</code> <code>TokenText</code>.</li>
+<li><strong>The glyph textures ship inside UI bundles.</strong> A bundle-membership index placed 12 of them in no bundle, but parsing
+  19,525 bundle manifests of five archives puts 9 of the 9 checked inside patch bundles (<code>Patch_DLC4</code>'s
+  <code>interface\bundles\gfx\ingame.bndl</code> and <code>ingame_navmarkers.bndl</code>, <code>Patch_05</code>'s <code>store_icon.bndl</code>). The views'
+  initialization waits for those bundles, so AddGlyph's unchecked read meets a loaded texture.</li>
 </ul>
 <h3 id="quest-text">Quest text</h3>
 <p>A quest's card text comes from one resolver, 0xCF9D90(_, quest record, out, kind), reached through the thunk 0xD64810
 and the wrapper 0xD731E0(quest, out, kind). Kind 0 is <code>Description</code>, kind 3 <code>ShortDescription</code>, and two more kinds go
-through other accessors. For each kind it reads that kind's picker: when one is set, it asks the picker (0x18A0C4C with
-the live quest, else 0x4AA370 with the record), which walks its entries in order and takes the first whose
-<code>Predicate</code> holds for the member filling its <code>Jobs</code> (or that has <code>PassIfNoMember</code> with nobody there). The entry's
+through other accessors. For each kind it reads that kind's picker. When one is set, it asks the picker (0x18A0C4C
+with the live quest, otherwise 0x4AA370 with the record); the picker walks its entries in order and takes the first
+whose <code>Predicate</code> holds for the member filling its <code>Jobs</code>, or that has <code>PassIfNoMember</code> with nobody there. The entry's
 <code>String</code> and <code>StringArgs</code> are used only when an entry passes and its <code>String</code> is not empty (0xCFAAE8 .. 0xCFAB43);
-otherwise the quest's own field and its <code>Args</code> are (0xCFABA7). The name's twin, 0x17DEE5C, shows what the argument
+otherwise the quest's own field and its <code>Args</code> are used (0xCFABA7). The name's twin, 0x17DEE5C, shows what the argument
 bits mean: bit 1 the subject's name and title (0x4A9810), bit 2 the second participant, bit 4
 <code>SupporterStringPicker</code>, bits 8, 0x10 and 0x20 numbers.</p>
 <ul>
 <li><strong>Readers.</strong> The two wrappers have 9 callers. Kind 0 is read by the world map's quest card 0x18EB6B4, the captain
-  card with his 3D model 0x190338C (the <code>CharacterPresentation</code> widget) and 0x18DAF8C (a layer not identified); the
+  card with his 3D model 0x190338C (the <code>CharacterPresentation</code> widget) and 0x18DAF8C (an unidentified layer). The
   mission start screen's text writer 0x18E356C fills its <code>QuestDescription</code> field through the same wrapper. Kind 3 is
-  read by the Army screen's captain line 0x18A36B8 and two others; kind 2 by one.</li>
+  read by the Army screen's captain line 0x18A36B8 and two others, kind 2 by one.</li>
 <li><strong>Pickers are shared.</strong> <code>Quest/JobStringPickerGroup</code> has 127 groups. All 11 <code>Outpost_*</code> groups are the same two
   entries on the outpost commander's job with <code>PassIfNoMember</code> True: <code>IsNameKnown</code> gives <code>SC_&lt;challenge&gt;_Outpost_Desc</code>
   ("Draw out {1!s} by ..."), <code>IsUnknown</code> gives <code>..._Desc_Unk</code> ("Draw out the Outpost leader by ..."). Both predicates
@@ -676,43 +676,43 @@ bits mean: bit 1 the subject's name and title (0x4A9810), bit 2 the second parti
   <code>ShortDescription</code> and <code>StartPointDescription</code> cells all point at one string, and the objective
   <code>SpawnCon_KillChief_Obj</code> ("Defeat {1!s}") is shared by 855 quests (outposts 233, vendettas 294, warchiefs and forts
   100, others 228). An empty picker link reads 0.</li>
-<li>The world map's quest card honours <code>\n</code> line breaks in the description.</li>
+<li>The world map's quest card honors <code>\n</code> line breaks in the description.</li>
 </ul>
 <h2 id="menus-as-gamedb-data">Menus as GameDB data</h2>
 <p>A menu is data: layers, trees of nodes, widgets, elements and their placements, all under <code>Interface/</code>.</p>
 <ul>
 <li><strong>The menu manager record</strong> <code>Interface/Menu/MenuManager::Menu</code> (at <code>[[UIManager+0x50]+0x518]</code>) links
   the default pause layer (<code>PauseRoot/PauseLayer</code>), the title screen root (<code>FrontEndRoot/FrontEnd</code>) and
-  one layer per screen: world map, zone map, quest log, appendices, war upgrades, the Army screen
-  (<code>Hierarchy/HierarchyLayer</code>), the captain detail (<code>FactionMember/FactionMember</code>), upgrades,
-  equipment, gems, store, gold, mercenaries, skins, options and more.</li>
+  one layer per screen, among them the world map, zone map, quest log, appendices, war upgrades, the Army
+  screen (<code>Hierarchy/HierarchyLayer</code>), the captain detail (<code>FactionMember/FactionMember</code>), upgrades,
+  equipment, gems, store, gold, mercenaries, skins and options.</li>
 <li><strong>Layers.</strong> <code>Interface/Menu/MenuLayer</code> has 48 layer classes and 74 layer records (one more class,
   <code>Graveyard</code>, survives only in an old patch). Every layer has the common fields <code>ContentSymbol</code>, <code>LayerFX</code>,
   the title fields, <code>DirectExitAction</code>, sounds for init / activate / sub-layer push and pop / deactivate /
   term, a <code>Transition</code> (<code>Interface/Menu/MenuTransition</code>, 43 records), <code>Components</code>, <code>NavPane</code>, a status
   header type, <code>AutoWidgets</code>, a <code>HUDState</code>, a default layer state, <code>MenuSelectionPredicates</code> and a
-  telemetry alias; each class adds its own (the Army screen's has 97 fields, most of them actions).
-  <code>Interface/Menu/MenuLayerList</code> (32) are stacks of layers pushed together (<code>Hierarchy_Full</code>,
-  <code>NewGameSetup_Full</code> ...).</li>
-<li><strong>Trees, nodes and widgets.</strong> <code>Interface/Menu/MenuTreeGroup</code> records group <code>Interface/Menu/MenuTreeBase</code> trees (155);
-  <code>Interface/Menu/MenuTreeNode</code> has 58 node classes (skills, gems, traits, quests, skins, game modes ...);
-  <code>Interface/Menu/MenuWidget</code> holds 271 widgets; <code>Interface/Menu/MenuComponent</code> holds buttons (78, each with a
+  telemetry alias; each class adds its own (the Army screen's has 97 fields, most of them actions). The
+  <code>Interface/Menu/MenuLayerList</code> records (32) are stacks of layers pushed together, for example <code>Hierarchy_Full</code>
+  and <code>NewGameSetup_Full</code>.</li>
+<li><strong>Trees, nodes and widgets.</strong> <code>Interface/Menu/MenuTreeGroup</code> records group <code>Interface/Menu/MenuTreeBase</code> trees (155).
+  <code>Interface/Menu/MenuTreeNode</code> has 58 node classes, among them skills, gems, traits, quests, skins and game modes.
+  <code>Interface/Menu/MenuWidget</code> holds 271 widgets, and <code>Interface/Menu/MenuComponent</code> holds buttons (78, each with a
   <code>ContentElement</code> naming a <code>LIB-</code> symbol), checkboxes, cycles, sliders and text entries. The trait card's rows are
   tree nodes too (see Captain traits); the Skills screen's node state is computed in code (see Items).</li>
-<li><strong>Elements and placement.</strong> <code>Interface/Elements</code> (242) and <code>Interface/ElementAttribute</code> (962). An
-  attribute is a screen placement and its animation: <code>AppliedProperties</code>, <code>InterpolationTime</code>,
+<li><strong>Elements and placement.</strong> The categories are <code>Interface/Elements</code> (242) and <code>Interface/ElementAttribute</code> (962).
+  An attribute is a screen placement and its animation: <code>AppliedProperties</code>, <code>InterpolationTime</code>,
   <code>DelayTime</code>, <code>InterpolationType</code>, <code>VisibleOnInterpolateTerm</code>, <code>UseSafeZone</code>, <code>Position</code> (a screen
   fraction), <code>Offset</code>, <code>Scale</code>, <code>Alpha</code>, <code>Z</code>, <code>ZScale</code>, <code>Rotation</code>, a 3D rotation and <code>Filters</code>
-  (<code>Interface/ElementFilter</code>: bevel, blur, colour matrix, drop shadow, glow). Attributes come in named
+  (<code>Interface/ElementFilter</code>: bevel, blur, color matrix, drop shadow, glow). Attributes come in named
   pairs such as <code>AgeGate_Active</code> / <code>AgeGate_Inactive</code>, an element's placement with its layer active and
   inactive.</li>
 <li><strong>Predicates.</strong> <code>Interface/Predicates/*</code> gate nodes and actions: <code>Menu</code> (66), <code>HierarchyState</code> (115),
   <code>Hierarchy</code> (28) and 39 more classes.</li>
 <li><strong>Selections.</strong> <code>Interface/Menu/MenuSelection/Predicate/*</code> and <code>/Action/*</code> tie an input to a prompt and a result
   action (below).</li>
-<li><strong>Text and input.</strong> <code>Interface/GFX/Fonts::Main</code>, <code>Interface/GFX/FontMapping</code> (<code>Console</code>, <code>IntHUD</code>,
-  <code>LatinHUD</code>), <code>Interface/GFX/KeyMaps</code> (<code>InGame</code>, <code>Menu</code>) and 109 <code>Interface/GFX/Text</code> styles for the
-  engine's own debug text. Menus take input through command sets (<code>Profile/CommandSets</code>).</li>
+<li><strong>Text and input.</strong> The text and input records are <code>Interface/GFX/Fonts::Main</code>, <code>Interface/GFX/FontMapping</code>
+  (<code>Console</code>, <code>IntHUD</code>, <code>LatinHUD</code>), <code>Interface/GFX/KeyMaps</code> (<code>InGame</code>, <code>Menu</code>) and 109 <code>Interface/GFX/Text</code> styles
+  for the engine's own debug text. Menus take input through command sets (<code>Profile/CommandSets</code>).</li>
 </ul>
 <h3 id="the-menu-system">The menu system</h3>
 <p><code>[UIManager+0x50]</code> is the menu system:</p>
@@ -819,32 +819,33 @@ offered, the prompts drawn for them and the Army screen's mode lists.</p>
 </tr>
 </tbody>
 </table>
-<p>A source names its subject at <code>+0x28</code>: with the world map open, bucket 6 held one source (vtable 0x1DB12B0) whose
-<code>+0x28</code> is the <code>3DZoneMap</code> layer record and which held 7 of that layer's 8 predicates; on the Army screen bucket 0's
+<p>A source names its subject at <code>+0x28</code>. With the world map open, bucket 6 held one source (vtable 0x1DB12B0) whose
+<code>+0x28</code> is the <code>3DZoneMap</code> layer record and which held 7 of that layer's 8 predicates. On the Army screen, bucket 0's
 sources carry a member key at <code>+0x28</code> and his position at <code>+0x38</code>, and the highlight's selection set 0x18BE498 appends
 one on every call (0x18BB704).</p>
 <p><strong>Who rebuilds it, and when.</strong> The client update 0x1A864C -&gt; 0x52440C -&gt; 0x1890700 calls
 0x163CFC(<code>[UIManager+0x50]</code>) -&gt; 0x163D28(<code>menu+0x6FD0</code>) every frame. 0x163D28 rebuilds the prompts only when the
-selection's byte <code>+0x418</code> is set, and clears it; 0xD8F220(selection, 0) sets it, from 14 sites in the engine. The bar is
-the main thread's.</p>
-<p><strong>The refill.</strong> 0x320B08 (51 call sites) runs each type's sources in <code>TypePriority</code> order: a source's vf2 0x321338
+selection's byte <code>+0x418</code> is set, and then clears the byte. 0xD8F220(selection, 0) sets it and is called from 14 sites
+in the engine. The bar belongs to the main thread.</p>
+<p><strong>The refill.</strong> 0x320B08 (51 call sites) runs each type's sources in <code>TypePriority</code> order. A source's vf2 0x321338
 clears its vector and calls vf21 0x322324, which reads the layer record's <code>MenuSelectionPredicates</code> (0x767E2C: the
-record's own run, then its instance) and keeps each predicate that 0x3223CC passes. The test covers its
-<code>CommonPredicates</code> (0x322D9C: a null link passes; then build, store and online-service predicates, then the required,
-allowed and excluded menu, hierarchy, faction, quest, game-state, player and bodyguard lists) and the running
-tutorial's <code>DisableMenuSelectionPredicates</code>. None of the 74 shipped predicates has a null <code>CommonPredicates</code>; 15 point
-at a common-predicate record that sets no condition.</p>
-<p><strong>The build.</strong> For each kept predicate 0x31EC5C skips one with no <code>Prompt</code>; otherwise its input actions
-(<code>InputPromptOverride</code>, else <code>InputKBM</code> when <code>+0x11</code> is 0 and it has one, else <code>Input</code>) go through 0x31EDF0, which
-claims each action index for the first predicate that uses it, in a table of 377 entries (an index past it is an
-engine assert). A predicate whose actions were all claimed is dropped. The kept ones are sorted (0x76CE58) and handed
+record's own run, then its instance) and keeps each predicate that 0x3223CC passes. The test covers the predicate's
+<code>CommonPredicates</code> and the running tutorial's <code>DisableMenuSelectionPredicates</code>. The common-predicate check 0x322D9C
+passes a null link; otherwise it tests the build, store and online-service predicates, then the required, allowed and
+excluded menu, hierarchy, faction, quest, game-state, player and bodyguard lists. None of the 74 shipped predicates has
+a null <code>CommonPredicates</code>; 15 point at a common-predicate record that sets no condition.</p>
+<p><strong>The build.</strong> 0x31EC5C skips each kept predicate that has no <code>Prompt</code>. Otherwise the predicate's input actions
+(<code>InputPromptOverride</code>, else <code>InputKBM</code> when <code>+0x11</code> is 0 and the predicate has one, else <code>Input</code>) go through
+0x31EDF0, which claims each action index for the first predicate that uses it, in a table of 377 entries; an index
+past the table is an engine assert. A predicate whose actions were all claimed is dropped. The kept ones are sorted (0x76CE58) and handed
 to each bar widget whose context matches the prompt's <code>Context</code>: 0xDDC940 -&gt; 0xE4F570 fills one of the widget's 16
 slots of 0x4D8 bytes with the <code>PromptID</code> key, two action IDs, <code>Enabled</code> and the device flags (<code>KeyboardPrompt</code> 1,
 <code>GamepadPrompt</code> 2, <code>ClickablePrompt</code> 4). A second loop reads each predicate's <code>Prompt</code> again (0x163F80) and uses it
 without a null check: a <code>Prompt</code> link that changes between the two reads would reach 0xE4F570 with a null <code>PromptID</code>.
 The accessors themselves return 0 for a null record (0x73E4CC).</p>
 <p><strong>Prompt-only predicates.</strong> A predicate may name a prompt and no <code>ResultAction</code>: it only draws the prompt, and the layer
-handles the key itself. The world map's <code>SetWaypoint_KBM</code>, <code>Zoom_MordorMap</code>, <code>Zoom_Army</code> and <code>Player_Center</code> are such.
+handles the key itself. The world map's <code>SetWaypoint_KBM</code>, <code>Zoom_MordorMap</code>, <code>Zoom_Army</code> and <code>Player_Center</code> are such
+predicates.
 <code>Interface/Menu/MenuLayer/ZoneMap::3DZoneMap.MenuSelectionPredicates</code> lists eight predicates (<code>PushQuestLog</code>,
 <code>PopToQuestLog</code>, <code>3DZoneMap_PushLegendLayer</code>, <code>Zoom_MordorMap</code>, <code>Zoom_Army</code>, <code>Player_Center</code>, <code>SetWaypoint_KBM</code>,
 <code>Back</code>); its prompts use the context <code>FortStatusHeader</code>. Only <code>SetWaypoint_KBM</code> names <code>ZoneMapHasHighlight</code> (as an
@@ -854,19 +855,19 @@ for example <code>ZoneMapZoomOut</code> 68, <code>MenuAux0</code> 78, <code>Comb
 keyboard the menu actions are bound to Space, 1-7, A, D, Q, E, Z, X, B, Shift, Home and Esc (<code>Profile/Commands</code>).</p>
 <h2 id="the-hud">The HUD</h2>
 <p>The HUD is the <code>Player</code> view. <code>Interface/ElementSetup::Setup</code> (108 fields) configures it: <code>HUDBase</code> -&gt;
-<code>Interface/HUD/Widget/HUDManager</code>, five event managers (centre, left, right ...), the item widget, the
+<code>Interface/HUD/Widget/HUDManager</code>, five event managers (among them center, left and right), the item widget, the
 mercenary widget, <code>DebugHUDElements</code> -&gt; <code>Interface/HUD/Widget/FXTest</code>, the bar effects and fill rates,
 toast events and minimap thresholds.</p>
 <p>The HUD builder 0x18C3E80 creates the widgets by name: combat (<code>CUIHUDCombat</code>), photo mode, combo, the
-event managers, the standard, keyboard, quick-time, centre and top prompt groups, combat hints, the pausing
+event managers, the standard, keyboard, quick-time, center and top prompt groups, combat hints, the pausing
 tutorial, pinned challenge, character and quest-start presentations, quest failure, brand notification,
-the crosshair (<code>CUIHUDCrosshair</code>), skill points, score and timer. Last it tests
-<code>GameModes.UseMercenaryWidget</code> on the record at <code>[UIManager+0x430]</code>: set, it builds the mercenary summon
-bar (<code>CUIHUDMercenaryWidget</code>, the Desolation of Mordor bodyguard slots); clear, the item widget.</p>
+the crosshair (<code>CUIHUDCrosshair</code>), skill points, score and timer. Last, it tests
+<code>GameModes.UseMercenaryWidget</code> on the record at <code>[UIManager+0x430]</code>: when the field is set it builds the mercenary
+summon bar (<code>CUIHUDMercenaryWidget</code>, the Desolation of Mordor bodyguard slots), and when it is clear, the item widget.</p>
 <p>HUD content is driven by states: <code>Interface/HUD/Widget</code> (28), <code>Interface/HUD/WidgetList</code> (20),
 <code>Interface/HUD/State</code> (44) and <code>Interface/HUD/StateConfig</code> (38). Each menu layer names the HUD state it
-wants (the Army screen: <code>Interface/HUD/State/Hierarchy</code>). Button prompts are data as well (see Items); the
-ammo counter and the reticle colour are written into the widget at <code>[[UIManager+0x30]+0x108]</code> by combat
+wants; the Army screen names <code>Interface/HUD/State/Hierarchy</code>. Button prompts are data as well (see Items). The
+ammo counter and the reticle color are written into the widget at <code>[[UIManager+0x30]+0x108]</code> by combat
 code (see Combat).</p>
 <p><strong>Quests and objectives on the HUD</strong> are data of <code>Quest/Quests</code> (<code>Name</code>, <code>Description</code>, <code>ShortDescription</code>, each with
 <code>Args</code> and a picker; <code>Objectives</code>, <code>JobSetup</code>, <code>NavMarkerTypeQuest</code>, <code>NavMarkerTypeCharacter</code>, <code>SetQuestAsTarget</code>,
@@ -913,8 +914,8 @@ record: an icon and a secondary texture, the <code>SPH-</code> symbol it shows (
 <code>PrimaryIconOverride</code> -&gt; <code>Interface/NavMarkerCustomDraw</code>, sizes, a HUD state and on- and off-screen configurations
 (<code>Interface.NavMarkerScreenConfigCommon</code>: <code>AbsoluteOffset</code>, <code>AbsolutePosition</code>, <code>AbsoluteUseScreenSafe</code>,
 <code>AlphaRange</code>, <code>AlphaTransition</code>, <code>DistanceAlpha</code>, <code>ScaleFallOff</code>, <code>ScaleRange</code>, <code>UseAbsolutePosition</code>). A marker object
-is 0x420 bytes (0x60CE2C); a world character's is <code>[char+0x2380]</code>, a stage character's at <code>+0x758</code>. The waypoint
-marker and <code>NavMarker::SetType</code> are in Outposts, strongholds and fortress upgrades.</p>
+is 0x420 bytes (0x60CE2C). A world character's marker is <code>[char+0x2380]</code>, and a stage character's is at <code>+0x758</code>. The
+waypoint marker and <code>NavMarker::SetType</code> are described in Outposts, strongholds and fortress upgrades.</p>
 <p><strong>The widgets.</strong> Each marker drives a widget (vt_0x1DA9640). The per-frame loop 0x1C4AEC walks every widget through an
 intrusive list: the sentinel is <code>base+0x26725F8</code>, the first node <code>[sentinel+8]</code>, the widget the node minus 0x18 and the
 next node <code>[node+8]</code> (170 widgets in a loaded world, the walk ending at the sentinel). For each widget 0x1C5140 -&gt;
@@ -964,9 +965,10 @@ update (170 of 170 read 0 at rest):</p>
 </table>
 <p><strong>Projection.</strong> 0x1C4AEC builds a context each frame from the UI manager's camera (<code>+0x144</code>, or <code>+0x17C</code>), its camera
 transform and lens (<code>+0x1E8</code>, <code>+0x204</code>, <code>+0x208</code>), the viewport rectangle <code>+0x220</code> and the safe-zone factors
-<code>VP_SZ_Top</code> / <code>Left</code> / <code>Right</code>. 0x1C3C54 projects a point: view = 0x2577DC(camera, world), u = 0.5 + 0.5 vx P00 / z,
-v = 0.5 - 0.5 vy P11 / z, on screen when both are within [0, 1] and z &gt; 0: a plain centred pinhole. In the Army
-screen's detail view, with the game in front, the UI camera equals the menu camera (0.0 cm apart).</p>
+<code>VP_SZ_Top</code> / <code>Left</code> / <code>Right</code>. 0x1C3C54 projects a point with a plain centered pinhole: view = 0x2577DC(camera,
+world), u = 0.5 + 0.5 vx P00 / z and v = 0.5 - 0.5 vy P11 / z, and the point is on screen when both are within [0, 1]
+and z &gt; 0. In the Army screen's detail view, with the game window in front, the UI camera equals the menu camera
+(0.0 cm apart).</p>
 <p><strong>From script:</strong></p>
 <table>
 <thead>
@@ -1005,12 +1007,12 @@ screen's detail view, with the game in front, the UI camera equals the menu came
 <h3 id="the-nameplate">The nameplate</h3>
 <p>The card over a hovered captain on the Army screen (name, class line, level shield, prompts, arrow) is not drawn by
 the Army screen layer. It is a nav marker widget, updated by the same loop as every marker in the world, and it never
-polls: 0x189B438(clip, <code>&amp;position</code>) refills its text only when flag 0x20000 is up or the clip has just loaded.
+polls: 0x189B438(clip, <code>&amp;position</code>) refills its text only when flag 0x20000 is raised or right after the clip loads.
 Hovering away and back reloads the clip, and highlighting the captain already highlighted does nothing.</p>
 <ul>
 <li><strong>The text is read from the live member.</strong> 0x188CE30(position) finds the member from <code>widget+0x290</code> = {<code>+0x00</code> army,
-  <code>+0x08</code> u8 row, <code>+0x09</code> u8 seat}, and 0x4A9810(member, ..) builds the line, so a change to his name or title shows
-  at the next refill without a summary refill.</li>
+  <code>+0x08</code> u8 row, <code>+0x09</code> u8 seat}, and 0x4A9810(member, ..) builds the line. A change to his name or title
+  therefore shows at the next refill, without a summary refill.</li>
 <li><strong>The engine's raise</strong> is 0x17FE784(marker, <code>&amp;position</code>): it copies 16 bytes to <code>marker+0x3B8</code> and <code>widget+0x290</code>
   and sets flag 0x20000 (<code>bts [widget+0x48], 0x11</code>), with no same-value test. It takes the 0x420-byte marker, not the
   widget. Its callers build the position from the member (0x60C424) or from a summary's <code>+0x48</code> (vf74 0x1823448,
@@ -1021,7 +1023,7 @@ Hovering away and back reloads the clip, and highlighting the captain already hi
 <p>The Army screen is a 3D stage in a dedicated menu world with the <code>hierarchy.gfx</code> overlay on top. The
 movie draws only the 2D panels: its 22 <code>HIE-</code> symbols are the enemy overview, the trait card parts
 (<code>HIE-TraitHeader</code>, <code>-TraitGroup</code>, <code>-TraitContent</code>, <code>-TraitDivider</code>), dialogs (upgrade, target, cancel),
-quest start and complete panels, assault and defence groups, contract overview and the player icon. No
+quest start and complete panels, assault and defense groups, contract overview and the player icon. No
 symbol describes rows or seats: the captains, the seats and the fort are world objects. (The instance
 names <code>Row0</code> - <code>Row9</code> belong to the component library's control-bindings screen, and <code>OverlordTree</code> /
 <code>WarchiefTree</code> to the zone map's fort highlight.)</p>
@@ -1029,27 +1031,27 @@ names <code>Row0</code> - <code>Row9</code> belong to the component library's co
 <code>bundles\hierarchymenu.bndl</code>, the menu world collision <code>prefabs\ui\worlduimenuws_collision.bndl</code>, the
 henchmen, power-struggle and blood-brother link effects, the fidget bundle
 <code>bundles\animationcharacters\menu\fidget.bndl</code> (at most 20 fidgets at once), one camera state per mode
-(army, mercenary, orders, garrison and contract assignment, store, map, pause ...), the character model
+(among them army, mercenary, orders, garrison and contract assignment, store, map and pause), the character model
 manager and 38 tutorials.</p>
 <p>Each army's stage is chosen by its <code>Faction/Definition.WorldUIFaction</code> -&gt; <code>Faction/World/Faction</code> (10
 records): <code>Instance</code> names the stage rig (<code>prefabs\ui\wuim_regionfaction_ws.bndl</code> for five regions,
 <code>wuim_minasfaction_ws</code> for Minas Ithil, <code>wuim_desert_dlc4_ws</code> and <code>wuim_dlc4merc_faction_ws</code> for the
 Desolation of Mordor), <code>FortPicker</code> the fort pieces, and <code>Member</code> / <code>GarrisonMember</code> / <code>VendettaMember</code>
 the seat grids. The section is requested by the region's stage object in the menu world (vt_0x1FA4008,
-named <code>Hier.Map.Region_*</code>) when that object activates: its vf16 0x1A34E78 maps the record <code>Region</code> to the
-region's army (<code>Region_GetFaction</code> 0x1E4418, which ends in <code>Regions/Region.GameModeFactionOverrides</code> keyed by the
-current game mode, then <code>Region.Faction</code>), resolves the world section and requests it into the object's own group
-(0x4B420C), then links the object into the active-stage list 0x2675860. The activation runs when the menu world is
+named <code>Hier.Map.Region_*</code>) when that object activates. Its vf16 0x1A34E78 maps the record <code>Region</code> to the
+region's army through <code>Region_GetFaction</code> 0x1E4418, which ends in <code>Regions/Region.GameModeFactionOverrides</code> keyed by
+the current game mode, then in <code>Region.Faction</code>. It then resolves the world section, requests it into the object's
+own group (0x4B420C) and links the object into the active-stage list 0x2675860. The activation runs when the menu world is
 rebuilt during a load, not on a visit to the Army screen. The stage objects sit at their regions' real positions on
 the map at scale 1.0 (eight active in a loaded game), and vf16 requests each section at its object's own transform.</p>
 <h3 id="stage-holders-and-the-world-ui-owner">Stage holders and the world-UI owner</h3>
 <p>The world-UI owner <code>[base+0x26FFB60]</code> (vt_0x1F97950; see Engine core) keeps one slot per army at <code>+0x2B8</code>: 38 slots
-of 0x50 bytes in army-table order (the key at <code>+0x00</code> is the <code>Faction/Definition</code>, 38 of 38 agreeing), the count at
-<code>+0x2C0</code>. <code>StageFor</code> 0x455EDC(owner, army) returns a slot's <code>+0x48</code>, the stage holder; <code>+0x28 .. +0x48</code> is an object
-handle (vt_0x1DC0488) chained on the region stage object's <code>+0x2A8</code>, which points at the spawned holder. The armies of
-one region share one holder (21 of the 38 slots filled in a loaded game). After a load every slot is empty until the
-owner's <code>+0x400</code> goes to 1, around the first visit to the Army screen; <code>+0x400</code> drops again later and the slots stay.
-A holder (vt_0x1FA2FB8):</p>
+of 0x50 bytes in army-table order (the key at <code>+0x00</code> is the <code>Faction/Definition</code>, and 38 of 38 agree), with the count
+at <code>+0x2C0</code>. <code>StageFor</code> 0x455EDC(owner, army) returns a slot's <code>+0x48</code>, the stage holder; <code>+0x28 .. +0x48</code> is an
+object handle (vt_0x1DC0488) chained on the region stage object's <code>+0x2A8</code>, which points at the spawned holder. The
+armies of one region share one holder (21 of the 38 slots are filled in a loaded game). After a load every slot is
+empty until the owner's <code>+0x400</code> goes to 1, around the first visit to the Army screen; <code>+0x400</code> drops again later,
+and the slots stay filled. A holder (vt_0x1FA2FB8) has this layout:</p>
 <table>
 <thead>
 <tr>
@@ -1092,8 +1094,8 @@ A holder (vt_0x1FA2FB8):</p>
 </tr>
 </tbody>
 </table>
-<p>The holder tick 0x16EE24 (from the owner's per-frame Update, vf18 0x16F4A0) runs the fort reconciler
-0x2EC464, which diffs the wanted fort pieces against the built ones; then, when <code>+0x275</code> is set, prunes
+<p>The holder tick 0x16EE24 (called from the owner's per-frame Update, vf18 0x16F4A0) runs the fort reconciler
+0x2EC464, which diffs the wanted fort pieces against the built ones. Then, when <code>+0x275</code> is set, the tick prunes
 relationships (0x1B5E13C) and rebuilds every stage character from the summaries (0x1D7A918), writing the
 word <code>+0x275</code> = 0x100 so that the row rebuild 0x1A284D8 follows on the next pass. The engine sets <code>+0x275</code>
 itself when it sets a holder up for an army (0x1A29168, from 0x19C3760 and 0x19C3F60). With the menu
@@ -1101,8 +1103,8 @@ closed an army has no stage objects; they are built fresh from the summaries whe
 <p><strong>An army with no stage cannot be shown.</strong> When a region's stage object activates before its region maps to an army,
 it spawns nothing (its <code>+0x2A8</code> handle points at itself) and the army's slot stays empty. A screen that shows such an
 army (the Mercenary screen pointed at it) then holds a black loading screen indefinitely, although the UI state
-machine's own wait expires after 20 seconds (above); a later load in which the region is mapped rebuilds the stage,
-and the screen opens normally.</p>
+machine's own wait expires after 20 seconds (above). A later load in which the region is mapped rebuilds the stage,
+and the screen then opens normally.</p>
 <h3 id="stage-characters-and-member-summaries">Stage characters and member summaries</h3>
 <p>A captain on the stage is a <code>CWorldUIFactionMember</code> (vt_0x1F733C0, 0xB58 bytes, placement constructor
 0x1822164), created through the object server by class name. It is built from the army's <strong>member
@@ -1169,7 +1171,7 @@ summary</strong>, not from the FactionMember.</p>
 </tr>
 <tr>
 <td>+0xB18</td>
-<td>its world-UI type record (<code>Faction/World/Character::FactionMember</code>, <code>FactionMember_WorldMap</code> ...), not the member</td>
+<td>its world-UI type record (for example <code>Faction/World/Character::FactionMember</code> or <code>FactionMember_WorldMap</code>), not the member</td>
 </tr>
 <tr>
 <td>+0xB3C</td>
@@ -1177,11 +1179,11 @@ summary</strong>, not from the FactionMember.</p>
 </tr>
 </tbody>
 </table>
-<p>Its vtable: vf63 the summary, vf67 / vf70 highlight on / off, vf68 / vf69 detail view start / end, vf71 / vf72 cursor on
-him / off (0x1A21664, byte <code>+0x1CE</code>, 0x188EE34), vf73 the selection object. A bone of a stage character is placed as
-world = P + s R(Q) t, with P, Q and s the character's <code>+0xAC</code>, <code>+0xB8</code> and <code>+0xC8</code> and t the bone's model-space
-position: a drawn weapon read this way sat 0.3 cm from the <code>R_Weapon</code> bone (0.4 cm on an Olog), against 43.6 cm and
-130.4 cm without the rotation. A loaded Army screen held 27 stage characters (an orc's rig has 100 bones, an Olog's 89),
+<p>Its vtable slots are vf63 (the summary), vf67 / vf70 (highlight on / off), vf68 / vf69 (detail view start / end),
+vf71 / vf72 (cursor on him / off; 0x1A21664, byte <code>+0x1CE</code>, 0x188EE34) and vf73 (the selection object). A bone of a
+stage character is placed at world = P + s R(Q) t, where P, Q and s are the character's <code>+0xAC</code>, <code>+0xB8</code> and <code>+0xC8</code>
+and t is the bone's model-space position. A drawn weapon read this way sat 0.3 cm from the <code>R_Weapon</code> bone (0.4 cm on
+an Olog), against 43.6 cm and 130.4 cm without the rotation. A loaded Army screen held 27 stage characters (an orc's rig has 100 bones, an Olog's 89),
 and the stage's captains draw with render ID 245 (see Characters, the player and the camera).</p>
 <p>A <strong>member summary</strong> (vt_0x1DB1070, 0x1A8 bytes) is one member's frozen description:</p>
 <table>
@@ -1194,7 +1196,7 @@ and the stage's captains draw with render ID 245 (see Characters, the player and
 <tbody>
 <tr>
 <td>+0x30</td>
-<td>a copy of the member's inventory (slot items, colours at <code>+0xC8</code>, overlays at <code>+0xE0</code>)</td>
+<td>a copy of the member's inventory (slot items, colors at <code>+0xC8</code>, overlays at <code>+0xE0</code>)</td>
 </tr>
 <tr>
 <td>+0x40</td>
@@ -1254,38 +1256,39 @@ and the stage's captains draw with render ID 245 (see Characters, the player and
 </tr>
 </tbody>
 </table>
-<p>There are three generations of copies. The army context keeps one summary per member (<code>[ctx+0x30]</code>,
-lookup 0x1B5C0F8(FS, <code>&amp;key</code>) -&gt; 0x16FC5C, a pure read); the open stage draws from its own container of
-copies (<code>0x16FC1C(owner, army)</code>, none shared with the army's); and each stage character draws from a third,
-private copy behind <code>+0x728</code>. The engine's refills: 0x169168(summary, member) re-reads the whole member
-into a summary (appearance from 0x75D2FC, items from 0x75D314, class, tree, role, personality, tribe,
-level, flags, the trait list rebuilt from <code>FM+0x198</code> and the markers from <code>FM+0x1B0</code>); its sources are the
-member's mock-member snapshot when one exists (see The Nemesis system). 0x62BF54 refills a container copy
-(or appends one for an unseated member).</p>
+<p>There are three generations of copies. The army context keeps one summary per member (<code>[ctx+0x30]</code>; the
+lookup 0x1B5C0F8(FS, <code>&amp;key</code>) -&gt; 0x16FC5C is a pure read). The open stage draws from its own container of
+copies (<code>0x16FC1C(owner, army)</code>), none of them shared with the army's. Each stage character draws from a third,
+private copy behind <code>+0x728</code>. The engine refills the copies as follows. 0x169168(summary, member) re-reads the whole
+member into a summary: the appearance from 0x75D2FC, the items from 0x75D314, class, tree, role, personality, tribe,
+level, flags, the trait list rebuilt from <code>FM+0x198</code> and the markers from <code>FM+0x1B0</code>. Its sources are the member's
+mock-member snapshot when one exists (see The Nemesis system). 0x62BF54 refills a container copy, or appends one for
+an unseated member.</p>
 <p><strong>The per-captain redraw</strong> is 0x19C395C(owner, <code>&amp;key</code>), which the engine calls after a Training Order is
 applied (0x1C51630): holder 0x455EDC -&gt; summary 0x1B5C0F8 -&gt; stage character 0x1A28FAC(holder, key) -&gt;
 <code>UI_CWorldUICharacter</code> 0x627F40(character, summary, 0, 0). Every step returns quietly when the army is
-not on a stage. 0x627F40 chooses the look (0x2EB2DC, below), and 0x62EEE4 swaps the new look in, rebinds
-the model and, only when the look test 0x170564 reports a change, tears down the selection and model
-objects, rebuilds them and sets <code>+0xB3C</code>. The look test does not compare the death bits (flag bits 2 and
+not on a stage. 0x627F40 chooses the look (0x2EB2DC, below). 0x62EEE4 then swaps the new look in and rebinds
+the model; only when the look test 0x170564 reports a change does it tear down the selection and model
+objects, rebuild them and set <code>+0xB3C</code>. The look test does not compare the death bits (flag bits 2 and
 21), so a change of state alone does not rebuild a captain's preview pose.</p>
-<p>Under modification: a value written into an army summary reaches the open stage only when the screen is
-entered again, because the stage draws from its own copies; a stage character's private copy is deep (it
-owns its item instances), so refilling it in place frees items the model has bound.</p>
+<p>Under modification, a value written into an army summary reaches the open stage only when the screen is
+entered again, because the stage draws from its own copies. A stage character's private copy is deep (it
+owns its item instances), so refilling it in place frees items that the model has bound.</p>
 <p>Every frame while the screen is open, the owner's tick runs the character model manager
 (<code>HierarchyCharacterModelMgr</code>, <code>ConfigSwapsPerFrame</code>) -&gt; 0x628BF8 -&gt; the stage character's vf63 0x3680B0
 (its summary) -&gt; 0x30DE28, which walks the summary's trait list for a <code>MountAITemplate</code>.</p>
 <h3 id="seats-placement-and-animation">Seats, placement and animation</h3>
 <p>A fort's composition is data: <code>Faction/World/Faction.FortPicker</code> -&gt; <code>Faction/World/Fort/Picker</code> -&gt;
 fort setups -&gt; piece entries -&gt; pieces {world sections, position, rotation, fixed seats}. A piece entry
-(<code>FortPieceEntry</code>) is {<code>FactionPredicate</code>, <code>HierarchyMenuPredicate</code>, <code>RequiredPredicateValue</code>, <code>Piece</code>}: 0x62B600
-builds the piece list from all seven entry lists of a setup and passes every entry through 0x62BB18, which allows it
-when the menu predicate's result (0x276E74) equals <code>RequiredPredicateValue</code>. The shipped data uses that switch only on
-lighting pieces (132 of 132; keep 0 of 135, gate 0 of 726, streamed 0 of 33). 0x2EC464 then diffs the list: pieces no
-longer listed go, new <code>WorldUIFortPiece</code> objects come; it rebuilds only when the fort's <code>+0x271</code> is set, which 0x326168
-does from 0x16E570, 0x455D78 (each tick from the owner's vf18, regions sorted by distance) and 0x7A126C. 0xE83590 also
-calls 0x62B600. A normal fort's <code>Foundation</code> piece has no world section and sits on the map's own terrain; the
-Desolation of Mordor's mercenary camp brings its own ground (<code>Fort/Piece::Foundation_Desert_Mercs</code> -&gt;
+(<code>FortPieceEntry</code>) is {<code>FactionPredicate</code>, <code>HierarchyMenuPredicate</code>, <code>RequiredPredicateValue</code>, <code>Piece</code>}. 0x62B600
+builds the piece list from all seven entry lists of a setup and passes every entry through 0x62BB18, which allows the
+entry when the menu predicate's result (0x276E74) equals <code>RequiredPredicateValue</code>. The shipped data uses that switch
+only on lighting pieces: 132 of 132 lighting entries carry it, against 0 of 135 keep, 0 of 726 gate and 0 of 33
+streamed entries. 0x2EC464 then diffs the list: pieces no longer listed are removed, and new <code>WorldUIFortPiece</code>
+objects are created. It rebuilds only when the fort's <code>+0x271</code> is set, which 0x326168 does when called from 0x16E570,
+0x455D78 (each tick from the owner's vf18, with regions sorted by distance) and 0x7A126C. 0xE83590 also calls
+0x62B600. A normal fort's <code>Foundation</code> piece has no world section and sits on the map's own terrain. The Desolation
+of Mordor's mercenary camp brings its own ground (<code>Fort/Piece::Foundation_Desert_Mercs</code> -&gt;
 <code>prefabs\ui\mordormap\foundation_desert_mercs.bndl</code>, 91 assets, 49.6 MB), which is why that camp shows on the map as a
 square of terrain wherever its stage is built.</p>
 <p>The upper rows (Overlord, inner and outer warchiefs, the
@@ -1293,33 +1296,33 @@ first captain row) sit on fixed seats (<code>WorldUIFixedFactionMemberPos</code>
 rotation), which any piece can register (0x629EEC -&gt; 0x62A17C). The other rows are a grid
 (<code>_StructuresWorldUI.FactionMember</code>: <code>RowGap</code>, <code>ColumnGap</code>) placed from the holder's frame (0x1D79DF0).
 A seat is dropped onto the stage's collision by a ray, 0x62AA6C(seat, offset, out): on a hit the height
-becomes the hit point plus the offset, on a miss the seat keeps its data position. The stage character
+becomes the hit point plus the offset, and on a miss the seat keeps its data position. The stage character
 (its vf11) calls it through 0x62AA48 with a zero offset, so the character's animated root, the hip, is
 placed on the seat itself.</p>
 <p>Stage idles are chosen by data and played by clip name. A preview state's
-<code>HierarchyPreviewTypeAnimData.RootAnimChoice</code> / <code>RootInAnimChoice</code> is a choice group; 0x42E72C takes the
-first child whose predicates pass (0x42E984 -&gt; 0x42EAFC; inputs: the combat tree's <code>CharacterType</code>, the
-role, the personality and whether the name is known), 0x42E82C collects its <code>Animation</code> records, 0x42F794
-picks one at random and 0x42F1D0 plays it by name (0x4C8A0C -&gt; 0x302540: the name's hash looked up in the
+<code>HierarchyPreviewTypeAnimData.RootAnimChoice</code> / <code>RootInAnimChoice</code> is a choice group. 0x42E72C takes the
+first child whose predicates pass (0x42E984 -&gt; 0x42EAFC); their inputs are the combat tree's <code>CharacterType</code>, the
+role, the personality and whether the name is known. 0x42E82C collects the child's <code>Animation</code> records, 0x42F794
+picks one at random, and 0x42F1D0 plays it by name (0x4C8A0C -&gt; 0x302540, which looks the name's hash up in the
 skeleton's animation set). A name the character's set lacks plays the bind pose. Fidgets fire only for
 tags the current choice carries.</p>
 <p>The detail view plays the effects of <code>Faction/World/Interactable/FX/States::FM_Army_Detail</code>: its entries
 choose, by species predicate, an <code>InteractableFXData</code> whose <code>FX</code> names a ClientFX sequence
-(<code>Hierarchy_Detail</code>, <code>Hierarchy_DetailOlag</code>, <code>Hierarchy_RiderDetail</code>); 0x2ECF5C reads the link on every
+(<code>Hierarchy_Detail</code>, <code>Hierarchy_DetailOlag</code>, <code>Hierarchy_RiderDetail</code>). 0x2ECF5C reads the link on every
 update.</p>
 <h3 id="unknown-captains-the-silhouette">Unknown captains: the silhouette</h3>
 <p>A captain whose name the player does not know is drawn as a generic model. The look chooser 0x2EB2DC
-takes, in order: the decapitation picker (<code>DecapModelPicker</code>, 0x2EB258 -&gt; 0x2EB14C) when the summary's
-flag word has bits 17 and 21 set; else, when the stage character's type record has a <code>DefaultModel</code> and
-0x170744(summary, flag) is false, that default model (0x2EA718); else the captain's own model (summary
-<code>+0x138</code>), built by 0x2EBA60 from the appearance copy.</p>
+tries three sources in order. When the summary's flag word has bits 17 and 21 set, it takes the decapitation picker
+(<code>DecapModelPicker</code>, 0x2EB258 -&gt; 0x2EB14C). Otherwise, when the stage character's type record has a <code>DefaultModel</code>
+and 0x170744(summary, flag) is false, it takes that default model (0x2EA718). Otherwise it takes the captain's own
+model (summary <code>+0x138</code>), built by 0x2EBA60 from the appearance copy.</p>
 <p>0x170744 returns true when the member (found from the key at <code>summary+0x88</code>) has killed the player
-(<code>FM+0x4C4</code> non-zero: such a captain is always shown). Otherwise, with the flag argument set, 0x16FDE0 must pass too:
-it is true when the member is not found or has flag bit 7, else it takes the summary's copy of that bit (<code>+0x188</code>
-bit 7), so with the flag set a known captain stays unknown until the menu has presented him. Last it returns
+(<code>FM+0x4C4</code> non-zero: such a captain is always shown). Otherwise, with the flag argument set, 0x16FDE0 must pass too.
+It is true when the member is not found or has flag bit 7; otherwise it takes the summary's copy of that bit (<code>+0x188</code>
+bit 7). With the flag set, a known captain therefore stays unknown until the menu has presented him. Last, it returns
 <code>summary+0x190</code> bit 0, the copy of the name-known bit (see The Nemesis system for intel levels). The redraw 0x19C395C,
 the holder path 0x1A2957C, the combat-tree reader 0x170698, the name reader 0x17EE550 and the replay pass 0x1BFCCC8
-call it with the flag clear; 0x627B74, 0x627E4C and 0x1A1FF24 with it set.</p>
+call it with the flag clear, and 0x627B74, 0x627E4C and 0x1A1FF24 call it with the flag set.</p>
 <table>
 <thead>
 <tr>
@@ -1387,51 +1390,52 @@ pointer:</p>
 <p>vf19 0x1898A38 is the action handler (-&gt; 0x1898AE0(layer, selection, action)) and vf29 0x1899E8C the enter method.
 0x189B438 fills the nameplate.</p>
 <h3 id="the-highlight">The highlight</h3>
-<p>"Selected" is two things on the Army screen: the highlight is the captain under the cursor (the spotlight, the
-nameplate and the prompts follow it); the target is the captain "New Target" announces, set by an action on whoever is
-highlighted.</p>
+<p>"Selected" has two meanings on the Army screen. The highlight is the captain under the cursor; the spotlight, the
+nameplate and the prompts follow it. The target is the captain that "New Target" announces, set by an action on
+whoever is highlighted.</p>
 <p>The highlight's owner is the stage controller <code>ctrl = [[base+0x26FFB60]+0x340]</code>, and <code>[ctrl+0x428]</code> is the highlighted
 stage character. Everything else is downstream of it: <code>UIManager+0x318</code> (the member key) and <code>+0x328</code>, the menu
-selection and the hierarchy layer's card <code>+0x1580</code>; a write to any of those moves nothing.</p>
+selection and the hierarchy layer's card <code>+0x1580</code>. A write to any of those moves nothing.</p>
 <p><strong><code>SetHighlight</code> 0x1834444(ctrl, character, a, b)</strong> is the one place a highlight changes (12 callers, 19 call
 sites). For the character already highlighted it returns 0. Otherwise, for the old character it clears <code>+0x1CD</code>,
-calls vf70, wipes <code>UIManager+0x318</code> and calls 0x188EB3C; it stores the new one (0x629960(<code>ctrl+0x408</code>), whose <code>+0x20</code>
-is <code>+0x428</code>); for the new character it sets <code>+0x1CD</code> and calls vf67. <code>a</code> and <code>b</code> reach only 0x1832124, the end of the
-old character's detail view.</p>
+calls vf70, wipes <code>UIManager+0x318</code> and calls 0x188EB3C. It then stores the new one (0x629960(<code>ctrl+0x408</code>), whose
+<code>+0x20</code> is <code>+0x428</code>), and for the new character it sets <code>+0x1CD</code> and calls vf67. <code>a</code> and <code>b</code> reach only 0x1832124,
+the end of the old character's detail view.</p>
 <p>vf67 0x1822FEC plays <code>HighlightCharacterSound</code>, writes his key to <code>UIManager+0x318</code> and calls 0x188ED10(<code>&amp;position</code>) =
 0x188ED1C(UIManager, <code>&amp;position</code>), which sets the selection and runs each open layer's refresh (the Army screen
-0x189A560, the captain detail 0x18C97E0, contract assignment, mercenary). Its camera call 0x327120(<code>ctrl+0x4E0</code>, state,
-7) does nothing here, because <code>Faction/World/Character::FactionMember.CameraStateHighlight</code> is unset (only
-<code>CameraStateSelect</code> is set): a highlight never moves the camera.</p>
-<p><strong>Keys and positions.</strong> 0x400818(out, member) = {<code>FM+0x178</code>, <code>FM+0x174</code>} with index -1 for empty: the summary's
+0x189A560, the captain detail 0x18C97E0, contract assignment and mercenary). Its camera call 0x327120(<code>ctrl+0x4E0</code>,
+state, 7) does nothing here, because <code>Faction/World/Character::FactionMember.CameraStateHighlight</code> is unset (only
+<code>CameraStateSelect</code> is set). A highlight therefore never moves the camera.</p>
+<p><strong>Keys and positions.</strong> 0x400818(out, member) = {<code>FM+0x178</code>, <code>FM+0x174</code>}, with index -1 when empty, is the summary's
 <code>+0x88</code> key and what the card holds. 0x1896B3C(out, member) builds a position {<code>+0x00</code> army, <code>+0x08</code> u8 row
 (0x1E4D90), <code>+0x09</code> u8 seat <code>FM+0x51B</code>, <code>+0x10</code> the key, <code>+0x20</code> u8 flag}. 0x1862A40(<code>&amp;key</code>) finds his stage character
 (<code>StageFor</code> 0x455EDC, then 0x1A28FAC).</p>
-<p><strong>Who highlights.</strong> The mouse (0x17DE2A8, from the UI manager's 0x188FE8C), next and previous (0x17DE1A0 /
-0x17DE224), a direction (0x17DE394), a menu entry (0x1830AF8) and the store (0x188EEAC). The four input paths share
-one branch: when the current character is in the detail view, <code>SetHighlight(.., 0, 0)</code> and then 0x1835574(ctrl, new,
-0, 2, 0, 0) carries the detail view over to the new captain; otherwise <code>SetHighlight(.., 1, 1)</code>. The mouse path is
-message-driven: a pick of nothing does not clear the highlight (0x1A21664(current, 0)), and 0x183246C returns the
-current highlight while the cursor has not moved (0x1834E70).</p>
-<p><strong>The cursor's verdict</strong> 0xEF3A80(character): 1 his row is in the army's list (<code>ctx+0x170 .. +0x178</code>), 2 the summary's
-<code>+0x1A1</code>, 3 his selection object's <code>+0xCC</code> is 0, 4 selectable. The mouse and the keyboard both use the list 0x1830D60,
-which keeps verdict 4; next and previous also need the summary's <code>+0x1A4</code> and a known name (0x170744(summary, 0)), so
-the keyboard skips a silhouette and the mouse does not. On one Minas Ithil stage 19 of 25 characters read 4 and 6 read 3
+<p><strong>Who highlights.</strong> The highlight is set by the mouse (0x17DE2A8, from the UI manager's 0x188FE8C), next and
+previous (0x17DE1A0 / 0x17DE224), a direction (0x17DE394), a menu entry (0x1830AF8) and the store (0x188EEAC). The
+four input paths share one branch. When the current character is in the detail view, they call
+<code>SetHighlight(.., 0, 0)</code>, and then 0x1835574(ctrl, new, 0, 2, 0, 0) carries the detail view over to the new captain;
+otherwise they call <code>SetHighlight(.., 1, 1)</code>. The mouse path is message-driven: a pick of nothing does not clear the
+highlight (0x1A21664(current, 0)), and 0x183246C returns the current highlight while the cursor has not moved
+(0x1834E70).</p>
+<p><strong>The cursor's verdict</strong>, 0xEF3A80(character), is one of four values: 1 (his row is in the army's list,
+<code>ctx+0x170 .. +0x178</code>), 2 (the summary's <code>+0x1A1</code>), 3 (his selection object's <code>+0xCC</code> is 0) and 4 (selectable). The
+mouse and the keyboard both use the list 0x1830D60, which keeps verdict 4. Next and previous also need the summary's
+<code>+0x1A4</code> and a known name (0x170744(summary, 0)), so the keyboard skips a silhouette and the mouse does not. On one Minas Ithil stage 19 of 25 characters read 4 and 6 read 3
 (the Overlord and the warchiefs). A menu entry (0x1830F2C -&gt; 0x1862A40 -&gt; <code>SetHighlight</code>) applies no such filter.</p>
 <h3 id="mark-target">Mark Target</h3>
 <p><code>Interface/Menu/MenuSelection/Predicate/FactionMember::SetTarget</code> takes <code>MenuEnter</code> and, as its mouse input,
 <code>Mouse1</code> on a highlighted captain, with the result action <code>Interface/Menu/MenuSelection/Action::SetTarget</code>, the mode
-<code>Target_Success_Allowed</code> and the positions captain, warchief and Overlord (not empty seats). So a left click on a
-hovered captain is Mark Target.</p>
+<code>Target_Success_Allowed</code> and the positions captain, warchief and Overlord (not empty seats). A left click on a
+hovered captain is therefore Mark Target.</p>
 <p>The dispatcher vf19(layer, action) -&gt; 0x1898AE0(layer, selection, action) takes the branch <code>ActionSetAsTarget</code>
-(accessor 0x1897668 on the layer record): 0x18928A8 -&gt; 0x17A9AE4(<code>[GM+0x6C80]</code>, member, region, 0), then
-0xD6EC60(layer, member, <code>UI_TargetChanged_Desc</code>), the only branch that raises that banner. <code>ActionClearAsTarget</code> runs
+(accessor 0x1897668 on the layer record), which calls 0x18928A8 -&gt; 0x17A9AE4(<code>[GM+0x6C80]</code>, member, region, 0) and
+then 0xD6EC60(layer, member, <code>UI_TargetChanged_Desc</code>); it is the only branch that raises that banner. <code>ActionClearAsTarget</code> runs
 <code>System::ClearCurrentTarget</code> 0x188B0C8. The current target lives at <code>[GM+0x6C80]</code> (<code>+0x00</code> its key, <code>+0x20</code> active;
 see Outposts, strongholds and fortress upgrades for its other fields).</p>
 <p>0x18928A8(_, <code>&amp;{army record, u32 pool index}</code>, region, flag) resolves the key (0x170794 -&gt; 0x18D93C(FS, <code>&amp;key</code>)) and
-calls 0x17A9AE4(targets, member, region, flag). The Army screen passes the region of the army it shows (0x188D0CC());
-the game's in-world callers pass the current one (a quest 0x625AD8 passes <code>[FS+0x1B0]</code>, <code>Faction.SetTarget</code> 0x17C0B58
-the current faction's). The flag (<code>targets+0x38</code>) is the quest type's <code>UIAllowTargetChangedNotice</code>, not a lock.</p>
+calls 0x17A9AE4(targets, member, region, flag). The Army screen passes the region of the army it shows
+(0x188D0CC()), and the game's in-world callers pass the current one: a quest (0x625AD8) passes <code>[FS+0x1B0]</code>, and
+<code>Faction.SetTarget</code> 0x17C0B58 passes the current faction's. The flag (<code>targets+0x38</code>) is the quest type's <code>UIAllowTargetChangedNotice</code>, not a lock.</p>
 <p><strong>The verdict</strong> is the selection's mode list "Target" (selection <code>+0x1E0</code>), computed inside <code>SetHighlight</code> from seven
 <code>Interface/HierarchyMode/Type</code> rules:</p>
 <table>
@@ -1470,38 +1474,40 @@ the current faction's). The flag (<code>targets+0x38</code>) is the quest type's
 </table>
 <p>The active quest (0x103508) is the first entry of <code>[GM+0x6C60]+0x3D8</code> (begin / end, 0x28-byte entries, object at
 <code>+0x20</code>) in state 17 (<code>+0x12C</code> unless -1, else <code>+0x128</code>) whose type (<code>[+0x260].Type</code>) has <code>RemainOnHUD</code> (default true).
-60 of 2,256 <code>Quest/Quests</code> set <code>TargetForcedToNone</code> (Golden Path 31, companion side quests 18, story fort assaults and
-finales, one statue replay). Read live: an ordinary captain read <code>Success_Allowed</code>, the current target
-<code>Clear_Allowed</code>. Calls and jumps under 0x18928A8 do not reach the script-context check 0x503EF8 (937 functions to depth
-6, 59 indirect calls not followed).</p>
+Of the 2,256 <code>Quest/Quests</code>, 60 set <code>TargetForcedToNone</code>: Golden Path 31, companion side quests 18, story fort
+assaults and finales, and one statue replay. In a live read, an ordinary captain read <code>Success_Allowed</code> and the current
+target <code>Clear_Allowed</code>. Calls and jumps under 0x18928A8 do not reach the script-context check 0x503EF8 (a walk of 937
+functions to depth 6, with 59 indirect calls not followed).</p>
 <h3 id="the-details-panel">The Details panel</h3>
 <p>The captain detail layer, <code>CUIFactionMemberLayer</code> (vt_0x1F7CB10), is the panel with a captain's trait rows, the
 bonuses and weaknesses icons with counts, the trait list and its video. With it open, the menu's layer stack held the
 pause layer, the Army screen layer and this one, and the Army screen layer's card still held another captain: that card
 is not what the Details view shows.</p>
-<p><strong>Built once.</strong> The enter method vf29 0x18C9408 initialises each embedded menu widget through its vf2 0x3292DC, which
+<p><strong>Built once.</strong> The enter method vf29 0x18C9408 initializes each embedded menu widget through its vf2 0x3292DC, which
 stores three callbacks at <code>widget+0x30</code> / <code>+0x38</code> / <code>+0x40</code> and a user argument at <code>+0xD0</code>. The base widget <code>+0xB090</code>
-(vt_0x1DB1688) gets 0x18C5B4C: the trait group trees, <code>StrengthOverlay</code> / <code>WeaknessOverlay</code>, <code>Video</code> and the
-<code>CharacterPresentation</code> card at layer <code>+0x14278</code> (its key {army, index} at <code>+0x14280</code>). The additional prompt
+(vt_0x1DB1688) gets 0x18C5B4C, which handles the trait group trees, <code>StrengthOverlay</code> / <code>WeaknessOverlay</code>, <code>Video</code> and
+the <code>CharacterPresentation</code> card at layer <code>+0x14278</code> (its key {army, index} at <code>+0x14280</code>). The additional prompt
 <code>+0xA10</code>, the video <code>+0xB438</code>, the contract highlight <code>+0xB7E0</code>, the contract results <code>+0xBB88</code> and photo mode <code>+0xBF30</code>
-get their own. The shared widget state machine vf4 0x46D700 calls <code>[w+0x30](w, [w+0xD0])</code> when it evaluates a widget.</p>
+get their own callbacks. The shared widget state machine vf4 0x46D700 calls <code>[w+0x30](w, [w+0xD0])</code> when it evaluates a widget.</p>
 <p><strong>Refreshed only when the highlight moves.</strong> The engine evaluates the widgets again through the highlight's layer
-refresh (above); highlighting the captain already highlighted returns early, so a change to the highlighted captain's
-traits leaves the panel as it was. The layer's own refresh is 0x18C97E0(layer): vf4 on <code>+0xB090</code>, <code>+0x5D50</code> and
-<code>+0xA10</code>, then 0x18CA830 (the selection's prompt flag), then 0xD8E770(menu, 7). It takes no captain argument and makes
-no same-value test: called on an open panel, it rewrote 137 and then 154 of the layer's 24,576 qwords, where a control
-second with no call changed none. Other calls are not refreshes: 0x188ED10's selection set 0x18BE498 appends an entry
-to the selection on every call (0x18BB704); the hierarchy refresh 0x189A560 can play <code>HighlightCurrentTargetSFX</code>; and
-0x1835574 moves only the stage side (the detail pose and the camera), the engine's own call passing 0 for the menu.</p>
+refresh (above). Highlighting the captain already highlighted returns early, so a change to the highlighted captain's
+traits leaves the panel as it was. The layer's own refresh is 0x18C97E0(layer), which runs vf4 on <code>+0xB090</code>, <code>+0x5D50</code>
+and <code>+0xA10</code>, then 0x18CA830 (the selection's prompt flag), then 0xD8E770(menu, 7). It takes no captain argument and
+makes no same-value test: called on an open panel, it rewrote 137 and then 154 of the layer's 24,576 qwords, while a
+control second with no call changed none. Other calls are not refreshes. 0x188ED10's selection set 0x18BE498 appends
+an entry to the selection on every call (0x18BB704). The hierarchy refresh 0x189A560 can play
+<code>HighlightCurrentTargetSFX</code>. 0x1835574 moves only the stage side (the detail pose and the camera), and the engine's own
+call passes 0 for the menu.</p>
 <p><strong>The rows</strong> are tree nodes on intrusive lists: the rows tree at layer <code>+0x1D340</code>, its child sentinel at <code>tree+0x488</code>,
-the link at <code>node+0x168</code>, the row's trait at <code>node+0x258</code>, the lit row at <code>tree+0x4A0</code>. <strong>The group strip</strong> (the eight
-group icons) is a menu tree group at layer <code>+0x17F58</code>: trees at <code>[+0x53B0]</code> (0x620 bytes each, u32 count <code>+0x53B8</code>, the
-active tree <code>+0x53C0</code>), each with a child list (sentinel <code>tree+0x488</code>, link <code>node+0x168</code>, the node's <code>TraitGroup</code> record
-at <code>node+0x28</code>, the lit node at <code>tree+0x4A0</code>). <code>SetActiveTree</code> 0x32D15C(strip, tree, node) lights an icon in either
-tree, but alone leaves the rows on the old group; the rows rebuild 0x18C9EE8(layer) then draws the lit group's rows
-(read live: weaknesses -&gt; bonuses changed the rows from 2 to 4, bonuses -&gt; class from 4 to 6). <code>TraitGroup.MaxVisTraits</code>
-ships 7 (3 for hints), and its four readers are all in this layer, so it limits only the card (see Captain traits); the
-shipped trait tree <code>MenuTreeBase/Traits</code> has no <code>Scrolling</code> pane and a <code>ScrollBarRotation</code> of -90.</p>
+the link at <code>node+0x168</code>, the row's trait at <code>node+0x258</code> and the lit row at <code>tree+0x4A0</code>. <strong>The group strip</strong> (the
+eight group icons) is a menu tree group at layer <code>+0x17F58</code>. Its trees are at <code>[+0x53B0]</code> (0x620 bytes each, u32 count
+<code>+0x53B8</code>, the active tree <code>+0x53C0</code>), each with a child list (sentinel <code>tree+0x488</code>, link <code>node+0x168</code>, the node's
+<code>TraitGroup</code> record at <code>node+0x28</code>, the lit node at <code>tree+0x4A0</code>). <code>SetActiveTree</code> 0x32D15C(strip, tree, node) lights
+an icon in either tree, but on its own it leaves the rows on the old group. The rows rebuild 0x18C9EE8(layer) then
+draws the lit group's rows: read live, switching from weaknesses to bonuses changed the rows from 2 to 4, and from
+bonuses to class from 4 to 6. <code>TraitGroup.MaxVisTraits</code> ships with the value 7 (3 for hints), and its four readers
+are all in this layer, so it limits only the card (see Captain traits). The shipped trait tree <code>MenuTreeBase/Traits</code>
+has no <code>Scrolling</code> pane and a <code>ScrollBarRotation</code> of -90.</p>
 <p><strong>The same widgets on another screen.</strong> 0x18EACD0 / 0x18A30F8 build strengths and weaknesses from the live member
 (0x1BBA470 / 0x1BBA518) and call the <code>CharacterPresentation</code> setup 0xE9204 (19 callers), but they belong to
 <code>CUI3DZoneMapLayer</code> (vt_0x1F7E570), the world map's captain tooltip.</p>
@@ -1514,33 +1520,33 @@ shipped trait tree <code>MenuTreeBase/Traits</code> has no <code>Scrolling</code
   the Army screen, contract assignment or the mercenary layer (and not in replay mode). While it passes,
   the camera belongs to the world-map layer: <code>Interface/Menu/MenuLayer/WorldMap.HierarchyCameraState</code> -&gt;
   <code>Interface/Camera/CameraStates::HierarchyFreeCam</code>, whose two orbit keys (<code>_StructuresUIOrbitPointParams</code>
-  primaries 340 and 341) are the near and far ends of the zoom: radius 1025 and 5250, vertical field of
-  view 25 degrees. Two keys are what make a zoom axis.</li>
+  primaries 340 and 341) are the near and far ends of the zoom, with radii 1025 and 5250 and a vertical field
+  of view of 25 degrees. Two keys are what make a zoom axis.</li>
 <li><strong>The captain detail.</strong> <code>CS_Char_Detail</code> has no world-map predicate. Its <code>UICameraSettings</code> is an array
   of 153 <code>Faction/HierarchyMenu/Cameras/UICameraState</code> entries, each chosen by a predicate on the
-  captain's row, seat and state (<code>Orc_Row2_L</code>, <code>Orc_SlotOverlord_Row4_3</code>, <code>Orc_Dead</code>, <code>Talion</code> ...) and
+  captain's row, seat and state (for example <code>Orc_Row2_L</code>, <code>Orc_SlotOverlord_Row4_3</code>, <code>Orc_Dead</code> and <code>Talion</code>) and
   naming one of 111 distinct camera states. Each of the 111 has exactly one orbit key (radius 250 to 550), so
   its radius is a fixed distance and the detail view has no zoom.</li>
 </ul>
 <p><strong>Orbit keys.</strong> An orbit key (<code>_StructuresUIOrbitPointParams</code>) holds <code>fov</code>, <code>OrbitRadius</code> and <code>Roll</code> as plain floats
-of the key's own instance, so a key's radius belongs to the states that reference that key alone; <code>CameraOffset</code>,
+of the key's own instance, so a key's radius belongs to the states that reference that key alone. <code>CameraOffset</code>,
 <code>CameraOffsetRange</code> and <code>CameraAdjust</code> are shared float-pool pairs (type 7; see GameDB), each shared by every key
 that holds the same values. <code>CameraOffsetRange</code> is the (yaw, pitch) swing in degrees on either side of <code>CameraOffset</code>
-(the formula is below); the key unpack clamps both values to [0, 180] (0x526DAB .. 0x526DD5, the same 180 to which it
-wraps <code>CameraOffset</code> into -180 .. 180), and at 180 the two ends of a drag meet behind the subject. The overview's
+(the formula is below). The key unpack clamps both values to [0, 180] (0x526DAB .. 0x526DD5; it wraps <code>CameraOffset</code>
+into -180 .. 180 with the same 180), and at 180 the two ends of a drag meet behind the subject. The overview's
 keys 340 and 341 carry (24, 12) at radius 1,025 and (16, 10) at radius 5,250, both with fov 25. The 111 detail keys
 use eight distinct pairs: (0, 0) on 75 (one more key's pair was not decoded), (90, 20) on 16 (among them the standard
 captain views <code>_base_Orc_*</code> / <code>_base_Olog_*</code>), (45, 15) and (40, 15) on 5 each, (60, 20) on 3, and (90, 25), (80, 15)
 and (60, 15) on 2 each. The (0, 0) pair is the database's shared unset value (see GameDB): a view on it has no
 rotation axis at all, and a write to that pair would move every cell in the database that shares it. A key also has a
-node offset (orbit
-and focal offsets with position and rotation tracking masks) and a <code>DepthOfField</code> link to
+node offset (orbit and focal offsets with position and rotation tracking masks) and a <code>DepthOfField</code> link to
 <code>Client/DepthOfFieldSettings</code> (near and far in-focus and blurred distances, blur intensities), authored for the
-shipped radius: <code>Orc_Details</code> is sharp from 120 to 325 and fully blurred past 375, so a camera pulled back beyond
+shipped radius. <code>Orc_Details</code> is sharp from 120 to 325 and fully blurred past 375, so a camera pulled back beyond
 that band renders the captain as blurred background. <code>WorldMapCameraMode</code> is 4 on every Army camera state except two:
 <code>CS_Store_ProductDisplay_Cursor</code> (5) and <code>CS_Mercenary_Cursor</code> (6).</p>
 <p><strong>The camera object</strong> is <code>ctrl = [[CGameClientShell+0xE38]+0x60]</code>: the shell's frame update 0x1A864C passes
-<code>[shell+0xE38]</code> to 0x52440C, which runs <code>[this+0x60]</code> through 0x524BA0 every frame; it is null with no menu camera.</p>
+<code>[shell+0xE38]</code> to 0x52440C, which runs <code>[this+0x60]</code> through 0x524BA0 every frame. The pointer is null when there
+is no menu camera.</p>
 <table>
 <thead>
 <tr>
@@ -1571,19 +1577,19 @@ that band renders the captain as blurred background. <code>WorldMapCameraMode</c
 </tr>
 </tbody>
 </table>
-<p>A key copy, unpacked by 0x527A18: <code>+0x00</code> fov, <code>+0x04</code> <code>OrbitRadius</code>, <code>+0x08</code> <code>Roll</code>, <code>+0x0C</code> <code>CameraOffset</code>, <code>+0x14</code> /
-<code>+0x18</code> <code>CameraOffsetRange</code> after the clamp, <code>+0x1C</code> <code>CameraAdjust</code>, <code>+0x24</code> the node offset, <code>+0x6C</code> the
-depth-of-field flag, <code>+0x70</code> / <code>+0x74</code> / <code>+0x78</code> far focus, far blur, far intensity, <code>+0x7C</code> / <code>+0x80</code> / <code>+0x84</code> near
-blur, near focus, near intensity.</p>
+<p>A key copy, unpacked by 0x527A18, holds <code>+0x00</code> fov, <code>+0x04</code> <code>OrbitRadius</code>, <code>+0x08</code> <code>Roll</code>, <code>+0x0C</code> <code>CameraOffset</code>,
+<code>+0x14</code> / <code>+0x18</code> <code>CameraOffsetRange</code> after the clamp, <code>+0x1C</code> <code>CameraAdjust</code>, <code>+0x24</code> the node offset, <code>+0x6C</code> the
+depth-of-field flag, <code>+0x70</code> / <code>+0x74</code> / <code>+0x78</code> far focus, far blur and far intensity, and <code>+0x7C</code> / <code>+0x80</code> /
+<code>+0x84</code> near blur, near focus and near intensity.</p>
 <p><strong>The copy is re-read every frame.</strong> While no transition runs, 0x524BA0 calls 0x524AF0(<code>ctrl+0x1D8</code>, <code>[ctrl+0x70]</code>,
-..), which copies the record's keys again, so a write to a key of the running state shows within a frame: a range
-written on the open Army screen and a radius and range written in the open detail view each reached the camera's copy
-within 100 ms, the camera object never replaced. 0x527A18 is <code>OrbitRadius</code>'s only copier. 0x5B9D24 is the camera's
+..), which copies the record's keys again, so a write to a key of the running state shows within a frame. A range
+written on the open Army screen, and a radius and range written in the open detail view, each reached the camera's
+copy within 100 ms, and the camera object was never replaced. 0x527A18 is <code>OrbitRadius</code>'s only copier. 0x5B9D24 is the camera's
 state switch: it compares the request with <code>+0x70</code>, fires the old state's <code>ExitEventTimeline</code> and seeds <code>+0x88</code> from
 <code>InitialInterpolationValue</code>.</p>
 <p><strong>The drag.</strong> <code>+0x88</code> and <code>+0x8C</code> clamp at exactly 0 and 1, and a drag is added to the stored value; nothing
 recomputes or eases it, so a value written there is where the next drag starts.</p>
-<p><strong>The parameter block</strong> (filled every frame by 0x524BA0, validated by 0x525168, "Invalid Camera params."):</p>
+<p><strong>The parameter block</strong> is filled every frame by 0x524BA0 and validated by 0x525168 ("Invalid Camera params."):</p>
 <table>
 <thead>
 <tr>
@@ -1637,12 +1643,12 @@ recomputes or eases it, so a value written there is where the next drag starts.<
 </table>
 <p>The renderer draws the detail view's captain through <code>+0x224</code>: in 42 sampled draws the world-to-view transform put
 the eye 0.4 cm from it with the quaternion's axes to four decimals. A key's fov is the vertical field of view (the
-projection's P11 = 1 / tan(fov / 2) on 2 of 2 keys), the projection is centred, and the frame is left-handed (+Z
+projection's P11 = 1 / tan(fov / 2) on 2 of 2 keys), the projection is centered, and the frame is left-handed (+Z
 forward, +Y up, +X right). The gameplay camera (<code>[[player+0x2F90]+0xA8]</code>) stays behind Talion while a menu is open.
 <code>CameraAdjust</code>'s only reader is the key unpack (accessor 0x528358; helpers 0x5283C8, 0x5283DC and 0x17FAB8C are called
-only from it); from there it travels in the parameter block, which the state switch copies (0x5B97xx, 0x5B9Dxx),
-transitions blend (0x689xxx .. 0x68Axxx) and 0x17F9xxx initialises. In the detail view the game parks the system
-cursor at the window centre.</p>
+only from it). From there it travels in the parameter block, which the state switch copies (0x5B97xx, 0x5B9Dxx),
+transitions blend (0x689xxx .. 0x68Axxx) and 0x17F9xxx initializes. In the detail view the game parks the system
+cursor at the window center.</p>
 <h3 id="the-mercenary-screen">The Mercenary screen</h3>
 <p>The Desolation of Mordor's mercenary layer shows an army's stage like the Army screen (see An army with no stage
 above) and a status header. <code>Interface/Menu/MenuLayer/Mercenary.StatusHeaderType</code> is 8. 0x3289C8 switches on the
@@ -1651,24 +1657,25 @@ fort, conquest and arena widgets). It runs at each header change (0x328748, 28 c
 fresh. Type 8 puts <code>MenuStatusHeader::Default.MercenariesCurrency</code> in slot 0: the widget
 <code>StatusHeaderMercenaryCurrency</code>, symbol <code>UPG-DLC4Coin</code>, whose predicates exclude only <code>IsStoreConfirmPurchase</code> and
 <code>IsDLC3</code>.</p>
-<p><code>UPG-DLC4Coin</code> (in <code>upgrades.gfx</code>) is a three-line ledger, not a coin: text fields <code>Value</code>, <code>Desc</code>, <code>CostValue</code>,
-<code>CostDesc</code>, <code>RemainingValue</code> and <code>RemainingDesc</code> over a backing sprite (<code>UPG-PlayerCurrency</code> has only <code>Value</code> and
-<code>Desc</code>). Its ready callback 0xE46560 -&gt; 0xE49A60 writes the balance as <code>%u</code> into <code>Value</code>; the selected member's hire
-cost (<code>GetHireCost</code> 0xFA3AF0) as <code>-%u</code> in red into <code>CostValue</code>; and balance minus cost as <code>%d</code> into <code>RemainingValue</code>,
-green, or red below 0. The cost lines show only with a member selected. All three <code>Desc</code> fields get the literal token
-<code>{Coin}</code> (its only three references), where the player-currency header's setter 0xE49020 takes the token from the
-currency item. The balance is the player's currency: the visual component (<code>[UIManager]+0xB0</code>, the same object as
-<code>[player]+0x2348</code>) holds the skill setup at <code>+0x738</code> (<code>Inventory/Skill/Setup::Player_Character</code>, whose <code>CurrencyItem</code>
-is <code>PC_Mirian</code>) and its inventory records at <code>+0x740 .. +0x748</code> (<code>+0x00</code> item, <code>+0x20</code> count); the affordability
-check at 0x18AAD4E and the payment at 0xDBD0DF read the same setup (Baranor's setup pays <code>DLC4_PLBar_Coin</code>). <code>{Coin}</code> is the
-glyph <code>CurrencyCoin</code> (<code>hud\questicons\new\kraken\coinicon.tex</code>), whose only item user is <code>DLC4_PLBar_Coin</code>; Mirian's
-own item chain is <code>PC_Mirian</code> -&gt; <code>UIItemData::PC_MordorBucks</code> -&gt; <code>CurrencyIcon</code> (<code>{M}</code>, <code>kraken\currency.tex</code>).</p>
+<p><code>UPG-DLC4Coin</code> (in <code>upgrades.gfx</code>) is a three-line ledger, not a coin: it has the text fields <code>Value</code>, <code>Desc</code>,
+<code>CostValue</code>, <code>CostDesc</code>, <code>RemainingValue</code> and <code>RemainingDesc</code> over a backing sprite (<code>UPG-PlayerCurrency</code> has only
+<code>Value</code> and <code>Desc</code>). Its ready callback 0xE46560 -&gt; 0xE49A60 writes the balance as <code>%u</code> into <code>Value</code>, the selected
+member's hire cost (<code>GetHireCost</code> 0xFA3AF0) as <code>-%u</code> in red into <code>CostValue</code>, and the balance minus the cost as <code>%d</code>
+into <code>RemainingValue</code>, in green, or in red below 0. The cost lines show only with a member selected. All three <code>Desc</code>
+fields get the literal token <code>{Coin}</code> (its only three references), whereas the player-currency header's setter
+0xE49020 takes the token from the currency item. The balance is the player's currency: the visual component
+(<code>[UIManager]+0xB0</code>, the same object as <code>[player]+0x2348</code>) holds the skill setup at <code>+0x738</code>
+(<code>Inventory/Skill/Setup::Player_Character</code>, whose <code>CurrencyItem</code> is <code>PC_Mirian</code>) and its inventory records at
+<code>+0x740 .. +0x748</code> (<code>+0x00</code> item, <code>+0x20</code> count). The affordability check at 0x18AAD4E and the payment at 0xDBD0DF
+read the same setup (Baranor's setup pays <code>DLC4_PLBar_Coin</code>). <code>{Coin}</code> is the glyph <code>CurrencyCoin</code>
+(<code>hud\questicons\new\kraken\coinicon.tex</code>), whose only item user is <code>DLC4_PLBar_Coin</code>. Mirian's own item chain is
+<code>PC_Mirian</code> -&gt; <code>UIItemData::PC_MordorBucks</code> -&gt; <code>CurrencyIcon</code> (<code>{M}</code>, <code>kraken\currency.tex</code>).</p>
 <h2 id="the-title-screen-save-select-and-loading-screens">The title screen, save select and loading screens</h2>
 <h3 id="the-title-screen-and-its-message-of-the-day">The title screen and its message of the day</h3>
 <p>The title screen's root layer is <code>Interface/Menu/MenuLayer/FrontEndRoot::FrontEnd</code> (class
 <code>CUIFrontEndRootLayer</code>): content symbol <code>LIB-MenuList</code>, the selection tree <code>FrontEndRoot</code>, a build
 version widget, the new-game layer list <code>NewGameSetup_Full</code>, and a message-of-the-day node
-<code>Interface/Menu/MenuTreeNode/StoreMOTD/Default</code> (cooldown colour, size and a 10-second time). The
+<code>Interface/Menu/MenuTreeNode/StoreMOTD/Default</code> (cooldown color, size and a 10-second time). The
 message's text comes from the online service's broadcast feed, not from the localization tables.
 <code>Interface/Shared</code> names a front-end world, <code>worlds\reference\frontend\frontend.world06c</code>, which does not
 ship, and a background bundle with two images cross-faded every 10 seconds.</p>
@@ -1680,10 +1687,10 @@ character model <code>PlayerSkin_DarkTalion_Main</code> and stores its unlock, n
 Its row state, availability test, the Continue / New Game / Delete actions and the confirmation box are
 in Saves, the store and the network layer; a new game pushes the <code>SingleOption::Difficulty</code> layer. Its prompt bar
 is the component library's <code>LIB-PromptBanner</code>, a text field in the font <code>$HydraHUD</code>, with a 3D effect behind it (see
-Widget effects).</p>
+Widget effects above).</p>
 <h3 id="loading-screens-and-production-notes">Loading screens and Production Notes</h3>
-<p>A loading screen is an <code>Interface/LoadingScreen</code> record (27): <code>Allowed</code>, <code>Platform</code>, a GameData predicate,
-completed / incomplete quest gates, required game modes and world, a fast-travel state, background slides
+<p>A loading screen is one of the 27 <code>Interface/LoadingScreen</code> records, which hold <code>Allowed</code>, <code>Platform</code>, a GameData
+predicate, completed / incomplete quest gates, required game modes and world, a fast-travel state, background slides
 with cycle and fade times, a bundle, an optional movie (6 of the 27 have one, all base-game <code>Cin_*</code> movies), portrait
 settings, valid tips and enter / exit audio hooks.</p>
 <p><code>CUILoadingScreen::CUILoadingScreen</code> (0x18D2024) looks up the elements <code>LoadingBG</code>, <code>LoadingBGCaption</code>
@@ -1725,17 +1732,17 @@ shipped.</p>
 <tr>
 <td>Console pages</td>
 <td><code>Debug/ConvarShortcut</code></td>
-<td>34 pages (QA, AAA, HDR, Camera, Combat, Inventory, Presentation, AI info, nav mesh, nodes, markup and world review, game speed, frame stepping ...), 530 items, each a title and a console macro</td>
+<td>34 pages (among them QA, AAA, HDR, Camera, Combat, Inventory, Presentation, AI info, nav mesh, nodes, markup and world review, game speed and frame stepping), 530 items, each a title and a console macro</td>
 </tr>
 <tr>
 <td>Cheats</td>
 <td><code>Interface/Cheat</code> (14) and <code>Interface/Cheat/Order</code> (9 shown)</td>
-<td>God, Health, Clip, RemoveAI, SafeZone, Invisible, quest unlock / complete / teleport, CrimeRemove, AllAchievements, DSDebugCam ...</td>
+<td>among them God, Health, Clip, RemoveAI, SafeZone, Invisible, quest unlock / complete / teleport, CrimeRemove, AllAchievements and DSDebugCam</td>
 </tr>
 <tr>
 <td>Captain actions</td>
 <td><code>Debug/FactionMember::Default</code></td>
-<td>20 actions (level up / down, decapitate, set as follower / spy / dead / prisoner / revenge target, get intel, swap positions, eject, hire mercenary ...), each a faction event</td>
+<td>20 actions (among them level up / down, decapitate, set as follower / spy / dead / prisoner / revenge target, get intel, swap positions, eject and hire mercenary), each a faction event</td>
 </tr>
 <tr>
 <td>Script hooks</td>
@@ -1755,8 +1762,8 @@ shipped.</p>
 </tbody>
 </table>
 <p>The widgets are the self-animating skins described above (<code>DBG-MenuButton</code>: <code>out</code> 0, <code>off</code> 9, <code>in</code> 10,
-<code>on</code> 14). <code>DBG-ConsoleCommands</code> is a page list with an 18-row sub-menu and a grey command preview;
-<code>DBG-ItemsWithDesc</code> a list with a description panel; <code>DBG-CheatEntry</code> a row with a checkbox.</p>
+<code>on</code> 14). <code>DBG-ConsoleCommands</code> is a page list with an 18-row sub-menu and a gray command preview,
+<code>DBG-ItemsWithDesc</code> is a list with a description panel, and <code>DBG-CheatEntry</code> is a row with a checkbox.</p>
 <h3 id="the-shell-that-still-runs">The shell that still runs</h3>
 <p>The open / close logic is intact behind the byte 0x2A2636D, which has four readers and no writer:</p>
 <ul>
@@ -1768,7 +1775,7 @@ shipped.</p>
 <p>All four act on <code>[UIManager+0x88]</code> and do nothing while the byte is clear. <code>SetDebugMenuShown</code> pushes
 <code>Profile/CommandSets/DebugMenu</code> on the input stack (0x1170D44; <code>DisableAllOtherCommands</code> with 26 menu
 commands enabled, so gameplay input is blocked), plays <code>EnterMenuSFX</code> and sets the open byte
-<code>[[UIManager]+0x88]+0x7AE</code>; hiding pops the set (0x1170D34) and plays <code>ExitMenuSFX</code>. The Army screen
+<code>[[UIManager]+0x88]+0x7AE</code>. Hiding pops the set (0x1170D34) and plays <code>ExitMenuSFX</code>. The Army screen
 action pushes the set and sets the byte without a sound. While the byte is set, <code>IsDebugMenuOpen</code>
 0x381EEC makes the renderer 0x382044 call 0x381E68, which draws a full-screen black quad at alpha 0xDD
 over the world and the HUD, and the gameplay-input test 0x17B91EC fails. The commands the set enables include
@@ -1784,9 +1791,9 @@ load 0xDC-0xDF, the debug camera 0xBC-0xC7).</p>
 <li><strong>The view is never built</strong>: <code>Debug</code> is not in <code>Interface/Shared.UIViews</code>, so <code>debug.bndl</code> and the
    movie are never loaded.</li>
 <li><strong>No code names the menu's records</strong>: <code>DebugMenu_</code>, <code>DBG-</code>, <code>Debug_Menu</code>, <code>ScriptHook</code>, <code>ProdNotes</code>
-   and <code>Showcase</code> occur nowhere in the executable as strings (controls in the same scan: <code>NavMarkers</code> 12,
-   <code>MessageBox</code> 25, <code>HierarchyLayer</code> 4, <code>FrontEndRoot</code> 5), and the component, attribute and view records
-   have no inbound RecordLinks.</li>
+   and <code>Showcase</code> occur nowhere in the executable as strings, while the controls in the same scan do
+   (<code>NavMarkers</code> 12, <code>MessageBox</code> 25, <code>HierarchyLayer</code> 4, <code>FrontEndRoot</code> 5). The component, attribute and view
+   records have no inbound RecordLinks.</li>
 <li><strong>The page data has no reader</strong>: the fields <code>ConvarShortcut.Key / Title / String / ShowInDebugMenu /
    CloseMenuOnCommand</code>, <code>Interface/Cheat.CheatConsoleString</code>, <code>WorldInfo.InDebugMenu</code>,
    <code>Debug/FactionMember.Actions</code> and <code>DebugScript.Parent</code> have no accessor, while
@@ -1806,18 +1813,18 @@ a script.</p>
 (0x65B0E4). The retail game registers one entry, God. The names table 0x22F55A8 reads <code>GOD</code>, <code>HEALTH</code>,
 <code>CLIP</code>, <code>REMOVEAI</code>, <code>SLOWMO</code> (ids 0 to 4).</p>
 <ul>
-<li><strong>Toggle</strong> 0x65ADDC(manager, id): finds the entry by id, checks the allowed flags (0x65B0E4) and the
+<li><strong>Toggle</strong> 0x65ADDC(manager, id) finds the entry by id, checks the allowed flags (0x65B0E4) and the
   record's <code>CheatActivatedString</code> (0x65AEA8), then calls Apply with the entry's <code>+0x21</code> state.</li>
-<li><strong>Apply</strong> 0x65AD7C(manager, id, on, character system): God stores the byte <code>manager+0x30</code> and calls
-  <code>CCharacter::SetCanDamage(!on)</code>, then refills health; Health refills through 0x65ADCC on the player's
-  combat object; Clip calls 0x19BFDA0(player, on, 1); RemoveAI calls 0x180EC7C and clears three fields of
-  the client shell's <code>+0xA50</code> object; SlowMo starts the slow-motion record <code>Debug</code> (0x7CE80C). 0x180F184
+<li><strong>Apply</strong> 0x65AD7C(manager, id, on, character system) applies one cheat. God stores the byte <code>manager+0x30</code> and
+  calls <code>CCharacter::SetCanDamage(!on)</code>, then refills health. Health refills through 0x65ADCC on the player's
+  combat object. Clip calls 0x19BFDA0(player, on, 1). RemoveAI calls 0x180EC7C and clears three fields of
+  the client shell's <code>+0xA50</code> object. SlowMo starts the slow-motion record <code>Debug</code> (0x7CE80C). 0x180F184
   re-applies Clip when the player spawns.</li>
 </ul>
-<p>The <code>Interface/Cheat</code> console strings (<code>Cheat_God</code> ...) are not registered in the retail console. The
+<p>The <code>Interface/Cheat</code> console strings (for example <code>Cheat_God</code>) are not registered in the retail console. The
 captain actions are faction events fired by <code>CreateAndProcessFactionEvent</code> 0x1B5B610(FS, event, member,
 other) on the Army screen's highlighted captain, the member of the stage character at
-<code>[[[base+0x26FFB60]+0x340]+0x428]</code> (see The highlight; and The Nemesis system for faction events).</p>
+<code>[[[base+0x26FFB60]+0x340]+0x428]</code> (see The highlight above, and The Nemesis system for faction events).</p>
 <h3 id="the-console-it-drives">The console it drives</h3>
 <p><code>ExecuteCommand</code> is the engine interface's vf29 (0x1180D8C): it hands the line to 0x1182FA4, which looks
 the name up in the console registry (<code>Find</code>, see The executable) and runs the command synchronously on the
@@ -1827,7 +1834,7 @@ have handlers compiled down to <code>ret 0</code>.</p>
 <p><strong>The console's output goes nowhere.</strong> Command output and the engine log both end in the sink 0x6AAC14,
 which under the lock 0x27C45A0 calls the function pointer <code>[base+0x27C45C8]</code> if set, then writes to a
 stream if the byte 0x27C45D1 is set. In the retail game the pointer is null (written only by its static
-initialiser 0x585A0 and the exit path 0x1196AF4) and the byte has one reader and no writer.</p>
+initializer 0x585A0 and the exit path 0x1196AF4) and the byte has one reader and no writer.</p>
 <p>The debug camera these pages drive is described in Characters, the player and the camera.</p>
 <h2 id="tutorials">Tutorials</h2>
 <p>Tutorials are data. Four families of records drive them:</p>
@@ -1862,33 +1869,33 @@ initialiser 0x585A0 and the exit path 0x1196AF4) and the byte has one reader and
 </tr>
 </tbody>
 </table>
-<p>A <strong>menu step</strong> applies or removes an input command set (<code>HierarchyTutorial_A</code>,
-<code>HierarchyTutorial_LStickX</code> ...), enables or blocks mouse movement and fast travel, advances on the
-common input, and may change the menu around it through three record kinds: <code>WidgetData</code> (18:
-<code>Show_</code> / <code>Hide_</code> a widget such as the fort status header or the hierarchy overview), <code>TreeData</code> (24:
-restrict a menu tree to some nodes, <code>ChallengesRestrict</code>, <code>GemSocketsRestrict</code> ..., or clear the
-restriction) and <code>MenuSelectionData</code> (8: lists of <code>Interface/Menu/MenuSelection/Predicate</code> records to
-disable, for example every order on a captain during the Bruz ambush tutorials). Layer data adds
+<p>A <strong>menu step</strong> applies or removes an input command set (for example <code>HierarchyTutorial_A</code> or
+<code>HierarchyTutorial_LStickX</code>), enables or blocks mouse movement and fast travel, and advances on the
+common input. It may also change the menu around it through three record kinds. <code>WidgetData</code> (18) shows or
+hides a widget (<code>Show_</code> / <code>Hide_</code>) such as the fort status header or the hierarchy overview. <code>TreeData</code> (24)
+restricts a menu tree to some nodes (for example <code>ChallengesRestrict</code> and <code>GemSocketsRestrict</code>) or clears the
+restriction. <code>MenuSelectionData</code> (8) lists <code>Interface/Menu/MenuSelection/Predicate</code> records to disable, for
+example every order on a captain during the Bruz ambush tutorials. Layer data adds
 per-screen settings (<code>ShowMemberNavMarker</code> / <code>HideMemberNavMarker</code> on the Army screen, <code>SelectMtnPass</code> on
 the quest log).</p>
 <p>An <strong>Army-screen state</strong> names the menu tutorial to show, an optional map presentation, a preset or job
-member or the mercenary entry point to select, the view, a camera transition to wait for (with a
-command set to apply meanwhile), <code>PopupDelay</code> (1.0 s in <code>PlayerDiedFirstTime_State01</code>), <code>DelayNextState</code>
-and <code>Next</code>, and closing conditions (<code>CloseOnPositionSelected</code>, <code>CloseOnNewEquipmentHighlighted</code>). The
-tutorials' predicates live in <code>Faction/HierarchyTutorial/Preadicates</code> (83 records, 73 fields; the
-category's name carries the misspelling). <code>TutorialViwed</code> links a <code>Combat/Predicates/Bool</code> record (has
-this tutorial been seen) and <code>AnyTutorialsViwed</code>, <code>AllTutorialsViwed</code> and <code>NotTutorialsViwed</code> test other
-tutorials; the rest test the Army screen's mode and state (normal, replay, interrogation, commanding,
-orders, assault setup; overview or details), the selected captain's known state (known, location known,
-full info, presumed dead, branded, decapitated, henchman ...), the active game mode, inventory and
+member or the mercenary entry point to select, the view, and a camera transition to wait for (with a
+command set to apply meanwhile). It also holds <code>PopupDelay</code> (1.0 s in <code>PlayerDiedFirstTime_State01</code>),
+<code>DelayNextState</code> and <code>Next</code>, and closing conditions (<code>CloseOnPositionSelected</code>, <code>CloseOnNewEquipmentHighlighted</code>).
+The tutorials' predicates live in <code>Faction/HierarchyTutorial/Preadicates</code> (83 records, 73 fields; the
+category's name carries the misspelling). <code>TutorialViwed</code> links a <code>Combat/Predicates/Bool</code> record (whether
+this tutorial has been seen), and <code>AnyTutorialsViwed</code>, <code>AllTutorialsViwed</code> and <code>NotTutorialsViwed</code> test other
+tutorials. The rest test the Army screen's mode and state (normal, replay, interrogation, commanding,
+orders or assault setup; overview or details), the selected captain's known state (among them known, location
+known, full info, presumed dead, branded, decapitated and henchman), the active game mode, inventory and
 new-item counts, skill points and store counts.</p>
 <p><strong>From script.</strong> <code>TutorialPausingShow</code> / <code>TutorialPausingHide</code> and <code>TutorialGameplayShow</code> /
 <code>TutorialGameplayHide</code> are methods of the <code>CCharacter</code> script class (0x1BB2108 resolves the
-<code>Interface/Tutorial/Pausing</code> record and calls the character's vtable slot 99); the player raises
+<code>Interface/Tutorial/Pausing</code> record and calls the character's vtable slot 99). The player raises
 <code>OnTutorialPausingDismissed</code> / <code>OnTutorialGameplayDismissed</code>. <code>System:GetHierarchyTutorialViewed</code>
 (0x1B86BA4) checks a <code>Faction/HierarchyTutorial</code> record against the viewed list reached through the
 player (<code>[CGameClientShell]+0x888</code>, with its byte <code>+0x3880</code>; the test is 0x30C46C). The HUD classes are
-<code>CUIHUDPausingTutorial</code> and <code>CUIHUDGameplayTutorial</code>; the Army-screen tutorials are run by the
+<code>CUIHUDPausingTutorial</code> and <code>CUIHUDGameplayTutorial</code>. The Army-screen tutorials are run by the
 hierarchy menu's tutorial manager (<code>HierarchyMenuTutorialMgr.cpp</code>), and the console names a
 <code>HierarchyMenu.ResetTutorials</code> command.</p>
 <h2 id="open-questions">Open questions</h2>
@@ -1896,39 +1903,39 @@ hierarchy menu's tutorial manager (<code>HierarchyMenuTutorialMgr.cpp</code>), a
 <li>What class is <code>[UIManager+0x88]</code>, the owner of the debug-menu open byte? The UI manager's
   constructor 0x1889674 only zeroes the slot. In a running game the object starts with a heap pointer
   rather than a vtable and holds a run of text-style entries that name the font "Anonymous Pro" with
-  sizes 45 and 100 (the name is not a literal in the executable, so it comes from data); the open
+  sizes 45 and 100; the name is not a literal in the executable, so it comes from data. The open
   byte sits at <code>+0x7AE</code>, near the object's end.</li>
-<li>What the <code>PreLoad</code> view was for, whether its <code>preload.gfx</code> still ships (no archive entry has that
+<li>What was the <code>PreLoad</code> view for, and does its <code>preload.gfx</code> still ship? No archive entry has that
   name and no interface bundle's manifest names it, but <code>ingame.bndl</code>'s manifest does not name
-  <code>sp.gfx</code> either, and that movie ships inside its container), and which movies hold the UI render
-  list's mode 8 and 0x10 entries.</li>
-<li>What consumes the <code>DebugMenuActivate1-4</code> command IDs (0xC8-0xCB). Data enables them: both
+  <code>sp.gfx</code> either, and that movie ships inside its container. Which movies hold the UI render
+  list's mode 8 and 0x10 entries?</li>
+<li>What consumes the <code>DebugMenuActivate1-4</code> command IDs (0xC8-0xCB)? Data enables them: both
   <code>Profile/CommandSets</code> records <code>DebugMenuActivate_Hydra</code> (pushed at every game start) and
   <code>DebugMenuActivate_Menu</code> list all four in <code>EnableCommands</code>, next to the AI-info and FactionMember
   debug commands. No code names them: neither their record links (0x9FD00091 - 0x9FD00094) nor their
   name hashes occur in the executable. A consumer would test the numeric IDs.</li>
-<li>Which code selects the <code>Interface/LoadingScreen</code> record for a given load. Data names few of them:
-  no shipped script names a loading screen (0 of 2,562 script sources), and the fields that can link
+<li>Which code selects the <code>Interface/LoadingScreen</code> record for a given load? Data names few of them.
+  No shipped script names a loading screen (0 of 2,562 script sources), and the fields that can link
   one are <code>GameModes.InitialLoadingScreen</code> (8 of 13 game modes name <code>Intro1</code>, one
   <code>DLC3_FastTravel_FromUI</code>), <code>Presentation/Elements.LoadingScreen</code> (set on 0 of 3,000 elements),
   <code>Regions/Region.ExitOnlineModeLoadingScreenOverride</code> (0 of 19 regions) and
   <code>Faction/MoneywallSetup/UI.LoadingScreen</code>. In the shipped database <code>Intro1</code> is linked 8 times and
   <code>DLC3_FastTravel_FromUI</code> once, while <code>FastTravel_DesertLoadScreen</code> is linked by no record at all, so
   the per-region fast-travel screens are chosen in code.</li>
-<li>Where the viewed-tutorial list is stored and whether it is saved with the game or the profile.</li>
-<li>What holds the screen black when an army without a stage is shown: the UI state machine's wait expires after 20 s,
+<li>Where is the viewed-tutorial list stored, and is it saved with the game or with the profile?</li>
+<li>What holds the screen black when an army without a stage is shown? The UI state machine's wait expires after 20 s,
   and in a frozen run only one word of the world-UI owner (<code>+0x68</code>) and none of the stage controller changed between
   3 s and 30 s. Nine of the 21 callers of <code>StageFor</code> skip a null result; the other twelve were not read that far.</li>
-<li>Whether the Army screen's action dispatcher re-tests the target rules: emulating vf19 with the SetTarget action on a
+<li>Does the Army screen's action dispatcher re-test the target rules? Emulating vf19 with the SetTarget action on a
   dead captain marked him, which suggests that only the prompt (withheld by the mode list) keeps the player from it.</li>
-<li>Whether verdict 3 of the Army screen's cursor test means "off camera": on one stage it marked the Overlord and the
+<li>Does verdict 3 of the Army screen's cursor test mean "off camera"? On one stage it marked the Overlord and the
   warchiefs; it should then change as the camera turns.</li>
-<li>Who writes a drag into the menu camera's <code>+0x88</code>: none of 13 functions that store there in the camera code is it,
-  so the writer likely stores through a pointer.</li>
-<li>What consumes <code>CameraAdjust</code> from the parameter block (<code>+0x200</code> / <code>+0x34C</code>): a displacement scan of the camera code
-  found only copies, blends and initialisation.</li>
-<li>Whether the HierarchyTransition handler 0x1834BB0 refills the stage copies from the members (which would make the
-  state change into the Army screen show member edits).</li>
-<li>Whether node slot 104 is an <code>htmlText</code> getter: its listing reads the member through 0x7B94F4 and converts it into a
+<li>Who writes a drag into the menu camera's <code>+0x88</code>? None of 13 functions that store there in the camera code is the
+  writer, so it likely stores through a pointer.</li>
+<li>What consumes <code>CameraAdjust</code> from the parameter block (<code>+0x200</code> / <code>+0x34C</code>)? A displacement scan of the camera code
+  found only copies, blends and initialization.</li>
+<li>Does the HierarchyTransition handler 0x1834BB0 refill the stage copies from the members? That would make the
+  state change into the Army screen show member edits.</li>
+<li>Is node slot 104 an <code>htmlText</code> getter? Its listing reads the member through 0x7B94F4 and converts it into a
   0x200-character buffer (0x775DF4), but on the save-select prompt's field it returned false on 10 of 10 reads.</li>
 </ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
