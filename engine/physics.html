@@ -16,6 +16,7 @@
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
 <a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
 <a href="physics.html" class="cur" data-p="physics">Physics: Havok integration</a>
+<a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
 <a href="characters.html" data-p="characters">Characters, the player and the camera</a>
 <a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
@@ -35,7 +36,8 @@ replaced the older <code>hkp*</code> API. The build is a hybrid: rigid bodies ar
 constraints are still the legacy <code>hkpRagdollConstraintData</code> and <code>hkpLimitedHingeConstraintData</code>.
 Havok AI (<code>hkai*</code>) provides navigation meshes, avoidance and silhouettes, and Havok Cloth deforms
 cloth with <code>hkaSkeleton</code>; Havok Animation and Behavior are not used (see Animation). HavokScript runs
-the game's scripts (see Scripting).</p>
+the game's scripts (see Scripting). A second cloth system, the engine's own GPU cloth, runs in a compute
+shader for orc and olog gear, banners, flags and others (see Cloth).</p>
 <p>Havok work runs on three <code>HavokWorkerThread</code>s (shared routine 0x11AFE58) and on the main thread's task
 queue: in play the main thread spends about 5% of its time in the physics step (<code>TtPhysics</code>,
 0x6528B8) and about 3% in the Havok task queue, where <code>hkaiAvoidanceSolverTask</code> shows up.</p>
