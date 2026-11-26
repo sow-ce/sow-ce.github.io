@@ -2,6 +2,7 @@
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
+<a href="builds.html" data-p="builds">Game builds: Steam, GOG and Microsoft Store</a>
 <a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
 <a href="engine-core.html" class="cur" data-p="engine-core">Engine core: managers, globals and key objects</a>
 <a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
@@ -23,11 +24,15 @@
 <a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
 <a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="haedirs.html" data-p="haedirs">Haedirs: towers, seeing stones and fast travel</a>
 <a href="outposts.html" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
 <a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="engine-core-managers-globals-and-key-objects">Engine core: managers, globals and key objects</h1><p class=\"lede\">The engine&#x27;s top-level objects and the static slots that reach them: the game manager and its subsystems, the client shell, the main scene and the AI world, the engine interface and its services, the update root and object server, the UI and world-UI owners, time and frame counters, and the tests that say whether a world is loaded.</p>
 <p>The engine reaches its subsystems through a small number of pointers stored in the writable
@@ -253,11 +258,15 @@ the Direct3D block at 0x272D1C0 (see Rendering).</p>
 </tr>
 <tr>
 <td>+0x6D28</td>
-<td>gifts and world items</td>
+<td>world items and gifts, and the seeing-stone ownership store: <code>+0x70</code> an array of <code>{record, u8 owned}</code> entries of 0x10 bytes, one per Haedir</td>
 </tr>
 <tr>
 <td>+0x6D30</td>
-<td>loading progress (it reports <code>ENTER_WORLD_HANG_DETECTED</code>)</td>
+<td><strong>the online manager</strong>: Invasion and Conquest state (<code>+0x20C</code> the Conquest time), the Nemesis Forge request (<code>+0x28</code> in flight) and its two stored captains (<code>+0x30</code>, <code>+0x78</code>; see The Nemesis Forge); its update 0x1E3E78 runs the enter-world checks and reports <code>ENTER_WORLD_HANG_DETECTED</code></td>
+</tr>
+<tr>
+<td>+0x6D48</td>
+<td>the title configuration the online service sends: switches such as <code>challenges_enabled</code> (<code>+0xD0</code>), <code>nemesis_forge</code> (<code>+0xD1</code>) and <code>conquests</code> (<code>+0xD2</code>), stored by the parser 0x18368B0</td>
 </tr>
 <tr>
 <td>+0x6D90</td>
@@ -494,4 +503,4 @@ frame). Engine asserts are a write to a null address at 0x819113 with the messag
   its shape: a 0x7BC0-byte object with two virtual methods, built by 0x109B44 from a setup object
   that copies a dozen texture handles into it, each marked by a flag bit; the slot was null in a
   loaded Lithlad.</li>
-</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
+</ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
