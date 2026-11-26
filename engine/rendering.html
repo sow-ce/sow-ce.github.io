@@ -16,6 +16,7 @@
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
 <a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
 <a href="characters.html" data-p="characters">Characters, the player and the camera</a>
 <a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
@@ -700,7 +701,7 @@ object transforms with their previous-frame copies for motion vectors (<code>k_m
 <code>k_PrevTexCoordScale</code>), the six frustum planes, tone mapping and HDR output (<code>k_vToneMappingParams0/1</code>,
 <code>k_fPaperWhite</code>, <code>DynamicExposureBuffer</code>), <strong>GPU cloth simulation</strong> (<code>k_RwClothPosBuffer0..7</code>,
 <code>k_ClothConstraintsBuffer</code>, <code>k_ClothBendSpringsBuffer</code>, <code>k_ClothSpringGroupsBuffer</code>,
-<code>k_ClothNodeDataBuffer</code>, <code>k_ClothBoundingBuffer</code>), <strong>tessellated terrain</strong> (<code>k_vTerrainHullParams0..2</code>,
+<code>k_ClothNodeDataBuffer</code>, <code>k_ClothBoundingBuffer</code>; the solver and its constants are in Cloth), <strong>tessellated terrain</strong> (<code>k_vTerrainHullParams0..2</code>,
 <code>k_vTerrainDomainParams0..3</code>: hull and domain shader inputs), <strong>GPU vegetation</strong> (instance buffers
 0-7 with read-write twins, per-LOD sort buffers <code>k_VegSortBufferLOD0..3</code> and <code>DitherLOD</code>,
 <code>k_VegInstanceCounters</code>, override buffers, <code>k_WindFXBuffer</code>), <strong>volumetric clouds</strong> (shadow,
