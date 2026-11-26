@@ -16,6 +16,7 @@
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
 <a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
 <a href="characters.html" data-p="characters">Characters, the player and the camera</a>
 <a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
@@ -759,7 +760,7 @@ handler's vtable.</p>
 <td><code>CRES</code> 5</td>
 <td>232</td>
 <td>0x72E4A8 (vt_0x230A868)</td>
-<td></td>
+<td>GPU buffer containers: cloth, particle, light-map and hair data (see Cloth)</td>
 </tr>
 <tr>
 <td><code>.strdb</code></td>
@@ -1133,10 +1134,15 @@ in one skinned mesh, vertex alpha 16 on the left and 64 on the right), legs 1,99
       masks {u32 name, u32 bone count, u32, u8 value per bone}, sockets {u32 bone, u32 name,
       f32 rotation[4], f32 position[3], f32 scale}
       0xDCDCFF01 string offsets (.anix libraries, then part names), 0xDCDCFF02 one flag per
-      library, 0xDCDCFF03 one byte per bone, 0xDCDCFF04 tail (0xDCDCFF99 skeleton physics,
-      optional Havok cloth)
+      library, 0xDCDCFF03 one byte per bone
+      0xDCDCFF04 Havok cloth: u32 count, count string offsets, the cloth tagfiles
+      0xDCDCFF05 GPU cloth list: u32 count, count x {u32 0xBEEFFEED, u16 length + .cres path,
+                 f32 x5, u32, f32 x2, u32, f32}
+      0xDEADDEAD, 0xDCDCFF99 skeleton physics
 </code></pre>
-<p>All 973 loose skeletons satisfy the header identities and carry the five markers in order; their
+<p>The loader (0x504420) reads the tail in that order. All 24,378 skeleton sections in the bundles carry the
+GPU cloth list, ending exactly on the two closing markers; 132 of them name a cloth file, 153 carry Havok
+cloth (see Cloth). All 973 loose skeletons satisfy the header identities and carry the five markers in order; their
 73,958 bones all hold unit quaternions. The largest has 241 bones; the orc base rig
 (<code>orcs\base\orc_base.skel</code>) has 100, the player's 128, a Gondorian's 95 and the olog's 89. Vertex
 palettes and the live pose arrays index bones in the skeleton's name-table order, not in the
@@ -1202,6 +1208,14 @@ English table has 68,547 keys. A key is <code>StringHash</code> of the key name 
 <tr>
 <td>SKDB</td>
 <td>140 / 140</td>
+</tr>
+<tr>
+<td>CRES</td>
+<td>827 / 827 distinct payloads (1,723 bundle sections, 232 loose entries) parsed to their last byte and re-emitted byte for byte</td>
+</tr>
+<tr>
+<td>SKEL tail (bundles)</td>
+<td>24,378 / 24,378 skeleton sections: GPU cloth list exact</td>
 </tr>
 </tbody>
 </table>
