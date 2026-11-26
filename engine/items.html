@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" class="cur" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -77,22 +77,22 @@ the same object the Skills screen uses, <code>[UIManager+0xB0]</code>). The inve
 </tr>
 <tr>
 <td>11 / 12 / 22</td>
-<td>cloak, armour, ring (by their contents)</td>
+<td>cloak, armor, ring (by their contents)</td>
 </tr>
 </tbody>
 </table>
 <p>The slot names are <code>Combat/Predicates/InventorySlot</code>. Index 0 of a slot vector is not the equipped
 item. The equipped items are named by the <strong>equip array</strong> <code>vc+0x38 + slot * 0x28</code> (14 of 14 equipped
-items read): for the weapon slots 0, 1, 2, 3, 6 and 7 the entry is a holder (vt_0x1DB1F68) whose
-<code>+0x140</code> is the item; for the cloak (11), armour (12), Isildur's ring (13), hands (14), scabbards (16,
-17), hair (19) and ring (22) the entry is the item itself. An item is equipped when the array names
+items read). For the weapon slots 0, 1, 2, 3, 6 and 7, the entry is a holder (vt_0x1DB1F68) whose
+<code>+0x140</code> is the item. For the cloak (11), armor (12), Isildur's ring (13), hands (14), scabbards
+(16, 17), hair (19) and ring (22), the entry is the item itself. An item is equipped when the array names
 it and its equipped byte <code>+0xA9</code> is 1; the byte alone can lag a change.</p>
 <ul>
 <li><strong>Owned counts</strong>: <code>vc+0x740 / +0x748</code>, records <code>{+0x00 item, +0x20 u32 count}</code> (714 stacks on a
   finished save). Count 0x509074, consume 0x4F163C(vc, item, n), give 0x1BCE0C0(vc, item); the general
   give is 0x1C01E0(vc, item, n). <code>vc+0x3D8+0xF0</code> is an append-only change log, not the counts.</li>
 <li><strong>Held test</strong> 0x24DF7C(vc, item): bit <code>recordIndex(item)</code> (0x1898E8) of the held bit set
-  <code>[vc+0x490]</code> (0x24EB74); without a bit set it walks the stacks (0x36A17C). 102 callers rely on it
+  <code>[vc+0x490]</code> (0x24EB74); without a bit set it walks the stacks (0x36A17C). It has 102 callers
   (combat, quests, skills).</li>
 </ul>
 <p><strong>The item instance</strong> (vt_0x1FDABF8):</p>
@@ -126,7 +126,7 @@ it and its equipped byte <code>+0xA9</code> is 1; the byte alone can lag a chang
 </tr>
 <tr>
 <td>+0x48</td>
-<td>the <code>Inventory/ArmorData</code> record (an armour's design)</td>
+<td>the <code>Inventory/ArmorData</code> record (an armor's design)</td>
 </tr>
 <tr>
 <td>+0x60</td>
@@ -185,7 +185,7 @@ buffer only when the owned byte is set. Captain traits that carry items are item
 <td>0x1BCA298</td>
 </tr>
 <tr>
-<td>re-skin <code>(item, look, design, combat, equipped)</code>; the loot component's vf3 (armour 0x3FFDF8 -&gt; 0x4C5CC0, weapon 0x715D24 -&gt; 0x3FD228)</td>
+<td>re-skin <code>(item, look, design, combat, equipped)</code>; the loot component's vf3 (armor 0x3FFDF8 -&gt; 0x4C5CC0, weapon 0x715D24 -&gt; 0x3FD228)</td>
 <td>0x645890; 0x40000C</td>
 </tr>
 <tr>
@@ -222,9 +222,9 @@ buffer only when the owned byte is set. Captain traits that carry items are item
   <code>Faction/Loot/NemesisGearDescription</code>, <code>+0x10</code> the captain's role (<code>Faction/Roles/Definitions</code>),
   <code>+0x18</code> u32 the name hash (the P919 of an <code>OrcNameGen1st_NNN</code> key) and <code>+0x1C</code> u32 the rarity hash.
   The display name 0xD062C0(item, buffer, flag) formats the design's <code>ItemName</code> (from the look at <code>+0x40</code>,
-  else the armour design at <code>+0x48</code>) with arguments from the origin; without an origin a legendary's key
+  else the armor design at <code>+0x48</code>) with arguments from the origin; without an origin a legendary's key
   prints its placeholder ("Blood Sword ({1!ls})"). In one save 43 of 71 pieces carried an origin.</li>
-<li><strong>A look is read at equip.</strong> Writing an equipped armour's design (<code>+0x48</code>) in place does not redraw it,
+<li><strong>A look is read at equip.</strong> Writing an equipped armor's design (<code>+0x48</code>) in place does not redraw it,
   and the item can then no longer be selected; with the item off, the same write takes effect when it is
   equipped again. The in-place re-skin 0x645890 is meant for an item that is its slot's only one.</li>
 <li><strong>Removing a buff removes one instance.</strong> 0x6DEAC4 takes the first instance of that record in the
@@ -260,13 +260,13 @@ abilities include 34 set bonuses (<code>LegendarySet_&lt;Set&gt;_Affix1</code> /
 <code>NemesisAffix</code> rewards.</p>
 <p><strong>A save keeps identity, not numbers</strong>: id, level, the item, look and affix hashes, the GUID and the
 nemesis origin; computed values (such as 157.0 or 169.0) occur nowhere in the decrypted save. See
-Saves for the inventory section's layout.</p>
+Saves, the store and the network layer, for the inventory section's layout.</p>
 <h2 id="gems">Gems</h2>
 <p><code>GemData.SocketAffixes</code> gives one affix per socket type (red on a sword <code>Float_DmgMod_M_PCT</code> 0.10 -
 0.30, green life steal 0.04 - 0.20, white Mirian 0.05 - 0.15, blade critical damage 0.20 - 1.00).
-<strong>Sockets belong to slots, not items</strong>: six live socket objects (vt_0x1FDAED0) at <code>[vc+0x3D8+0x80]</code> =
-<code>{entries, 8}</code>, entry <code>{GemSocketType, socket*}</code>; a socket is <code>+0x18</code> gem, <code>+0x20</code> type, <code>+0x28</code> its
-affix vector. Constructor 0x1BFB8AC(memory, type, gem), <code>SocketGem</code> 0x1BFBCB8, apply 0x1BFBC50(socket,
+<strong>Sockets belong to slots, not items.</strong> Six live socket objects (vt_0x1FDAED0) sit at
+<code>[vc+0x3D8+0x80]</code> = <code>{entries, 8}</code>, each entry <code>{GemSocketType, socket*}</code>; a socket holds <code>+0x18</code> the
+gem, <code>+0x20</code> the type and <code>+0x28</code> its affix vector. Constructor 0x1BFB8AC(memory, type, gem), <code>SocketGem</code> 0x1BFBCB8, apply 0x1BFBC50(socket,
 0 / 1, owner, GemItemLevel) over the socket's affix vector.</p>
 <h2 id="items-that-combat-requires">Items that combat requires</h2>
 <p>The player's combat accepts a held item only if the <code>Combat/Predicates/Item</code> lists name it:
@@ -392,32 +392,34 @@ An entry is 0x48 bytes (built by 0x7A2A40 / 0x7A2A78):</p>
 </tr>
 </tbody>
 </table>
-<p>Registration is skipped while <code>[owner+0x30]</code> is set. So a later change to a proc's <code>Chance</code> or
-<code>Predicate</code> is not seen until the item is equipped again, while its action fields (<code>Buff</code>, <code>TargetBuff</code>,
-<code>TargetAppliedState</code>, <code>ResourceGain</code>) are read when it fires (0x714948). Of the 223 shipped procs, 221
-use a <code>Predicate</code> (215 <code>Quest/AutoObjectives</code>, 6 <code>Combat/Buffs/Procs/Predicates</code>), 131 a
-<code>ResourceGain</code>, 60 a <code>Buff</code>, 37 a <code>Chance</code>, 26 a <code>TargetBuff</code>, 10 a <code>RandomStatusEffect</code> list and 8 a
-<code>TargetAppliedState</code> (such as <code>OnFire_MedDur</code>). <code>Combat/ResourceGain.ResourceType</code> is 1 Focus, 2
-elf-shot, 8 Might, 9 mount stamina, 10 Wrath, and none means health. 13 of the 223 are handed out by
-nothing, three of them complete (<code>ProcDef_AoEFreeze_Execute</code>, <code>ProcDef_PoisonAoE_BrutalStealthKill</code>,
+<p>Registration is skipped while <code>[owner+0x30]</code> is set. A later change to a proc's <code>Chance</code> or <code>Predicate</code>
+is therefore not seen until the item is equipped again, whereas its action fields (<code>Buff</code>,
+<code>TargetBuff</code>, <code>TargetAppliedState</code>, <code>ResourceGain</code>) are read each time it fires (0x714948).</p>
+<p>Of the 223 shipped procs, 221 use a <code>Predicate</code> (215 of them from <code>Quest/AutoObjectives</code>, 6 from
+<code>Combat/Buffs/Procs/Predicates</code>), 131 a <code>ResourceGain</code>, 60 a <code>Buff</code>, 37 a <code>Chance</code>, 26 a <code>TargetBuff</code>,
+10 a <code>RandomStatusEffect</code> list and 8 a <code>TargetAppliedState</code>, such as <code>OnFire_MedDur</code>. The resource a
+<code>Combat/ResourceGain</code> record restores is set by its <code>ResourceType</code>: 1 Focus, 2 elf-shot, 8 Might, 9
+mount stamina and 10 Wrath, with no type meaning health. Nothing hands out 13 of the 223 procs, three of
+them complete (<code>ProcDef_AoEFreeze_Execute</code>, <code>ProcDef_PoisonAoE_BrutalStealthKill</code> and
 <code>ProcDef_ConvertBeasts_WhileMounted</code>). <code>Combat/Buffs/ChanceTypes</code> records have no fields.</p>
-<p><strong>Every firing adds a buff instance.</strong> A proc's <code>Buff</code> lands on the player as a new instance at each
-firing and runs its <code>ActionsOnApply</code> again; a buff whose <code>StatDuration</code> is empty never expires, so such
-instances accumulate. Shipped buffs without a duration include <code>AoEFreeze</code>, <code>AOE_MoraleBomb_Small</code>
-and <code>PLBar_StunAoE_OnLowHealth</code>. <code>ConsumeWholeChargeMeter</code> is true on 1,125 of the 1,126
-<code>Combat/Buffs</code> records, a default that says nothing about a buff.</p>
-<p><strong>Summons.</strong> A buff summons through <code>ActionsOnApply</code> -&gt; <code>Combat/Actions/NPCSummon</code>
-(<code>DLC4_SummonSpider_OnStealthKill</code>, for example); the 50 summon actions are otherwise run by attacks
-(<code>ActionsOnAttackStart_Source</code>). A summon action names a <code>Combat/NPCSummon</code> <code>{AISpawnType, Count,
-SummonData, DeferredCooldown}</code>, and its <code>SummonData</code> decides the side and the lifetime: <code>Alignment</code>
-<code>BuddyFollower</code> or <code>BuddyFollower_Beast</code> fight for the player, <code>MatchSummonerPlayerFollower</code> for the
-summoner, and <code>RemovalRecord</code> (<code>AmbShort_R</code>, <code>AmbLong_R</code>) removes them, with none meaning they stay. Of
-the 58 <code>Combat/SummonData</code> records, <code>Hammerhand_Summon_Goblins</code> summons 8 ghuls on the enemy side
-(<code>Orc_FactionA</code>) with no removal. The game caps its own summoning buffs inside the buff:
-<code>DLC4_SummonGhul_OnStealthKill</code> and <code>_Spider_</code> last 1 s, summon on apply, and carry a one-time area
-(<code>PLBar_Kill_ExcessSummonedGhuls</code> / <code>_Spiders</code>) whose first tick marks up to 4 ghuls or 6 spiders
-(<code>MaxAIToHit</code>) and whose second kills the rest, both hitting only allies that carry <code>Buddy_Summoned</code>.
-A summon action's <code>DeferredCooldown</code> does not limit repeated firings.</p>
+<p><strong>Every firing adds a buff instance.</strong> A proc's <code>Buff</code> lands on the player as a new instance each time
+the proc fires, and its <code>ActionsOnApply</code> runs again. A buff whose <code>StatDuration</code> is empty never expires,
+so such instances accumulate. Shipped buffs without a duration include <code>AoEFreeze</code>,
+<code>AOE_MoraleBomb_Small</code> and <code>PLBar_StunAoE_OnLowHealth</code>. <code>ConsumeWholeChargeMeter</code> is true on 1,125 of
+the 1,126 <code>Combat/Buffs</code> records: it is a default and says nothing about a particular buff.</p>
+<p><strong>Summons.</strong> A buff summons through <code>ActionsOnApply</code> -&gt; <code>Combat/Actions/NPCSummon</code>, as
+<code>DLC4_SummonSpider_OnStealthKill</code> does; otherwise the 50 summon actions are run by attacks
+(<code>ActionsOnAttackStart_Source</code>). A summon action names a <code>Combat/NPCSummon</code> record
+<code>{AISpawnType, Count, SummonData, DeferredCooldown}</code>, and its <code>SummonData</code> decides the side and the
+lifetime. With <code>Alignment</code> set to <code>BuddyFollower</code> or <code>BuddyFollower_Beast</code>, the summoned characters fight for the
+player; with <code>MatchSummonerPlayerFollower</code>, they take the summoner's side. A <code>RemovalRecord</code>
+(<code>AmbShort_R</code>, <code>AmbLong_R</code>) removes them; without one they stay. Of the 58 <code>Combat/SummonData</code> records,
+<code>Hammerhand_Summon_Goblins</code> summons 8 ghuls on the enemy side (<code>Orc_FactionA</code>) with no removal.</p>
+<p>The game caps its own summoning buffs within the buff itself. <code>DLC4_SummonGhul_OnStealthKill</code> and
+<code>_Spider_</code> last 1 s, summon on apply, and carry a one-time area (<code>PLBar_Kill_ExcessSummonedGhuls</code> /
+<code>_Spiders</code>). The area's first tick marks up to 4 ghuls or 6 spiders (<code>MaxAIToHit</code>) and its second
+kills the rest; both ticks hit only allies that carry <code>Buddy_Summoned</code>. A summon action's
+<code>DeferredCooldown</code> does not limit repeated firings.</p>
 <h3 id="on-hit-chances">On-hit chances</h3>
 <p>The player's chance table is <code>[[combat+0x320]+0x228]</code>: entries of 0x10 bytes <code>{record, f32}</code> and a u32
 count at <code>+0x230</code>, indexed by <code>Combat/Buffs/ChanceTypes</code> record index and built on the first addition
@@ -430,12 +432,12 @@ built or on a record of another category. A buff's chance modifier
 <p>Seven keys roll on the player's attacks with no ability at all: <code>C_PC_ApplyFire</code> (528 sword attacks,
 through <code>PC_ApplyStatusEffect_Fire_WeaponKindRequired</code>), <code>C_PC_ApplyFreeze</code> (529),
 <code>C_PC_ApplyFireExecute</code> (74), <code>C_Machine_ExplodeOnGlaiveHit</code> (40 held glaive swings), <code>C_HeadExp</code> (14
-flurry kills), <code>C_BrutalK_3xMorale</code> (80) and <code>C_Blast_HeadExp</code> (80 chain attacks); the dagger and bow
-have their own (<code>C_PC_ApplyFireDagger</code> 158, <code>C_PC_ApplyFreezeDagger</code> 159, <code>C_PC_ApplyFireHeadshot</code> and
-<code>C_ApplyFreeze_CriticalHitRanged</code> on 58 elemental-arrow attacks, <code>C_Celebrimbor_Headshot_FreezeAoE</code> on
-10 heavy headshots). Keys such as <code>C_BowCrit_HeadExp</code>, <code>C_PinOlogs</code>, <code>C_MarkExecute_HeadExp</code> and
+flurry kills), <code>C_BrutalK_3xMorale</code> (80) and <code>C_Blast_HeadExp</code> (80 chain attacks). The dagger and bow
+have their own: <code>C_PC_ApplyFireDagger</code> (158), <code>C_PC_ApplyFreezeDagger</code> (159), <code>C_PC_ApplyFireHeadshot</code>
+and <code>C_ApplyFreeze_CriticalHitRanged</code> (on 58 elemental-arrow attacks), and
+<code>C_Celebrimbor_Headshot_FreezeAoE</code> (on 10 heavy headshots). Keys such as <code>C_BowCrit_HeadExp</code>, <code>C_PinOlogs</code>, <code>C_MarkExecute_HeadExp</code> and
 <code>C_Terror_Headshot_HeadExplode</code> sit on bow item data and reach no attack without an ability of their
-own. 11 of the 78 keys have no holder in the shipped data.</p>
+own. Of the 78 keys, 11 have no holder in the shipped data.</p>
 <p><strong>Elements by weapon:</strong></p>
 <table>
 <thead>
@@ -476,13 +478,17 @@ FlamingWeapon</code>, <code>CursedWeapon</code> or <code>PoisonedWeapon</code>).
 <code>C_PC_ApplyFire</code> (<code>Frost_Weapon</code> the same on <code>C_PC_ApplyFreeze</code>). The sword's own poisoned and cursed
 states hang off a category nothing holds, so poison and curse on the sword need the buff.</p>
 <h3 id="when-affix-effects-are-read">When affix effects are read</h3>
-<p>An affix's <code>Buff</code> and <code>Proc</code> are read only when its item is equipped or a gem is socketed: the field
-bindings list three readers, all on those paths - 0x40136C (log tag <code>[COMBAT|BUFF]</code>; it also applies the
-item's <code>ActiveBuffData</code>, <code>ActiveVariableMod</code>, <code>ActiveMaterialOverrides</code> and <code>AppearanceTagsOnEquip</code>),
-called from the equip paths 0x4010D8 and 0x1BF2ED8 and reading the affix through 0x1BFBC50, the
-gem-socketing path 0x1BFBCB8, and 0x1C7FCD8, reached from the same equip path (0x4010D8 -&gt; 0x1C68B58 -&gt;
-0x1C7FC04). A change to an affix's <code>Buff</code> or <code>Proc</code> record therefore
-takes effect at the next equip, not at the next event.</p>
+<p>An affix's <code>Buff</code> and <code>Proc</code> are read only when its item is equipped or a gem is socketed. The field
+bindings list three readers, all on those paths:</p>
+<ul>
+<li>0x40136C (log tag <code>[COMBAT|BUFF]</code>), called from the equip paths 0x4010D8 and 0x1BF2ED8, which
+  reads the affix through 0x1BFBC50 and also applies the item's <code>ActiveBuffData</code>,
+  <code>ActiveVariableMod</code>, <code>ActiveMaterialOverrides</code> and <code>AppearanceTagsOnEquip</code>;</li>
+<li>the gem-socketing path 0x1BFBCB8;</li>
+<li>0x1C7FCD8, reached from the same equip path (0x4010D8 -&gt; 0x1C68B58 -&gt; 0x1C7FC04).</li>
+</ul>
+<p>A change to an affix's <code>Buff</code> or <code>Proc</code> record therefore takes effect at the next equip, not at the
+next event.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
 <li>What the integer <code>Combat/AOE.Timer</code> controls (1 to 4; its relation to the length of the <code>Tick</code> list
