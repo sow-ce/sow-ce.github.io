@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -41,7 +41,7 @@ them, the objects they create and the world data that the rest of the engine que
 <h2 id="regions-and-world-parts">Regions and world parts</h2>
 <p>The game has eight regions. Each has one <strong>main part</strong> (<code>worlds\retail\&lt;folder&gt;\&lt;folder&gt;</code>, the only
 part with terrain) and a set of <strong>layers</strong> under <code>worlds\retail\&lt;folder&gt;\sectionsandlayers\</code>: story
-and side content, fortress pieces, lighting and its per-Overlord variants. 1,303 layers ship (each
+and side content, fortress pieces, lighting and its per-Overlord variants. In all, 1,303 layers ship (each
 identified by the paths its own container lists, never by its archive entry name):</p>
 <table>
 <thead>
@@ -99,7 +99,8 @@ identified by the paths its own container lists, never by its archive entry name
 main part and all 221 of its layers are in the patch archives (the containers in <code>Patch_DLC4</code>, with
 standalone <code>.objres</code> and <code>.scripts</code> copies in later patches).</p>
 <p>A world part is an EMBB container (see Archives and file formats). Every layer carries its own
-prefab (<code>.inst</code>), and 1,302 of 1,303 carry the same eight further parts, named after the layer:
+prefab (<code>.inst</code>), and 1,302 of 1,303 layers carry the same eight further parts, named after the
+layer:
 <code>.objres</code> (the object registry below), <code>.terrain</code>, <code>.hkai</code> (navigation mesh), <code>.wldclnt</code> (static
 placements), <code>.veggrid</code>, <code>.scripts</code> (its script; see Scripting), <code>.uis</code> and <code>.uiwd</code>; then the
 prefabs, meshes, materials, textures and effects it uses (176 layers also carry a world mesh,
@@ -229,11 +230,11 @@ Seregost nine each (Nurnen's and Cirith Ungol's include a shared <code>ol_share0
 also in <code>_bd</code> and <code>_bduc</code> forms. Lithlad's <code>ol_outlaw</code> holds what a lighting layer holds (1,104
 <code>SpecialFX</code>, 959 <code>LightCube</code>, 612 <code>Sound</code>, 175 <code>WorldModel</code> ... and an <code>AtmosphereVolume</code>), much like
 its <code>night03</code> (1,492 <code>SpecialFX</code>, 959 <code>LightCube</code>, 612 <code>Sound</code>, 32 <code>AtmosphereVolume</code>s).</p>
-<p>Of the 68 groups with entries, 63 hold only the menus' 3D scenes: 86 sections under
+<p>Of the 68 groups with entries, 63 hold only the menus' 3D scenes. They are 86 sections under
 <code>prefabs\ui\mordormap\</code> (the world map's region pieces such as <code>minasmorgul.bndl</code>, and each
 fortress's keep and gate pieces by tribe, <code>fortworldsections\keeps\blackguard\bgrdflairped05.bndl</code>),
 12 under <code>prefabs\ui\store\</code>, 6 battle-report scenes and 8 region-faction scenes
-(<code>wuim_*_ws.bndl</code>). 127 sections were loaded in all, 13 of them from <code>worlds\</code>.</p>
+(<code>wuim_*_ws.bndl</code>). In all, 127 sections were loaded, 13 of them from <code>worlds\</code>.</p>
 <p><strong>Conditional sections.</strong> At load <code>MainScene+0x760 .. +0x768</code> receives 16-byte pairs
 <code>{section record, u32 id}</code> copied from the region's <code>WorldInfo.ConditionalWorldSections</code>. The
 evaluator 0x1DFAC8 (called from 0x1DF500) reads each section's
@@ -251,7 +252,7 @@ manager's object sets (see Threads and the frame) are these contexts: 129 of 129
 carry that vtable, and every placed object points back to its own at <code>+0x58</code> (105,946 of 105,946).</p>
 <p>A context's object-name table is <code>[ctx+0x68]</code>: 0x800 buckets of 0x18 bytes, bucket =
 <code>hash &amp; 0x7FF</code>, list head at <code>+0x08</code>; the node is embedded in the object at <code>+0x28</code> (<code>+0x08</code> next,
-<code>+0x10</code> hash, <code>+0x18</code> name). 20 of the 129 contexts had a table, holding 105,946 objects; the
+<code>+0x10</code> hash, <code>+0x18</code> name). Of the 129 contexts, 20 had a table, holding 105,946 objects; the
 largest is the main part's.</p>
 <p>Matching each table against the shipped registries by object name:</p>
 <table>
@@ -296,7 +297,7 @@ largest is the main part's.</p>
 (<code>*.SC</code>) and some <code>MapCanvas</code> objects (<code>*.MCNV_H</code>); 317 names exist only live (<code>Avian0</code> ..
 <code>Avian11</code>, <code>CTP_D_103.CTP</code> ...). The position differences are <strong>AI placements moved vertically</strong>:
 20,211 of the 20,306 moved objects in the main part are AI nodes, ambient spawners and combat
-teleport points, and in every one of those classes the median horizontal change is 0.0 cm while the
+teleport points. In every one of those classes the median horizontal change is 0.0 cm, while the
 median vertical change is -47 to -285 cm (<code>AINodeMenacePlace</code> 6,802 of 6,869 moved, median -181 cm;
 <code>AISpawnerAmbientNormal</code> 4,343 of 4,920, -150 cm; <code>AINodeRetreat</code> 432 of 432, -285 cm;
 <code>CombatTeleportPoint</code> 751 of 849, -47 cm). The other 95 moved objects belong to other classes.</p>
@@ -490,8 +491,8 @@ the class name. It builds, per object set, a table of {name hash, u16 index} pai
 object by name. It reads the id at file <code>+0x2E</code> into a local and discards it: nothing at run time
 keys on it. The id is the authoring identifier of the object's template. Every copy of an object
 placed through the same prefab carries the same id (one <code>AINodeMenacePlace</code> prefab node: 9,275 copies
-over 74 parts share 0x2651E0E7; one hanging-light trigger: 8,749 copies over 109 parts), while
-objects authored directly in a part have their own: over the whole game, 1,247,824 objects carry
+over 74 parts share 0x2651E0E7; one hanging-light trigger: 8,749 copies over 109 parts). Objects
+authored directly in a part have their own: over the whole game, 1,247,824 objects carry
 167,063 distinct ids, 151,160 of them used by a single object. The id never equals the hash of the
 object's name (0 of 1,247,824) and stays within one class (two exceptions: 0 on every
 <code>WorldInitializer</code> and <code>WorldCollision</code> object, and one pair of unrelated objects, as expected from
@@ -551,7 +552,7 @@ obstacle use different records of the same prefab.</p>
   offset}</code>; an entry is <code>{u32 5, u32 keys, u32 frames, u32 frame bytes}</code>, keys <code>{u32 hash(name),
   u32 frame}</code> (<code>Open</code>, <code>Closed</code>, <code>Start</code>, <code>End</code>), frames of 40 bytes <code>{f32 time (s), f32 offset[3],
   f32 quat[4], u32 0xFFFFFFFF, u32 tag}</code>. The id is the <code>KeyDataIndex</code> property of a <code>KeyFramer</code>
-  object (449 of 449 resolve). 45 of 1,310 blocks carry paths (431 paths; quaternions unit 4,848 of
+  object (449 of 449 resolve). Of 1,310 blocks, 45 carry paths (431 paths; quaternions unit 4,848 of
   4,848, times monotonic in 431 of 431); a gate leaf slides 400 cm over its 10 s <code>TotalPathTime</code>.</li>
 <li><strong>SFXS</strong>, static effects that are not objects (falling leaves, furnace smoke): header <code>1 | off_a |
   off_b | n | n2 | 0 | 0</code>, <code>.fxp</code> paths, at off_a n x <code>{f32 position[3], f32 cull range}</code>, at off_b
@@ -567,18 +568,20 @@ obstacle use different records of the same prefab.</p>
   then n group indices, n instance names (<code>light_05L.Moths</code>; prefixed by their prefab instance, not
   OBJL objects), n zeros and n positions.</li>
 <li><strong>Clutter</strong> (<code>CClutterMgr</code>, <code>ClientShellDLL\ClutterMgr.cpp</code>): instanced static meshes carried
-  with their geometry. Header <code>u32 1 | u32 string bytes | u16 meshes | u16 instances | u16 elements
-  | u16 vertex buffers | u32 buffer bytes</code>; <code>.mat</code> strings; per mesh <code>{u32 material, u16 elements,
-  u16 vertex buffers, u16 vertices, u16 indices, u16 users}</code> with its vertex elements, 56-byte
-  vertices <code>{pos[3], normal[3], uv0[2], uv1[2], tangent[3], u32 colour}</code> and u16 triangle indices;
+  with their geometry. The header is
+  <code>u32 1 | u32 string bytes | u16 meshes | u16 instances | u16 elements | u16 vertex buffers | u32 buffer bytes</code>;
+  then come the <code>.mat</code> strings, and per mesh
+  <code>{u32 material, u16 elements, u16 vertex buffers, u16 vertices, u16 indices, u16 users}</code> with its vertex
+  elements, 56-byte vertices <code>{pos[3], normal[3], uv0[2], uv1[2], tangent[3], u32 color}</code> and u16 triangle
+  indices;
   then 40-byte instances <code>{f32 pos[3], f32 quat[4], f32 scale, u16 left, u16 right, u16 mesh, u16 1}</code>
-  forming a binary tree with one root per block. 51 blocks are non-empty (275 meshes, 9,630
-  instances); Lithlad's main part has 23 meshes and 1,657 instances.</li>
+  forming a binary tree with one root per block. The non-empty blocks number 51 (275 meshes,
+  9,630 instances); Lithlad's main part has 23 meshes and 1,657 instances.</li>
 <li><strong>PFDG</strong>, the prefab tree of the debug viewer (registered by <code>CPrefabDebugViewer</code> 0x1796274, which
   draws a cube <code>CPrefabDebugViewer.Box</code> scaled by each node's extent): <code>'PFDG' | 1 | n | string
-  bytes</code>, n x <code>{f32 centre[3], f32 extent[3]}</code> (the extent is signed: 21% have a negative
+  bytes</code>, n x <code>{f32 center[3], f32 extent[3]}</code> (the extent is signed: 21% have a negative
   component), n packed 21-byte nodes <code>{u32 parent, u32 first child (0xFFFFFFFF none), u8 r, g, b, a,
-  u32 path, u32 name, u8 flag}</code>, strings. 381,195 nodes, every link valid. The viewer is created and
+  u32 path, u32 name, u8 flag}</code>, strings. The shipped trees hold 381,195 nodes, every link valid. The viewer is created and
   its handler registered unconditionally at client start-up (<code>CGameClientShell::InitializeSubsystems</code>
   0x1772E1C), so the block is parsed on every load; the handler's finalize step (vf5 0x483F78) hands
   each tree, keyed by <code>StringHash("&lt;part&gt;.objres")</code>, to the viewer (0x483FDC) and to nothing else. No
@@ -617,7 +620,7 @@ this order; the walk ends exactly at the section end in 1,310 of 1,310 parts:</p
 <tr>
 <td>+0x18</td>
 <td>f32[3]</td>
-<td>pivot position (world, cm; the base centre of the prefab)</td>
+<td>pivot position (world, cm; the base center of the prefab)</td>
 </tr>
 <tr>
 <td>+0x24</td>
@@ -656,16 +659,49 @@ this order; the walk ends exactly at the section end in 1,310 of 1,310 parts:</p
 </tr>
 </tbody>
 </table>
-<p>The reader 0x1CCB150 turns each into a 0x60-byte run-time record: bounds at <code>+0x00 / +0x10</code>, the
-pivot at <code>+0x40</code>, the quaternion at <code>+0x4C</code>, the scale at <code>+0x5C</code>, the squared cull distance at <code>+0x3C</code>
-(a default when the file value is not positive), and at <code>+0x38</code> the kind in bits 0-1 and "flags
-non-zero" in bit 2. <strong>The <code>+0x40</code> word selects which LOD group of the prefab the instance draws</strong>: the
+<p>The reader 0x1CCB150 turns each into a 0x60-byte run-time record:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>+0x00 / +0x10</code></td>
+<td>the bounds</td>
+</tr>
+<tr>
+<td><code>+0x38</code></td>
+<td>the kind in bits 0-1, and "flags non-zero" in bit 2</td>
+</tr>
+<tr>
+<td><code>+0x3C</code></td>
+<td>the squared cull distance (a default when the file value is not positive)</td>
+</tr>
+<tr>
+<td><code>+0x40</code></td>
+<td>the pivot</td>
+</tr>
+<tr>
+<td><code>+0x4C</code></td>
+<td>the quaternion</td>
+</tr>
+<tr>
+<td><code>+0x5C</code></td>
+<td>the scale</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The file record's <code>+0x40</code> word selects which LOD group of the prefab the instance draws.</strong> The
 reader passes <code>StringHash(prefab path)</code> and this tag to 0x58A928, which keeps, per prefab path, a
-small table of the tags placed with it (three inline, then blocks of 14) and returns the tag's index,
-stored at <code>+0x3A</code>. The tags are the ones the prefab's LOD records open with (see Prefabs): in Lithlad
-and Minas Ithil 18,937 of 18,937 instances whose prefab ships in the part's own container name one of
-their prefab's groups; 163 of them use a prefab with several groups and 45 pick one other than the
-first. Composite prefabs use the same tag on their child records. Lithlad's 12,877 instances use 15
+small table of the tags placed with it (three inline, then blocks of 14) and returns the tag's
+index; the run-time record stores it at <code>+0x3A</code>. The tags are the ones the prefab's LOD records
+open with (see Prefabs below). In Lithlad and Minas Ithil, 18,937 of 18,937 instances whose prefab
+ships in the part's own container name one of their prefab's groups; 163 of them use a prefab with
+several groups, and 45 pick one other than the first. Composite prefabs use the same tag on their
+child records. Lithlad's 12,877 instances use 15
 distinct tags, one per prefab for 241 of 242 prefabs.</p>
 <p>Lithlad's main part places 12,877 static instances of 242 prefabs (quaternions unit 12,877 of
 12,877, scale 0.12-2.03, flags 1 on 12,789; cull distances mostly 60 m, 90 m, 350 m and 4 km). The
@@ -685,8 +721,8 @@ its squared cull distance in the fourth component: one of every instance in the 
 leaves out the instances of kind 3. A cell's groups cover its instances: Lithlad's cell lists 12,714
 instances under key 0 and 163 under 0xD7D4D586 (12,877 in all).</p>
 <p><strong>The trailing block</strong> (read by 0x6B3664) opens with 13 words, four of which must be 0: <code>A count |
-first cell of a range | 0 | B count | ? | 0 | total s | total hull references | hull count | ? | 0 |
-total A-to-A references | 0</code> (the loader keeps a pointer to the cells from "first cell" on, and the
+first cell of a range | 0 | B count | unknown | 0 | total s | total hull references | hull count |
+unknown | 0 | total A-to-A references | 0</code> (the loader keeps a pointer to the cells from "first cell" on, and the
 totals size its allocation); then:</p>
 <pre><code>hulls x {f32, u32, u32 vertices, u32 n1, u32 n2, vertices x f32[3], n1 x u16, n2 x u16}
 A     x {60 bytes, ending with u32 count c1, u32 count c2, i32 cell (-1 none), u8 count s;
@@ -694,18 +730,19 @@ A     x {60 bytes, ending with u32 count c1, u32 count c2, i32 cell (-1 none), u
 B     x {u32 n, u32, f32, i32, i32, n x u32 references to A records}
 </code></pre>
 <p>The engine computes each hull's bounds from its vertices. Every main part has one or two A records
-and one B record; Barad-dur and the Black Gate have no hulls, the others 86 to 207. 1,217 of the
-1,302 layers carry only the empty 52-byte header, and 85 carry records.</p>
+and one B record; Barad-dur and the Black Gate have no hulls, the others 86 to 207. Of the
+1,302 layers, 1,217 carry only the empty 52-byte header, and 85 carry records.</p>
 <h3 id="prefabs-prfb-inst">Prefabs (PRFB, <code>.inst</code>)</h3>
 <p>A prefab's baked geometry; static world geometry is never <code>.mesh</code> (prefab <code>.mesh</code> files are the
 destructible and animated pieces). <code>'PRFB' | u32 8 | u32 hash | ...</code> with header words for draws
 <code>[4]</code>, materials <code>[5]</code>, child prefabs <code>[6]</code> and vertex formats <code>[9]</code>, then:</p>
 <ul>
-<li><strong>LOD records</strong> from 0x38, 44 bytes each with -1.0 at <code>+28</code>, in groups that open with a per-group
-  tag (0xD238B9DD on a keep wall, 0xD238B9DE on human buildings, 0x3249 on lanterns, an extra leading
-  group 0x159A on fortress pieces); a placement names the tag of the group it draws (see Placements): a root <code>{tag, -1, 0, 0, next = first unit, f32 cull distance}</code>
-  and units <code>{tag, name hash, first draw, draw count, next unit (-1 = finest), f32 switch distance,
-  f32, -1.0, 0, 0, distinct draws}</code>. Per instance the engine walks coarse to fine and draws the first
+<li><strong>LOD records</strong> start at 0x38, 44 bytes each with -1.0 at <code>+28</code>. They form groups, each opening
+  with a per-group tag (0xD238B9DD on a keep wall, 0xD238B9DE on human buildings, 0x3249 on lanterns,
+  and an extra leading group 0x159A on fortress pieces): a root
+  <code>{tag, -1, 0, 0, next = first unit, f32 cull distance}</code> and units
+  <code>{tag, name hash, first draw, draw count, next unit (-1 = finest), f32 switch distance, f32, -1.0, 0, 0, distinct draws}</code>.
+  A placement names the tag of the group it draws (see Placements above). Per instance the engine walks coarse to fine and draws the first
   unit whose <code>next</code> is -1 or whose switch distance the camera is beyond (a keep wall switches at 320,
   150 and 80 m and is culled at 7 km). A unit may draw nothing at its range; draws in no unit are
   depth-prepass and shadow casters. Header word <code>[7]</code> is not the unit count (88 of 431 chained
@@ -714,9 +751,9 @@ destructible and animated pieces). <code>'PRFB' | u32 8 | u32 hash | ...</code> 
   <code>vend</code> (stream 0 then stream 1, stride-aligned), then u16 indices (<code>idx_min .. idx_max</code>, rebased
   by <code>idx_min</code>).</li>
 <li>The tail: vertex formats <code>{u8 stream, u8 type, u8 usage, u8 index}</code> (types 2 float3, 12 half4,
-  10 half2, 4 ubyte4; usages 0 position, 1 normal, 2 tangent, 3 binormal, 4 uv, 5 colour), 52-byte
+  10 half2, 4 ubyte4; usages 0 position, 1 normal, 2 tangent, 3 binormal, 4 uv, 5 color), 52-byte
   draw records <code>{0, n, n, index start, base, triangles, material, 0, 0, format, vend, f32, f32}</code>,
-  then the material paths. Positions are prefab-local with the pivot at the base centre. A composite
+  then the material paths. Positions are prefab-local with the pivot at the base center. A composite
   prefab ends with a block of placed child prefabs.</li>
 </ul>
 <p>A layer carries the prefabs it places as PRFB sections of its own container (Minas Ithil's
@@ -729,23 +766,24 @@ destructible and animated pieces). <code>'PRFB' | u32 8 | u32 hash | ...</code> 
   cards (504 km in Minas Ithil's <code>night01</code>, 960 km for Cirith Ungol's <code>mt_v01</code>).</li>
 <li>In Cirith Ungol about 90% of the world's triangles use <strong>texture-array</strong> materials (<code>.texa</code>),
   which blend array slices by a mask and a height map.</li>
-<li><strong>TERR version 9 (<code>&lt;region&gt;.terrain</code>)</strong>, main parts only (Barad-dur has none), read by 0x7AC0F4:
-  per terrain a root grid (4x4 or 8x8), position (the centre), quaternion, extent, height range, a
-  terrain shader parameter (400; 500 in Lithlad, 1000 at the Black Gate: with Lithlad loaded,
-  <code>k_vTerrainHullParams0.y</code> and <code>k_vTerrainDomainParams1.w</code> both hold 500, next to the height range
-  13,000 in <code>k_vTerrainDomainParams1.y</code>), the node count, a material and a global
-  texture (a 32x32 flag map, one cell per depth-3 node), then nodes <code>{u32 flags; unless flags &amp;
-  0x20: f32 min, f32 max, u32 tile}</code> and tiles of three texture paths; the file ends exactly after
-  them in every region. Each root is a quadtree stored in pre-order (flag bits 0-3 = children present,
+<li><strong>TERR version 9 (<code>&lt;region&gt;.terrain</code>)</strong>, in main parts only (Barad-dur has none), is read by
+  0x7AC0F4. Per terrain it holds a root grid (4x4 or 8x8), the position (the center), a quaternion,
+  the extent, the height range, a terrain shader parameter, the node count, a material and a global
+  texture (a 32x32 flag map, one cell per depth-3 node). Then come the nodes,
+  <code>{u32 flags; unless flags &amp; 0x20: f32 min, f32 max, u32 tile}</code>, and tiles of three texture
+  paths; the file ends exactly after them in every region. The shader parameter is 400, 500 in
+  Lithlad and 1000 at the Black Gate: with Lithlad loaded, <code>k_vTerrainHullParams0.y</code> and
+  <code>k_vTerrainDomainParams1.w</code> both hold 500, next to the height range 13,000 in
+  <code>k_vTerrainDomainParams1.y</code>. Each root is a quadtree stored in pre-order (flag bits 0-3 = children present,
   0x40 root, 0x20 no data); every root's tile 0 is the region overview, deeper nodes own a 68x68
   16-bit height tile and two 132x132 BGRA maps (four texture-array slice indices and their weights).
   World placement: <code>U = (x - pos.x) / size + 0.5</code>, <code>V = (z - pos.z) / size + 0.5</code>,
   <code>y = pos.y + h * range</code>. The terrain shader <code>disp_terrain.fxo</code> keeps the four heaviest of up to 24
   slices per point; slice index 255 means no layer, which marks the holes (outside the play area,
   and pockets such as forts and caves).</li>
-<li><strong>VEGT (<code>.vegtile</code>)</strong>, vegetation, read by 0x503A0C: <code>'VEGT' | u32 version (1-3) | f32 centre[3] |
+<li><strong>VEGT (<code>.vegtile</code>)</strong>, vegetation, read by 0x503A0C: <code>'VEGT' | u32 version (1-3) | f32 center[3] |
   f32 half[3] | u32 species</code>, then per species <code>{u16 length, name, u32 n, n x 16-byte instance}</code>.
-  An instance is <code>u16 qx, qy, qz</code> (position = <code>(centre - half) + q * step</code>, step = <code>max(half) * 2 /
+  An instance is <code>u16 qx, qy, qz</code> (position = <code>(center - half) + q * step</code>, step = <code>max(half) * 2 /
   65535</code>), <code>u8 scale</code> (<code>b / 127.5</code>), a u8, four rotation bytes, a 3-byte bounding-sphere offset and
   <code>u8 flags</code> (bit 0 hidden). The rotation is decoded on the GPU
   (<code>vegetation_sort_nomotion.fxo</code>): <code>cos yaw = 2 b0 / 255 - 1</code>, <code>sin yaw = 2 b1 / 255 - 1</code>,
@@ -860,8 +898,8 @@ holds <code>+0x00</code> the name, <code>+0x08</code>
 the base class's descriptor, <code>+0x10</code> flags, <code>+0x18</code> the constructor, <code>+0x20</code> the destructor, <code>+0x2C</code>
 the instance size and <code>+0x30</code> the alignment. A shape-validated sweep of the image finds 433
 descriptors with 433 distinct names (431 in <code>.idata</code>, 2 in <code>.xtext</code>; 121 constructors lie outside
-<code>.arch</code>). 320 classes descend from <code>BaseClass</code>, 256 of them from <code>GameBase</code> (0x120 bytes, constructor
-0x7DCC78), and 64 from <code>BrushBase</code>.
+<code>.arch</code>). <code>BaseClass</code> has 320 descendant classes: 256 descend from <code>GameBase</code> (0x120 bytes,
+constructor 0x7DCC78) and 64 from <code>BrushBase</code>.
 The image also lists the static descriptors in one place: the leaf function 0x19CBDFC stores 435
 descriptor pointers, one after another, into the array 0x2A61A30 .. 0x2A627C0 (stride 8).</p>
 <table>
@@ -1042,7 +1080,7 @@ descriptor pointers, one after another, into the array 0x2A61A30 .. 0x2A627C0 (s
 7,249, <code>FireVolume</code> 7,189, <code>DynamicObjectGroupState</code> 6,251, <code>ScriptRelay</code> 5,993,
 <code>AISpawnerAmbientNormal</code> 5,002, <code>Group</code> 4,628, <code>FireProp</code> 4,129 and <code>VolumeController</code> 3,882.</p>
 <p><strong>Position.</strong> <code>+0xAC</code> is the logical position for world objects; prefabs are authored with their
-pivot at the base centre. Characters share the transform offsets (see Characters).</p>
+pivot at the base center. Characters share the transform offsets (see Characters).</p>
 <h2 id="creating-binding-moving-and-removing-objects">Creating, binding, moving and removing objects</h2>
 <p>All of this runs on the main thread.</p>
 <h3 id="the-object-server">The object server</h3>
@@ -1079,11 +1117,11 @@ pivot at the base centre. Characters share the transform offsets (see Characters
 </tbody>
 </table>
 <p>The <strong>creator</strong> 0x1CD454 (also called by the part loader 0x11B4EC0 for every object a part
-streams in) requires an object set at <code>params+0x1A0</code>, allocates the object through the class holder
-at <code>params+0x40</code>, runs its <code>ReadProps</code> (vtable <code>+0x60</code>, which pulls every property from the
-<code>ObjectRec</code>), builds the transform from the parameters into <code>+0xAC</code>, registers the name, links the
-object into its context, builds its components (vtable <code>+0x68</code>) and activates it (<code>+0x80</code>, <code>+0x70</code>,
-<code>+0x48</code>). A part's loader creates every object first and post-creates each afterwards.</p>
+streams in) requires an object set at <code>params+0x1A0</code>. It allocates the object through the class
+holder at <code>params+0x40</code> and runs its <code>ReadProps</code> (vtable <code>+0x60</code>, which pulls every property from
+the <code>ObjectRec</code>). It then builds the transform from the parameters into <code>+0xAC</code>, registers the name,
+links the object into its context, builds its components (vtable <code>+0x68</code>) and activates it
+(<code>+0x80</code>, <code>+0x70</code>, <code>+0x48</code>). A part's loader creates every object first and post-creates each afterwards.</p>
 <p><code>CObjectCreateParams</code> (defaults 0x43DAA0):</p>
 <table>
 <thead>
@@ -1137,8 +1175,8 @@ object into its context, builds its components (vtable <code>+0x68</code>) and a
 </table>
 <h3 id="names">Names</h3>
 <p>The name registrar 0x4DBF08 either copies the name (and sets <code>+0xDE</code> to 1) or keeps a pointer into
-the part's strings (<code>+0xDE</code> = 0), hashes it into the node at <code>+0x28</code> and calls the context's vf10
-0x4DBF78, which picks the bucket (<code>hash &amp; 0x7FF</code>, 0x4DBF84) and appends the node at the tail
+the part's strings (<code>+0xDE</code> = 0). It then hashes the name into the node at <code>+0x28</code> and calls the
+context's vf10 0x4DBF78, which picks the bucket (<code>hash &amp; 0x7FF</code>, 0x4DBF84) and appends the node at the tail
 (0x115ED3C, which asserts "Error: Adding a link that is already inside of a list" only when the node
 itself is already linked). <strong>Duplicate names are legal</strong>: nothing checks the name. The lookup
 0x4DC078 compares the hash and then the name case-insensitively, walking from the tail, so the
@@ -1160,9 +1198,9 @@ returns <code>Class.None</code>; <code>ScriptObject.Create</code> is a function 
 <code>+0x48</code>) that becomes null when the prefab's part streams out.</p>
 <h3 id="moving">Moving</h3>
 <p><code>GameBase:CopyXForm(A, B)</code> 0x1823B70 is <code>SetPosition(A, B+0xAC)</code> 0x1454EC followed by
-<code>SetRotation(A, B+0xB8)</code> 0xEF690; render state and spatial structures follow the setters, and it
-works across contexts. <strong>Collision follows ownership</strong>: the setter path 0x274C3C forwards to the
-physics body at <code>+0x98</code>, so only pieces the object owns move. 3,382 of 3,491 <code>FireProp</code>s own no
+<code>SetRotation(A, B+0xB8)</code> 0xEF690. Render state and spatial structures follow the setters, and the
+call works across contexts. <strong>Collision follows ownership</strong>: the setter path 0x274C3C forwards to the
+physics body at <code>+0x98</code>, so only pieces the object owns move. Of 3,491 <code>FireProp</code>s, 3,382 own no
 pieces (their collision is baked into the part's static <code>PhysicsBSP</code>), so a moved bench or barrel
 stack keeps its old collision; <code>DynamicObjectGroupBrush</code>es (607 of 634) and cage brushes (vt_0x1FA3C00,
 84 of 84) own theirs and stay solid where they go. A destructible prop is a prefab of sibling objects
@@ -1225,7 +1263,7 @@ once (0x5AEABC). A brush's current state object is <code>brush+0x148</code>; whi
 brush are routed nowhere. A brush's <code>ReadProps</code> does not fill the visibility flags (a <code>FireProp</code>'s
 does), so a brush created without them is invisible.</p>
 <h2 id="placed-lights-and-sounds">Placed lights and sounds</h2>
-<p>Light and sound objects read their colours and radii from their property records at creation and
+<p>Light and sound objects read their colors and radii from their property records at creation and
 keep them in the object:</p>
 <table>
 <thead>
@@ -1250,15 +1288,15 @@ keep them in the object:</p>
 </table>
 <p>In Lithlad the live values equal the decoded property records: LightColor, SpecularColor and
 IntensityScale 950 of 950, LightRadius 903 of 903, Sound OuterRadius 1,326 of 1,326 (each control
-read 0). 2,810 lights were matched by name; 45 sat more than 1 cm from their decoded position. 3 of
-those sit exactly where the patch <code>.objres</code> places them. The other 42 are lantern lights
+read 0). Matching by name paired 2,810 lights; 45 sat more than 1 cm from their decoded position.
+Of those, 3 sit exactly where the patch <code>.objres</code> places them. The other 42 are lantern lights
 (<code>LightHangOrc*_l.LC_Out01</code>, <code>light_NN.LC_Out01</code>) displaced 2-22 cm horizontally (vertical median
 0.4 cm, none downward), and 16 of them moved between two reads a minute apart.</p>
 <h2 id="context-actions-traversal-markup">Context actions: traversal markup</h2>
 <p>Where Talion can hang, pull up, vault, rail-run or leap from a mount is world data: <strong>context-action
 lines</strong> owned by <code>VolumeController</code>, <code>WorldInitializer</code> and <code>StreamingStamp</code> objects, built into a
 world grid on the <code>ContextActionBuilderThread</code> (see Threads and the frame) and queried by the
-movement behaviour graphs. <code>ContextActionDB</code> (<code>ContextActionDB.cpp</code>, initialised by 0x1B43A90,
+movement behavior graphs. <code>ContextActionDB</code> (<code>ContextActionDB.cpp</code>, initialized by 0x1B43A90,
 vt_0x23010A8) is <code>[GM+0x6DA0]</code>; it registers the <code>cntx</code> resource type.</p>
 <h3 id="on-disk-cadb-and-cawr">On disk: CADB and CAWR</h3>
 <p>CADB (read by 0x7CB194 for the header and vt_0x1FF6B98::vf3 0x501478 for the body; exact in 724 of
@@ -1271,12 +1309,16 @@ nV x 0x20  volume {f32 min[3], f32 max[3], u32 first plane, u32 plane count}
 nO x 0x34  owner  {u32 key, f32 min[3], f32 max[3], u32 first line, u32 line count,
                    u32 list-1 first volume, u32 count, u32 list-2 first volume, u32 count}
 </code></pre>
-<p>Across 724 parts: 7,883 of 7,886 palette entries name one of the 124 <code>Character/Models/ContextActions</code>
-records (fields <code>Group</code>, <code>DebugColor</code>, <code>AdditionalReferencedActions</code>; so a global mask fits 128 bits);
-2,209,930 lines, every one owned exactly once and inside its owner's box; 314,834 planes (all unit);
-50,668 volumes; 32,104 owners, whose key is the hash of an OBJL object name (32,104 of 32,104:
-<code>VolumeController</code> 31,803, <code>WorldInitializer</code> 288, <code>StreamingStamp</code> 13), sorted. Lines are not level
-in general (1,551,979 slope) and 68,951 normals have a vertical component. The busiest actions by
+<p>Across 724 parts:</p>
+<ul>
+<li>7,883 of 7,886 palette entries name one of the 124 <code>Character/Models/ContextActions</code> records
+  (fields <code>Group</code>, <code>DebugColor</code>, <code>AdditionalReferencedActions</code>), so a global mask fits in 128 bits;</li>
+<li>2,209,930 lines, every one owned exactly once and inside its owner's box;</li>
+<li>314,834 planes (all unit) and 50,668 volumes;</li>
+<li>32,104 owners, sorted, whose key is the hash of an OBJL object name (32,104 of 32,104:
+  <code>VolumeController</code> 31,803, <code>WorldInitializer</code> 288, <code>StreamingStamp</code> 13).</li>
+</ul>
+<p>Lines are not level in general (1,551,979 slope), and 68,951 normals have a vertical component. The busiest actions by
 line count: <code>Edge_Hang</code> 997,374, <code>Edge_Pullup</code> 388,445, <code>Edge_NoHang</code> 350,260, <code>Block_Movement</code>
 326,177, <code>Block_Movement_RailRun</code> 219,953, <code>Edge_Hang_Dangle</code> 216,272, <code>Hurdle</code> 94,327,
 <code>Edge_MountJumpTo</code> 93,946, <code>VaultOver_Mount</code> 91,633, <code>Edge_NoTrollJump</code> 83,358, <code>Rail_Running</code>
@@ -1285,15 +1327,51 @@ line count: <code>Edge_Hang</code> 997,374, <code>Edge_Pullup</code> 388,445, <c
 u32 key}</code> (exact in 724 of 724). <code>key</code> is the hash of the object name; the middle word is 0 on disk and
 is filled at load with the hash of the <code>cntx</code> resource that holds the owner (2,777 of 2,777 live).</p>
 <h3 id="loading">Loading</h3>
-<p>A loaded <code>cntx</code> object is 0x80 bytes (0x7CD444): lines at <code>+0x20</code> (stride 0x38: the mask at <code>+0x00</code>,
-the vectors from <code>+0x10</code>), planes <code>+0x30</code>, volumes <code>+0x40</code>, owner keys <code>+0x50</code>, owners <code>+0x60</code>, the
-asset's hash at <code>+0x1C</code>, and a node at <code>+0x08</code> in the database's list <code>DB+0x68</code> (vf5 0x79A948 asserts
-"Duplicate asset being loaded."). <strong>vf4 0x41E564 rewrites every line mask</strong> from palette bits to
-global bits: the database's action table (<code>DB+0x10</code> count, 124; <code>DB+0x18</code> entries of 0x28 bytes
-<code>{u32 record hash, u128 own bit, u128 closure}</code>, sorted, "Improperly sorted database records!")
-closes each action over its <code>AdditionalReferencedActions</code> to a fixed point, and a line stores the
-OR of its actions' closures. A query for one action therefore also finds every line whose action
-lists it.</p>
+<p>A loaded <code>cntx</code> object is 0x80 bytes (0x7CD444):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>+0x08</code></td>
+<td>a node in the database's list <code>DB+0x68</code> (vf5 0x79A948 asserts "Duplicate asset being loaded.")</td>
+</tr>
+<tr>
+<td><code>+0x1C</code></td>
+<td>the asset's hash</td>
+</tr>
+<tr>
+<td><code>+0x20</code></td>
+<td>the lines (stride 0x38: the mask at <code>+0x00</code>, the vectors from <code>+0x10</code>)</td>
+</tr>
+<tr>
+<td><code>+0x30</code></td>
+<td>the planes</td>
+</tr>
+<tr>
+<td><code>+0x40</code></td>
+<td>the volumes</td>
+</tr>
+<tr>
+<td><code>+0x50</code></td>
+<td>the owner keys</td>
+</tr>
+<tr>
+<td><code>+0x60</code></td>
+<td>the owners</td>
+</tr>
+</tbody>
+</table>
+<p><strong>vf4 0x41E564 rewrites every line mask</strong> from palette bits to global bits. The database's action
+table holds the count at <code>DB+0x10</code> (124) and the entries at <code>DB+0x18</code>: 0x28 bytes each,
+<code>{u32 record hash, u128 own bit, u128 closure}</code>, kept sorted ("Improperly sorted database
+records!"). Each action's closure is its own bit closed over its <code>AdditionalReferencedActions</code> to a
+fixed point, and a line stores the OR of its actions' closures. A query for one action therefore
+also finds every line whose action lists it.</p>
 <p>Live, for the four loaded parts with a shipped source, 163,048 of 163,048 lines equal the file in
 geometry and in the predicted global mask (the unconverted file mask equals the live one in only 806
 of 161,821), as do 2,364 of 2,364 planes, 344 of 344 volumes and 2,091 of 2,091 owners.</p>
@@ -1371,13 +1449,18 @@ volumes. Control: the same volumes moved 300 cm along x would contain 31 kill an
 </table>
 <p>The cell target is 2000 x 8000 x 2000 cm (0x267A448 .. 0x267A450). Lithlad's grid spans 1,120 x 244
 x 1,220 m in 56 x 4 x 61 = 13,664 cells of 2000 x 6105 x 2000 cm (the extent divided by the target,
-rounded up, on all three axes) and holds 184,993 lines. The inner tables: <code>+0x10</code> cells (0x28 bytes: u32 index, u8 x, y, z, u8 has
-kill <code>+7</code>, u8 has cut <code>+8</code>, a run vector at <code>+0x10</code>), <code>+0x20</code> owner instances (0x20: u32 A, u8 active
-<code>+4</code>, run vector <code>+8</code>), <code>+0x30</code> kill volumes, <code>+0x40</code> cut volumes (0x38: box, u32 plane count
-<code>+0x18</code>, planes <code>+0x20</code>, u32 A <code>+0x28</code>, u32 B <code>+0x2C</code>, u8 cell range[6] <code>+0x30</code>), <code>+0x50</code> world planes
-(16 bytes <code>{n[3], d}</code>, inside when <code>n . p - d &lt;= 0</code>). A world line is 0x40 bytes: <code>u8 flags</code> (bit 0 =
-owner active), <code>u32 home cell | bit 31</code>, <code>u128 global mask +8</code>, <code>f32 p0 +0x18</code>, <code>p1 +0x24</code>, <code>normal
-+0x30</code>.</p>
+rounded up, on all three axes) and holds 184,993 lines. The inner tables are:</p>
+<ul>
+<li><code>+0x10</code> cells (0x28 bytes: u32 index, u8 x, y, z, u8 has kill <code>+7</code>, u8 has cut <code>+8</code>, a run vector
+  at <code>+0x10</code>);</li>
+<li><code>+0x20</code> owner instances (0x20 bytes: u32 A, u8 active <code>+4</code>, run vector <code>+8</code>);</li>
+<li><code>+0x30</code> kill volumes;</li>
+<li><code>+0x40</code> cut volumes (0x38 bytes: box, u32 plane count <code>+0x18</code>, planes <code>+0x20</code>, u32 A <code>+0x28</code>, u32 B
+  <code>+0x2C</code>, u8 cell range[6] <code>+0x30</code>);</li>
+<li><code>+0x50</code> world planes (16 bytes <code>{n[3], d}</code>, inside when <code>n . p - d &lt;= 0</code>).</li>
+</ul>
+<p>A world line is 0x40 bytes: <code>u8 flags</code> (bit 0 = owner active), <code>u32 home cell | bit 31</code>,
+<code>u128 global mask +8</code>, <code>f32 p0 +0x18</code>, <code>p1 +0x24</code>, <code>normal +0x30</code>.</p>
 <h3 id="the-query">The query</h3>
 <p><code>ContextActionDB::Query</code> 0xFEAFB0(DB, AABB <em>box, u128 </em>any, u128 <em>all, u128 </em>none, u128 <em>not_all,
 results </em>) locks <code>DB+0x20</code> and runs 0xFEAE40 over every cell the box covers (0xFEB3B0) and every run
@@ -1385,12 +1468,12 @@ in it (0xFEB070). It returns each <strong>active</strong> line once (de-duplicat
 <code>mask &amp; any != 0</code>, <code>mask &amp; all == all</code>, <code>mask &amp; none == 0</code> and <code>mask &amp; not_all != not_all</code> (a zero
 mask skips its test) and whose segment meets the box (slab test 0x5AA774). Results are <code>{u32 n, n x
 0x38 {u128 mask, p0, p1, normal}}</code>, at most 256. Running the engine's own 0xFEAE40 in an emulator
-against live memory, on boxes around the player and on random lines with five or six mask sets, gave
-the same answer as this model in 96 of 96 and 80 of 80 queries; returning inactive lines would have
-changed the answer in 18 of 19 and 9 of 9.</p>
+against live memory, on boxes around the player and on random lines with five or six mask sets,
+gave the same answer as this model in 96 of 96 and 80 of 80 queries. Returning inactive lines as
+well would have changed the answer in 18 of 19 and 9 of 9.</p>
 <p>The callers build the masks from the action table's own bits (0x41F954): <code>any</code> from a node's
 <code>GameDBContextAction</code> and <code>GameDBContextAction_OR</code>, <code>all</code> from <code>_AND</code>, <code>none</code> from <code>_NOT_OR</code>,
-<code>not_all</code> from <code>_NOT_AND</code>. The seven callers of 0xFEAFB0 are behaviour-graph nodes (see Animation):
+<code>not_all</code> from <code>_NOT_AND</code>. The seven callers of 0xFEAFB0 are behavior-graph nodes (see Animation):
 <code>Predicate.DetectedEdge</code> (<code>DetectEdgeData</code> 0x1C6EF90: fields <code>Direction</code>, <code>VerticalOffset</code>,
 <code>Radius</code>, <code>Height</code> and the five action lists; box = position + (0, VerticalOffset, 0) +- (Radius,
 Height / 2, Radius); defaults -104, 100 and 10 cm), <code>Predicate.FoundRailing</code> / <code>Modifier.FindRailing</code>
@@ -1445,9 +1528,9 @@ the counts fall to 34, 23, 15, 0 and 24. The dust points (64) lie a median 9.7 m
   exactly one context: 127 loaded sections, 129 contexts and 126 live <code>WorldInitializer</code> objects
   (every part read opens with one) suggest it.</li>
 <li>What the WDSC cell groups' keys and the trailing block's hulls and records are for. The handler's
-  module also manages <strong>visibility layers</strong> (render commands that set a layer's state, keyed by two
-  words; asserts "Setting visibility layer state on a visibility layer that does not exist" and
-  "ReleaseVisibilityLayer must be paired with AddVisibilityLayer"), and group keys such as
+  module also manages <strong>visibility layers</strong>: render commands set a layer's state, keyed by two words,
+  and the module asserts "Setting visibility layer state on a visibility layer that does not exist"
+  and "ReleaseVisibilityLayer must be paired with AddVisibilityLayer". Group keys such as
   0xD7D4D586 / 0xD7D4D587 / 0xD7D4D58B differ only in their last character, as numbered layer names
   would; matching the keys against the layer state requests would settle it. What kind 3 excludes
   instances from (the second bounds list) is part of the same question.</li>
@@ -1458,7 +1541,7 @@ the counts fall to 34, 23, 15, 0 and 24. The dust points (64) lie a median 9.7 m
   context-action lines, as their placement suggests.</li>
 <li>Whether the lantern lights that sit 2-22 cm from their authored points follow an animated or
   simulated lamp socket (16 of 42 moved within a minute).</li>
-<li>Which context-action nodes Talion's own behaviour graph uses, and whether the other node types
+<li>Which context-action nodes Talion's own behavior graph uses, and whether the other node types
   that carry the same action lists (<code>FoundContextAction</code>, <code>AlignToBrush</code>, <code>FoundContextActionEnd</code>,
   <code>FoundRailingCorner</code>, <code>CameraContextActionData</code>, <code>FindMoveAndPinIK</code>) reach the grid through the
   seven known callers.</li>
