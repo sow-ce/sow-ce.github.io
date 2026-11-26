@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Characters, the player and the camera - Shadow of War engine reference</title><meta name="description" content="The character object and its key fields, the player, the camera pipeline and what the screen actually reads, near-camera dissolve, the character controller with its collision layers and trigger volumes, character size with the scale component and the live capsule swap, AI spacing and attack reach, the player&#x27;s movement record, immediate teleport and model change with its build gate, Wraith World and its exit switches, the wraith companion model, weapons and holders, runtime material slots, render IDs, mounts, Talion&#x27;s material controller, Sauron&#x27;s two forms and the keyed effects, and birds."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Characters, the player and the camera - Shadow of War engine reference</title><meta name="description" content="The character object and its key fields; the player; the camera pipeline and the copy the screen reads; near-camera dissolve; the character controller with its collision layers and trigger volumes; character size with the scale component and the live capsule swap; AI spacing and attack reach; the player&#x27;s movement record, immediate teleport and model change with its build gate; Wraith World and its exit switches; the wraith companion model; weapons and holders, runtime material slots and render IDs; mounts; Talion&#x27;s material controller; Sauron&#x27;s two forms and their keyed effects; and birds."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -34,14 +34,14 @@
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
 <a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
-<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="characters-the-player-and-the-camera">Characters, the player and the camera</h1><p class=\"lede\">The character object and its key fields, the player, the camera pipeline and what the screen actually reads, near-camera dissolve, the character controller with its collision layers and trigger volumes, character size with the scale component and the live capsule swap, AI spacing and attack reach, the player&#x27;s movement record, immediate teleport and model change with its build gate, Wraith World and its exit switches, the wraith companion model, weapons and holders, runtime material slots, render IDs, mounts, Talion&#x27;s material controller, Sauron&#x27;s two forms and the keyed effects, and birds.</p>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="characters-the-player-and-the-camera">Characters, the player and the camera</h1><p class=\"lede\">The character object and its key fields; the player; the camera pipeline and the copy the screen reads; near-camera dissolve; the character controller with its collision layers and trigger volumes; character size with the scale component and the live capsule swap; AI spacing and attack reach; the player&#x27;s movement record, immediate teleport and model change with its build gate; Wraith World and its exit switches; the wraith companion model; weapons and holders, runtime material slots and render IDs; mounts; Talion&#x27;s material controller; Sauron&#x27;s two forms and their keyed effects; and birds.</p>
 <p>Every character is a <code>CCharacter</code> with a body, a controller and a capsule in the Havok world, a scale component that
 sets its size, and a visual whose pieces, weapons and materials the engine builds from records and items. This chapter
 follows the object, the camera, the controller and the capsule, size and reach, the player's movement, teleport and
 model change, Wraith World and Talion's material controller, then Sauron's two forms and the birds.</p>
 <h2 id="the-character-object">The character object</h2>
-<p>Every character - the player, NPCs, creatures - is a <code>CCharacter</code>. AI characters are the <code>NPC</code> class (vt_0x1FB3640, 0x3180 bytes; see AI);
-the player is a <code>CPlayerObj</code> (vt_0x1F96818).</p>
+<p>Every character, including the player, NPCs and creatures, is a <code>CCharacter</code>. AI characters are the <code>NPC</code> class
+(vt_0x1FB3640, 0x3180 bytes; see AI), and the player is a <code>CPlayerObj</code> (vt_0x1F96818).</p>
 <table>
 <thead>
 <tr>
@@ -80,7 +80,7 @@ the player is a <code>CPlayerObj</code> (vt_0x1F96818).</p>
 </tr>
 <tr>
 <td>+0x120</td>
-<td>the behaviour-interface base subobject</td>
+<td>the behavior-interface base subobject</td>
 </tr>
 <tr>
 <td>+0x22E0</td>
@@ -153,12 +153,12 @@ the player is a <code>CPlayerObj</code> (vt_0x1F96818).</p>
 </tbody>
 </table>
 <p>The player is <code>[base+0x2797808]</code>, the first entry of the player list <code>[base+0x2A34C68]</code>; the client
-shell <code>[base+0x26FFA98]</code> holds it at <code>+0x888</code>. Player-only fields: <code>+0x2D40</code> the body-build flag (below),
+shell <code>[base+0x26FFA98]</code> holds it at <code>+0x888</code>. The player-only fields are <code>+0x2D40</code> the body-build flag (below),
 <code>+0x2F10</code> AI-spectator invisibility, <code>+0x2F88</code> the movement object, <code>+0x2F90</code> the camera / dissolve object,
 <code>+0x2FA0</code> the combat component, <code>+0x2FA8</code> vision mode, <code>+0x2FC0</code> the scene component, <code>+0x3420</code> the screen camera
-copy, <code>+0x2578</code> the mount being ridden. A bone's world position comes from the pose and the bone
+copy and <code>+0x2578</code> the mount being ridden. A bone's world position comes from the pose and the bone
 hashes: a skeleton object's runtime skeleton <code>[[[skel+0x10]+0x18]+0x10]</code> holds <code>+0x40</code> the bone count
-and <code>+0x78</code> the bones' name hashes in pose order (Talion 128 bones, the face rig 241).</p>
+and <code>+0x78</code> the bones' name hashes in pose order (Talion has 128 bones, the face rig 241).</p>
 <h2 id="the-camera">The camera</h2>
 <pre><code>owner = [[[base+0x26FFAA8]+0x6CB0]+0x6728 + i*8]   (vt_0x1FD99F8; the local player's entry has +0xDEA8 set)
 owner+0xDEA8 -&gt; the camera modifier data (md)
@@ -167,40 +167,40 @@ owner+0x5F0  -&gt; the modifier list (sentinel; +0x5F8 first node; node = modifi
 md+0x66C position, +0x678 rotation quaternion, +0x690 / +0x694 horizontal / vertical FOV (radians)
 md+0x650 / +0x688 the previous frame's transform / lens
 </code></pre>
-<p>A frame (0x2FC6B8): 0x51BF3C(md, dt) prepares from the previous camera and the focus; 0x51BCA8 runs
-each modifier's vf7 on md, validating after each; the finalizer 0x51BE7C stores the result into the
+<p>In a frame (0x2FC6B8), 0x51BF3C(md, dt) prepares from the previous camera and the focus. 0x51BCA8 then runs
+each modifier's vf7 on md, validating after each, and the finalizer 0x51BE7C stores the result into the
 output object <code>md+0x768</code> (<code>+0x3A4</code> transform, <code>+0x3C0</code> start transform, <code>+0x3F4</code> / <code>+0x3F8</code> lens).
-<strong>The screen reads that stored copy, not the live md:</strong> 0x2FEA2C -&gt; 0x51AC00 -&gt; 0x51AC30 -&gt; 0x4E0CFC
+<strong>The screen reads that stored copy, not the live md.</strong> The chain 0x2FEA2C -&gt; 0x51AC00 -&gt; 0x51AC30 -&gt; 0x4E0CFC
 copies it to <code>player+0x3420</code>, which drives the view, camera transitions and the lens. The live md is
 the camera's state for the next frame. The gameplay camera <code>Camera/Behavior::Camera_Primary</code> has 12
 modifiers (Adjustables, Lens, SetRoot, SmootherBegin, Distance, OrbitControl, AvoidObstacles, Pitch,
-Yaw, Roll, Smoother, Collide); only the collision modifier (vt_0x1DB5FE0) calls <code>SetCameraPos</code>
+Yaw, Roll, Smoother, Collide). Only the collision modifier (vt_0x1DB5FE0) calls <code>SetCameraPos</code>
 0x51C394. Presentation cameras are the <code>*_BS</code> / <code>*_BR</code> modifier families. While a menu is open the gameplay camera
-(<code>[[player+0x2F90]+0xA8]</code>) stays where it was; the menus have their own camera (see User interface, "The Army
+(<code>[[player+0x2F90]+0xA8]</code>) stays where it was, and the menus have their own camera (see User interface, "The Army
 camera").</p>
 <p>The debug camera manager <code>[base+0x2A86860]</code> (vt_0x22F4A90, a state machine; built at client start by
 0x17CD2EC, read by the screen copy 0x4E0CFC) takes a mode from <code>DebugCamera.FreeCamControls</code>
-(handler 0x17CFF54: "Cinematic", "ClipMode" or "Marketing" stored as 0 / 1 / 2 at <code>+0x118</code>).
+(handler 0x17CFF54, which stores "Cinematic", "ClipMode" or "Marketing" as 0 / 1 / 2 at <code>+0x118</code>).
 <code>DebugCamera.Track</code> (0x17D0074) follows a named object.</p>
 <p><strong>Near-camera dissolve.</strong> <code>Camera/CharacterDissolve</code> (34 records: hide and fade radii and lerps) is
-set by camera behaviours (setter 0x1567E8, controller <code>+0x240</code>) and by presentation elements (1,380 of
+set by camera behaviors (setter 0x1567E8, controller <code>+0x240</code>) and by presentation elements (1,380 of
 3,548 set <code>Dissolve.Settings</code>, controller <code>+0x248</code>). 0x6C4E60 builds two capsules from the camera
-along its forward axis; the classifier 0x30A368 -&gt; 0x309128 -&gt; 0x308BE0 returns show, fade or hide
-from the capsules against each body's capsules (a camera inside a body forces hide), unless the
-character's forced mode overrides it (3 volume decides, 0 always show, 2 always hide; set by
-presentations' HideActors / ExcludeActors and <code>HideAllCharacters</code> 0x19B43B4). The result drives the
+along its forward axis. The classifier 0x30A368 -&gt; 0x309128 -&gt; 0x308BE0 tests them against each body's capsules
+and returns show, fade or hide (a camera inside a body forces hide), unless the character's forced mode overrides
+it. The forced mode is 3 (the volume decides), 0 (always show) or 2 (always hide); it is set by presentations'
+HideActors / ExcludeActors and by <code>HideAllCharacters</code> 0x19B43B4. The result drives the
 material constant <code>k_fDissolve</code> (0x3093F4); at 1.0 the visible bit clears. Every result reads one
-table on <code>[player+0x2F90]</code> (vt_0x1F67370): <code>+0x258</code> show {0.0, 0.2}, <code>+0x260</code> hide {1.0, 0.1}, <code>+0x268</code>
-fade {0.76, 0.2}, copied once when the player is initialised.</p>
+table on <code>[player+0x2F90]</code> (vt_0x1F67370): <code>+0x258</code> show {0.0, 0.2}, <code>+0x260</code> hide {1.0, 0.1} and <code>+0x268</code>
+fade {0.76, 0.2}. The table is copied once when the player is initialized.</p>
 <h2 id="the-character-controller">The character controller</h2>
-<p><code>ctrl = [[[player+0x2F88]+0x08]+0x28]</code>: the movement object (<code>char+0x24A0</code>; the player's is vt_0x22F7738) holds at
-<code>+0x08</code> a controller holder with no vtable, and the holder's <code>+0x28</code> is the controller in use (one per character, 94
-live in one scene). The controller is vt_0x1DB4DE0: <code>+0x38</code> owner,
-<code>+0x40</code> the <code>hknpCharacterProxy</code> (vt_0x1DBDA20: <code>+0x3C</code> filter info, <code>+0x80</code> position in metres,
-<code>+0xB0</code> velocity in m/s), <code>+0x81</code> support state (2 = standing), <code>+0xE4</code> collision filter, <code>+0xEC</code>
-gravity on. Slots: 5 SetPosition (cm), 6 SetVelocity, 8 Step (-&gt; 0x399F18 integrate), 11
+<p>The controller is reached as <code>ctrl = [[[player+0x2F88]+0x08]+0x28]</code>: the movement object (<code>char+0x24A0</code>; the
+player's is vt_0x22F7738) holds at <code>+0x08</code> a controller holder with no vtable, and the holder's <code>+0x28</code> is the
+controller in use (one per character, 94 live in one scene). The controller is vt_0x1DB4DE0, with <code>+0x38</code> the owner,
+<code>+0x40</code> the <code>hknpCharacterProxy</code> (vt_0x1DBDA20: <code>+0x3C</code> filter info, <code>+0x80</code> position in meters,
+<code>+0xB0</code> velocity in m/s), <code>+0x81</code> the support state (2 = standing), <code>+0xE4</code> the collision filter and <code>+0xEC</code>
+gravity on. Its vtable slots are 5 SetPosition (cm), 6 SetVelocity, 8 Step (through the integrator 0x399F18), 11
 SetGravityEnabled 0x3F1900, 12 IsGravityEnabled, 13 refresh support, 20 SetCollisionFilter 0x3F14B4
-(writes the controller's and the proxy's filter), 24 CopyFrom. <strong>The controller object is replaced
+(which writes the controller's and the proxy's filter) and 24 CopyFrom. <strong>The controller object is replaced
 during play</strong> (across a death or respawn, and by every capsule rebuild, below), so it is reached through the chain on
 every use.</p>
 <table>
@@ -295,14 +295,14 @@ every use.</p>
 <tr>
 <td>shape</td>
 <td>+0x88</td>
-<td>the Havok shape (<code>+0x7C</code> radius, <code>+0x84</code> cylinder, in metres)</td>
+<td>the Havok shape (<code>+0x7C</code> radius, <code>+0x84</code> cylinder, in meters)</td>
 </tr>
 </tbody>
 </table>
-<p><code>W</code> is <code>[base+0x2A86760]</code>: <code>+0x20</code> the <code>hknpWorld</code>, <code>+0x61B8</code> the controller create list, <code>+0x61D0</code> the destroy list,
-locks at <code>+0x6398</code> / <code>+0x63C0</code>. At rest, on 17 of 17 bodies (the player included), the pending controller is null and
-the committed and pending dimensions are equal; all 11 orcs checked (scale 0.93 to 1.23) hold radius 40 x scale and
-half height 104 x scale. The player's holder has <code>+0x58</code> = 1; an NPC's movement vf35 returns false, so 0x3F1548 ends in
+<p><code>W</code> is <code>[base+0x2A86760]</code>, with <code>+0x20</code> the <code>hknpWorld</code>, <code>+0x61B8</code> the controller create list, <code>+0x61D0</code> the destroy
+list and locks at <code>+0x6398</code> / <code>+0x63C0</code>. At rest, on 17 of 17 bodies (the player included), the pending controller is
+null and the committed and pending dimensions are equal. All 11 orcs checked (scale 0.93 to 1.23) hold radius 40 x
+scale and half height 104 x scale. The player's holder has <code>+0x58</code> = 1; an NPC's movement vf35 returns false, so 0x3F1548 ends in
 0x3F1448, which clears <code>+0x58</code> and sets <code>+0x50</code> = 0x20.</p>
 <p><strong>The proxy.</strong> The <code>hknpCharacterProxy</code> holds its shape at <code>+0x28</code> (an <code>hknpCapsuleShape</code> on 17 of
 17 live proxies) and the physics world at <code>+0x40</code>. <code>+0x50</code> .. <code>+0x8F</code> is its transform: three
@@ -312,7 +312,7 @@ the shape, relative to the position (0.73 x 1.89 m up to 0.99 x 2.56 m for orcs 
 6.16 m for the largest creature in one scene). The integrator 0x399F18 (controller slot 8) turns the
 velocity into the step's displacement, <code>+0xC0 = +0xB0 x dt</code> (dt from the step information <code>+0x08</code>),
 casts the capsule from <code>+0x80</code> to <code>+0x80 + +0xC0</code>, and keeps the velocity it started from in
-<code>+0xD0</code>, so a value written to <code>+0xB0</code> is what the next step moves by. <code>+0x120</code> is the up vector
+<code>+0xD0</code>. A value written to <code>+0xB0</code> is therefore what the next step moves by. <code>+0x120</code> is the up vector
 (0, 1, 0). The settings that follow are the same on all 17 proxies, so they are not per character:</p>
 <table>
 <thead>
@@ -366,9 +366,9 @@ casts the capsule from <code>+0x80</code> to <code>+0x80 + +0xC0</code>, and kee
 </tbody>
 </table>
 <p><strong>An NPC's proxy does not walk with him.</strong> The player's proxy stands on him (0.00 cm), but an NPC's is usually parked
-while the movement step moves him: of 96 bodies that walked more than 20 cm in a 148-second sample, the proxy moved 0
-cm on 83, kept up for more than half the distance on 8 and in between on 5; with the game paused, 0 of 140 proxies sat
-within 1 cm of their character and 6 within 10 cm, with gaps up to 160 m. Parked proxies often sit on round numbers.
+while the movement step moves him. Of 96 bodies that walked more than 20 cm in a 148-second sample, the proxy moved 0
+cm on 83, kept up for more than half the distance on 8 and fell in between on 5. With the game paused, 0 of 140
+proxies sat within 1 cm of their character and 6 within 10 cm, with gaps of up to 160 m. Parked proxies often sit on round numbers.
 For an NPC the wall test is therefore the cast shape: the movement step 0x41C5C8 tests that <code>[holder+0x08]</code> exists
 (0x41DA2B) and sweeps it (0x41DA4D, through 0x1BD564C, a one-instruction jump to 0x36BFD0).</p>
 <p><strong>Collision layers.</strong> The world's collision filter is the object at <code>[hknpWorld+0x480]</code> (vt_0x22C2530,
@@ -376,10 +376,10 @@ an engine subclass of <code>hknpGroupCollisionFilter</code>): two bodies collide
 layerB)</code> (table at filter <code>+0x24</code>, symmetric). The player's proxy is on layer 7 (row 0x0030003D);
 every AI proxy is on layer 1 (row 0x00000001, the world only). Hit capsules use layer 6. Every
 character also carries a <strong>sensor body</strong> on layer 28 (filter 0x1C) exactly at its position, built by 0x3EE110 from
-the class's raw <code>CapsuleRadius</code> at scale 1.0, so it never follows size. Trigger
-rows: 27 = 0x10000001 (layers 0 and 28), 28 = 0x48000001 (0, 27, 30), 30 = 0x10000001 (0, 28). The
-world's body array is <code>[hknpWorld+0x28]</code> (15,360 entries of 0xB0: <code>+0x30</code> position in metres,
-<code>+0x60</code> shape, <code>+0x6C</code> filter info with the layer in bits 0-4, <code>+0x70</code> id); about 4,300 bodies are
+the class's raw <code>CapsuleRadius</code> at scale 1.0, so it never follows size. The trigger
+rows are 27 = 0x10000001 (layers 0 and 28), 28 = 0x48000001 (0, 27, 30) and 30 = 0x10000001 (0, 28). The
+world's body array is <code>[hknpWorld+0x28]</code> (15,360 entries of 0xB0: <code>+0x30</code> position in meters,
+<code>+0x60</code> shape, <code>+0x6C</code> filter info with the layer in bits 0-4, <code>+0x70</code> id). About 4,300 bodies are
 live in a region.</p>
 <p><strong>Trigger volumes.</strong> Script triggers are Havok trigger bodies: the trigger class table at 0x2A61E48
 (<code>TriggerSpatialBase</code> constructor 0x1A52C88, <code>TriggerSpatialShape</code> 0x65575C / vt_0x1DC1228,
@@ -404,37 +404,39 @@ native spectator movement state (<code>NativeState.SpectatingState</code>, <code
 unfocused; <code>[base+0x2702590]</code> keeps running.</p>
 <h2 id="character-size-capsules-and-reach">Character size, capsules and reach</h2>
 <h3 id="the-size-roll">The size roll</h3>
-<p>A captain's size is 0x7F8488(fm) -&gt; 0x4E541C(class <code>FM+0x278</code>, army <code>FM+0x180</code> or else <code>FM+0x178</code>, seed <code>FM+0x168</code>):</p>
+<p>A captain's size comes from 0x7F8488(fm) -&gt; 0x4E541C(class <code>FM+0x278</code>, army <code>FM+0x180</code> or else <code>FM+0x178</code>, seed
+<code>FM+0x168</code>):</p>
 <pre><code>size = min + (max - min) * frac + ScaleAdditiveModifier
 frac = u32((seed * 0xBB38435 + 0x3619636B) &gt;&gt; 32) / 4294967295.0     (the divisor at 0x202E808; + 0.0 at 0x202E584)
 (min, max) = Character/Models.AIScaleRange of the class
 </code></pre>
-<p><code>ScaleAdditiveModifier</code> is a float of the army record (<code>Faction/Definition</code>; read 0.1 on 7 of 7 live army records).
-Two captains predicted exactly: an <code>Orc_Defender</code> (range 1.05 .. 1.15, roll 1.1307, + 0.1 = 1.2307, his <code>+0xC8</code>
+<p><code>ScaleAdditiveModifier</code> is a float of the army record (<code>Faction/Definition</code>; it reads 0.1 on 7 of 7 live army records).
+The formula predicts two captains exactly: an <code>Orc_Defender</code> (range 1.05 .. 1.15, roll 1.1307, + 0.1 = 1.2307, his <code>+0xC8</code>
 1.2307, capsule radius 49.23 cm) and an <code>Orc_Archer</code> (0.9 .. 1.0, roll 0.9841, + 0.1 = 1.0841). The appearance roll
 shares the same fraction (see Captain appearance). A class whose maximum is not above its minimum returns the
 minimum. A body with no member takes its class from <code>char+0x2B30</code> and its seed from <code>char+0x2338</code> (0x4E3AD8 -&gt;
 0x4E3D4C, the same roll with no army bonus), and that function returns the global <code>[0x267B1C0]</code> instead whenever it is
-above 0: a size override that ships -1.0, off.</p>
-<p>The callers of 0x7F8488 (7 of 7): the body bind 0x40ED18, the refresh 0x4E3AD8, the player 0x19BD070 (from vt_0x1F96818
-vf60 and <code>SetPlayAsFactionMemberNPC</code>), the Army summary 0x169168 (into the summary's <code>+0x124</code>), the sever 0x19D2858, and
-0x1B5AE88 and 0x1B5B0E8. <code>ZTestVeryLargeOrcInfantry</code> is no mechanism: it is a
+above 0. That global is a size override that ships as -1.0, which is off.</p>
+<p>The callers of 0x7F8488 (7 of 7) are the body bind 0x40ED18, the refresh 0x4E3AD8, the player 0x19BD070 (from
+vt_0x1F96818 vf60 and <code>SetPlayAsFactionMemberNPC</code>), the Army summary 0x169168 (into the summary's <code>+0x124</code>), the sever
+0x19D2858, 0x1B5AE88 and 0x1B5B0E8. <code>ZTestVeryLargeOrcInfantry</code> is not a mechanism: it is a
 <code>Character/Models</code> record that differs from <code>Orc_Infantry</code> in 9 of 102 fields, one of them <code>AIScaleRange</code> 2.0 / 2.0
 (the shipped infantry has 0.9 / 1.1).</p>
 <p><strong><code>FM+0x180</code> is <code>InitialFaction</code></strong>, the army a captain was born into, and so the record his size bonus comes from:
 a dominated captain keeps his birth army's bonus. The key name is in the document writer 0x1BC45A8 and the reader
-0x1BC20B0. Live, 521 of 528 members hold the same army at <code>+0x178</code> and <code>+0x180</code>, 7 differ and none is null. Its
-readers are 0x7F8488, the two writers 0x594788 and 0x1BC45A8, and the member copy 0x1BB936C; it is written by the
+0x1BC20B0. In a live game, 521 of 528 members hold the same army at <code>+0x178</code> and <code>+0x180</code>, 7 differ, and none is null.
+Its readers are 0x7F8488, the two writers 0x594788 and 0x1BC45A8, and the member copy 0x1BB936C. It is written by the
 constructor 0x1BB4C1C, the loaders 0x1BC0F2C, 0x1BC20B0, 0x1BC21B4 (which reads <code>faction_record</code> into <code>+0x178</code> and
 copies it into <code>+0x180</code> at 0x1BC2238), 0x1BC04E4, 0x1C0E2F8 and the member builders. <strong>The save stores both armies by
-name hash:</strong> after the seed, <code>00 hash(FM+0x178) 00 hash(FM+0x180)</code> (528 of 528 members; the 7 moved captains with two
-different hashes, as live). The writer 0x594788 -&gt; 0x36E044 writes <code>[rec+4]</code> when <code>[rec+1] &amp; 2</code>, and <code>[rec+4]</code> is
-P919(name) on 8 of 8 army records; the reader 0x1BC0F2C -&gt; 0x17A9528 binary-searches the category. So a private copy
-of a record that keeps the header saves as the shipped record, and a load puts the shipped record back. A reader of a
-float field needs only <code>[rec+8]</code> (the descriptor run: <code>+0x0C</code> count, <code>+0x0E</code> link) and <code>[rec+0x10]</code> (the instance):
-GetFloatFast 0x30E6B4; GetFloatByName 0x115B43C also reads <code>[rec]</code> and <code>[rec+1]</code>.</p>
+name hash.</strong> After the seed come <code>00 hash(FM+0x178) 00 hash(FM+0x180)</code> (528 of 528 members; the 7 moved captains
+carry two different hashes, as in the live game). The writer 0x594788 -&gt; 0x36E044 writes <code>[rec+4]</code> when
+<code>[rec+1] &amp; 2</code>, and <code>[rec+4]</code> is P919(name) on 8 of 8 army records. The reader 0x1BC0F2C -&gt; 0x17A9528 binary-searches
+the category. A private copy of a record that keeps the header therefore saves as the shipped record, and a load puts
+the shipped record back. A reader of a float field needs only <code>[rec+8]</code> (the descriptor run: <code>+0x0C</code> count, <code>+0x0E</code>
+link) and <code>[rec+0x10]</code> (the instance), as GetFloatFast 0x30E6B4 does; GetFloatByName 0x115B43C also reads <code>[rec]</code> and
+<code>[rec+1]</code>.</p>
 <h3 id="the-scale-component">The scale component</h3>
-<p><code>comp = char+0x2738</code>. The setter 0x4E3CF0(comp, size) stores <code>+0x10</code> and <code>+0x6C</code> and calls 0x3EEBA8, but only when the
+<p>The scale component is <code>comp = char+0x2738</code>. The setter 0x4E3CF0(comp, size) stores <code>+0x10</code> and <code>+0x6C</code> and calls 0x3EEBA8, but only when the
 size differs by more than 0.01 (<code>[0x202E820]</code>).</p>
 <table>
 <thead>
@@ -474,13 +476,13 @@ size differs by more than 0.01 (<code>[0x202E820]</code>).</p>
 </tr>
 </tbody>
 </table>
-<p>0x749790 recomputes: the lowest slot with a scale wins, else the base; the rate is the slot's, else 0.5 (<code>[0x26756D8]</code>)
-for an override and 0.1 (<code>[0x26756DC]</code>) back to base; more than 0.01 away sets state 1, otherwise the target and rate
-are cleared and the state is 0. While the state is not 0 the tick 0x682674 (from 0x2F6A70) moves <code>+0x14</code> by rate x dt
-through 0x3EEBA8. Set and clear are 0x11498C8(char, slot, scale, rate) and 0x1149838(char, slot); both refuse while
-CanScale is clear. 0x3FB0C8(comp, class) copies the class's CanScale (when false it empties every slot's flags and
-recomputes); it runs from NPC vf136 0x3FAFA4 (called by the bind 0x40ED18) and 0x3FA9C0, so the byte is re-armed at
-every bind.</p>
+<p>0x749790 recomputes the size. The lowest slot with a scale wins, otherwise the base. The rate is the slot's, otherwise
+0.5 (<code>[0x26756D8]</code>) for an override and 0.1 (<code>[0x26756DC]</code>) back to the base. A target more than 0.01 away sets state 1;
+otherwise the target and rate are cleared and the state is 0. While the state is not 0, the tick 0x682674 (from
+0x2F6A70) moves <code>+0x14</code> by rate x dt through 0x3EEBA8. Set and clear are 0x11498C8(char, slot, scale, rate) and
+0x1149838(char, slot); both refuse while CanScale is clear. 0x3FB0C8(comp, class) copies the class's CanScale (when
+false it empties every slot's flags and recomputes). It runs from NPC vf136 0x3FAFA4 (called by the bind 0x40ED18)
+and 0x3FA9C0, so the byte is re-armed at every bind.</p>
 <table>
 <thead>
 <tr>
@@ -522,14 +524,19 @@ every bind.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>What the setter reaches.</strong> 0x3EEBA8(comp, size) stores <code>+0x14</code>, then: 0x402810 writes the character's <code>+0xC8</code> after
-a finiteness test and calls 0x274C3C; the character's vf84 (NPC 0x3EF034 -&gt; the base 0x3EF0D0) rebuilds the ray-hit
-shape <code>char+0x2AE0</code> (<code>Model.RayHitDims</code>) and the ranged one at <code>char+0x26D0</code>, calls <code>[char+0x2528]</code> slot 12 and
-writes <code>+0x1088 .. +0x1090</code> and <code>+0x111C</code>, and the NPC side adds <code>[[char+0x2D30]+0x40]</code> slot 23 and two tables indexed
-by the sighting slot <code>char+0x2BF8</code>; 0x3EEB44 updates <code>+0x1DC</code> on the 10 attachment holders; and 0x1E52D4 writes the
-combat stat <code>Float_CharacterScale</code> (<code>Combat/Stat/Variable/Float</code>, loaded from <code>[[GM+0x6CD8]+0x8300]</code>). 135 functions
-read <code>+0xC8</code> as a float (93 of them with offsets only a character has); they read it when needed, so pathing,
-fight circles, height predicates and teleports follow a resize with no further work. Camera collision (0x44DC90,
+<p><strong>What the setter reaches.</strong> 0x3EEBA8(comp, size) stores <code>+0x14</code> and then reaches four places:</p>
+<ul>
+<li>0x402810 writes the character's <code>+0xC8</code> after a finiteness test and calls 0x274C3C.</li>
+<li>The character's vf84 (NPC 0x3EF034 -&gt; the base 0x3EF0D0) rebuilds the ray-hit shape <code>char+0x2AE0</code>
+  (<code>Model.RayHitDims</code>) and the ranged one at <code>char+0x26D0</code>, calls <code>[char+0x2528]</code> slot 12 and writes
+  <code>+0x1088 .. +0x1090</code> and <code>+0x111C</code>. The NPC side adds <code>[[char+0x2D30]+0x40]</code> slot 23 and two tables indexed
+  by the sighting slot <code>char+0x2BF8</code>.</li>
+<li>0x3EEB44 updates <code>+0x1DC</code> on the 10 attachment holders.</li>
+<li>0x1E52D4 writes the combat stat <code>Float_CharacterScale</code> (<code>Combat/Stat/Variable/Float</code>, loaded from
+  <code>[[GM+0x6CD8]+0x8300]</code>).</li>
+</ul>
+<p>In all, 135 functions read <code>+0xC8</code> as a float (93 of them with offsets only a character has). They read it when
+needed, so pathing, fight circles, height predicates and teleports follow a resize with no further work. Camera collision (0x44DC90,
 <code>Character/CameraCollisionShapeList</code>) is built only at spawn.</p>
 <h3 id="the-capsule-swap">The capsule swap</h3>
 <p>The capsule is double-buffered and swapped live by the engine, in four stages:</p>
@@ -564,23 +571,23 @@ fight circles, height predicates and teleports follow a resize with no further w
 </tr>
 </tbody>
 </table>
-<p>0x24816C(<code>&amp;holder+0x08</code>) releases and nulls the cast shape, so that vf14 builds a new one; without it the cast shape
+<p>0x24816C(<code>&amp;holder+0x08</code>) releases and nulls the cast shape, so that vf14 builds a new one. Without it, the cast shape
 keeps the old size. Because vf14 first moves the old proxy onto the character, a parked proxy is pulled to its NPC, not
 the NPC to the proxy, and the new capsule stands at his x and z, lifted by the change in half height. Of the 21
 functions that use the holder, only 0x30186C writes <code>+0x59</code> and only vf19 reads it. At spawn (NPC vf146 0x3F0E8C -&gt;
-0x3F119C) the size is set first (0x4E3AD8 -&gt; 0x7F8488 -&gt; the setter), then 0x3F08B0, the camera collision 0x44DC90,
-vf14 at 0x3F126E and vf111 0x41B6B4, which is why every spawned capsule matches its size; the player's slot 143 is
-0x19BCE98. The player reaches the same core 0x3F1548 at run time (free aim clearing its target, and a movement-record
-change 0x187F94C); for NPCs the only shipped caller of slot 14 is the spawn path. Driven on a live NPC (the cast shape
-released, then vf14), the swap resizes him in place: read back on one body after five swaps between x1.08 and x4.91,
-at x4.91 the scale read 4.910 and the committed radius and half height 196.40 / 510.64 cm (the cast shape and the
-controller's shape 196.40), and <code>char+0x218C</code>, which equals the half height at rest, followed it (510.64, then 171.60
-at x1.65; a control body read its reset value 10000.0).</p>
+0x3F119C) the size is set first (0x4E3AD8 -&gt; 0x7F8488 -&gt; the setter); then come 0x3F08B0, the camera collision
+0x44DC90, vf14 at 0x3F126E and vf111 0x41B6B4, which is why every spawned capsule matches its size. The player's slot
+143 is 0x19BCE98. The player reaches the same core 0x3F1548 at run time (free aim clearing its target, and a
+movement-record change 0x187F94C); for NPCs the only shipped caller of slot 14 is the spawn path. Driven on a live NPC
+(the cast shape released, then vf14), the swap resizes him in place. Read back on one body after five swaps between
+x1.08 and x4.91, at x4.91 the scale read 4.910 and the committed radius and half height 196.40 / 510.64 cm, with the
+cast shape and the controller's shape at 196.40. <code>char+0x218C</code>, which equals the half height at rest, followed it
+(510.64, then 171.60 at x1.65), while a control body read its reset value 10000.0.</p>
 <h3 id="ai-spacing-and-attack-reach">AI spacing and attack reach</h3>
 <p><code>Character/Models.CapsuleRadius</code> is not the body and takes no size: it is the AI spacing radius. The callers of
 0x30CEC0 use it in 6 two-sided gaps, <code>max(0, dist(a, b) - (ra + rb))</code> (0x18BF90, 0x18DAE8, 0x2E48F4, 0x2E49B8,
-0x378CEC, 0x1A039E0), one one-sided distance <code>dist - r</code> (0x2E44D8) and one cache, 0xF1314 into <code>char+0x2DD0</code> (NPCs
-only). <code>dist</code> corrects the height through 0x18C06C, so the vertical part does follow size. The other direct reader,
+0x378CEC, 0x1A039E0), in a single one-sided distance <code>dist - r</code> (0x2E44D8) and in one cache, 0xF1314 into
+<code>char+0x2DD0</code> (NPCs only). <code>dist</code> corrects the height through 0x18C06C, so the vertical part does follow size. The other direct reader,
 0x158494, is a ranged aim offset, <code>CapsuleRadius x scale x 0.5</code>.</p>
 <table>
 <thead>
@@ -617,34 +624,36 @@ only). <code>dist</code> corrects the height through 0x18C06C, so the vertical p
 MaximumDistance)</code> when <code>ApplyDamageRangeIncludeTS</code> is set) with gap = 0x18BF90(attacker, target), then the angle tests
 (<code>ApplyDamageMaxHalfAngle</code>). <code>StrikeRange</code> is a {min, max} copied into the translation-scaling state by 0x4E5970,
 which also compares the gap with <code>InitialMaximumDistance</code>. Over all 16,976 <code>Combat/Attack</code> records, 16,350 have a
-positive <code>ApplyDamageRange</code> maximum: median 200 cm (10,599 exactly 200), 10th percentile 125, 90th 1,000. At body
+positive <code>ApplyDamageRange</code> maximum, with a median of 200 cm (10,599 exactly 200), a 10th percentile of 125 and a
+90th of 1,000. At body
 contact the gap is 40 x (S + 1) - (r + 30) against Talion for an attacker of scale S and radius r, so a larger
 attacker's own <code>CapsuleRadius</code> makes the gap smaller.</p>
 <p><strong>On the Army screen</strong> the summary's size is <code>+0x124</code> (filled by 0x169168; an unidentified captain gets
 <code>Faction/Global.UnknownFactionMemberScale</code> instead), read through 0x576DCC. 0x42F930(stage character, size) stores
-<code>+0xB38</code>, runs 0x402810, rescales a mount that uses the rider's scale and refreshes the attachments; 0x7C0F78(states,
-scale) takes the summary's size when the scale is 0 or less, stores it at <code>+0x570</code> and raises bit 5 of <code>+0x574</code> (applied
-by 0x37B260 -&gt; 0x42EED0); 0x1C7500 compares <code>+0x124</code> between summaries.</p>
+<code>+0xB38</code>, runs 0x402810, rescales a mount that uses the rider's scale and refreshes the attachments. 0x7C0F78(states,
+scale) takes the summary's size when the scale is 0 or less, stores it at <code>+0x570</code> and raises bit 5 of <code>+0x574</code>
+(applied by 0x37B260 -&gt; 0x42EED0). 0x1C7500 compares <code>+0x124</code> between summaries.</p>
 <h2 id="the-player-s-movement-record-and-speed">The player's movement record and speed</h2>
 <p>The movement object <code>mv = [player+0x2F88]</code> holds the live copy of <code>Client/PlayerMovement</code>. The copier 0x187F94C(mv,
 record) (callers 0x187F71C and 0x19BF068; re-run by <code>Set</code> / <code>ClearCharacterModelOverride</code> and <code>Set</code> /
 <code>ClearFactionMember</code>) writes <code>+0x410</code> the character, <code>+0x548</code> the record (it skips an unchanged one), <code>+0x550</code>
-<code>BaseSpeedMultiplier</code> (1.0), <code>+0x554</code> <code>PlayerYawInterpolateTime</code> (0.4) and <code>+0x558</code> <code>FallMinHeight</code> (100.0); the
+<code>BaseSpeedMultiplier</code> (1.0), <code>+0x554</code> <code>PlayerYawInterpolateTime</code> (0.4) and <code>+0x558</code> <code>FallMinHeight</code> (100.0). The
 character's own <code>+0x550</code> reads 0. Writing <code>+0x550</code> does not change the running speed: at 0.6 the top controller speed
 (the proxy's <code>+0xB0</code>) read 8.77 against 9.21 m/s and 8.08 against 8.53 m/s on two clean pairs, 0.95x against the 0.60x
-asked. Root motion drives the player; what scales his motion is his clock (<code>SlowMo.PlayerTimeScale</code>, see Combat).</p>
+requested. Root motion drives the player, and what scales his motion is his clock (<code>SlowMo.PlayerTimeScale</code>, see
+Combat).</p>
 <h2 id="moving-the-player-the-immediate-teleport">Moving the player: the immediate teleport</h2>
 <p>0x19C04D4(player, <code>&amp;transform{position, rotation}</code>) is a two-argument player wrapper with no caller in the shipped
 executable. Unless the player is spectating (0x171A78: <code>+0x2F0C</code>, or a state query) it calls the player's immediate
 teleport, his vtable slot 111 0x7BA55C(player, <code>&amp;pos</code>, <code>&amp;rot</code>, ground snap = 1, zero velocity = 0, reset the combat
 component = 1 (0x7BA7E4)). The snap casts a vertical ray from the target plus <code>char+0x2BC0</code> x scale down 10,000 cm
-(<code>[0x202E9EC]</code>): a hit puts the feet on it, a miss keeps the target height. Zeroing the velocity runs 0x41BB78 -&gt;
+(<code>[0x202E9EC]</code>): a hit puts the feet on it, and a miss keeps the target height. Zeroing the velocity runs 0x41BB78 -&gt;
 0x17347C. Nothing else is touched: the character arrives in one frame (34-64 ms after the request, 0.0 cm off target
 in 11 of 11 moves; a 4 m move snapped 76.5 cm onto the ground in 48 ms, with no fade and no loading screen). An AI
 character's slot 111 is another function (0x41B6B4, which the NPC spawn path also calls). The snap only looks down from its
 start, so a target inside a wall or under a slope lands beyond the wall or stays inside the terrain.</p>
-<p><strong>The world ray test</strong> the snap casts is 0x124B6C = vt_0x1E6ABA8 vf67(<code>[base+0x26FEFD0]+8</code>, <code>&amp;query</code>, <code>&amp;result</code>),
-a hit when it returns 1:</p>
+<p><strong>The world ray test</strong> the snap casts is 0x124B6C = vt_0x1E6ABA8 vf67(<code>[base+0x26FEFD0]+8</code>, <code>&amp;query</code>, <code>&amp;result</code>);
+it reports a hit when it returns 1:</p>
 <table>
 <thead>
 <tr>
@@ -690,14 +699,14 @@ a hit when it returns 1:</p>
 <p>It hits terrain, walls and overhangs and passes through characters (5 of 5 orcs between 1.4 and 13 m were not hit).</p>
 <h2 id="the-player-s-model-change-and-the-body-build">The player's model change and the body build</h2>
 <p><strong>One body in, one out.</strong> The player's model change, vf136 0x19BF404, compares the old model <code>[char+0x2B30]</code> with
-the new one after the base vf136; when they differ it requests the old model's bundle unloaded (<code>RequestBundleUnload</code>
+the new one after the base vf136. When they differ, it requests the old model's bundle unloaded (<code>RequestBundleUnload</code>
 0x19EB87C(manager, <code>Character/Models.Bundle(old)</code>)) and takes that record out of the build set (0x4277FC on
-<code>owner+0x8E8</code>), then requests the new one's (<code>RequestBundleLoad</code> 0x4B6204) and adds its record (0x1156BDC), raises the
-build flag and calls 0x19CBA4C. No memory test sits anywhere on that path: the game fits a small card by never
-holding more than one extra body.</p>
-<p><strong>The build flag</strong> is the byte <code>player+0x2D40</code> (<code>+0x2D41</code>: fire <code>OnModelConfigComplete</code>, vf134). vf136 raises it (the
-word 0x101); one function lowers it, the gate 0x19C0BA8, run for each pending player by the tick 0x4C6050 of the
-manager at <code>[base+0x2A86880]</code> (list <code>+0x120</code>), and only when both hold:</p>
+<code>owner+0x8E8</code>). It then requests the new one's bundle (<code>RequestBundleLoad</code> 0x4B6204), adds its record (0x1156BDC),
+raises the build flag and calls 0x19CBA4C. No memory test sits anywhere on that path: the game stays within a small graphics
+card's memory by never holding more than one extra body.</p>
+<p><strong>The build flag</strong> is the byte <code>player+0x2D40</code> (<code>+0x2D41</code> is the flag to fire <code>OnModelConfigComplete</code>, vf134). vf136
+raises it (the word 0x101). One function lowers it: the gate 0x19C0BA8, run for each pending player by the tick
+0x4C6050 of the manager at <code>[base+0x2A86880]</code> (list <code>+0x120</code>), and only when both of these hold:</p>
 <ol>
 <li>0x19EAD34: every record of <code>CharacterBundleMgr</code>'s build set (<code>+0x80</code>) passes <code>IsBundleLoaded</code> 0x1665B4 (see
    Resource streaming);</li>
@@ -705,54 +714,59 @@ manager at <code>[base+0x2A86880]</code> (list <code>+0x120</code>), and only wh
    the 15 gear slots (<code>[vc+0x1C8 + i*0x28]</code> -&gt; <code>+0xC0</code> -&gt; <code>+0x68</code>) all read ready; a missing link counts as ready.</li>
 </ol>
 <p>The flag's leaf getter is 0x1172488; at rest it reads 0 with 11 requests tested and none unready (6 holders
-vt_0x1DB1F68, 5 slot objects vt_0x1FDABF8). Two things wait on it: the scripted player-model setup 0x4C5EFC (fade
-reason 6) and a quest state, 0x7DDECC (vt_0x1F9DFB8 vf2: it reschedules itself while the flag is up, else moves to state
-0xF). A mission's fade held while the flag was up and cleared in the same 500 ms sample in which it fell; builds after
-an arrival took 12 and 14 s. So a body build that cannot finish is a black screen when it lands inside a load, a
-mission start or a scripted swap, and only a slow build anywhere else.</p>
+vt_0x1DB1F68, 5 slot objects vt_0x1FDABF8). Two consumers wait on it: the scripted player-model setup 0x4C5EFC (fade
+reason 6) and a quest state, 0x7DDECC (vt_0x1F9DFB8 vf2, which reschedules itself while the flag is up and otherwise
+moves to state 0xF). A mission's fade held while the flag was up and cleared in the same 500 ms sample in which it
+fell, and builds after an arrival took 12 and 14 s. A body build that cannot finish is therefore a black screen when it
+lands inside a load, a mission start or a scripted swap, and only a slow build anywhere else.</p>
 <p><strong>Bodies on other rigs.</strong> A body on another rig plays the player's clips by bone name: an Olog body drives 47 of its
 89 bones from Talion's locomotion clip (the rig comparison is in Animation, "Rigs compared").</p>
 <p><strong>Nazgul bodies have no solid materials.</strong> Of 11,791 material copies decoded, every Nazgul body, helmet, robe and
 weapon material is <code>wraith_solid</code> (or <code>wraith_solid_cine</code>) in a translucent slot with the solid slot empty; a wraith
-move re-applies the compiled set (see Runtime material slots). A Nazgul's cape is no piece slot at all: it draws from
-a cloth render node (vt_0x1DAADB8, built by 0x1B27D4; <code>[node+0x90]</code> is the body piece's material object + 0xA0, and
-nothing in the piece points back at the node) through the material handle the node captured, <code>[node+0x118]</code>
-(vt_0x1DBC860, <code>+0x08</code> the resource). A cloth node changes material only through a new handle (the app object's
-vf103 0x58B064 makes one from a <code>.mat</code> path, and the cloth wrapper <code>node - 0x10</code> takes it through vf51 0x58AE0C, queued
-on the render ring); writing a resource into the old handle is refused while the render side holds it locked
-(0x1BE7C4). The node's render layer <code>[node+0xB2]</code> (1 opaque, 5 translucent, 7 UI) comes from its constructor (5 for a
-ghost cloth), the passes pick nodes by it every frame, and wrapper vf31 0x58ADC4 changes it (one world held 4,207 cloth
-nodes: 3,529 on layer 1, 640 on layer 5, 34 on layer 7). Monolith's solid twin of the cape's vertex-cloth shader,
+move re-applies the compiled set (see Runtime material slots below). A Nazgul's cape is not a piece slot at all. It
+draws from a cloth render node (vt_0x1DAADB8, built by 0x1B27D4; <code>[node+0x90]</code> is the body piece's material object +
+0xA0, and nothing in the piece points back at the node) through the material handle that the node captured,
+<code>[node+0x118]</code> (vt_0x1DBC860, <code>+0x08</code> the resource). A cloth node changes material only through a new handle: the app
+object's vf103 0x58B064 makes one from a <code>.mat</code> path, and the cloth wrapper <code>node - 0x10</code> takes it through vf51
+0x58AE0C, queued on the render ring. Writing a resource into the old handle is refused while the render side holds it
+locked (0x1BE7C4). The node's render layer <code>[node+0xB2]</code> (1 opaque, 5 translucent, 7 UI) comes from its constructor
+(5 for a ghost cloth). The passes pick nodes by it every frame, and wrapper vf31 0x58ADC4 changes it; one world held
+4,207 cloth nodes, 3,529 on layer 1, 640 on layer 5 and 34 on layer 7. Monolith's solid twin of the cape's vertex-cloth shader,
 <code>gear_lod0_vertcloth_nocull.fxo</code>, is listed by 1 of 183,631 shipped bundle manifests (Castamir's), and a shader tree
 loads only through a manifest that lists it (see Resource streaming).</p>
 <h2 id="wraith-world-and-the-wraith-companion">Wraith World and the wraith companion</h2>
-<p><strong>Wraith World</strong> is a weapon mode: <code>Combat/PlayerWeaponModes/VisionMode</code> -&gt; <code>Client/VisionMode::VM_Wraith</code>;
-0x6A6CE4 -&gt; 0x6A7E90(vision = <code>[player+0x2FA8]</code>, mode): <code>+0x28</code> the mode record, <code>+0x44</code> active, an
-amount that eases from <code>+0x48</code> to the target <code>+0x4C</code> over the mode's 1 s ramp (<code>ShaderVisionMode</code>,
-read by 0x115EF98). The game changes nothing on the player's own pieces: Talion's solid shaders cut
-his body away with the same reveal map the wraith draws with (<code>tRevealMapArray</code>, <code>k_fRevealValue</code>).
+<p><strong>Wraith World</strong> is a weapon mode: <code>Combat/PlayerWeaponModes/VisionMode</code> -&gt; <code>Client/VisionMode::VM_Wraith</code>. The
+call 0x6A6CE4 -&gt; 0x6A7E90(vision = <code>[player+0x2FA8]</code>, mode) drives the vision object, whose <code>+0x28</code> is the mode
+record and <code>+0x44</code> the active flag; an amount eases from <code>+0x48</code> to the target <code>+0x4C</code> over the mode's 1 s ramp
+(<code>ShaderVisionMode</code>, read by 0x115EF98). The game changes nothing on the player's own pieces: Talion's solid shaders
+cut his body away with the same reveal map the wraith draws with (<code>tRevealMapArray</code>, <code>k_fRevealValue</code>).
 Orc and human shaders carry only <code>k_fDissolve</code>. A presentation sets <code>Client/VisionMode::VM_Presentation</code> on the
-vision object (<code>+0x28</code>); with the presentation exit below cleared, the mode stays active meanwhile (<code>+0x44</code> stays 1).</p>
+vision object (<code>+0x28</code>). With the presentation exit below cleared, the mode stays active meanwhile (<code>+0x44</code> stays 1).</p>
 <p><strong>The wraith mode's exits are data.</strong> <code>Combat/PlayerWeaponModes/Modes::PC_WraithPing</code> keeps four packed bools in bool
 word 0 of its instance, all true as shipped (0x0F): bit 0 <code>ExitOnTakeDamage</code>, bit 1 <code>ExitOnCameraPresentationActive</code>,
-bit 2 <code>ExitOnStartAnyAttack</code>, bit 3 <code>ExitOnDamageEnemy</code>; each has an exclusion (the attack category
-<code>Combat/Category::PC_DontDisable_WraithPing_Generic</code>; for presentations <code>ExcludeExitOnPresentationEvent</code> =
-<code>Intro_WraithVisionTut</code>, <code>MemorableMoments_OrcVPlayer</code>, <code>MemorableMoments_Switch</code>). <code>OnDuration</code> is 0 (no timeout), the
-vision mode <code>PingMode</code> -&gt; <code>VM_Wraith</code>, the material transform <code>WraithPing</code>; the included transition
-<code>PC_Wraith_Vision_Cursed</code> ships all four false. The exit check 0x590780 (its only caller 0x59053C) leaves the mode on
-the timer, on a hit taken, a hit on an enemy or an attack started (each unless the attack uses the exclusion category,
-<code>CombatManager::DoesAttackUseCategory</code>), on a presentation not in the exclusion list (0x183D548), on the predicate's
-<code>CancelAttackCategory</code>, on <code>RequiredSimultaneousModes</code>, and on a new mode the record does not allow (0x183D5A4; the
-<code>AllowedModes</code> list has 30 entries: bow, zoom, sniper, shotgun, stealth, slow motion, the Radiance area attacks, the
-fell beast ...). The four switches are read live by that function alone, with no copy, so a cleared bit applies at the
-next attack. The mode's predicate <code>Combat/PlayerWeaponModes/Predicate::PC_WraithPing</code> is a toggle on <code>CombatSecondary01</code>
-(<code>IsToggle</code>, <code>UseRawInput</code>; required item <code>CP_WraithVision</code>; not poisoned, not cursed; cancelled by the category
-<code>PC_Disable_WraithPing_Generic</code>) with no presentation condition.</p>
-<p><strong>The wraith form</strong> is the player's companion model (<code>Combat/CompanionModel</code>): a copy of the player
-(<code>CombatCompanionModelInstance</code> vt_0x1DBD198; manager vt_0x1DCC8F8 at <code>[[player+0x26A8]+0x80]</code>: <code>+0x38</code>
-body instance, <code>+0x60</code> head instance, <code>+0x68</code> companion record) built from a <code>SimpleModel</code>. Wraith
-moves add echoes that clone it (<code>Combat/Echo::QuickThrow</code> = three <code>PC_Echo</code> with
-<code>CopyPlayerCompanion</code>, material set Echo). Monolith's wraith pieces carry a default set of
+bit 2 <code>ExitOnStartAnyAttack</code> and bit 3 <code>ExitOnDamageEnemy</code>. Each has an exclusion: the attack category
+<code>Combat/Category::PC_DontDisable_WraithPing_Generic</code>, and for presentations <code>ExcludeExitOnPresentationEvent</code> =
+<code>Intro_WraithVisionTut</code>, <code>MemorableMoments_OrcVPlayer</code>, <code>MemorableMoments_Switch</code>. <code>OnDuration</code> is 0 (no timeout),
+the vision mode is <code>PingMode</code> -&gt; <code>VM_Wraith</code> and the material transform <code>WraithPing</code>. The included transition
+<code>PC_Wraith_Vision_Cursed</code> ships all four false. The exit check 0x590780 (its only caller is 0x59053C) leaves the mode:</p>
+<ul>
+<li>on the timer;</li>
+<li>on a hit taken, a hit on an enemy or an attack started, each unless the attack uses the exclusion category
+  (<code>CombatManager::DoesAttackUseCategory</code>);</li>
+<li>on a presentation not in the exclusion list (0x183D548);</li>
+<li>on the predicate's <code>CancelAttackCategory</code> and on <code>RequiredSimultaneousModes</code>;</li>
+<li>on a new mode that the record does not allow (0x183D5A4). The <code>AllowedModes</code> list has 30 entries, among them bow,
+  zoom, sniper, shotgun, stealth, slow motion, the Radiance area attacks and the fell beast.</li>
+</ul>
+<p>The four switches are read live by that function alone, with no copy, so a cleared bit applies at the next attack.
+The mode's predicate <code>Combat/PlayerWeaponModes/Predicate::PC_WraithPing</code> is a toggle on <code>CombatSecondary01</code> with no
+presentation condition. It sets <code>IsToggle</code> and <code>UseRawInput</code>, requires the item <code>CP_WraithVision</code> and a player who is
+neither poisoned nor cursed, and is canceled by the category <code>PC_Disable_WraithPing_Generic</code>.</p>
+<p><strong>The wraith form</strong> is the player's companion model (<code>Combat/CompanionModel</code>), a copy of the player built from a
+<code>SimpleModel</code> (<code>CombatCompanionModelInstance</code> vt_0x1DBD198). Its manager, vt_0x1DCC8F8 at <code>[[player+0x26A8]+0x80]</code>,
+holds the body instance at <code>+0x38</code>, the head instance at <code>+0x60</code> and the companion record at <code>+0x68</code>. Wraith
+moves add echoes that clone it: <code>Combat/Echo::QuickThrow</code> is three <code>PC_Echo</code> with
+<code>CopyPlayerCompanion</code> and the material set Echo. Monolith's wraith pieces carry a default set of
 translucent wraith materials (<code>wraith_game.fxo</code>, fed the character's own textures) plus depth proxies
 (<code>wraith_proxy.fxo</code>) and an Echo set (<code>wraith_riddick.fxo</code>).</p>
 <p><strong>Material sets are compiled.</strong> 0x1B6190C builds a cache at start-up at <code>[GM+0x6DD0]+0x18</code>: one
@@ -760,52 +774,52 @@ entry per <code>Model</code> record of 0x48-byte compiled sets. Editing a record
 asking for a set index past an entry's count returns null.</p>
 <h2 id="visuals-pieces-and-weapons">Visuals, pieces and weapons</h2>
 <p>A visual (vt_0x1DA9610) has a spec at <code>[visual+0xB8]</code> (23 piece slots at <code>+0x28</code>) and a skeleton at
-<code>[visual+0x90]</code>. <code>SetPieceSlot</code> 0x4C62EC(spec, slot, piece, armour design, visual) swaps one slot live
-(the engine's live armour equip). A <code>SimpleModel</code> builder (0x4C5194) sets body, head, hair,
+<code>[visual+0x90]</code>. <code>SetPieceSlot</code> 0x4C62EC(spec, slot, piece, armor design, visual) swaps one slot live
+(the engine's live armor equip). A <code>SimpleModel</code> builder (0x4C5194) sets body, head, hair,
 accessories, flair and helmet from its entry; piece slots 8-12 come only from items. Pieces follow the
-host's pose through 0xF5A290 (pieces at <code>skel+0x108</code> into the host's pose list); visibility 0x1BEE8C
-(skeleton, flag) is the engine's "hide the base model" (the material controller's <code>HideBaseModel</code>
-transform calls exactly that); 0x58BCF0 sets the material-set type.</p>
+host's pose through 0xF5A290 (pieces at <code>skel+0x108</code> into the host's pose list). Visibility 0x1BEE8C
+(skeleton, flag) is the engine's "hide the base model", and the material controller's <code>HideBaseModel</code>
+transform calls exactly that. 0x58BCF0 sets the material-set type.</p>
 <p><strong>Weapons</strong> are drawn by per-slot <strong>holders</strong> <code>[vc + 0x38 + slot * 0x28]</code> (vt_0x1DB1F68; a shield carrier's slot 0
 holder is vt_0x1DCA710 with the same layout: <code>+0x140</code> the item, <code>+0x148</code> / <code>+0x150</code> the built elements, <code>+0x1F1</code>
 shown). An element is an object reference (vt_0x1DB4F58: <code>+0x08</code> next, <code>+0x10</code> previous, <code>+0x18</code> itself, <code>+0x20</code> the
-target); its target is the built object (vt_0x1F782C0), whose <code>+0x120</code> is the weapon's model (vt_0x1DB4948, null
-while not drawn): <code>+0xE0</code> the wielder, <code>+0x120</code> the material object, <code>+0x170</code> the mesh path, and at <code>+0xC0</code> an
-embedded reference link (vt_0x1DAA9D0). This chain found 54 of 55 models on 27 Army-stage characters and every weapon
-of 16 of 16 world characters (the 55th model was a warg mount's). A weapon skeleton has three
-bones (root, handle, tip). 0x3FD228 builds only an empty holder; an equipped, drawn weapon is rebuilt
-by the engine's refresh 0x45ABE4 per holder: 0x3FD21C (hide: destroys every model) then 0x3FD204
-(show: builds from the item as it is now); the equip setup (vf35 0x3FCF70) does the same pair. The
-weapon's look chain: <code>Inventory/EquippedWeaponData.Model</code> -&gt; <code>_StructuresInventoryItemModel.Models</code> -&gt;
+target). Its target is the built object (vt_0x1F782C0), whose <code>+0x120</code> is the weapon's model (vt_0x1DB4948, null
+while not drawn). The model holds <code>+0xE0</code> the wielder, <code>+0x120</code> the material object, <code>+0x170</code> the mesh path and, at
+<code>+0xC0</code>, an embedded reference link (vt_0x1DAA9D0). This chain found 54 of 55 models on 27 Army-stage characters and
+every weapon of 16 of 16 world characters (the 55th model was a warg mount's). A weapon skeleton has three
+bones (root, handle, tip). 0x3FD228 builds only an empty holder. An equipped, drawn weapon is rebuilt
+by the engine's refresh 0x45ABE4 per holder: 0x3FD21C (hide, which destroys every model), then 0x3FD204
+(show, which builds from the item as it is now). The equip setup (vf35 0x3FCF70) runs the same pair. The
+weapon's look chain is <code>Inventory/EquippedWeaponData.Model</code> -&gt; <code>_StructuresInventoryItemModel.Models</code> -&gt;
 <code>_StructuresInventoryModel.ModelRecord</code> -&gt; a <code>Model</code> -&gt; its default material set. Equipped weapon slots
-are vectors at <code>vc+0x4D0 + i * 0x18</code> (0 sword, 1 dagger, 2 bow); an item's <code>+0xA9</code> is "equipped",
-<code>+0x40</code> its equipped-weapon data and <code>+0x2C</code> its holder index. The weapon TYPE comes from the item's
-<code>Inventory/Items.WeaponType</code>, copied into the built weapon object (<code>+0x188</code>, by 0x3FCF70): the active
-weapon is <code>[char+0x2348]</code> -&gt; slot <code>[vc+0x728]</code> -&gt; <code>[vc + idx * 0x28 + 0x38]</code> -&gt; <code>+0x188</code>.</p>
+are vectors at <code>vc+0x4D0 + i * 0x18</code> (0 sword, 1 dagger, 2 bow). An item's <code>+0xA9</code> is "equipped",
+<code>+0x40</code> its equipped-weapon data and <code>+0x2C</code> its holder index. The weapon type comes from the item's
+<code>Inventory/Items.WeaponType</code>, copied into the built weapon object (<code>+0x188</code>, by 0x3FCF70); for the active
+weapon the chain is <code>[char+0x2348]</code> -&gt; slot <code>[vc+0x728]</code> -&gt; <code>[vc + idx * 0x28 + 0x38]</code> -&gt; <code>+0x188</code>.</p>
 <p><strong>Runtime material slots.</strong> A piece's material object (<code>piece+0x48</code>, vt_0x1FFE3E8) has one table of 48
-slots of 0x18 bytes from <code>+0x1E8</code>: slots 0-15 solid, 16-31 translucent (<code>+0x368</code>), 32-47 depth proxy
-(<code>+0x4E8</code>); a slot's first field is the <code>.mat</code> resource. The setter is the object's vtable slot 47,
-0x17AF0C(object, kind, index, resource): <strong>kind 0 solid, 1 translucent, 2 depth proxy</strong>; it references
+slots of 0x18 bytes from <code>+0x1E8</code>: slots 0-15 solid, 16-31 translucent (<code>+0x368</code>) and 32-47 depth proxy
+(<code>+0x4E8</code>). A slot's first field is the <code>.mat</code> resource. The setter is the object's vtable slot 47,
+0x17AF0C(object, kind, index, resource), where <strong>kind 0 is solid, 1 translucent and 2 depth proxy</strong>. It references
 the resource and posts to the render command ring, so it belongs on the main thread.
 <code>SetMaterialSet</code> 0x4DC938(skeleton, type) re-applies a set's solid entries.</p>
-<p><strong>Render IDs</strong> (<code>SetRenderID</code> 0x1BF144(visual, id), through the skeleton's vf4 0x1BF3AC onto body,
-head, pieces and attachments): the player 255, his wraith copy 254, a player-aligned mount 212,
-followers 210, enemies 220, the Army stage's captains 245. 0x1BF3AC(model, u8 id) stores <code>model+0x40</code>, then gives the
+<p><strong>Render IDs</strong> are set by <code>SetRenderID</code> 0x1BF144(visual, id), through the skeleton's vf4 0x1BF3AC, onto body,
+head, pieces and attachments. The player has 255, his wraith copy 254, a player-aligned mount 212,
+followers 210, enemies 220 and the Army stage's captains 245. 0x1BF3AC(model, u8 id) stores <code>model+0x40</code>, then gives the
 id to the base piece <code>[model+0x100]</code> and the 23 slots <code>[model+0x108 + i*8]</code> through 0x1BF49C, to <code>[model+0xE0]</code> through
 0x1BF96C, to <code>[model+0xD0]</code> through 0x58D648, and to each child in <code>[[model+0xC8]+0x138 .. +0x140]</code> through 0x1BF388.
 0x1BF49C calls the piece's render instance (<code>[piece+0x48]</code> vf36, 0x1BF4DC), which queues a render command (ring
 0x272E8D8, 0x114D4E4, callback 0x677070), then passes the id to the piece's child <code>[piece+0x58]</code>: each piece can carry
 its own id, applied by the render thread a frame later. The per-pixel id is the alpha byte of the G-buffer target
 with id 7 (RGBA8; a float copy sits in the alpha of target 19), so the engine's own raster says which character, or
-which piece, covers a pixel: one frame of the Army screen held four values, 245 the stage captains, 1 the sky and
-background, 0, and 220 an enemy (see Rendering). In-world characters stay in material-set type <code>Wraith</code> permanently
-(the type's override is the pale vision glow); no shipped <code>Model</code> carries a Wraith-typed set (set types in
-use: default 2,644, GhostWeapon 133, Echo 78, HierarchyUnknown 65, PlayerCompanion 17, Death 11).</p>
-<p><strong>Mounts.</strong> The ridden mount is <code>[player+0x2578]</code>, its rider <code>[mount+0x25A0]</code>, its visual
+which piece, covers a pixel. One frame of the Army screen held four values: 245 for the stage captains, 1 for the sky
+and background, 0, and 220 for an enemy (see Rendering). In-world characters stay in material-set type <code>Wraith</code>
+permanently (the type's override is the pale vision glow). No shipped <code>Model</code> carries a Wraith-typed set; the set types
+in use are default 2,644, GhostWeapon 133, Echo 78, HierarchyUnknown 65, PlayerCompanion 17 and Death 11.</p>
+<p><strong>Mounts.</strong> The ridden mount is <code>[player+0x2578]</code>; its rider is <code>[mount+0x25A0]</code> and its visual
 <code>[mount+0x2340]</code>. A mount has no material controller (its combat object's <code>+0x390</code> is 0).</p>
 <h2 id="talion-s-material-controller">Talion's material controller</h2>
-<p><code>ctrl = [[player+0x26A8]+0x390]</code> (no vtable). It animates the shader parameters of Talion and of his
-wraith double; no other character has one (0 of 43 spawned characters).</p>
+<p>The controller is <code>ctrl = [[player+0x26A8]+0x390]</code>, an object with no vtable. It animates the shader parameters of
+Talion and of his wraith double; no other character has one (0 of 43 spawned characters).</p>
 <table>
 <thead>
 <tr>
@@ -844,65 +858,65 @@ wraith double; no other character has one (0 of 43 spawned characters).</p>
 </tr>
 </tbody>
 </table>
-<p><strong>A parameter entry</strong>: <code>+0x00</code> the parameter name's hash, <code>+0x04</code> the priority of its driving state,
+<p><strong>A parameter entry</strong> holds <code>+0x00</code> the parameter name's hash, <code>+0x04</code> the priority of its driving state,
 <code>+0x08</code> an easing object (only while easing), <code>+0x10</code> / <code>+0x14</code> start and end time, <code>+0x18</code> the
-transform driving it, <code>+0x20</code> default, <code>+0x28</code> current, <code>+0x30</code> from, <code>+0x38</code> to. Value objects (float
+transform driving it, <code>+0x20</code> default, <code>+0x28</code> current, <code>+0x30</code> from and <code>+0x38</code> to. Value objects (float
 vt_0x1DC8930, int vt_0x1F9FF30, ARGB vt_0x1F9FE70; value at <code>+0x08</code>) push through their slot 2 to the
 handle's setter (<code>SetParamFloat</code> 0x3094FC, int 0x57AC84, <code>SetParamVector</code> 0x47E4540), each posting one
 render command. On the Dark Talion skin the self block holds 8 entries (<code>k_fRevealValue</code>, <code>k_fCurse</code>, <code>k_fRevealArm</code>,
-<code>k_fDepthAdjust</code>, <code>k_nRevealMapIndex</code> and three colours) and the child block 11 (<code>k_fFresnelGlow</code> 0.5,
+<code>k_fDepthAdjust</code>, <code>k_nRevealMapIndex</code> and three colors) and the child block 11 (<code>k_fFresnelGlow</code> 0.5,
 <code>k_fRevealArm</code> 0, <code>k_fRevealWidth</code> 0.1, <code>k_fFixedReveal_Active</code> 0, <code>k_fOpacityMin</code> 0, <code>k_fDepthAdjust</code> 0.25,
-<code>k_fOpacity</code> 0, <code>k_nRevealMapIndex</code> 0 and three colours).</p>
+<code>k_fOpacity</code> 0, <code>k_nRevealMapIndex</code> 0 and three colors).</p>
 <ul>
-<li><code>SetSetup</code> 0x739BC0(ctrl, setup) builds the entries (0x73A5E8: the <code>RestoreDefaultTransform</code> value
-  if a transform names the parameter, else its initial value) and returns immediately when the setup is
+<li><code>SetSetup</code> 0x739BC0(ctrl, setup) builds the entries (0x73A5E8 takes the <code>RestoreDefaultTransform</code> value
+  if a transform names the parameter, otherwise its initial value) and returns immediately when the setup is
   already current, so the setup record is read only when it changes.</li>
-<li>The update 0x58B488 -&gt; 0x58B850 eases entries (current = lerp(from, to)) and pushes; an idle entry
+<li>The update 0x58B488 -&gt; 0x58B850 eases entries (current = lerp(from, to)) and pushes them; an idle entry
   pushes nothing.</li>
 <li><code>AddState</code> 0x58E320(ctrl, state, ...) is refused when the state's tag is in the setup's
-  <code>StateTagRestrictions</code> (0x58BAFC); an entry follows a state only when its priority is at least the
-  current driver's. <code>RemoveState</code> 0x58B370 removes every node of a record; each parameter it drove eases
+  <code>StateTagRestrictions</code> (0x58BAFC). An entry follows a state only when its priority is at least the
+  current driver's. <code>RemoveState</code> 0x58B370 removes every node of a record, and each parameter it drove eases
   to the next remaining state's value, or to its default. A state that drives a parameter the setup
   does not list creates an entry whose default is that state's value. The script bindings are
   <code>CPlayerObj::AddMaterialState</code> 0x19BB020 / <code>RemMaterialState</code> 0x19BEF8C.</li>
-<li>After every equip the engine re-attaches the blocks (0x7A7738: the self block to the player and the
-  held weapon, the child block to the double), because a piece added later is set up by 0x4C6EFC
-  without them. The child block reaches only the double's twin of a weapon (<code>[[model+0x20]+0x128]</code>); a held weapon
+<li>After every equip the engine re-attaches the blocks (0x7A7738 attaches the self block to the player and the
+  held weapon, and the child block to the double), because a piece added later is set up by 0x4C6EFC
+  without them. The child block reaches only the double's twin of a weapon (<code>[[model+0x20]+0x128]</code>). A held weapon
   gets the self block alone, so a wraith-shader weapon's own <code>.mat</code> opacity decides whether it shows outside Wraith
   World.</li>
 </ul>
 <p><strong>The handles.</strong> A block's handle is bound into every piece of its skeleton, so a parameter set on the handle reaches
-every shader on those pieces that declares its name: Talion's block reaches his solid armour (<code>talion_armor.fxo</code>, 59
-parameters: tint zones and their curse twins, blood colour, value and alpha, <code>k_fDissolve</code>, <code>k_fOpacity</code>, specular
-tints) and the wraith-shader pieces he holds; the double's block reaches <code>wraith_game*.fxo</code> (52 parameters, among them
+every shader on those pieces that declares its name. Talion's block reaches his solid armor (<code>talion_armor.fxo</code>, 59
+parameters: tint zones and their curse twins, blood color, value and alpha, <code>k_fDissolve</code>, <code>k_fOpacity</code>, specular
+tints) and the wraith-shader pieces he holds. The double's block reaches <code>wraith_game*.fxo</code> (52 parameters, among them
 <code>k_fBloomScale</code>, <code>k_fFresnelMin</code> / <code>Max</code>, <code>k_fAlphaFloor</code>, <code>k_fDesaturate</code>, <code>k_fLightIntensity</code>, <code>k_fAmbient</code>). The
-controller pushes only its own entries, so a value set on the handle directly lasts until the handle is replaced (a
-skin change, a reload); the handle has no remove slot.</p>
+controller pushes only its own entries, so a value set on the handle directly lasts until the handle is replaced (by
+a skin change or a reload). The handle has no remove slot.</p>
 <p>The 168 material states are parameter states; none hides a model or swaps cloth. WraithRadiance,
-Vanish, WraithPing, Domination, Tower and GameChanger set Talion's <code>k_fRevealValue</code> 0 and the double's
-<code>k_fRevealArm</code> 1 and <code>k_fOpacity</code> 1 (the body cut away, the double shown); TalionDeathSwitch shows
-both; HandOfGod and Stealth draw a fainter double; <code>_Curse</code> sets <code>k_fCurse</code> 1; Player_Eltariel,
-TalionWraith and DarkTalion are colour sets. A body whose tree keeps the setup <code>Player_DarkTalion</code> but has no
-companion double is cut away by those states and shows nothing in their place; the setup
+Vanish, WraithPing, Domination, Tower and GameChanger set Talion's <code>k_fRevealValue</code> to 0 and the double's
+<code>k_fRevealArm</code> to 1 and <code>k_fOpacity</code> to 1, which cuts the body away and shows the double. TalionDeathSwitch shows
+both, HandOfGod and Stealth draw a fainter double, and <code>_Curse</code> sets <code>k_fCurse</code> to 1. Player_Eltariel,
+TalionWraith and DarkTalion are color sets. A body whose tree keeps the setup <code>Player_DarkTalion</code> but has no
+companion double is cut away by those states and shows nothing in their place. The setup
 <code>Combat/FX/MaterialController/Setup::Baranor</code> restricts the Talion and Celebrimbor states and pushes no reveal.</p>
-<p><strong>The wraith shader</strong> (<code>wraith_game.fxo</code>, skeletal pixel shader): the material constant buffer cb3
-follows the <code>.mat</code> parameter order (<code>cb3[9]</code> fixed-reveal width and active, reveal width and arm;
-<code>cb3[10]</code> fixed-reveal arm, reveal map index, dissolve, fresnel minimum; <code>cb3[11]</code> fresnel maximum,
-alpha floor, opacity, opacity minimum; <code>cb3[12].x</code> bloom scale). Reveal = saturate((sample + (W + 1) x
-Arm - 1) / W) x (1 - Dissolve) with W the reveal width; alpha is roughly fresnel x reveal x
+<p><strong>The wraith shader</strong> (<code>wraith_game.fxo</code>) is a skeletal pixel shader. Its material constant buffer cb3
+follows the <code>.mat</code> parameter order: <code>cb3[9]</code> holds the fixed-reveal width and active flag and the reveal width and
+arm; <code>cb3[10]</code> the fixed-reveal arm, reveal map index, dissolve and fresnel minimum; <code>cb3[11]</code> the fresnel maximum,
+alpha floor, opacity and opacity minimum; and <code>cb3[12].x</code> the bloom scale. Reveal = saturate((sample + (W + 1) x
+Arm - 1) / W) x (1 - Dissolve), with W the reveal width, and alpha is roughly fresnel x reveal x
 <code>k_vObjectColor.w</code> x opacity x diffuse alpha. <code>k_vObjectColor</code> is a global shader-constant object
-(0x2A39FA0, value at <code>+0x40</code>) filled per draw (0x254B80) from a packed colour at draw item <code>+0x4C</code>.</p>
+(0x2A39FA0, value at <code>+0x40</code>) filled per draw (0x254B80) from a packed color at draw item <code>+0x4C</code>.</p>
 <h2 id="sauron-s-two-forms">Sauron's two forms</h2>
 <p>The final boss is two combat trees, <code>Combat/Tree::AI_Sauron_WarForm</code> and <code>AI_Sauron_FairForm</code>. Walking the
-RecordLinks from each: the war form reaches 116 attacks, 37 of them his own (all 16 mace swings among them); the fair
-form 187, 52 his own. In the shipped data the fair ranged chain (<code>AI_Sauron_Fair_Ranged_Auto</code> -&gt; <code>_2</code> -&gt; <code>_3</code> -&gt;
-<code>_Last</code>), <code>AI_Sauron_Fair_Melee</code>, <code>AI_Sauron_Fair_To_Warform</code> and <code>AI_Sauron_Curse_AoE</code> have no referrer (a reverse
-scan of 694,632 records and 2,679 world scripts; nodes built at run time not checked). His 24 counter syncs (<code>SRNF_CB_Sync_*</code>) pair with Celebrimbor's
+RecordLinks from each tree, the war form reaches 116 attacks, 37 of them his own (all 16 mace swings among them), and
+the fair form 187, 52 of them his own. In the shipped data the fair ranged chain (<code>AI_Sauron_Fair_Ranged_Auto</code> -&gt; <code>_2</code>
+-&gt; <code>_3</code> -&gt; <code>_Last</code>), <code>AI_Sauron_Fair_Melee</code>, <code>AI_Sauron_Fair_To_Warform</code> and <code>AI_Sauron_Curse_AoE</code> have no referrer (a
+reverse scan of 694,632 records and 2,679 world scripts; nodes built at run time were not checked). His 24 counter syncs (<code>SRNF_CB_Sync_*</code>) pair with Celebrimbor's
 halves on the player rig; no orc half ships. The fair and player rigs bind every body bone at 0.0 cm (only the finger
 curls differ), and the fair body's static mesh has nothing between the belt and the boots.</p>
-<p><strong>His effects are keyed.</strong> 45 distinct <code>MeleeFX</code> play in his moves: 34 resolve through lookup tables whose only
+<p><strong>His effects are keyed.</strong> His moves play 45 distinct <code>MeleeFX</code>: 34 resolve through lookup tables whose only
 drawing entry is <code>Sauron</code>, 7 name an effect directly, 3 are Nazgul-only and one (<code>Sauron_PushBack</code>) names nothing and
-draws nothing. 29 of the 53 decoded effects carry a Sound node with his own audio hook, so his combat sounds live
+draws nothing. Of the 53 decoded effects, 29 carry a Sound node with his own audio hook, so his combat sounds live
 inside those keyed effects. His trees also carry the war <code>HitFXSetup</code> <code>Sauron_WarForm</code>, the fair <code>HitFXSetup</code>
 <code>BlackHand</code> and <code>StateFX</code> <code>Sauron_FairForm</code>, <code>AttackTypeFX</code> <code>Nazgul</code> on both and the war form's
 <code>PersistentClientFX</code> <code>sauron_wf_persistent.fxp</code>.</p>
@@ -910,41 +924,43 @@ inside those keyed effects. His trees also carry the war <code>HitFXSetup</code>
 target's, 2 the player's (<code>[[[CGameClientShell]+0x888]+0x26A8]+0x68</code>), with no fallback ("FAILED to find a Valid Key,
 FX will not play"). A character's key is a <code>Client/FXLookup/Key</code> record at its combat object's <code>+0x68</code>, copied from
 <code>Combat/Tree.FXLookupKey</code> (RecordLink slot 60, displacement 0x1E0) by 0x4EECA4 (re-run by <code>Set</code> /
-<code>ClearCharacterModelOverride</code>) and by the buff path 0x45050C. Both boss trees carry <code>Sauron</code>; <code>Player_Character</code>
-<code>Talion</code>, <code>Player_Character_DarkTalion</code> <code>DarkTalion</code>, <code>Player_Character_Baranor</code> <code>Baranor</code> (key record indices: Talion 1,
-Sauron 11, DarkTalion 14). The compiled cache is <code>[GameManager+0x6C70]</code> {data, count <code>+0x08</code>, key category <code>+0x10</code>}:
-<code>data[key index]</code> = {key, per-key object}; a per-key object is {<code>+0x00</code> data, <code>+0x08</code> count, <code>+0x10</code> table category} with
-<code>data[table index]</code> = {table, entry}, entry 0 meaning that key draws nothing for that table; 0x66916C reads
-<code>_StructuresFXLookupTableEntry.FX</code>. A record's index is (rec - <code>[[rec+0x18]+0x38]</code>) / 0x28. Of 619 live lookup tables
-(620 shipped) 54 have a <code>Sauron</code> entry, 243 <code>DarkTalion</code> and 261 <code>Talion</code>, and 264 have a Talion or Dark Talion entry
-but no Sauron one; 0 of 620 carry both a <code>Sauron</code> and a <code>DarkTalion</code> entry.</p>
+<code>ClearCharacterModelOverride</code>) and by the buff path 0x45050C. Both boss trees carry <code>Sauron</code>, <code>Player_Character</code>
+carries <code>Talion</code>, <code>Player_Character_DarkTalion</code> <code>DarkTalion</code> and <code>Player_Character_Baranor</code> <code>Baranor</code> (the key record
+indices are Talion 1, Sauron 11 and DarkTalion 14). The compiled cache is <code>[GameManager+0x6C70]</code> {data, count <code>+0x08</code>,
+key category <code>+0x10</code>}, with <code>data[key index]</code> = {key, per-key object}. A per-key object is {<code>+0x00</code> data, <code>+0x08</code>
+count, <code>+0x10</code> table category}, with <code>data[table index]</code> = {table, entry}; entry 0 means that the key draws nothing
+for that table. 0x66916C reads <code>_StructuresFXLookupTableEntry.FX</code>. A record's index is
+(rec - <code>[[rec+0x18]+0x38]</code>) / 0x28. Of 619 live lookup tables (620 shipped), 54 have a <code>Sauron</code> entry, 243 a
+<code>DarkTalion</code> entry and 261 a <code>Talion</code> entry, and 264 have a Talion or Dark Talion entry but no Sauron one, while 0 of
+620 carry both a <code>Sauron</code> and a <code>DarkTalion</code> entry.</p>
 <p><strong>His teleport.</strong> Eight recoils (<code>AI_Sauron_Recoil_Teleport_F</code> / <code>B</code> / <code>L</code> / <code>R</code> and the <code>_RMT_</code> set) and four ranged
-dodges play <code>Naz_SaurFair_TeleportAway</code> (in <code>nazgul_prototype.anix</code>, 566 ms): <code>STARTFACING</code> at 0, <code>BEFACING</code> at 200,
-<code>COMBATTELEPORTTOOBJECT</code> at 300, <code>EAL</code> and <code>EnableRecoilOnStop</code> at 533 ms; every one of them requires a target. Its
-<code>MeleeFX</code> <code>Sauron_Teleport</code> (keyed to Sauron) is <code>sauron_teleport_out_anim.fxp</code>, 2.8 s: a fire-smoke burst on
+dodges play <code>Naz_SaurFair_TeleportAway</code> (in <code>nazgul_prototype.anix</code>, 566 ms), whose events are <code>STARTFACING</code> at 0,
+<code>BEFACING</code> at 200, <code>COMBATTELEPORTTOOBJECT</code> at 300, and <code>EAL</code> and <code>EnableRecoilOnStop</code> at 533 ms. Every one of these
+moves requires a target. Its <code>MeleeFX</code> <code>Sauron_Teleport</code> (keyed to Sauron) is <code>sauron_teleport_out_anim.fxp</code>, 2.8 s
+long: a fire-smoke burst on
 <code>Torso_Base</code> at 0.16 - 0.22 s, a light, a shock ring, embers and smoke that follow him, and no sound. The move itself
 is the engine's teleport query, <code>AttackData.UseCombatTeleportPoint</code> = <code>Combat/Teleport/Query::
-AI_Nazgul_Sauron_Fair_Teleport_Rec</code>: valid types <code>AI_Nazgul_Teleport_Type1</code> (placed combat teleport points), 5 - 15 m
-from him and 10 - 20 m from the player, <code>SelectionOperation</code> 1. 0x571B3C walks the query's <code>TeleportOffset</code> list and
-calls 0x19D79EC(entry, context) until one succeeds (it returns at once when <code>[context+0x28]</code> is 0). His recoil cooldown
-<code>AI_Sauron_Fair_TeleportRecoil</code> is 8 s; his teleport sound <code>cbt_srnf_tele_out</code> is posted only by
-<code>SRNF_TransToFair_Recoil</code> at 33 ms. The animation event names are an engine table: <code>.xtext</code> from 0x1F98FB8 holds
-pointers to <code>COMBAT_TELEPORT</code> ... <code>COMBATTELEPORTTOOBJECT</code> (at 0x1F98FD8).</p>
+AI_Nazgul_Sauron_Fair_Teleport_Rec</code>: valid types <code>AI_Nazgul_Teleport_Type1</code> (placed combat teleport points), at
+5 - 15 m from him and 10 - 20 m from the player, with <code>SelectionOperation</code> 1. 0x571B3C walks the query's
+<code>TeleportOffset</code> list and calls 0x19D79EC(entry, context) until one succeeds (it returns at once when <code>[context+0x28]</code>
+is 0). His recoil cooldown <code>AI_Sauron_Fair_TeleportRecoil</code> is 8 s. His teleport sound <code>cbt_srnf_tele_out</code> is posted
+only by <code>SRNF_TransToFair_Recoil</code> at 33 ms. The animation event names are an engine table: <code>.xtext</code> from 0x1F98FB8
+holds pointers to <code>COMBAT_TELEPORT</code> through <code>COMBATTELEPORTTOOBJECT</code> (at 0x1F98FD8).</p>
 <h2 id="birds-and-other-flying-creatures">Birds and other flying creatures</h2>
 <p>Crows, bats, seagulls and the desert raptors are not characters. Each is an <code>AvianObject</code> (vt_0x1DBBD30,
-0x518 bytes, derived from the generic game object, without a character controller, behaviour graph or
+0x518 bytes, derived from the generic game object, without a character controller, behavior graph or
 inventory) spawned by a placed world object, an <code>AvianMarker</code> (vt_0x1FA4CD0). A marker owns at most one bird.</p>
 <h3 id="definitions">Definitions</h3>
 <p><code>Avian/Definition</code> holds 14 species records: Crow, Crow_Eat, bat, bat_Day, bat_DaySleep, bat_AnyTime,
 Seagul, Seagull_Eat, raptor_Desert, raptor_Desert_Day, raptor_Desert_Night, raptor_Desert_Night_Clear,
 testing and testingBenchmark. A definition names the model (<code>Model.Cha_Crow</code>, <code>Cha_Bat</code>, <code>Cha_Seagull</code>,
 <code>Cha_RaptorDesert</code>), a scale range (crows 1.0-1.5, the others 0.9-1.1), a weather / time-of-day predicate
-(<code>Weather/Predicates/Forecast.AnyTimeNoRain</code>, <code>NightNoRain</code>, <code>DayNoWeather</code> ...), a combat tree
-(<code>Hunting_Crow</code>, <code>Hunting_Bat</code>, <code>Hunting_Seagull</code>, <code>Hunting_Avian</code>), a render-ID setup, seven animation
-slots each with a weighted variant list (perched, eating, take-off, bank left, bank right, flap, landing),
-perch and flight durations (average and variance), take-off height and distance, climb, descent, turn and
-lateral rates, a death effect, a respawn time and the group-sound settings. A crow perches 9 +/- 6 s and
-flies 60 +/- 11 s; bats fly 900 s; every species respawns after 33-120 s.</p>
+(for example <code>Weather/Predicates/Forecast.AnyTimeNoRain</code>, <code>NightNoRain</code> or <code>DayNoWeather</code>), a combat tree
+(<code>Hunting_Crow</code>, <code>Hunting_Bat</code>, <code>Hunting_Seagull</code>, <code>Hunting_Avian</code>), a render-ID setup and seven animation
+slots, each with a weighted variant list (perched, eating, take-off, bank left, bank right, flap, landing).
+It also holds perch and flight durations (average and variance), take-off height and distance, climb, descent,
+turn and lateral rates, a death effect, a respawn time and the group-sound settings. A crow perches for 9 +/- 6 s and
+flies for 60 +/- 11 s, bats fly for 900 s, and every species respawns after 33-120 s.</p>
 <h3 id="the-manager">The manager</h3>
 <p><code>CAvianMgr</code> is a singleton at <code>[base+0x2A86878]</code> (constructor 0x19C7D8C, destructor 0x19C7E00):</p>
 <table>
@@ -1038,7 +1054,7 @@ marker is visited about every ten frames.</p>
 </tr>
 <tr>
 <td>+0x198 / +0x19C</td>
-<td>an orbit centre is set / its position, copied from the object named by <code>OrbitMarker</code> (0x1A41C34)</td>
+<td>an orbit center is set / its position, copied from the object named by <code>OrbitMarker</code> (0x1A41C34)</td>
 </tr>
 <tr>
 <td>+0x1A8 / +0x1AC</td>
@@ -1060,18 +1076,18 @@ marker is visited about every ten frames.</p>
 </table>
 <p>Per marker the sweep calls 0x43AE38 with the player's position. A disabled marker, or one whose definition's
 weather predicate fails against <code>[GameManager+0x6D98]</code>, loses its bird. Distances are horizontal (X and Z)
-and measured to the player only. On entering the activation radius the marker rolls once:
-<code>random(0, 99.9) &lt; ActivationPercent</code>; on success it spawns (0x1A41FFC: the definition's model, a scale
-drawn from the scale range and stored at the bird's <code>+0xC8</code>, class <code>AvianObject</code>, created through the object
-server). While activated, a marker with no bird respawns once the engine clock passes <code>+0x1D8</code>. Beyond the
-deactivation radius the bird is removed and the out-of-range script event fires. When a bird is destroyed
-the marker sets <code>+0x1D8</code> = now + RespawnTime x 1000 (0x575ED4; 5 s when the field is absent); a respawn time
+and measured to the player only. On entering the activation radius, the marker rolls once:
+<code>random(0, 99.9) &lt; ActivationPercent</code>. On success it spawns a bird (0x1A41FFC) with the definition's model and a
+scale drawn from the scale range and stored at the bird's <code>+0xC8</code>; the bird is of class <code>AvianObject</code> and is created
+through the object server. While activated, a marker with no bird respawns once the engine clock passes <code>+0x1D8</code>.
+Beyond the deactivation radius the bird is removed and the out-of-range script event fires. When a bird is destroyed,
+the marker sets <code>+0x1D8</code> = now + RespawnTime x 1000 (0x575ED4; 5 s when the field is absent). A respawn time
 of 0 or less clears the roll instead, so nothing returns until the player leaves and comes back.</p>
-<p>In a live desert region 301 markers (raptor_Desert_Day 157, raptor_Desert 63, raptor_Desert_Night 57,
+<p>In a live desert region, 301 markers (raptor_Desert_Day 157, raptor_Desert 63, raptor_Desert_Night 57,
 raptor_Desert_Night_Clear 24) used activation radii of 120-130 m, a deactivation radius of 140 m, fear
-distances of 30-40 m and activation chances of 25, 38 and 40 percent; 250 were AlwaysFlying. Of 28 markers
-whose radius covered the player, 21 were activated and 6 had passed the roll, giving 6 birds, each linked
-both ways (<code>marker+0x1D0</code> and <code>bird+0x390</code>), flying 7-26 m from its marker at 0.5-6 m above it, with scales
+distances of 30-40 m and activation chances of 25, 38 and 40 percent, and 250 were AlwaysFlying. Of 28 markers
+whose radius covered the player, 21 were activated and 6 had passed the roll, giving 6 birds. Each was linked
+both ways (<code>marker+0x1D0</code> and <code>bird+0x390</code>) and flew 7-26 m from its marker at 0.5-6 m above it, with scales of
 0.92-1.07.</p>
 <h3 id="the-bird">The bird</h3>
 <table>
@@ -1122,7 +1138,7 @@ both ways (<code>marker+0x1D0</code> and <code>bird+0x390</code>), flying 7-26 m
 <tr>
 <th>State</th>
 <th>Function</th>
-<th>Behaviour</th>
+<th>Behavior</th>
 </tr>
 </thead>
 <tbody>
@@ -1139,7 +1155,7 @@ both ways (<code>marker+0x1D0</code> and <code>bird+0x390</code>), flying 7-26 m
 <tr>
 <td>2 flying</td>
 <td>0xEFC48, steering 0xEFD10</td>
-<td>flies for the flight time around the marker or its orbit centre above FlightBottom; turns pick the bank animations, straight flight the flap animations (threshold pi/16); a FlyOff marker's bird is destroyed</td>
+<td>flies for the flight time around the marker or its orbit center above FlightBottom; turns pick the bank animations, straight flight the flap animations (threshold pi/16); a FlyOff marker's bird is destroyed</td>
 </tr>
 <tr>
 <td>3 descending</td>
@@ -1172,29 +1188,29 @@ rat, seagull, spider).</p>
 flight separately, and picks the none / low / high loop from the <code>LowCount</code> / <code>HighCount</code> thresholds.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li><code>Presentation/Settings.HideCharacterRadius</code> and its sphere query 0xF4DD50.</li>
-<li>The role of the registered class name <code>AvianOrbitMarker</code>.</li>
-<li>Whether FlightRadius is the radius of a circling path or a wander bound, and how FlightTop enters the
-  flight target (the steering 0xEFD10 is only partly decoded).</li>
-<li>The fields at <code>+0x30</code> to <code>+0x3C</code> of a group-sound entry.</li>
-<li>What <code>InventoryItemUISpawner</code> (vt_0x1FA4E78, 0x1A8 bytes, base <code>GameBase</code>, constructor 0x1A4258C) does
+<li>What do <code>Presentation/Settings.HideCharacterRadius</code> and its sphere query 0xF4DD50 do?</li>
+<li>What is the role of the registered class name <code>AvianOrbitMarker</code>?</li>
+<li>Is FlightRadius the radius of a circling path or a wander bound, and how does FlightTop enter the
+  flight target? The steering 0xEFD10 is only partly decoded.</li>
+<li>What are the fields at <code>+0x30</code> to <code>+0x3C</code> of a group-sound entry?</li>
+<li>What does <code>InventoryItemUISpawner</code> (vt_0x1FA4E78, 0x1A8 bytes, base <code>GameBase</code>, constructor 0x1A4258C) do
   with the properties it reads: SpawnCount, SpawnPoint, SpawnOnNavMesh, NightTime, RespawnDelay and
-  RespawnWaitForBubbleReset.</li>
-<li>Which state makes some NPCs' proxies follow them (8 of 96 walkers), what a parked proxy collides with, and what stops
-  the player walking through an NPC.</li>
-<li>What moves an NPC's position after a live capsule swap: the swap stage lifts the new proxy by the change in half
+  RespawnWaitForBubbleReset?</li>
+<li>Which state makes some NPCs' proxies follow them (8 of 96 walkers), what does a parked proxy collide with, and what
+  stops the player walking through an NPC?</li>
+<li>What moves an NPC's position after a live capsule swap? The swap stage lifts the new proxy by the change in half
   height but leaves the character's <code>+0xAC</code>, and one pair of reads after a resize showed his height following the
   half height within 4.2 cm while he walked.</li>
-<li>Which thread drains the physics create list (0x1484C8, reached from vt_0x1E6ABA8 vf62 and vt_0x1DC1170 vf0), who owns
-  <code>char+0x1110</code> (equal to the scale at rest), what category scale slot 5's keyed record belongs to, and how
-  <code>StrikeRange</code> is used after 0x4E5970.</li>
-<li>What 0x1B5AE88 and 0x1B5B0E8, two callers of the size function, compute (their callers carry reward strings).</li>
-<li>What keeps a taller body's feet on the ground when it plays Talion's clips on Talion's controller: an Olog body
+<li>Which thread drains the physics create list (0x1484C8, reached from vt_0x1E6ABA8 vf62 and vt_0x1DC1170 vf0)? Who
+  owns <code>char+0x1110</code> (equal to the scale at rest), what category does scale slot 5's keyed record belong to, and how
+  is <code>StrikeRange</code> used after 0x4E5970?</li>
+<li>What do 0x1B5AE88 and 0x1B5B0E8, two callers of the size function, compute? Their callers carry reward strings.</li>
+<li>What keeps a taller body's feet on the ground when it plays Talion's clips on Talion's controller? An Olog body
   with the player's controller stands on the ground in game, though offline its toes reach 44-50 cm below where the
-  player's root sits (foot placement or a ground snap are the candidates).</li>
-<li>Whether <code>Combat/Teleport/FX::Sauron_Teleport_Out</code> / <code>_In</code> name files that ship (<code>sauron_teleport_out.fxp</code> /
-  <code>sauron_teleport_in.fxp</code> were not found, while <code>sauron_teleport_out_anim.fxp</code> beside them was), and whether
-  <code>AI_Nazgul_Teleport_Type1</code> points exist anywhere but his arena.</li>
-<li>Whether <code>AI_SauronFair_RMT_Start</code>, which needs an item only an unreferenced record grants, can fire in the shipped
-  fight.</li>
+  player's root sits; the candidates are foot placement and a ground snap.</li>
+<li>Do <code>Combat/Teleport/FX::Sauron_Teleport_Out</code> / <code>_In</code> name files that ship? <code>sauron_teleport_out.fxp</code> /
+  <code>sauron_teleport_in.fxp</code> were not found, while <code>sauron_teleport_out_anim.fxp</code> beside them was. Do
+  <code>AI_Nazgul_Teleport_Type1</code> points exist anywhere but his arena?</li>
+<li>Can <code>AI_SauronFair_RMT_Start</code>, which needs an item that only an unreferenced record grants, fire in the shipped
+  fight?</li>
 </ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
