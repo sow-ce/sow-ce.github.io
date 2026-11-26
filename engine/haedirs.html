@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Haedirs: towers, seeing stones and fast travel - Shadow of War engine reference</title><meta name="description" content="The campaign&#x27;s 15 Haedir towers: the three pieces of saved state a purified tower is made of, the seeing-stone store and how the engine derives the tower items from it, the purify path, the achievement, the region challenge and the story gate, and how a tower&#x27;s flame and eye decide their colour."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Haedirs: towers, seeing stones and fast travel - Shadow of War engine reference</title><meta name="description" content="The campaign&#x27;s 15 Haedir towers: the three pieces of saved state a purified tower is made of, the seeing-stone store and how the engine derives the tower items from it, the purify path, the achievement, the region challenge and the story gate, and how a tower&#x27;s flame and eye decide their color."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -34,7 +34,7 @@
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
 <a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
-<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="haedirs-towers-seeing-stones-and-fast-travel">Haedirs: towers, seeing stones and fast travel</h1><p class=\"lede\">The campaign&#x27;s 15 Haedir towers: the three pieces of saved state a purified tower is made of, the seeing-stone store and how the engine derives the tower items from it, the purify path, the achievement, the region challenge and the story gate, and how a tower&#x27;s flame and eye decide their colour.</p>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="haedirs-towers-seeing-stones-and-fast-travel">Haedirs: towers, seeing stones and fast travel</h1><p class=\"lede\">The campaign&#x27;s 15 Haedir towers: the three pieces of saved state a purified tower is made of, the seeing-stone store and how the engine derives the tower items from it, the purify path, the achievement, the region challenge and the story gate, and how a tower&#x27;s flame and eye decide their color.</p>
 <p>The campaign has 15 Haedirs, three each in Minas Ithil, Cirith Ungol, Nurnen, Gorgoroth and Seregost.
 Purifying one at its seeing stone unlocks fast travel to it, lights its flame and counts toward the
 region's challenge. The engine keeps a purified Haedir as three separate pieces of saved state, and
@@ -52,7 +52,7 @@ derives one of them from another when the player enters the world.</p>
 <tr>
 <td>the seeing stone's owned byte</td>
 <td>the stone store <code>[GM+0x6D28]</code></td>
-<td>the stone at its initialisation (its flame), and the item reconcile when the player enters the world</td>
+<td>the stone at its initialization (its flame), and the item reconcile when the player enters the world</td>
 </tr>
 <tr>
 <td>the item <code>&lt;Region&gt;_Tower_0N</code></td>
@@ -68,10 +68,10 @@ derives one of them from another when the player enters the world.</p>
 </table>
 <p>(The Minas Ithil variables are spelled <code>MinasItihlTower_*</code> in the data.)</p>
 <h2 id="the-seeing-stone-store">The seeing-stone store</h2>
-<p><code>[GM+0x6D28]</code> keeps the stones in the same shape as the GameData store (<code>GM+0x6C58</code>) and the quest
-store (<code>GM+0x6C60</code>): <code>+0x70</code> an array of <code>{record, u8 owned}</code> entries of 0x10 bytes, <code>+0x78</code> the u32
-count and <code>+0x80</code> the category it holds, <code>WorldPuzzle/SeeingStone</code> (16 records: the 15 stones and
-<code>_Base</code>).</p>
+<p><code>[GM+0x6D28]</code> keeps the stones in the same layout as the GameData store (<code>GM+0x6C58</code>) and the quest
+store (<code>GM+0x6C60</code>): an array of <code>{record, u8 owned}</code> entries of 0x10 bytes at <code>+0x70</code>, the u32 count
+at <code>+0x78</code>, and at <code>+0x80</code> the category it holds, <code>WorldPuzzle/SeeingStone</code> (16 records: the 15 stones
+and <code>_Base</code>).</p>
 <table>
 <thead>
 <tr>
@@ -94,24 +94,29 @@ count and <code>+0x80</code> the category it holds, <code>WorldPuzzle/SeeingSton
 </tr>
 </tbody>
 </table>
-<p>The stone object is a <code>SeeingStone</code> (vt_0x200B5E8): its record at <code>+0x1B0</code>, and the owned byte cached at
-<code>+0x211</code> by its initialisation (vf16 0x1D60140, the copy at 0x1D601D9). The script method
-<code>SeeingStone:IsPlayerOwned</code> (0x1170DF4) returns that cached byte. The script class has no setter: its
-members are <code>Cast</code>, <code>Create</code>, <code>GetCanExit</code>, <code>GetEnabled</code>, <code>IsPlayerOwned</code>, <code>Serialize</code>, <code>SetCanExit</code> and
-<code>SetEnabled</code>.</p>
-<p><strong>The items follow the store, not the other way round.</strong> When the player enters the world, the
-player's handler 0x19BD8F8 calls 0xE857A0 with the store: for every owned stone whose <code>UnlockItem</code> (a
-<code>WorldPuzzle/SeeingStone</code> field read only by 0xE85340, which only this caller calls) the player does not
-hold, it adds the item (<code>AddItemToInventory</code> 0x1C1224). A stone owned in the store therefore brings its
-fast travel back at the next world entry, while an item alone does not light a flame.</p>
-<p>The store's owner holds more than the stones: a <code>+0xE8</code> list of 0x68-byte world-item entries
-(0x19CA048, keyed to <code>GameModes.ItemSpawnTransferableToModes</code>; 0x19C992C walks it for
-<code>Social/Gifts/Save</code>), a <code>+0x00</code> list of 0x28-byte entries (0xE85760, from the player's vf134 0x19BB8BC),
-a flag at <code>+0x69</code> that is set on entering any stone's view and cleared at 0x1D5E938, and the data
-<code>System::SetItemLocationRevealed</code> reads (0x1A08660). The stone array itself is written through its
-lookup 0x19C9014 by exactly two functions, the setter and the loader.</p>
+<p>The stone object is a <code>SeeingStone</code> (vt_0x200B5E8). It keeps its record at <code>+0x1B0</code> and a copy of the
+owned byte at <code>+0x211</code>, taken by its initialization (vf16 0x1D60140; the copy is made at 0x1D601D9).
+The script method <code>SeeingStone:IsPlayerOwned</code> (0x1170DF4) returns that cached byte. The script class
+has no setter: its members are <code>Cast</code>, <code>Create</code>, <code>GetCanExit</code>, <code>GetEnabled</code>, <code>IsPlayerOwned</code>,
+<code>Serialize</code>, <code>SetCanExit</code> and <code>SetEnabled</code>.</p>
+<p><strong>The items follow the store, not the other way around.</strong> On entry into the world, the player's handler
+0x19BD8F8 calls 0xE857A0 with the store. For every owned stone whose <code>UnlockItem</code> is missing from the
+inventory, that function adds the item (<code>AddItemToInventory</code> 0x1C1224); <code>UnlockItem</code> is a
+<code>WorldPuzzle/SeeingStone</code> field read only by 0xE85340, which only this caller calls. A stone owned in
+the store therefore restores its fast travel at the next world entry, while an item alone does not
+light a flame.</p>
+<p>The store's owner holds more than the stones:</p>
+<ul>
+<li>a list of 0x68-byte world-item entries at <code>+0xE8</code> (0x19CA048, keyed to
+  <code>GameModes.ItemSpawnTransferableToModes</code>), which 0x19C992C walks for <code>Social/Gifts/Save</code>;</li>
+<li>a list of 0x28-byte entries at <code>+0x00</code> (0xE85760, called from the player's vf134 0x19BB8BC);</li>
+<li>a flag at <code>+0x69</code>, set on entering any stone's view and cleared at 0x1D5E938;</li>
+<li>the data that <code>System::SetItemLocationRevealed</code> reads (0x1A08660).</li>
+</ul>
+<p>The stone array itself is written through its lookup 0x19C9014 by exactly two functions, the setter and
+the loader.</p>
 <h2 id="the-tower-item">The tower item</h2>
-<p>118 GameDB cells point at the 22 <code>*_Tower_0*</code> items. For each campaign tower:</p>
+<p>In GameDB, 118 cells point at the 22 <code>*_Tower_0*</code> items. For each campaign tower:</p>
 <ul>
 <li><code>Regions/TravelPoint::&lt;Region&gt;_0N.UnlockItem</code> unlocks the fast-travel point, and its
   <code>NavMarkerSetup[].RequiredItem</code> shows the map marker.</li>
@@ -137,7 +142,7 @@ reads all 15 true whether or not the towers were purified. <code>HaedirUnlocked<
   With the item held it does nothing more; without it, it waits for the stone's <code>OnGainOwnership</code>, then
   plays the tower presentation and runs the region's unlock script. Its <code>FXSO:Init</code> starts the blue flame
   (<code>Haedir_CB</code>) when <code>SS:IsPlayerOwned()</code> or <code>GameData.DLC_DLC3Active</code> holds, else Sauron's
-  (<code>Haedir_Sauron</code>). Both read their state once, at initialisation: a tower that is already loaded keeps
+  (<code>Haedir_Sauron</code>). Both read their state once, at initialization: a tower that is already loaded keeps
   its look until its layer loads again.</li>
 <li><strong>The purify</strong> is the first use of the stone's view, 0x1D5E398: if <code>+0x211</code> is 0 and the current game
   mode has <code>GameModes.SaveCurrentWorld</code>, it sets <code>+0x211</code> to 1, calls the store setter 0x19C9BA4, runs the
@@ -167,27 +172,29 @@ identifies the barrows through a purified tower's stone.</p>
 landmarks, the zone exit) nor the online modes' <code>LockedTravelPointsOverride</code> lists; no seeing stone or
 purify objective names them. (<code>Desert_Tower_01</code>'s predicate tests <code>DesertFort_01</code>, a slip in the data.)</p>
 <h2 id="the-tower-s-flame-and-eye">The tower's flame and eye</h2>
-<p>Each tower is a <code>Watch_0N</code> prefab instance whose objects include the flames <code>FX_SS_CB_World</code> /
-<code>FX_SS_Sauron_World</code> and their wraith-world versions <code>FX_SS_CB_Wraith</code> / <code>FX_SS_Sauron_Wraith</code>, the eyes
-<code>FX_Eye_CB</code> / <code>FX_Eye_Sauron</code> (all <code>SpecialFXSeq</code>, vt_0x1DC1530), the transitions <code>FX_SS_Transition</code> /
-<code>FX_Eye_Transition</code> (<code>SpecialFX</code>), the stone <code>SSP.SS</code>, the script objects <code>FXSO</code> and <code>SO</code>, and the map
-marker <code>LockedNM</code>. Placed objects are found by name through the update manager's object sets,
-<code>[base+0x26FF050]+0x3E0+0x18</code> (128 sets, one per world context, vt_0x1DB5D58), each with its name table
-at <code>+0x68</code>.</p>
-<p>The tower's script (<code>fx_watchtower.script06a</code>) starts the flame once at initialisation, by
+<p>Each tower is a <code>Watch_0N</code> prefab instance. Its objects include the flames <code>FX_SS_CB_World</code> /
+<code>FX_SS_Sauron_World</code> and their wraith-world versions <code>FX_SS_CB_Wraith</code> / <code>FX_SS_Sauron_Wraith</code>; the eyes
+<code>FX_Eye_CB</code> / <code>FX_Eye_Sauron</code> (all <code>SpecialFXSeq</code>, vt_0x1DC1530); the transitions <code>FX_SS_Transition</code> /
+<code>FX_Eye_Transition</code> (<code>SpecialFX</code>); the stone <code>SSP.SS</code>; the script objects <code>FXSO</code> and <code>SO</code>; and the map
+marker <code>LockedNM</code>. Placed objects are found by name through the update manager's object sets at
+<code>[base+0x26FF050]+0x3E0+0x18</code>: 128 sets, one per world context (vt_0x1DB5D58), each with its name
+table at <code>+0x68</code>.</p>
+<p>The tower's script (<code>fx_watchtower.script06a</code>) starts the flame once at initialization, by
 <code>SS:IsPlayerOwned()</code>. Its <code>WraithOnCallback</code> (wraith vision or a presentation) starts the eye and the
-wraith flame of the matching colour, by <code>IsPlayerOwned()</code> at that moment, and its <code>WraithOffCallback</code>
+wraith flame of the matching color, by <code>IsPlayerOwned()</code> at that moment, and its <code>WraithOffCallback</code>
 stops exactly what it started. So the eye exists only in wraith vision, and after a purify both the
-flame and the eye keep the old colour until the layer initialises again: after advancing the time of
+flame and the eye keep the old color until the layer initializes again: after advancing the time of
 day (<code>System.AdvanceTimeOfDay</code> 0x1787D08) or a load.</p>
-<p><code>SpecialFXSeq</code> methods: <code>Start</code> 0x74F0E4, <code>Shutdown</code> 0x74F1A0, <code>QuickStart</code> 0x1B201F0, <code>QuickShutdown</code>
-0x1B201A4 and <code>IsPlaying</code> 0x1B1FEF4; the sequence player sits at <code>+0x138</code> (its vf1 takes 0 start, 1 quick
-start, 2 shutdown), and <code>IsPlaying</code> is <code>0x114ED48(+0x138) != -1</code>. The effects are <code>haedir_cb_loop.fxp</code>
-(a sprite, a light and two sounds), <code>watchtower_eye_cb_loop.fxp</code> (a light, 3 models and 7 particle
-systems) and <code>haedir_cb_wraith_loop.fxp</code> (a sprite and 2 particle systems), with their own materials
-(<code>haedir_glow.mat</code>, <code>cele_eyeball_flame.mat</code>, <code>sauron_eyeball_flame.mat</code>, ...) and colour-paired
-textures (<code>cele_eyeflame_v2.tex</code> / <code>sauron_eyeflame_v2.tex</code>); none has a MaterialController, so their
-colour is in the textures and lights (see Visual effects).</p>
+<p>The <code>SpecialFXSeq</code> class provides <code>Start</code> (0x74F0E4), <code>Shutdown</code> (0x74F1A0), <code>QuickStart</code> (0x1B201F0),
+<code>QuickShutdown</code> (0x1B201A4) and <code>IsPlaying</code> (0x1B1FEF4). Its sequence player sits at <code>+0x138</code>; the
+player's vf1 takes 0 to start, 1 to start quickly and 2 to shut down, and <code>IsPlaying</code> is
+<code>0x114ED48(+0x138) != -1</code>.</p>
+<p>The effects are <code>haedir_cb_loop.fxp</code> (a sprite, a light and two sounds), <code>watchtower_eye_cb_loop.fxp</code>
+(a light, 3 models and 7 particle systems) and <code>haedir_cb_wraith_loop.fxp</code> (a sprite and 2 particle
+systems). They use their own materials, such as <code>haedir_glow.mat</code>, <code>cele_eyeball_flame.mat</code> and
+<code>sauron_eyeball_flame.mat</code>, and textures in color pairs such as <code>cele_eyeflame_v2.tex</code> /
+<code>sauron_eyeflame_v2.tex</code>. None of them has a MaterialController, so their color lives in the textures
+and the lights (see Visual effects).</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
 <li>Whether 0x17C6EAC is what updates the <code>HaedirPurified</code> profile statistic, and whether anything but the
@@ -195,5 +202,5 @@ colour is in the textures and lights (see Visual effects).</p>
   read).</li>
 <li>Whether the region challenge counts an item added again after it was taken away (the objective counts
   additions).</li>
-<li>Which material constants the tower effects' shaders read, and the lights' colour curves.</li>
+<li>Which material constants the tower effects' shaders read, and the lights' color curves.</li>
 </ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
