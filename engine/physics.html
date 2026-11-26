@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" class="cur" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -113,7 +113,7 @@ whose only caller is 0x1187004), and the engine publishes its owner in a static 
 15,364 in a combat scene); a body id packs <code>index | generation &lt;&lt; 24</code>. <code>+0x108</code> has capacity 1,024,
 matching the material palette.</p>
 <p>This gravity drives the rigid-body solver only. Characters move through the engine's character
-controller, which the behaviour graph owns (see Animation).</p>
+controller, which the behavior graph owns (see Animation).</p>
 <h2 id="materials">Materials</h2>
 <p>Both libraries keep their entries in an <code>hkArray</code> at <code>+0x30</code>. The material palette is one contiguous
 array of 1,024 <code>hknpMaterial</code> entries (vt_0x1DAC040, stride 0x80):</p>
@@ -279,7 +279,7 @@ plus 4,808 inside bundles (196 types).</p>
   navigation pieces of props (<code>Resou_09.W.dnmp</code>, <code>Store_34.NMPtop</code>).</li>
 <li><strong>Collision shapes:</strong> roots are <code>hknpCompoundShape</code>s holding <code>hknpCompressedMeshShape</code>,
   <code>hknpConvexPolytopeShape</code> (boxes and capsules), <code>hknpSphereShape</code>, <code>hknpHeightFieldShape</code> and
-  <code>hknpConvexShape</code>, in metres; an instance places a shape as <code>p' = R (p * scale) + t</code>.</li>
+  <code>hknpConvexShape</code>, in meters; an instance places a shape as <code>p' = R (p * scale) + t</code>.</li>
 </ul>
 <h2 id="surfaces">Surfaces</h2>
 <p>What a character, a projectile or a sound does when it meets geometry is decided by the surface it
@@ -371,12 +371,16 @@ touched: one of the 78 <code>Surfaces/Surfaces</code> records (type <code>Surfac
 </tbody>
 </table>
 <p>Every field but two has an accessor read by game code; <code>CanSpiderCrawl</code> and <code>CanMeleeThrough</code> are
-registered in the schema and filled in the data, but no code reads them. The sets are telling:
-wall-climbing is allowed only on <code>Air</code>, <code>AxeClimb</code>, <code>Can_Scramble</code>, <code>PlayerBlocker_Dust</code> and the three
-<code>No_WallRunPlusSlip*</code> surfaces; the 14 slippery surfaces are the <code>*_No_WallRun*</code> family, the player
-blockers, <code>Perimeter</code>, <code>Wood_Tree</code> and <code>Slippery</code>; the 12 fire props are the wood and cloth surfaces;
-warg jumps are refused on 18 surfaces, the five <code>Drake_*</code> collision surfaces among them, which are
-also the only five that refuse spider crawling.</p>
+registered in the schema and filled in the data, but no code reads them. The sets are telling:</p>
+<ul>
+<li>wall-climbing is allowed only on <code>Air</code>, <code>AxeClimb</code>, <code>Can_Scramble</code>, <code>PlayerBlocker_Dust</code> and the
+  three <code>No_WallRunPlusSlip*</code> surfaces;</li>
+<li>the 14 slippery surfaces are the <code>*_No_WallRun*</code> family, the player blockers, <code>Perimeter</code>,
+  <code>Wood_Tree</code> and <code>Slippery</code>;</li>
+<li>the 12 fire props are the wood and cloth surfaces;</li>
+<li>warg jumps are refused on 18 surfaces, among them the five <code>Drake_*</code> collision surfaces, which are
+  also the only five that refuse spider crawling.</li>
+</ul>
 <p><strong>Surface ids.</strong> Collision data does not name a surface by index but by a 16-bit id folded from the
 P919 hash of its record name: <code>id = (h + (h &gt;&gt; 16)) &amp; 0xFFFF</code> (78 of 78 surfaces, no two sharing an
 id). A table of 16-byte entries <code>{u16 id, ..., +0x08 the record}</code> between <code>[base+0x277C9E0]</code> and
