@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -36,7 +36,7 @@
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
 <a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="threads-and-the-frame">Threads and the frame</h1><p class=\"lede\">Every engine thread and its routine, how a thread is started, what the main thread does each frame and in what order, and how the render thread consumes the main thread&#x27;s commands, renders the scene and presents.</p>
 <h2 id="the-threads">The threads</h2>
-<p>The game runs about 94 threads in the world. 35 belong to the executable, about 33 to the graphics
+<p>The game runs about 94 threads in the world. Of these, 35 belong to the executable, about 33 to the graphics
 driver, and the rest to the C runtime, the OS, Bink (5), XAudio2 and the input stack. The engine
 names its threads (<code>GetThreadDescription</code> returns the name); 28 carry a name.</p>
 <table>
@@ -164,8 +164,8 @@ render thread below) and calls 0x1CF430 with its state block (<code>+0x38</code>
 render thread is behind: while the value at <code>+0x198</code> is below the value at <code>+0x1A0</code>, or equal to it
 and the ring's read cursor <code>+0xD0</code> is still below <code>+0x188</code>. Each pass sets <code>+0x1EC</code>, signals the
 render thread's event (<code>+0x130</code>) and waits on its own event (<code>+0x128</code>) with
-<code>MsgWaitForMultipleObjectsEx</code>, so window messages are still dispatched while the main thread waits;
-when the stop byte <code>+0x120</code> is set it only pumps messages (<code>PeekMessageW</code>). The main thread can
+<code>MsgWaitForMultipleObjectsEx</code>, so window messages are still dispatched while the main thread waits.
+When the stop byte <code>+0x120</code> is set, it only pumps messages (<code>PeekMessageW</code>). The main thread can
 therefore run ahead of the renderer only as far as the queue allows.</p>
 <h3 id="where-the-time-goes">Where the time goes</h3>
 <p>Sampled during play (4,000 samples at 400 Hz, every walk unwound to the thread's root 0x8C3E5C):</p>
@@ -235,11 +235,12 @@ its time waiting, while the renderer keeps drawing the paused scene at full fram
 <h3 id="the-object-update-scheduler">The object update scheduler</h3>
 <p>Game objects are updated by a per-object countdown, not by a character loop. 0x2D47E0 passes
 <code>[base+0x26FF050]</code> to 0x1F68D8, which skips the walk while the object server <code>[base+0x26FF058]</code>
-reports itself busy, then calls 0x6B31DC on the update manager <code>U = [base+0x26FF050]+0x3E0</code>
-(vt_0x22C0050). 0x6B31DC first drains a deferred-delivery buffer at <code>U+0x690</code> (0x4CA9F8): each
-entry names a target object (<code>+0x20</code>) and a 16-bit tag (<code>+0x28</code>), and 0x4CAD68 decodes the entry's
-recorded payload in chunks of up to 512 bytes and hands each chunk to the target's vtable slot 19;
-the buffer is then reset and time-stamped. Then it calls <strong>0x2FA064</strong>:</p>
+reports itself busy; otherwise it calls 0x6B31DC on the update manager
+<code>U = [base+0x26FF050]+0x3E0</code> (vt_0x22C0050). 0x6B31DC first drains a deferred-delivery buffer at
+<code>U+0x690</code> (0x4CA9F8). Each entry names a target object (<code>+0x20</code>) and a 16-bit tag (<code>+0x28</code>);
+0x4CAD68 decodes the entry's recorded payload in chunks of up to 512 bytes and hands each chunk to
+the target's vtable slot 19. The buffer is then reset and time-stamped, and 0x6B31DC calls
+<strong>0x2FA064</strong>:</p>
 <ul>
 <li>0x2FA064 walks the object sets linked from <code>U+0x18</code> (node at <code>set+0x18</code>, next at <code>node+0x08</code>;
   130 sets in a loaded region). For each set it takes the set's due list <code>set+0xE8</code> and hands every
@@ -326,7 +327,7 @@ tick; it calls, in this order (each call with the object it runs on; <code>scene
 <li><code>scene+0x778</code> AI pre-tick 0x1F73DC, then the <strong>AI world tick</strong> 0x1F7304</li>
 <li><code>scene+0x788</code> 0x1F7240</li>
 <li><code>scene+0x798</code>: game mode 0x11FA58, projectiles that stick or fly 0x1F721C, weapon-mode item
-   givers 0x1F6EC4, and 0x4C6050, the list of synchronised / attached characters (it clears each
+   givers 0x1F6EC4, and 0x4C6050, the list of synchronized / attached characters (it clears each
    NPC's AI-suspend byte <code>npc+0x2C21</code>)</li>
 <li><code>scene+0x7D8</code> render restart 0x4E1538</li>
 <li><code>GM+0x6C68</code> the faction system's fort-assault composition 0x1E2BC4, then <code>GM+0x6CC8</code>
@@ -344,16 +345,82 @@ tick; it calls, in this order (each call with the object it runs on; <code>scene
 <li><code>GM+0x6D08</code> the script system 0x6D19B4</li>
 </ol>
 <p>The tick makes 52 calls in all, with <code>QueryPerformanceCounter</code> timing around the AI world.</p>
-<p>The <strong>AI world tick</strong> 0x1F7304 runs on <code>W = scene+0x778</code>: battle-node capture <code>W+0x88</code> 0x6546E8,
-smart objects <code>W+0x10</code> 0x6B5258, AI core <code>W+0x18</code> 0x6EE15C, NPC summon and dismiss <code>W+0x08</code>
-0x1234EC, <strong>fight circles</strong> <code>W+0x28</code> 0x6DE538, transient alarms <code>W+0x38</code> 0x607838, AI core
-<code>W+0x40</code> / <code>+0x48</code> 0x48C7E0 / 0x6870FC, find-player <code>W+0x70</code> 0x404EEC, the buddy / follower system
-<code>W+0xB0</code> 0x3608C8, AI core <code>W+0xB8</code> 0x6D5394, the spawn-scenario module <code>W+0xA8</code> 0x378404 and AI
-core <code>W+0x90</code> / <code>+0x98</code> 0x72ABE4 / 0x1F5C94. The AI world also holds the spawn manager (<code>W+0x30</code>)
-and the alarm system (<code>W+0x38</code>); see AI.</p>
+<p>The <strong>AI world tick</strong> 0x1F7304 runs on <code>W = scene+0x778</code> and updates these modules:</p>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Slot</th>
+<th>Update</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>battle-node capture</td>
+<td><code>W+0x88</code></td>
+<td>0x6546E8</td>
+</tr>
+<tr>
+<td>smart objects</td>
+<td><code>W+0x10</code></td>
+<td>0x6B5258</td>
+</tr>
+<tr>
+<td>AI core</td>
+<td><code>W+0x18</code></td>
+<td>0x6EE15C</td>
+</tr>
+<tr>
+<td>NPC summon and dismiss</td>
+<td><code>W+0x08</code></td>
+<td>0x1234EC</td>
+</tr>
+<tr>
+<td><strong>fight circles</strong></td>
+<td><code>W+0x28</code></td>
+<td>0x6DE538</td>
+</tr>
+<tr>
+<td>transient alarms</td>
+<td><code>W+0x38</code></td>
+<td>0x607838</td>
+</tr>
+<tr>
+<td>AI core</td>
+<td><code>W+0x40</code> / <code>+0x48</code></td>
+<td>0x48C7E0 / 0x6870FC</td>
+</tr>
+<tr>
+<td>find-player</td>
+<td><code>W+0x70</code></td>
+<td>0x404EEC</td>
+</tr>
+<tr>
+<td>the buddy / follower system</td>
+<td><code>W+0xB0</code></td>
+<td>0x3608C8</td>
+</tr>
+<tr>
+<td>AI core</td>
+<td><code>W+0xB8</code></td>
+<td>0x6D5394</td>
+</tr>
+<tr>
+<td>the spawn-scenario module</td>
+<td><code>W+0xA8</code></td>
+<td>0x378404</td>
+</tr>
+<tr>
+<td>AI core</td>
+<td><code>W+0x90</code> / <code>+0x98</code></td>
+<td>0x72ABE4 / 0x1F5C94</td>
+</tr>
+</tbody>
+</table>
+<p>The AI world also holds the spawn manager (<code>W+0x30</code>) and the alarm system (<code>W+0x38</code>); see AI.</p>
 <h2 id="the-render-thread">The render thread</h2>
 <p>The render thread is a static object at 0x267E338 (thread class vt_0x1FFD4D0: vf8 name
-0x7F9AE0, vf9 stub 0x7F9AF0). Its routine 0x1C8F158 runs a one-time initialisation 0x1C8ECB8 (it
+0x7F9AE0, vf9 stub 0x7F9AF0). Its routine 0x1C8F158 runs a one-time initialization 0x1C8ECB8 (it
 registers the world-mesh, world-client, texture-animation and CPU-texture resource types and the fog
 overlay material), signals that it is ready, then loops <code>while (0x1C8EDE0(queue)) {}</code>: it is a
 command processor.</p>
@@ -400,16 +467,28 @@ tail-calls <code>method(object, arguments)</code>; the executor then aligns the 
 therefore be walked exactly from its start to the write cursor.</p>
 <p>A frame is 360-371 commands from 44 distinct methods. Across two snapshots (24,944 commands / 68
 frames and 18,169 / 49 frames) every frame issued its 22-23 once-per-frame commands in the same
-order. In order: setup 0x485420; 0x258720 (28 per frame); 0x177D7C (53 per frame, shader-constant
-uploads); three calls on the surface-overlay renderable (vt_0x1FFECD8: 0x70C0E0, 0x7146A0, 0x72FDE0;
-the rain / fire overlay pass); 0x5E9448 (53); a once-per-frame block with terrain 0x484844; a long
-interleave of per-view work on objects of vt_0x1DAADB8; weather material overrides 0x1B7A40 /
-0x1B7A94; the <strong>scene command</strong> (below); light-volume instancing 0x6C74A8
-(<code>DrawIcosahedronInstancesIndirect</code>); 13 tiled-lighting tile updates (0x1791CC <code>BufferTileIndices</code>
-with 0x247108); texture bindings 0x33651C; exposure 0x1E8150 (<code>Lith.ExposureAdjustSpeed</code>,
-<code>Lith.BlowOutWeight</code>); frame timing 0x6D5908; <strong>Present</strong> 0x38052C; Bink video 0x3322BC (it walks
-the live-video list 0x267E400); 0x4C32E8 (a call into the engine interface's render service); and
-high-resolution texture streaming 0x3807E4.</p>
+order:</p>
+<ol>
+<li>setup 0x485420;</li>
+<li>0x258720 (28 per frame);</li>
+<li>0x177D7C (53 per frame, shader-constant uploads);</li>
+<li>three calls on the surface-overlay renderable (vt_0x1FFECD8: 0x70C0E0, 0x7146A0, 0x72FDE0), the rain
+   and fire overlay pass;</li>
+<li>0x5E9448 (53);</li>
+<li>a once-per-frame block with the terrain 0x484844;</li>
+<li>a long interleave of per-view work on objects of vt_0x1DAADB8;</li>
+<li>the weather material overrides 0x1B7A40 / 0x1B7A94;</li>
+<li>the <strong>scene command</strong> (below);</li>
+<li>light-volume instancing 0x6C74A8 (<code>DrawIcosahedronInstancesIndirect</code>);</li>
+<li>the 13 tiled-lighting tile updates (0x1791CC <code>BufferTileIndices</code> with 0x247108);</li>
+<li>texture bindings 0x33651C;</li>
+<li>exposure 0x1E8150 (<code>Lith.ExposureAdjustSpeed</code>, <code>Lith.BlowOutWeight</code>);</li>
+<li>frame timing 0x6D5908;</li>
+<li><strong>Present</strong> 0x38052C;</li>
+<li>Bink video 0x3322BC, which walks the live-video list 0x267E400;</li>
+<li>0x4C32E8, a call into the engine interface's render service;</li>
+<li>high-resolution texture streaming 0x3807E4.</li>
+</ol>
 <h3 id="where-the-render-thread-s-time-goes">Where the render thread's time goes</h3>
 <p>Sampled during play (4,000 samples at 500 Hz; every stack unwound to the thread trampoline):</p>
 <pre><code>0x797DD4 trampoline -&gt; 0x1C8F158 render routine -&gt; 0x188DB0 -&gt; 0x188E08 executor   (99.8%)
@@ -425,18 +504,70 @@ high-resolution texture streaming 0x3807E4.</p>
           0x384640  light accumulation (point-light compute 0x4D951C runs here)  3-4%
         0x1021250   vegetation displacement and grouped GPU particles             3-4.5%
         0x33740C    post-processing (motion blur, depth of field, blur, vignette)
-        0x339D6C    colour-grading LUT
-        0x1EDE58    object-colour compute                                         6-7%
+        0x339D6C    color-grading LUT
+        0x1EDE58    object-color compute                                         6-7%
   0x38052C Present                                                                 7-10%
 </code></pre>
 <p>The order inside <code>0x33CD60</code> comes from consecutive samples (taken 1.4 ms apart): when two
 consecutive samples sit in different children, the first child ran before the second. Over 8,370
-samples every such move went one way only: 0x255920 to mesh pass A 380 times (0 the other way),
-0x185410 to A 136 (0), A to the GPU particles 193 (0), the GPU particles to mesh pass B 89 (0), A to B
-685 (0), B to the light accumulation 0x384640 214 (0), and the light accumulation to the next frame's
-0x255920 18 times. The frame is therefore: G-buffer prelude, G-buffer (A), GPU particles, shadows (B),
+samples, every such move went one way only:</p>
+<table>
+<thead>
+<tr>
+<th>From</th>
+<th>To</th>
+<th>Moves</th>
+<th>The other way</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x255920</td>
+<td>mesh pass A</td>
+<td>380</td>
+<td>0</td>
+</tr>
+<tr>
+<td>0x185410</td>
+<td>A</td>
+<td>136</td>
+<td>0</td>
+</tr>
+<tr>
+<td>A</td>
+<td>the GPU particles</td>
+<td>193</td>
+<td>0</td>
+</tr>
+<tr>
+<td>the GPU particles</td>
+<td>mesh pass B</td>
+<td>89</td>
+<td>0</td>
+</tr>
+<tr>
+<td>A</td>
+<td>B</td>
+<td>685</td>
+<td>0</td>
+</tr>
+<tr>
+<td>B</td>
+<td>the light accumulation 0x384640</td>
+<td>214</td>
+<td>0</td>
+</tr>
+<tr>
+<td>the light accumulation</td>
+<td>the next frame's 0x255920</td>
+<td>18</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>The frame is therefore: G-buffer prelude, G-buffer (A), GPU particles, shadows (B),
 lighting. Which targets each pass draws into is in Rendering. In <code>0x33BCB8</code>, 0x33CD60 runs first,
-0x1021250 next and 0x1EDE58 last (a forward pass writing scene colour and motion). In <code>0x1EABC4</code>,
+0x1021250 next and 0x1EDE58 last (a forward pass writing scene color and motion). In <code>0x1EABC4</code>,
 the three small children run before 0x33BCB8 in all 303 frames where two were sampled. The tree is
 the same whether the world is playing or paused.</p>
 <p>What identifies each branch: the GPU particle branch references
