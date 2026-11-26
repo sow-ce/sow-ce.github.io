@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -134,7 +134,7 @@ Asset formats are older versions that War's loaders reject:</p>
 </tbody>
 </table>
 <p>Mordor's version-9 mesh vertex is 60 bytes: half-precision position (4 halves), 16-bit texture
-coordinates, 32-bit normal, tangent and bitangent, a colour, blend weights in BGRA order and bone
+coordinates, 32-bit normal, tangent and bitangent, a color, blend weights in BGRA order and bone
 indices; strides can differ between a mesh's elements. <strong>Every Mordor mesh has one UV set</strong>, while
 War's orc gear shaders read a second one. Mordor's texture coordinates can run to 2.0. Textures use
 the same DDS-based payload, and War's texture header adds a 23-byte block.</p>
@@ -149,7 +149,7 @@ directly (the Master Pike), Mordor's albedo was about half as bright as War's eq
 database. It holds 115 character models named <code>Cha_*</code>. The Black Númenórean characters are
 three unique models: <code>Cha_Belroth</code> (the Hammer), <code>Cha_Imrakhad</code> (the Tower) and <code>Cha_Zainzadan</code>
 (the Black Hand, whose mesh one of Talion's alternative skins in Mordor is built from). Mordor ships no
-generic Black Númenórean soldier armour: a census of every container path (66,731 distinct), every
+generic Black Númenórean soldier armor: a census of every container path (66,731 distinct), every
 self-named texture (12,714, none unreferenced) and every XML manifest (8,071) finds none.</p>
 <p>The warband downloads (<code>layer52</code> to <code>layer56</code> archives) are 216-byte unlock stubs: the Guardian,
 Blood Hunter, Crusher and Flesh Burner orcs are GameDB presets assembling base-game pieces with
@@ -182,32 +182,54 @@ paint, not new assets.</p>
 </tbody>
 </table>
 <p>The 72 shared bones sit at the same bind positions (median difference 0.07 cm, at most 0.94 cm for
-the core bones). Their bind rotations fall into three groups. 36 bind alike, within 2 degrees: the
-spine, legs, head and upper arms. 34 are re-posed: the hands and fingers hold another pose in the same
-bone frames, so a finger's child joint sits where Mordor's does in its own bone's frame to 0.01 degrees
-on 31 of 32 finger segments, and the weapon bone's local rotation agrees to 0.008 degrees (its grip
-1.6 cm nearer the wrist). 2 are re-framed: the forearm twist bones, turned 81.46 degrees about their
-own long axis with the joint unmoved. The face rigs share no joint names. Of Mordor's orc pieces, those
-that use only bones <code>orc_base</code> also has: armour 35 of 40, flair 116 of 131, bodies 15 of 15, heads 44
-of 111.</p>
+the core bones). Their bind rotations fall into three groups:</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Bones</th>
+<th>Difference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>alike</td>
+<td>36: the spine, legs, head and upper arms</td>
+<td>within 2 degrees</td>
+</tr>
+<tr>
+<td>re-posed</td>
+<td>34: the hands and fingers</td>
+<td>the same bone frames in another pose: a finger's child joint sits where Mordor's does in its own bone's frame to 0.01 degrees on 31 of 32 finger segments, and the weapon bone's local rotation agrees to 0.008 degrees, its grip 1.6 cm nearer the wrist</td>
+</tr>
+<tr>
+<td>re-framed</td>
+<td>2: the forearm twist bones</td>
+<td>turned 81.46 degrees about their own long axis, with the joint unmoved</td>
+</tr>
+</tbody>
+</table>
+<p>The face rigs share no joint names. Of Mordor's orc pieces, those that use only bones <code>orc_base</code> also
+has are: armor 35 of 40, flair 116 of 131, bodies 15 of 15 and heads 44 of 111.</p>
 <p>A Mordor version-8 skeleton has the same 37-byte bone records as War's version 17, but each record
-carries its own name offset; its part rows are 11 bytes (War's 14), its bounds a 24-byte box at 0x44
-with no radius, and its strings are padded to 4 bytes (486 of 486 distinct skeletons read this way).
-The two games share one space: a Mordor orc piece holds its <code>Head</code> at (0.0, 72.76, 0.66) and War's
-<code>orc_base</code> at (0.0, 72.76, 0.67). Mordor stores its binds in model space as quaternions (x, y, z, w): converted to
-local rotations they equal the file's own <code>bind</code> clip on 111 of 111 bones (median 0.005 degrees), and
-every Mordor animation file carries such a <code>bind</code> clip, the rest pose as its clips see it. Mordor's
-humanoids name their bones as the orc rig does, so a file's rig is told by its <code>bind</code> clip's bone
-lengths, not by its names. War's own orc clips never track the ten twist helpers (<code>L/R_ArmuX</code>,
-<code>_Bicep</code>, <code>_Forearm</code>, <code>_Wrist</code>, <code>_Thigh</code>: 0 of 4,463 clips in 351 files): the engine places them.</p>
+carries its own name offset. Its part rows are 11 bytes (War's are 14), its bounds are a 24-byte box
+at 0x44 with no radius, and its strings are padded to 4 bytes; 486 of 486 distinct skeletons read this
+way. The two games share one coordinate space: a Mordor orc piece holds its <code>Head</code> at (0.0, 72.76,
+0.66), and War's <code>orc_base</code> at (0.0, 72.76, 0.67).</p>
+<p>Mordor stores its binds in model space, as quaternions (x, y, z, w). Converted to local rotations, they
+equal the file's own <code>bind</code> clip on 111 of 111 bones (median 0.005 degrees), and every Mordor animation
+file carries such a <code>bind</code> clip: the rest pose as its clips see it. Because Mordor's humanoids name
+their bones as the orc rig does, a file's rig is identified by its <code>bind</code> clip's bone lengths, not by
+its bone names. War's own orc clips never track the ten twist helpers (<code>L/R_ArmuX</code>, <code>_Bicep</code>,
+<code>_Forearm</code>, <code>_Wrist</code>, <code>_Thigh</code>; 0 of 4,463 clips in 351 files): the engine places them.</p>
 <h2 id="animations">Animations</h2>
 <p>Mordor's animation files are ANIX version 42 (War: 44). Mordor's loader (0xE44F80 in
 <code>ShadowOfMordor.exe</code>) reads a 0x1C-byte header (magic, 42, file size, the block chunk's offset and size,
 the animation chunk's offset and size) and then both chunks. The animation chunk holds a directory
 offset (<code>+0x00</code>), the clip count (<code>+0x04</code>), the node count (<code>+0x0C</code>), the channel count (<code>+0x10</code>), the
-string table offset (<code>+0x14</code>) and the node hashes (<code>+0x18</code>), then the channel hashes (position
-0x00CE66FC, rotation 0x27436396, events 0x210C8F5A, the same as War's): a node by channel grid where
-version 44 has a run-length track table. A clip record is version 44's without the u32 pair at
+string table offset (<code>+0x14</code>) and the node hashes (<code>+0x18</code>), followed by the channel hashes (position
+0x00CE66FC, rotation 0x27436396, events 0x210C8F5A, the same as War's). Where version 44 keeps a
+run-length track table, this header is a plain node-by-channel grid. A clip record is version 44's without the u32 pair at
 <code>+0x74</code> / <code>+0x78</code>: its codecs start at <code>+0x74</code>, then one 3-byte entry per track <code>{u8 channel, u8 node,
 u8 group}</code>, aligned to 4, then the blockset table of 16-byte <code>{offset, size, t0, t1}</code> entries; version
 44 has a byte group array and a u16 remap array instead.</p>
@@ -227,13 +249,13 @@ Audio and video), audio keys its database lacks, and the foot markers (<code>Hee
 <code>HeelLift</code>, <code>ToeLift</code>). Mordor registers its verbs as strings (<code>AUDIO_HOOK_KEY</code>, <code>DIALOG_EVENT</code>, <code>SND</code>,
 <code>SND_UI</code>, <code>SND_GROUND</code>, <code>SND_HAND</code>, the footstep verbs, <code>BODY_IMPACT</code>), where War compares hashes.</p>
 <p><strong>War ships Monolith's own ports of some Mordor clips.</strong> War's <code>bip_cmbt_attack_front_1</code>
-(<code>orcinf_cmbt_attack.anix</code>) has the same 56 frames and 1,833 ms as Mordor's <code>Bip_Cmbt_Attack_Front_1</code>;
-retargeted onto War's rig (the hands re-posed as above), Mordor's clip matches the port to a median of
-0.27 degrees per body bone, and the port adds a weapon grip in the fingers. Mordor keeps that grip
+(<code>orcinf_cmbt_attack.anix</code>) has the same 56 frames and 1,833 ms as Mordor's <code>Bip_Cmbt_Attack_Front_1</code>.
+Retargeted onto War's rig (the hands re-posed as above), Mordor's clip matches the port to a median of
+0.27 degrees per body bone; the port adds a weapon grip in the fingers. Mordor keeps that grip
 apart: <code>animation\shared\orc\orc_awareness.anix</code> holds <code>Orc_L_Hand_Weapon</code> and <code>Orc_R_Hand_Weapon</code>, one
 static pose on 14 finger bones, while its body clips leave the hand open. War keeps the same two layers
 (<code>orc_awareness_misc.anix</code>) and plays the right one while fighting (41 starts in 250 s of one fight),
-and its clips carry finger poses as well (99 %).</p>
+and its clips carry finger poses as well (99%).</p>
 <h2 id="the-captain-record-factionmember">The captain record (<code>FactionMember</code>)</h2>
 <p>Mordor's <code>FactionMember</code> is 0x3B0 bytes (its pool descriptor at 0x18022E8; War's is 0x528), in a pool
 array with a stride of 0x3B8. Addresses in this section are RVAs of <code>ShadowOfMordor.exe</code>. Fields, in
@@ -367,13 +389,13 @@ the order the save writer (0x85BAE0) writes them where it does:</p>
 <h2 id="orc-content-what-carried-over-to-war">Orc content: what carried over to War</h2>
 <p>War moved every asset path (<code>models\npc\orcs</code> became <code>characters\modelcharacters\orcs</code>; 1 of 448
 Mordor orc model paths exists in War) and renamed its records (0 of 202 preset captains share a name),
-so names cannot say which Mordor orc meshes War kept. Measured by surface distance instead (4,000
-area-weighted samples per mesh, exact point-to-triangle distance, both directions, the 90th percentile
-in cm), each of Mordor's 419 orc meshes against War's 1,578 character meshes: "same" means within
-0.25 cm both ways, "adapted" 1.0, "re-made" 2.0, and "merged" a Mordor piece lying inside a bigger War
-piece. Controls set those limits: different War designs of one slot are at least 3.58 cm apart for
-helmets, 4.28 for chests and 3.88 for one-hand weapons, while any two orc heads are within 2 cm of each
-other, so heads cannot be matched this way.</p>
+so names cannot show which Mordor orc meshes War kept. Surface distance can: each of Mordor's 419 orc
+meshes is compared with War's 1,578 character meshes, using 4,000 area-weighted samples per mesh, the
+exact point-to-triangle distance in both directions and the 90th percentile in centimeters. A mesh
+counts as "same" within 0.25 cm both ways, "adapted" within 1.0 and "re-made" within 2.0; "merged" means
+that a Mordor piece lies inside a bigger War piece. Controls set those limits: different War designs
+for one slot are at least 3.58 cm apart for helmets, 4.28 for chests and 3.88 for one-hand weapons,
+while any two orc heads lie within 2 cm of each other, so heads cannot be matched this way.</p>
 <table>
 <thead>
 <tr>
@@ -415,7 +437,7 @@ other, so heads cannot be matched this way.</p>
 <td>30</td>
 </tr>
 <tr>
-<td>Armour (class sets)</td>
+<td>Armor (class sets)</td>
 <td>38</td>
 <td>1</td>
 <td>0</td>
@@ -488,25 +510,82 @@ other, so heads cannot be matched this way.</p>
 </tr>
 </tbody>
 </table>
-<p>War kept, as the same mesh, the Beheader, Broken Shield, Bug, Metal Beard, Troll Tusk, Master and
-Juggernaut helms, the crown, spiked breastplates, face capes, the Butcher aprons (War's olog apron is
-Mordor's orc apron), two helmets and a set of weapons (crossbow, skull bow, javelin, kris, spiked and pick
-clubs, an elite sword, the saw sword, the shaman staff, throwing axe and spear parts, the huge hammer and
-the branding iron). Mordor's Black Hand sword is the exact mesh of War's <code>nazgul_blackblade</code>. Mordor
-only: all six class armour sets, the Bright Lord outfits, most hair and every head, the bodies and legs,
-the Black Captains' bodies, and 30 weapons (the Master Pike, five spears, axes, maces, swords and the orc
-bow among them).</p>
-<p>At record level both databases are GADB version 17: Mordor 1,234 categories and 232,481 records, War
-2,742 and 694,632. Orc look pieces 362 against 1,150, orc weapon records 158 (60 models) against 237 (97
-models), heads (<code>Model/SimpleModelHeads</code>) 137 against 335, look classes 81 against 185, armour sets 28
-against 17, colour setups 119 against 465, flairs 375 against 2 (War replaced flairs with items and
-tints), and scars 122 against War's 24 scar types (a different system).</p>
+<p>War reuses these Mordor meshes unchanged:</p>
+<ul>
+<li>the Beheader, Broken Shield, Bug, Metal Beard, Troll Tusk, Master and Juggernaut helms, the crown,
+  the spiked breastplates, the face capes and the Butcher aprons (War's olog apron is Mordor's orc
+  apron), and two further helmets;</li>
+<li>a set of weapons: the crossbow, the skull bow, the javelin, the kris, the spiked and pick clubs, an
+  elite sword, the saw sword, the shaman staff, the throwing axe and spear parts, the Huge Hammer and
+  the branding iron.</li>
+</ul>
+<p>Mordor's Black Hand sword is the
+exact mesh of War's <code>nazgul_blackblade</code>. Only Mordor has the six class armor sets, the Bright Lord
+outfits, most of the hair and every head, the bodies and legs, the Black Captains' bodies, and 30
+weapons, among them the Master Pike, five spears, axes, maces, swords and the orc bow.</p>
+<p>At record level both databases are GADB version 17:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Shadow of Mordor</th>
+<th>Shadow of War</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>categories / records</td>
+<td>1,234 / 232,481</td>
+<td>2,742 / 694,632</td>
+</tr>
+<tr>
+<td>orc look pieces</td>
+<td>362</td>
+<td>1,150</td>
+</tr>
+<tr>
+<td>orc weapon records (models)</td>
+<td>158 (60)</td>
+<td>237 (97)</td>
+</tr>
+<tr>
+<td>heads (<code>Model/SimpleModelHeads</code>)</td>
+<td>137</td>
+<td>335</td>
+</tr>
+<tr>
+<td>look classes</td>
+<td>81</td>
+<td>185</td>
+</tr>
+<tr>
+<td>armor sets</td>
+<td>28</td>
+<td>17</td>
+</tr>
+<tr>
+<td>color setups</td>
+<td>119</td>
+<td>465</td>
+</tr>
+<tr>
+<td>flairs</td>
+<td>375</td>
+<td>2 (War replaced flairs with items and tints)</td>
+</tr>
+<tr>
+<td>scars</td>
+<td>122</td>
+<td>24 scar types (a different system)</td>
+</tr>
+</tbody>
+</table>
 <h2 id="the-army-screen">The Army screen</h2>
 <p>Mordor's hierarchy screen is a world of its own,
 <code>worlds\cinematics\wraith_visions\hierarchymenu_son.bndl</code> (<code>son.arch05</code> entry 15, 232,667,989 bytes,
-446 assets; near-identical copies in <code>intro.arch05</code> and <code>outro.arch05</code>): a scene, an object database,
-a world mesh and 10 prefabs (the hierarchy art, the Warchief pedestals, glyphs, orc light posts, a
-ruin wall, backdrop rocks), with the crowd drawn as card meshes
+446 assets; near-identical copies in <code>intro.arch05</code> and <code>outro.arch05</code>). It holds a scene, an object
+database, a world mesh and 10 prefabs (the hierarchy art, the Warchief pedestals, glyphs, orc light
+posts, a ruin wall, backdrop rocks), and it draws the crowd as card meshes
 (<code>fx\ui\hierarchy\models\orcarmy_outlinecards.mesh</code>). The seats are logical rows and columns in
 <code>_StructuresFaction.HierarchyFactionPos</code> (5 Warchiefs and captain rows of 8, 7 and 5: 25 seats),
 placed in the world as objects <code>Hier.Faction_&lt;row&gt;_&lt;column&gt;</code> with a character spot <code>.Chr</code>, a camera
