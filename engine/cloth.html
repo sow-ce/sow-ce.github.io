@@ -1,0 +1,415 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cloth: GPU cloth and Havok Cloth - Shadow of War engine reference</title><meta name="description" content="The game&#x27;s two cloth systems: the engine&#x27;s own GPU cloth, a position-based solver in a compute shader fed by CRES files, with the CRES container and its five kinds, the cloth file&#x27;s six buffers, how a skeleton or an effect names its cloth, the solver step by step with its constants, and how simulated cloth is drawn; and the Havok Cloth carried inside skeletons."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<a href="cloth.html" class="cur" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="outposts.html" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="cloth-gpu-cloth-and-havok-cloth">Cloth: GPU cloth and Havok Cloth</h1><p class=\"lede\">The game&#x27;s two cloth systems: the engine&#x27;s own GPU cloth, a position-based solver in a compute shader fed by CRES files, with the CRES container and its five kinds, the cloth file&#x27;s six buffers, how a skeleton or an effect names its cloth, the solver step by step with its constants, and how simulated cloth is drawn; and the Havok Cloth carried inside skeletons.</p>
+<p>The game ships two cloth systems. The engine's own GPU cloth simulates orc and olog gear, a few player and
+Eltariel bodies and cloaks, an Easterling cape, banners, flags, warg drool and a weapon's cloth in a compute
+shader, from <code>&lt;stem&gt;.gpucloth.cres</code> files; Havok Cloth, carried inside skeleton files, drives the player's
+capes. A piece uses one or the other: none of the 132 skeleton sections that name a GPU cloth also carries
+Havok cloth.</p>
+<h2 id="the-cres-container">The CRES container</h2>
+<p>A <code>.cres</code> file is a container of GPU buffers. One reader loads every kind (0x72E4A8, slot 3 of vt_0x230A868;
+resource type 12):</p>
+<pre><code>u32 'CRES' | u32 version (1 - 5)
+version &gt;= 3:  u32 tag | u32 tag version          the pair must be one of the table below
+string:        u16 length + bytes                 read and dropped (at most 259)
+version &gt;= 4:  u32 n + n bytes                    the resource's own blob
+version &gt;= 3:  u32 buffer count (else 1)
+per buffer     u32 count | u32 stride | u32 format  then count x stride bytes
+</code></pre>
+<p>In version 5 the format word is the <code>StringHash</code> of a format name, looked up in a table the reader builds at
+0x27AF880: <code>Float32</code>, <code>UInt32</code>, <code>SInt32</code>, <code>UInt16x2</code>, <code>UInt8</code>, <code>UInt8x4</code>, <code>UNorm8</code>, <code>UNorm8x4</code>,
+<code>FloatR11G11B10</code>, <code>Float16x2</code>, <code>UNorm16x4</code>, <code>Float16x4</code>, <code>Float32x2</code>, <code>Float32x4</code> (typed buffers, ids 0 - 13)
+and <code>Structured</code> (a structured buffer of the given stride). A name outside the table refuses the file. Version
+2 - 4 store the id directly; version 1 stores only a byte size of 32-bit words. The reader also accepts a CRES
+wrapped in an <code>SLVT</code> version 4 envelope. The loaded object is 0x48 bytes (constructor 0x72EC50): the blob at
++0x00, the buffer pointers at +0x10, their byte sizes at +0x28.</p>
+<table>
+<thead>
+<tr>
+<th>Tag</th>
+<th>Tag version</th>
+<th>Shipped</th>
+<th>Buffers</th>
+<th>Files</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GPUC</code></td>
+<td>2</td>
+<td>240 in bundles + 12 loose</td>
+<td>6 (below) + blob</td>
+<td><code>&lt;stem&gt;.gpucloth.cres</code>, the cloth file</td>
+</tr>
+<tr>
+<td><code>PRTS</code></td>
+<td>4</td>
+<td>1,322 + 41</td>
+<td>4 structured (strides 16, 12, 8, 16) + blob</td>
+<td><code>&lt;model&gt;_ps.cres</code>, prefab <code>_fp.cres</code></td>
+</tr>
+<tr>
+<td><code>LOCT</code></td>
+<td>1</td>
+<td>122 + 115</td>
+<td>1 <code>UInt32</code></td>
+<td><code>&lt;map&gt;.lsomap.cres</code> and <code>.env.cres</code> (loader 0x1CBD2D8)</td>
+</tr>
+<tr>
+<td><code>SSTR</code></td>
+<td>1</td>
+<td>39 + 63</td>
+<td>1 <code>UInt32</code> + blob</td>
+<td>world layers' <code>.osc_*.cres</code>, named by an <code>SSTFile</code> property (loader 0x1B50440)</td>
+</tr>
+<tr>
+<td><code>HAIR</code></td>
+<td>3</td>
+<td>1 loose</td>
+<td>1 structured (stride 76)</td>
+<td><code>materials\0dev\engine\hairlookup_array.cres</code></td>
+</tr>
+</tbody>
+</table>
+<p>Every shipped CRES is version 5 with exactly the tag version in the table, and its name string is empty. The
+827 distinct payloads parse to their last byte and re-emit byte for byte. A sweep of the path tables of all
+190,407 bundle containers found 1,723 <code>.cres</code> sections in 482 containers; each carries the <code>CRES</code> magic, and
+none of the other 146,778 sections in those containers does.</p>
+<h2 id="the-gpu-cloth-file-gpuc">The GPU cloth file (<code>GPUC</code>)</h2>
+<p>The blob is <code>u8 transform count, u8 capsule count, u8 bone[transform count]</code>. The six buffers come in a fixed
+order, and the cloth dispatcher binds them to the compute shader's resources in that order:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Shader resource</th>
+<th>Format</th>
+<th>Record</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>k_ClothConstraintsBuffer</code> (t0)</td>
+<td>Structured, 20</td>
+<td>u32 i, u32 j, f32 wi, f32 wj, f32 rest</td>
+<td>distance constraints</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>k_ClothBendSpringsBuffer</code> (t1)</td>
+<td>Structured, 32</td>
+<td>4 x {u32 partner, f32 rest}</td>
+<td>bend springs</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>k_ClothNodeDataBuffer</code> (t3)</td>
+<td>Structured, 24</td>
+<td>u32 n0, n1, n2, n3, f32 inverse mass, i32 bone slot</td>
+<td>particles</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>k_ClothSpringGroupsBuffer</code> (t2)</td>
+<td><code>UInt32</code></td>
+<td>8 x u32</td>
+<td>constraint batch sizes</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>k_ClothResetBuffer</code> (t4)</td>
+<td>Structured, 12</td>
+<td>f32 x3</td>
+<td>rest positions</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>k_ClothBoundingBuffer</code> (t5)</td>
+<td>Structured, 36</td>
+<td>u32 bone slot, f32 A[3], f32 D[3], f32 1/|D|², f32 1/r²</td>
+<td>collision capsules</td>
+</tr>
+</tbody>
+</table>
+<p>What the 118 distinct shipped cloth files hold:</p>
+<ul>
+<li><strong>Particles.</strong> At most 254 per file, one per thread of a 256-thread group. A particle with inverse mass 0
+  is pinned to its bone slot, and every other particle has slot -1: 5,120 pinned and 13,275 free particles out
+  of 18,395, with no exception. A slot indexes the blob's bone list, which uses the same bone numbers as the
+  mesh's skinning palette. The blob holds at most 16 bones.</li>
+<li><strong>The frame stencil.</strong> n0 - n3 are not constraints. The solver rebuilds each particle's normal as
+  normalize(a × c + c × b + b × d + d × a), where a - d are the vectors to n0, n1, n2 and n3 (the fan runs
+  n0, n2, n1, n3). The tangent is normalize(P[n0] − P[n1]). A slot that names the particle itself contributes
+  nothing, which is how a particle with fewer neighbours is padded (10,409 of 73,580 slots).</li>
+<li><strong>Constraints.</strong> On all 44,937 edges, wi = invMass_i / (invMass_i + invMass_j), wi + wj = 1, and rest equals
+  the exact rest distance. No edge joins two pinned particles.</li>
+<li><strong>Batches.</strong> The eight counts add up to the edge count, and no particle appears twice inside one batch (118
+  of 118 files), so each batch is solved one edge per thread with no write conflict. Batches 0 - 3 hold the
+  structural edges and 4 - 7 the shear edges: none of the 23,680 edges in batches 0 - 3 is a quad diagonal,
+  against 17,524 of the 21,257 in batches 4 - 7. At most 107 edges sit in one batch.</li>
+<li><strong>Bend springs.</strong> Each of the four rest distances is the straight rest distance to the partner. Of the 73,192
+  used slots, 40,544 point two edges away and 9,588 further; 23,060 name the particle itself and do nothing.</li>
+<li><strong>Capsules.</strong> The segment runs from A to A + D in the bind space of its bone. +0x1C is 1/|D|² (354 of 354)
+  and the radius is 1/√(+0x20), from 7.2 to 66 cm (median 15.6). There are at most 12 per file.</li>
+<li><strong>The mesh.</strong> The particles are one draw group of the mesh with the same stem, in the same bundle: every one
+  of 117 files has a group with exactly as many vertices as particles, and particle i sits at vertex i. The
+  mesh stores half-precision positions and the cloth file the full-precision copy: 113 files agree within half
+  a half-float step and the others within 0.015 cm. A pinned particle's bone is always one of its vertex's skin
+  bones (5,052 of 5,052), and in 4,924 cases the heaviest one.</li>
+</ul>
+<h2 id="how-a-cloth-file-is-found">How a cloth file is found</h2>
+<p>Only two places in the code request a CRES resource.</p>
+<p><strong>The skeleton names it.</strong> The skeleton loader (0x504420) reads, after the per-bone bytes, a Havok cloth block,
+then a GPU cloth list:</p>
+<pre><code>0xDCDCFF04  Havok cloth (below)
+0xDCDCFF05  u32 count
+            count x { u32 0xBEEFFEED | u16 length + path (requested as a CRES)
+                      f32, f32, f32, f32, f32, u32, f32, f32, u32, f32 }
+0xDEADDEAD
+0xDCDCFF99  skeleton physics
+</code></pre>
+<p>The ten values have the order and types of the GPUCloth effect node's creation record below: density,
+stretch, shear and bend stiffness, dissipation, iteration count, full and reduced simulation distance, shared
+group and wind factor. The entries are kept 0x30 bytes apart from skeleton +0x30. All 24,378 skeleton sections
+in the bundles carry the block, and 132 of them (93 distinct skeletons: 70 orc, 17 olog, 3 player, 2 Eltariel,
+1 Easterling) list one cloth each. Every listed path has the skeleton's own stem (132 of 132) and is a shipped
+cloth file (93 of 93). Across those entries the iteration count is 2 in 120 of 132 (at most 12), the two
+distances are always 100 and 1000, the shared group is always 0, and the wind factor is 1.0 (130) or 0.5 (2).</p>
+<p><strong>The GPUCloth effect node.</strong> <code>ClientFX.GPUCloth</code> is a <code>Model</code> node (key vt_0x200B358 on the Model key
+vt_0x1DC8910) with twelve properties of its own, stored in the key by its property loader (0x1D549B8):</p>
+<table>
+<thead>
+<tr>
+<th>Key offset</th>
+<th>Property</th>
+<th>Key offset</th>
+<th>Property</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x148</td>
+<td><code>Density</code></td>
+<td>+0x160</td>
+<td><code>FullSimDist</code></td>
+</tr>
+<tr>
+<td>+0x14C</td>
+<td><code>StretchStiffness</code></td>
+<td>+0x164</td>
+<td><code>ReducedSimDist</code></td>
+</tr>
+<tr>
+<td>+0x150</td>
+<td><code>ShearStiffness</code></td>
+<td>+0x168</td>
+<td><code>SharedGroup</code> (int)</td>
+</tr>
+<tr>
+<td>+0x154</td>
+<td><code>BendStiffness</code></td>
+<td>+0x16C</td>
+<td><code>WindFactor</code></td>
+</tr>
+<tr>
+<td>+0x158</td>
+<td><code>Dissipation</code></td>
+<td>+0x170</td>
+<td><code>ApplyLocalWindSources</code> (bool)</td>
+</tr>
+<tr>
+<td>+0x15C</td>
+<td><code>NumIterations</code> (int)</td>
+<td>+0x171</td>
+<td><code>ApplyWindDamping</code> (bool)</td>
+</tr>
+</tbody>
+</table>
+<p>The key's second slot (0x1D54ADC) takes the node's model path, drops its extension, appends <code>.GPUCloth.cres</code>
+and stores the resource handle at +0x140. When the effect starts (0x64FE94) it builds the model, then passes the
+handle and the ten values from Density to WindFactor to the cloth system; the two wind switches are not part
+of that record. The 25 cloth files that no skeleton names are a weapon's cloth, two warg drool files and 22
+banners, flags and hanging clothes in the world.</p>
+<p><strong>Character switches.</strong> <code>Model.EnableCloth</code> (read by 0x111948) is applied by 0x1118E4 to the model's object
+at +0xD0 and to the object at +0x58 of each of the 23 piece slots that start at +0x108.
+<code>Faction/World/Character.ApplyGPUClothTranslations</code> (read by 0x7C439C), when false, makes 0x1B464C0 clear byte
++0x28 of the object at +0xD8 and of the object at +0x60 of each piece slot.</p>
+<h2 id="the-solver">The solver</h2>
+<p>The compute shader is <code>shaders\shadertrees\compute\cloth_physics.fxo</code>. The renderer loads it through the
+materials <code>clothphysics.mat</code> and <code>clothphysicsreset.mat</code> (0x1CA5674, fields +0x808 and +0x820 of the static
+engine-material table at 0x2A37740). The tree holds two <code>cs_5_0</code> programs, <code>fulldeferred_rigid</code> and
+<code>translucent_rigid</code>, and the reset tree one.</p>
+<p><strong>Dispatch.</strong> The dispatcher (0x101A9C0) walks the live cloth instances and groups consecutive instances of the
+same cloth resource, up to eight. For each group 0x10199C0 maps the bone block, fills each instance
+(0x101B440) and dispatches one 256-thread group per instance. The instances of a group share the six buffers
+and the counts. Each has its own 60-byte particle state buffer (<code>k_RwClothPosBuffer0</code> - <code>7</code>, from instance
++0x30) and its own constants.</p>
+<table>
+<thead>
+<tr>
+<th>State offset</th>
+<th>Field</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>position</td>
+</tr>
+<tr>
+<td>+0x0C</td>
+<td>velocity</td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td>normal</td>
+</tr>
+<tr>
+<td>+0x24</td>
+<td>tangent</td>
+</tr>
+<tr>
+<td>+0x30</td>
+<td>position at the start of the step</td>
+</tr>
+</tbody>
+</table>
+<p>The reset program sets position and previous position to the rest position and velocity to zero, and builds
+the frame from the stencil.</p>
+<p><strong>One step</strong>, one thread per particle, positions held in group-shared memory:</p>
+<ol>
+<li>A pinned particle takes P = R(q) · rest + t from its bone. <code>k_mModelObjectNodes</code> holds, per bone, a
+   translation and then a rotation quaternion (32 bytes), indexed by transform count × instance + slot; the
+   dispatcher maps transform count × instance count × 32 bytes of it.</li>
+<li>A free particle integrates F = bend + (wind − v) · |(wind − v) · n| · invMass · Params1.w + Force, then
+   v′ = (v + F · dt) · damping and P′ = P + v′ · dt. The bend term pushes a particle away from each spring
+   partner that is closer than its rest distance: F −= dir · max(Params1.z · (rest − length), 0).</li>
+<li>Two constraint phases sweep the eight batches. The first runs Params3.x iterations when Params3.y ≥ 1e-4,
+   the second Params2.x iterations when Params3.w ≥ 1e-4. Each edge's length is clamped into
+   [rest, rest · k], with k = Params1.x for batches 0 - 3 and Params1.y for batches 4 - 7, and the correction
+   is shared by wi and wj. After each sweep every particle is pushed out of each capsule: the closest point on
+   the segment is Q = A + D · saturate((P − A) · D / |D|²), and when |P − Q|² / r² ≤ 1 the particle moves to
+   Q + (P − Q) · r / |P − Q|. A capsule's A and D are carried by its bone's transform first.</li>
+<li>The normal and tangent are rebuilt from the stencil. Velocity becomes (P′ − P) · Params2.w, which is 1/dt,
+   unless that constant is 0.</li>
+</ol>
+<p>The <code>translucent_rigid</code> program first carries every particle's position, velocity and normal through the
+instance's <code>k_mClothMoveTransform</code> (three rows), the owner's move since the last step. 0x101B440 fills it from
+instance +0x54 - +0x90 when bit 0 of instance +0x48 is set, and with the identity otherwise.
+<code>fulldeferred_rigid</code> has no such step.</p>
+<table>
+<thead>
+<tr>
+<th>Constant</th>
+<th>Object</th>
+<th>cb0 rows</th>
+<th>Contents (per instance)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>k_vClothWind</code></td>
+<td>0x273A910</td>
+<td>0 - 7</td>
+<td>air velocity</td>
+</tr>
+<tr>
+<td><code>k_vClothForce</code></td>
+<td>0x273A9D0</td>
+<td>8 - 15</td>
+<td>acceleration</td>
+</tr>
+<tr>
+<td><code>k_mClothMoveTransform</code></td>
+<td>0x273AA90</td>
+<td>16 - 39</td>
+<td>three rows each</td>
+</tr>
+<tr>
+<td><code>k_vClothSimulationParams1</code></td>
+<td>0x273AC50</td>
+<td>40 - 47</td>
+<td>structural limit, shear limit, bend stiffness, wind drag</td>
+</tr>
+<tr>
+<td><code>k_vClothSimulationParams2</code></td>
+<td>0x273AD10</td>
+<td>48 - 55</td>
+<td>phase-2 iterations, damping, dt, 1/dt</td>
+</tr>
+<tr>
+<td><code>k_vClothSimulationParams3</code></td>
+<td>0x2A3BB00</td>
+<td>56 - 63</td>
+<td>phase-1 iterations, phase-1 gate, -, phase-2 gate</td>
+</tr>
+<tr>
+<td><code>k_vNumClothTranforms</code>, <code>k_vNumClothBoundings</code>, <code>k_numBufferEntries</code></td>
+<td>0x273ADD0, 0x273AE20, 0x273B000</td>
+<td>64</td>
+<td>x, y, z: transforms, capsules, particles</td>
+</tr>
+</tbody>
+</table>
+<p>Each array sits at its constant object +0x38, and the resource of a buffer constant at +0x40. In 0x101B440,
+Params1 = (instance +0xD4, +0xD8, +0xDC / +0x90, +0xD0) and Params2 = (+0xA0, saturate(1 − dt · +0xE0), dt from
++0x98, 1/dt). When no step is pending (instance +0xA0 and +0xA8 both zero), dt and 1/dt are written as 0. The
+transform and capsule counts come from the cloth file's first two blob bytes.</p>
+<h2 id="drawing-simulated-cloth">Drawing simulated cloth</h2>
+<p>The cloth materials use the <code>gpu_cloth</code> shader trees (<code>solid\gpu_cloth\gpuclothspecalphatestnocul.fxo</code>,
+<code>gpuclothspecalphatestnocultintsever.fxo</code>) or the wraith <code>*_gpucloth</code> trees. Every vertex program of the first
+(15 of 15) reads <code>k_ClothPosBuffer</code>, a 48-byte structured buffer indexed by the vertex id, holding position,
+velocity, normal and tangent. Texture coordinates and colour still come from the mesh. The previous-frame
+position for motion vectors is position − velocity · cb0[26].z, and <code>k_ClothInvTransform1</code> - <code>3</code> map the
+result back.</p>
+<h2 id="havok-cloth">Havok Cloth</h2>
+<p>Havok Cloth data sits in the skeleton's <code>0xDCDCFF04</code> block as Havok tagfiles (<code>hclClothData</code>,
+<code>hclSimClothData</code>, skin and mesh-deform operators, capsule colliders, bone-plane constraints); its setup
+classes carry the 2015.1 suffix (<code>hctClothSetup20151Options</code>). 153 of the 24,378 skeleton sections carry
+some. It works in metres, and it reads the wearer's bones through the same piece-to-rig table as the mesh. The
+<code>Cloth.*</code> console variables (<code>MaxTimeStep</code>, <code>SettleNumSteps</code>, <code>RunAsTask</code>, <code>ScaleUpBoneCloth</code> and others) and
+the <code>hcl*Task</code> classes belong to it, not to the GPU cloth.</p>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>How StretchStiffness, ShearStiffness, BendStiffness, Dissipation and Density become instance +0x90 - +0xE0:
+  shipped stretch values are mostly 0.01, while the edge clamp needs Params1.x ≥ 1, which suggests 1 +
+  stretch. The cloth system's creation function would settle it.</li>
+<li>Which of the two solver programs a dispatch uses, and what sets the move-transform bit.</li>
+<li>How the 60-byte solver state becomes the 48-byte buffer the vertex programs read.</li>
+<li><code>k_mModelObjectNodes</code> declares 128 float4s (64 bones). A group of more than four instances of a 16-bone cloth
+  would need more; whether the dispatcher limits groups by bone count is unread.</li>
+<li>How the world's banners and flags reach the loader, since no skeleton names them.</li>
+<li>What the PRTS, LOCT, SSTR and HAIR buffers mean; only their shapes and paths are known.</li>
+<li>Which of the per-piece objects at +0x58 and +0x60 is the GPU cloth instance.</li>
+</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
