@@ -1,0 +1,589 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The mission start screen - Shadow of War engine reference</title><meta name="description" content="The game&#x27;s own &quot;start this mission?&quot; screen: how a mission start reaches the quest-start menu layer, the layer object, its modes and actions, which captains it names, the 3D stage where they face each other, a sim event as it sits in memory, and the Army screen&#x27;s Kill, Ambush and Reinforce orders that run through the same layer."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<a href="https://sow-ce.github.io/">Home</a>
+<h2>Foundations</h2>
+<a href="overview.html" data-p="overview">About this reference</a>
+<a href="builds.html" data-p="builds">Game builds: Steam, GOG and Microsoft Store</a>
+<a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
+<a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
+<a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
+<a href="resource-streaming.html" data-p="resource-streaming">Resource streaming, bundles and the file system</a>
+<a href="archives-formats.html" data-p="archives-formats">Archives and file formats</a>
+<a href="gamedb.html" data-p="gamedb">GameDB: schema, records and field bindings</a>
+<a href="world.html" data-p="world">World: regions, layers, placements and world objects</a>
+<a href="scripting.html" data-p="scripting">Scripting: HavokScript, world scripts and natives</a>
+<h2>Graphics, media and motion</h2>
+<a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
+<a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
+<a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
+<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
+<h2>Gameplay systems</h2>
+<a href="characters.html" data-p="characters">Characters, the player and the camera</a>
+<a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
+<a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
+<a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
+<a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
+<a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
+<a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="haedirs.html" data-p="haedirs">Haedirs: towers, seeing stones and fast travel</a>
+<a href="outposts.html" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
+<a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="quest-start-screen.html" class="cur" data-p="quest-start-screen">The mission start screen</a>
+<a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="the-mission-start-screen">The mission start screen</h1><p class=\"lede\">The game&#x27;s own &quot;start this mission?&quot; screen: how a mission start reaches the quest-start menu layer, the layer object, its modes and actions, which captains it names, the 3D stage where they face each other, a sim event as it sits in memory, and the Army screen&#x27;s Kill, Ambush and Reinforce orders that run through the same layer.</p>
+<p>Before a nemesis mission starts, the game shows a confirmation screen: a 2D card for one captain, two captains or an
+Army-screen order, over a 3D stage where the mission's captains walk out and face each other. The screen is one menu
+layer, <code>CUIQuestStartLayer</code>, driven by the quest's <code>WorldUIConfirmSequence</code> and by the mission's sim event; the same
+layer confirms the Army screen's orders. Menu layers in general are described in User interface: Scaleform, menus and
+the debug menu.</p>
+<h2 id="how-a-mission-start-reaches-the-screen">How a mission start reaches the screen</h2>
+<ul>
+<li><strong>From the world.</strong> The quest-confirm object <code>[base+0x25D8E60]</code> holds the placed quest at <code>+0x168</code>. Its input
+  handler 0x7D4BA4 (input code 0xEF) runs 0x1A06BFC: a quest whose <code>WorldUIConfirmSequence</code> is null starts at once
+  (0x189161C); otherwise 0x19F0E98(placed quest) fills the quest's jobs and its <code>PresentationOnConfirm</code> plays. That
+  presentation's callback 0x434CF0 (event 4) runs 0x1A07DEC, which enters the flow only when the sequence is set:
+  0x17BDF6C(<code>[player+0x2F98]</code>, quest).</li>
+<li><strong>0x17BDF6C picks the screen.</strong> It takes the quest's <code>StartLayers</code> when set; otherwise ActivationType 5 gives the
+  matchmaking layer and 6 the online arena layer, a fort quest the <code>QuestStartFort_Full</code> layer list, and anything else
+  <code>QuestStart</code>. It queues the push at <code>[menu+0x5B0]</code>, runs 0x188F2C0 -&gt; 0x188F2CC(UIManager, quest), which hands the
+  quest to the matchmaking layer (<code>+0xEA0</code>) and the online arena layer (<code>+0x1C338</code>) as well and runs the setup
+  0x18E493C(layer, quest), and sets <code>+0x60</code> of the player component it was given to 6.</li>
+<li><strong>The push.</strong> 0x18BB000(menu, layer record) pushes at once (0x31A034) when <code>[menu+0x728]</code> is set, else queues the
+  record at <code>[menu+0x568]</code>.</li>
+<li><strong>Two more doors.</strong> The console command <code>UI.EnterQuestStartFlow</code> (0x17C09BC) takes the region's <code>FortAssaultQuest</code>,
+  runs 0x19F0E98(placed) and then 0x17BDF6C with <code>[placed+0x258]</code>. The Army screen's <code>ActionDemoBeginAssaultSetup</code>
+  (0x189907C -&gt; 0x188BCC8) runs 0x19F0E98, 0x188F2C0 and 0x18BB15C -&gt; 0x18BB000.</li>
+<li><strong>The setup runs before the push.</strong> The layer builds its request (below) in the setup and applies it when it
+  enters (its enter method reads <code>+0xA10</code>).</li>
+</ul>
+<h2 id="the-layer-object">The layer object</h2>
+<p>The layer factory 0x7219D0 matches the category global 0x27011B8, allocates 0xE720 bytes and runs the constructor
+0x18E2C70 (string <code>CUIQuestStartLayer::CUIQuestStartLayer</code>). The menu's layer list and stack hold the object plus
+0x48 (every caller of the layer lookup 0x466758 subtracts 0x48), so the menu-layer fields <code>+0x6B8</code> (the menu) and
+<code>+0x6C0</code> (the layer record) sit at <code>+0x700</code> and <code>+0x708</code> of the object. Offsets below are on the object.</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Vtable</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>0x1F7E0F8</td>
+<td>vf0 the destructor 0x18E2EAC, vf1 the tick 0x326030</td>
+</tr>
+<tr>
+<td>+0x48</td>
+<td>0x1F7E110</td>
+<td>the menu-layer part (base vtable 0x1DC7EE8)</td>
+</tr>
+<tr>
+<td>+0x50</td>
+<td>0x1F7E108</td>
+<td></td>
+</tr>
+<tr>
+<td>+0x58</td>
+<td>0x1F7E220</td>
+<td>the content widgets reach the layer through it</td>
+</tr>
+<tr>
+<td>+0x558</td>
+<td>0x1F7E210</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>On the menu-layer vtable 0x1F7E110: vf12 0x7D507C takes raw input (0x21 = Cancel; all input is swallowed while
+<code>+0xE710</code> is set); vf19 0x31C290 is the action handler (the base slot 0x7F4660 returns 0); vf27 0x31CE70 refreshes the
+prompt bar; vf28 0x31B324 runs when the layer is covered; vf29 0x328484 is the enter method (widgets, the <code>+0xA10</code>
+request, the <code>QuestStartScreenKey</code> sound; coming back from the war-upgrades layer it recomputes the mode); vf30
+0x327D74 is the exit method (clears <code>+0x6BF8</code>, <code>+0x6C00</code>, <code>+0xE710</code> and <code>+0xE718</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0xA10</td>
+<td>the request, 0x70 bytes, built by 0x17BCCB0 (below)</td>
+</tr>
+<tr>
+<td>+0xA18 / +0xDC0 / +0x1168 / +0x1510</td>
+<td>the content widgets: General, Single, Duel, SimEventAugment</td>
+</tr>
+<tr>
+<td>+0x18B8</td>
+<td>the prompt widget</td>
+</tr>
+<tr>
+<td>+0x6BF8</td>
+<td>the SimEvent record (<code>[event+0x48]</code>), orders only</td>
+</tr>
+<tr>
+<td>+0x6C00</td>
+<td>the assignment-picker entry an augment chose; the second argument of the order's Create / Confirm presentation</td>
+</tr>
+<tr>
+<td>+0x6C08</td>
+<td>the <code>Quest/Quests</code> record (0 for orders)</td>
+</tr>
+<tr>
+<td>+0x6C10</td>
+<td>the mode</td>
+</tr>
+<tr>
+<td>+0x6C18 / +0x6C28</td>
+<td>member keys A and B: {army record, pool index}, index -1 when empty</td>
+</tr>
+<tr>
+<td>+0xE710</td>
+<td>waiting on the confirm or cancel sequence</td>
+</tr>
+<tr>
+<td>+0xE711</td>
+<td>confirmed while matchmaking was pushed</td>
+</tr>
+<tr>
+<td>+0xE718</td>
+<td>a pending summary image</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The tick commits.</strong> While <code>+0xE710</code> is set, vf1 waits for the presentation (<code>[[base+0x26FFB60]+0x3F0]</code>, its
+<code>+0x222</code> set while it plays) and then commits: an order through 0x18911FC (create) or 0x18911B0 (augment) and back to
+the Army screen (0x18BB21C, 0x31A3FC); a quest through 0x188C060, which leaves the menu through <code>[player+0x2F98]</code>.</p>
+<h3 id="modes">Modes</h3>
+<p>Every one of the 15 instructions that touch <code>+0x6C10</code> was read; the decision block is 0x18E4B4B .. 0x18E4BF2.</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>When</th>
+<th>Content widget</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>any</td>
+<td>the quest's <code>StartScreen</code> is non-zero (read from <code>[placed+0x260]</code>, else the record): that value</td>
+<td></td>
+</tr>
+<tr>
+<td>5 / 6</td>
+<td>a fort quest: ActivationType 5 or 6 gives 6, else 5</td>
+<td>the fort-assault prompt (0x77799C)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>an Army-screen order is pending: create (0x7C6860) or augment (0x7B478C); the order setups 0x18E4CB8 / 0x18E4DA4 also set it</td>
+<td>Augment (0x7DBFF4)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>members A and B both exist and neither carries the dead mark, flag bit 21 (0x1162D1C; see The Nemesis system)</td>
+<td>Duel (0x7DBF1C)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>member A exists without bit 21</td>
+<td>Single (0x7DBF54)</td>
+</tr>
+<tr>
+<td>1</td>
+<td>otherwise</td>
+<td>General (0x7DBFA8)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>only as a <code>StartScreen</code> value</td>
+<td>Single with another prompt (0xDAB860)</td>
+</tr>
+</tbody>
+</table>
+<p>The widgets' quest text (name, description, icon) is written by 0x18E356C, which takes the description from the
+quest text resolver (see User interface: Scaleform, menus and the debug menu, "Quest text").</p>
+<h3 id="actions">Actions</h3>
+<p>Confirm is a menu action, dispatched through vf19 from the layer record's <code>Action*</code> fields.</p>
+<ul>
+<li><strong><code>ActionStartQuest</code>.</strong> A fort quest first checks its slots, and an empty slot opens the message box
+  <code>UI_FortAssault</code> / <code>UI_FortDefense_EmptySlots</code> (callback 0x18E3BC8). The start runs 0x777878 -&gt; 0x116E7A4 (through
+  <code>[placed+0x180]</code> -&gt; 0x7DB0E4, else 0x5BBF64). Then the record's <code>EventSetup.ConfirmOrderEvt</code> runs 0x777954 -&gt;
+  0x7780B8 -&gt; 0x7C0624, which walks the current sequence's <code>SquenceBranches</code>: the branch whose <code>RequiredEvent</code> is that
+  event gives <code>NextSequence</code> (<code>PresistSequenceData</code> -&gt; <code>+0x223</code>), and 0x798254 plays it. If no presentation takes the
+  event, 0x188C060 leaves the screen at once.</li>
+<li><strong><code>ActionConfirmOrders</code>.</strong> Takes the pending event, reveals a spy (<code>RevealSpy</code>) when the order's captain is one, then
+  plays the event's <code>ConfirmWUIPresentation</code> with <code>+0x6C00</code> (0xD604F0).</li>
+<li><strong>Cancel</strong> (raw input 0x21). A quest runs 0x1891E58 (not while matchmaking is pushed); an order runs
+  0x1B59EF4(<code>FS+0x20</code>) and 0x1B59F50(<code>FS+0x28</code>). Then <code>CancelOrderEvt</code> goes through the same branches.</li>
+<li><strong>The others.</strong> <code>ChangeSelectionDirection</code> moves the highlight between A and B, and only onto a captain whose name
+  is known (<code>[FM+0x510] &amp; 1</code>). <code>SetDetailState</code> runs 0x188EEF4(.., 2). <code>SetTarget</code> is 0x18928A8 and <code>ClearTarget</code>
+  0x188B0C8.</li>
+<li><strong>The prompt bar.</strong> The push 0x31A034 -&gt; 0x31D85C(<code>menu+0x6FD0</code>, record) feeds the record's
+  <code>MenuSelectionPredicates</code> to the menu selection; vf27 refreshes it (0x320B08), and so does 0x31A3FC after a set or
+  clear of the target.</li>
+</ul>
+<p><strong>No captain cycling here.</strong> A fort assault's slot edits belong to the war-upgrades layer (vtable 0x1F895C0): its enter
+method 0x1937C4C copies the quest-start layer's <code>+0x6C08</code> into its own <code>+0x11890</code>, and on return the quest-start layer
+recomputes mode 5 or 6.</p>
+<h2 id="who-the-screen-names">Who the screen names</h2>
+<p><strong>The setup's two keys</strong> (0x18E493C; it tests no job and no alias). With a sim event, the event's participants by
+position give the keys: entry 0 is A and entry 1 is B (0x61D0F8(UIManager, quest, first) -&gt; key 0x400818). A
+participant counts only when it is filled (<code>[p+0x3A]</code> bits 3 and 0) and its slot's follower rule holds: 0x61EABC reads
+the slot's <code>ExclusiveMustBePlayerFollower</code> (0 any, 1 must be the player's follower, flag bit 27 through 0x114E020, 2
+must not). Without an event the keys come from <code>[placed+0x1A8]</code> / <code>[placed+0x1B8]</code>, then the holder
+<code>[placed+0x430]</code>, then the quest's job entries 0 and 1.</p>
+<p><strong>The request</strong> (<code>+0xA10</code>, 0x70 bytes):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>the faction</td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>0xB</td>
+</tr>
+<tr>
+<td>+0x0C</td>
+<td>flags: 0x40 a quest, 0x80 an order</td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td>ONE named participant (A when valid, else B; 0x18E4C12 ..) as {army, row, seat}, when he has a row (<code>[FM+0x268]</code>, seat byte <code>FM+0x51B</code>)</td>
+</tr>
+<tr>
+<td>+0x28 / +0x30</td>
+<td>otherwise the same participant as {army <code>[FM+0x178]</code>, pool index <code>[FM+0x174]</code>}</td>
+</tr>
+<tr>
+<td>+0x40</td>
+<td>key A (orders)</td>
+</tr>
+<tr>
+<td>+0x58</td>
+<td>the sequence: the <code>WorldUIConfirmSequence</code> of the placed quest's record, else of the record (accessor 0x18E3520, read at 0x18E4B18)</td>
+</tr>
+</tbody>
+</table>
+<p>It is applied by 0x18BB21C -&gt; 0x1154EA8(<code>menu+0x6FD0</code>) and by 0x188E818 -&gt; 0x18321E0(<code>[[base+0x26FFB60]+0x340]</code>,
+request, 6), the world-UI stage controller of the Army screen.</p>
+<h2 id="the-3d-stage">The 3D stage</h2>
+<p><strong>Records.</strong>
+- <code>Faction/World/Presentation/Sequence</code>: <code>Bundle</code>, <code>SimEventPicker</code>, <code>QuestPicker</code>, <code>InteractionPointsPicker</code>,
+  <code>WorldAlignmentSetup</code>, <code>SquenceBranches</code>, <code>ResetSpawnTransforms</code>, <code>AllowCursor</code>, <code>Steps</code>.
+- <code>Faction/World/Presentation/Step</code>: <code>Advance</code>, <code>Length</code>, <code>GlobalSoundKey</code>, <code>LoadGarrisonLoot</code>, <code>LoadUnpackedLoot</code>,
+  <code>FadeAction</code>, <code>FadeColor</code>, <code>FadeDuration</code>, <code>CameraState</code>, <code>CameraContext</code>, <code>Presentations</code>
+  (<code>Faction/Events/Replay/Presentation</code>).
+- Branches (<code>_StructuresWorldUIPresentationBranch</code>): <code>RequiredEvent</code> (Confirm or Cancel), <code>NextSequence</code>,
+  <code>PresistSequenceData</code>.</p>
+<p><strong>Which quest starts on which stage</strong> (<code>Quest/Quests.WorldUIConfirmSequence</code>, shipped database):</p>
+<table>
+<thead>
+<tr>
+<th>Sequence</th>
+<th>Quests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single participant</td>
+<td>1,696 (the outpost missions among them)</td>
+</tr>
+<tr>
+<td>Dual participant</td>
+<td>230 (chases, invasions, raids)</td>
+</tr>
+<tr>
+<td>StoryMission</td>
+<td>163</td>
+</tr>
+<tr>
+<td>FortAssault</td>
+<td>26</td>
+</tr>
+<tr>
+<td>Gauntlet</td>
+<td>21</td>
+</tr>
+<tr>
+<td>StoryMission_DLC3</td>
+<td>11</td>
+</tr>
+<tr>
+<td>FortDefense</td>
+<td>6</td>
+</tr>
+<tr>
+<td>FortAssault_R1 / FortDefense_R2</td>
+<td>1 each</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Single and dual.</strong> <code>QS_SingleParticipant_Base_WUIP</code> aligns on <code>Job_Subject_Or_Vendetta</code>, branches [25] / [26].
+<code>QS_DualParticipant_Base_WUIP</code> aligns on <code>Job_SubjectAndOther</code>; its participants list <code>MCL_Job_SubjectOther</code> holds
+<code>MC_Job_Subject</code>, <code>MC_Job_Other</code> and <code>MC_Job_Vendetta</code>, and <code>MC_Job_Other</code> -&gt;
+<code>_StructuresFaction.HierarchyPreviewTypeStatePredicate[1311]</code> -&gt; the member state <code>Job_Other</code> {<code>IncludedQuestJob</code>
+PS_Other, <code>IncludeHenchman</code> False}; <code>Job_Subject</code> names PS_Subject. The face-off alignment picker
+<code>QS_DualParticipant_Faceoff</code> has 12 entries by preview type, the idles are <code>QS_DualParticipant_Idle_A</code> / <code>_B</code>, the
+branches [2] / [3]. Neither base filters by its <code>SimEventPicker</code> or <code>QuestPicker</code>: the only field set on either is
+<code>UseQuestTrigger</code> (the quest the player triggered). The Army screen's orders have their own scenes
+(<code>AS_SingleParticipant_Ambush_Create_WUIP</code> / <code>_Confirm_WUIP</code>, <code>AS_SingleParticipant_Backup_*</code>), and a start that shows
+two captains confirms on <code>QS_DualParticipant_Confirm_WUIP</code>.</p>
+<p><strong>The stage's captains are <code>CWorldUICharacter</code> objects.</strong> The class test 0x2CF520 walks the type chain at <code>[obj+0x78]</code>
+to the node 0x2670C40 (name <code>CWorldUICharacter</code>; parents <code>WorldUIInteractable</code> -&gt; <code>WorldMapNavMarker</code> -&gt; <code>GameBase</code> -&gt;
+<code>BaseClass</code>). The 219 member-state records (fields <code>IncludedQuestJob</code>, <code>DominationSubject</code>, <code>OrdersMode</code>,
+<code>FortAssaultMode</code>, <code>Highlighted</code>, <code>Detail</code>, <code>IncludedMode</code> ...) are tested by 0x366D80, the only caller of the
+<code>IncludedQuestJob</code> (0x367A88, 0x683098) and <code>DominationSubject</code> (0x3681E4) accessors.</p>
+<p><strong><code>IncludedQuestJob</code> accepts a job or its alias, on three contexts the character carries</strong> (0x170424(character, job);
+the member is the character's vf56):</p>
+<table>
+<thead>
+<tr>
+<th>Character field</th>
+<th>Context</th>
+<th>Match</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>+0x6B8</code></td>
+<td>the placed quest</td>
+<td>0x19F6818: the member key at entry <code>+0x20</code> must be equal and the job must be entry <code>+0x08</code> or <code>+0x10</code>; a second list there passes an entry whose <code>Quest/Jobs/List</code> names the job, with no member check</td>
+</tr>
+<tr>
+<td><code>+0x6E0</code></td>
+<td>the sim event</td>
+<td>0x1BEFBDC -&gt; 0x34FB7C finds the entry whose <code>+0x28</code> key is the member, then 0x620EC8 checks job == <code>+0x08</code> or <code>+0x10</code></td>
+</tr>
+<tr>
+<td><code>+0x708</code></td>
+<td>the pending order</td>
+<td>0x1B5CDEC checks <code>[o+0x60]</code> is the member and the job is in <code>[o+0x68]</code>'s group (0x1B5B510)</td>
+</tr>
+</tbody>
+</table>
+<p>So PS_Subject matches an outpost commander through the alias of his job, <code>SC_Subject_OutpostCommander</code>.
+<code>IncludeHenchman</code> False (0x1822B8C) refuses a member whose master (0x7E0614, <code>[FM+0x2C8]</code>) holds the job too.</p>
+<p><strong>The player's follower on the dual stage is the game's own case.</strong> Ten sim events put a PS_Other-aliased job with
+<code>PlayerFollower</code> True in slot 1: <code>Feast</code>, <code>Feast_Origin</code>, <code>ArenaFollower</code>, <code>DuelFromGarrisonExistingFollower</code> and six
+<code>DuelFromFD</code> / <code>DuelIntoHierarchy</code> <code>*NonLegFoll</code> events. The feast's 19 quests and the arena's 7 (<code>SM_Arena</code>,
+<code>MI_Feast_00</code> ...) all start on <code>QS_DualParticipant_Base_WUIP</code>. The member state <code>QuestJob_PS_SubjOther</code> {PS_Subject,
+PS_Other, PS_Ambusher} is linked by nothing in the database, so no stage shows an ambusher by job.</p>
+<h2 id="a-sim-event-in-memory">A sim event in memory</h2>
+<p>An army's sim events hang off its army context (see The Nemesis system, "Turns and sim events"); the member on an event
+points at it from <code>[FM+0x4F0]</code>. Read live on five events:</p>
+<table>
+<thead>
+<tr>
+<th>Event offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>vtable 0x1DBC8A8</td>
+</tr>
+<tr>
+<td>+0x18 / +0x20</td>
+<td>participant entries, begin / end, 0x40 bytes each</td>
+</tr>
+<tr>
+<td>+0x40</td>
+<td>the <code>Faction/Definition</code></td>
+</tr>
+<tr>
+<td>+0x48</td>
+<td>the <code>Faction/Events/SimEvent</code> record</td>
+</tr>
+<tr>
+<td>+0x50 / +0x58</td>
+<td>the <code>Quest/Quests</code> record (twice)</td>
+</tr>
+<tr>
+<td>+0x60</td>
+<td>the <code>SimEventGenerationType</code> (<code>IS_Outpost_OP1</code>, <code>PowerStruggle_Act2</code>, <code>NeverEndingShadowWar</code>)</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Entry offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>its slot: a <code>Faction/Events/SimEventParticipant</code> record (<code>KillOlogs_Outpost_01_01</code>, <code>Raid_Caragors_01</code>)</td>
+</tr>
+<tr>
+<td>+0x08 / +0x10</td>
+<td>the job and its alias (<code>SC_Subject_OutpostCommander</code> / PS_Subject)</td>
+</tr>
+<tr>
+<td>+0x20</td>
+<td>a <code>Faction/FortUpgrade/Definitions</code> record on fort-defence entries, else 0</td>
+</tr>
+<tr>
+<td>+0x28 / +0x30</td>
+<td>the member key: army record, u32 pool index</td>
+</tr>
+<tr>
+<td>+0x38</td>
+<td>u16 0xFFFF</td>
+</tr>
+<tr>
+<td>+0x3A</td>
+<td>flags: bits 0 and 3 = filled (0x29 on 22 of 23 entries read, 0x69 on one)</td>
+</tr>
+</tbody>
+</table>
+<p>In one save, eight outpost events were up, each with one entry, the commander; in the same pass <code>Raid_Caragors</code> and
+<code>Execution2</code> had two (PS_Subject-aliased, then PS_Other-aliased) and <code>FortDefense</code> 13. Over every army: 44 events with
+one entry, 4 with two, 3 with 13. An entry names its slot record, so a member on an event always sits in a slot that
+is a record of <code>Faction/Events/SimEventParticipant</code>.</p>
+<h2 id="assignment-and-the-army-screen-s-orders">Assignment, and the Army screen's orders</h2>
+<h3 id="the-engine-s-assignment">The engine's assignment</h3>
+<p><strong>0x1BF02E8(event, jobGroup, member)</strong>, read whole:</p>
+<ol>
+<li>It refuses a member already on the event (0x596BC4).</li>
+<li>It walks the event record's (<code>[event+0x48]</code>) <code>Participants</code> for the slot whose <code>JobGroup</code> is the argument (0x61F5A4).</li>
+<li>It takes the group's first job that no entry holds yet (0x620E84).</li>
+<li>It builds the entry {slot, job, alias, member} with 0x1BF0C98.</li>
+<li>When the slot's follower rule passes (0x61EABC), it runs 0x61CED0 (below).</li>
+<li>It pushes the entry onto the event's participants (<code>+0x18</code>).</li>
+<li>0x1BEDF34 switches a full event to <code>MaxParticipantsNewSimEvent</code> (log string "Upgrading SimEvent %s to use record
+   %s") when <code>MaxParticipants</code> is above 0 and the count reaches it. It returns 1.</li>
+</ol>
+<p><strong>0x61CED0(member, event, slot)</strong> is the member's side:
+- If <code>[FM+0x4F0]</code> holds another event, it ends that event (0x61DB24(other, 1)): a member is on one event at a time.
+- It moves the member's list node at <code>FM+0x4D0</code> onto this event (0x40E6E4 unlinks and relinks it, <code>+0x20</code> = the
+  event), so <code>FM+0x4F0</code> then names this event.
+- It clears <code>FM+0x51D</code>, sets the interrogation state 0xB (0x23 when <code>[FM+0x510] &amp; 1</code>), hands the slot's <code>Purposes</code> to
+  0x1B5E36C(FS, member) unless flag bit 2 is set, and 0x4AA210(<code>GM+0x6C80</code>, member) can raise a UI refresh flag.</p>
+<p><strong>Ending an event</strong> is 0x61DB24(event, force), 40 callers (the member's death 0x626E38, the seat move 0x61E13C,
+unseating 0x61B274, the per-turn expiry 0x1BF00C0, the follower setter 0x7D52B0 ...), all with force 1. It returns at
+once when <code>[event+0x9D]</code> is set; otherwise 0x61EE0C(FS, event) unbinds the event's quest (0x4FA558 the placed quest,
+0x7DD708 unless it is active and not forced, then 0x7E04B4 on the quest system), fires the event's <code>EventOnClear</code> for
+each participant, starts each participant's <code>ActivateCooldownOnFinish</code> cooldowns and frees the event (0x61EBA0, its
+destructor, 0x596E84). The per-turn expiry 0x1BF00C0 (the participants' <code>EventOnSimEventTimeOut</code> events, 0x622A84,
+then the end) acts only once the end turn <code>[event+0x98]</code> has passed; it read 0 on 7 of 7 outpost events, so those never
+expire on their own.</p>
+<h3 id="the-orders">The orders</h3>
+<p>The Army screen offers three orders that touch missions, each a menu-selection predicate with a mode type:</p>
+<table>
+<thead>
+<tr>
+<th>Order</th>
+<th>Prompt</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kill</td>
+<td><code>Interface/Menu/MenuSelection/Prompt::OrdersAssassinate</code>, "Command {1} to Kill {2}.", mode <code>Orders_Success_Assassinate</code></td>
+<td>a follower or spy against a living enemy captain who is not on a mission quest; creates one of six attacks at equal weight (<code>Duel</code>, <code>CampRaid2</code>, <code>Raid_Caragors</code>, <code>Raid_Checkpoint</code>, <code>Raid_Supplies</code>, <code>Chase</code>): Army-screen vf19 0x1898A38 -&gt; 0x1899114 -&gt; 0x18911FC -&gt; 0x61DE2C(context, candidate, player-created 1)</td>
+</tr>
+<tr>
+<td>Ambush</td>
+<td><code>Interface/Menu/MenuSelection/Predicate/FactionMember::OrdersJobAmbusher</code>, prompt "Ambush", ResultAction <code>OrdersAugmentMission</code>, mode <code>Orders_Success_JobAmbusher</code></td>
+<td>adds the captain to an existing mission's ambusher slot</td>
+</tr>
+<tr>
+<td>Reinforce</td>
+<td>mode <code>Orders_Success_JobBackup</code></td>
+<td>adds the captain to an existing follower mission's backup slot</td>
+</tr>
+</tbody>
+</table>
+<p>Only the <code>Duel</code> of the six attacks moves a seat (Actions 10, the follower as the other side, result
+<code>SubjectKilledByOther</code>); in the others a follower's win kills the enemy (Actions 7).</p>
+<p><strong>The augment chain</strong> (dispatcher 0x1899114, augment branch):</p>
+<ol>
+<li><code>PassSimEventAssignToJob</code> (0x18BDD1C) and the event's <code>PlayerAssignmentJobGroupPicker</code> (0x189D5E0) feed 0x188ABC4,
+   which builds the pending order at <code>FS+0x28</code>: <code>+0x38</code> the event, <code>+0x60</code> the member, <code>+0x68</code> the job group.</li>
+<li><code>CreateWUIPresentation</code> (0x1BEDED4) plays the order's 3D scene.</li>
+<li>The quest-start layer opens in mode 4 (0x4666E8 -&gt; 0x466758 -&gt; 0x18E4CB8 -&gt; 0x18BB000).</li>
+<li>On confirm, 0x18911B0 runs 0x1BF02E8(<code>[p+0x38]</code>, <code>[p+0x68]</code>, <code>[p+0x60]</code>) and then 0x1B59F50(<code>FS+0x28</code>).</li>
+<li>The create branch runs 0x18974EC -&gt; 0x1898194 (<code>PassSimEventCreationData</code>) -&gt; ... -&gt; 0x18911FC -&gt; 0x61DE2C.</li>
+</ol>
+<p><strong>The data.</strong>
+- The mode type <code>Interface/HierarchyMode/Type::Orders_Success_JobAmbusher</code> has the predicates
+  <code>CaptIsCaptainOrWCFollower_HLIsEnemyOnInactiveSE</code>, the fail predicates <code>IsCaptiveOutpostPos</code> and
+  <code>IsCaptiveEasterling</code>, <code>PassSimEventAssignToJob</code> true and the objective text <code>UI_Orders_JobAmbusher</code>. The other
+  modes are <code>Orders_Success_JobBackup</code>, <code>Orders_Failure_AmbusherFull</code> / <code>_Active</code> and <code>Orders_Failure_BackupFull</code> /
+  <code>_Active</code>.
+- The pickers: <code>_StructuresFaction.SimEventAssignJobGroupPicker</code> holds <code>Entry</code> items, each a
+  <code>SimEventAssignJobGroupEntry</code> {<code>Job</code>: the target's job, <code>IsFollower</code>, <code>AssignJobGroup</code>}. There are 47 entries, and
+  412 of the 431 sim events have an empty picker. <code>Raid_Caragors</code>' picker [103]: entry 24, a PS_Subject or PS_Other
+  enemy -&gt; <code>AmbushGroup</code>; entry 25, a PS_Subject follower -&gt; <code>BackupGroup</code>; entry 26, a PS_Other follower -&gt;
+  <code>Backup2Group</code>.
+- The database has ten job groups. <code>AmbushGroup</code> {PS_Ambusher_01, _02} is gated to Act 2 (<code>GlobalVarPredicate Act2</code>)
+  with the objective override <code>Quest_JobGroup_AmbushObjective</code>; <code>BackupGroup</code> {PS_Backup_01, _02} and <code>Backup2Group</code>
+  {PS_Backup2_01, _02} share <code>Quest_JobGroup_BackupObjective</code>. All three weigh <code>QuantityWeights</code> [90, 8, 2]. By the
+  slots' <code>JobGroup</code>: <code>AmbushGroup</code> 19 events, <code>BackupGroup</code> 24, <code>Backup2Group</code> 15, the three <code>*Invasion</code> groups 1 each.
+  The ambusher jobs carry <code>OtherJob</code> PS_Subject and <code>OtherMustExist</code>, with no <code>AliasJob</code>; 73 jobs alias PS_Other, and
+  none of the ten groups holds one.
+- The strings: <code>UI_Prompt_JobAmbusher</code> "Ambush", <code>UI_Orders_JobAmbusher</code> "Command {1!s} to ambush the existing
+  {PowerStruggle} Nemesis Mission.", <code>Quest_JobGroup_AmbushObjective</code> "{1!s} is ambushing a {PowerStruggle} Nemesis
+  Mission."; <code>UI_Prompt_JobBackup</code> "Reinforce", <code>UI_Orders_JobBackup</code> "Command {1!s} to reinforce the existing
+  {PSBranded}Follower Mission.", <code>Quest_JobGroup_BackupObjective</code> "{1!s} is reinforcing a {PSBranded} Follower
+  Mission."; <code>UI_Orders_MissionFull</code> "This Nemesis Mission cannot accept any more Ambushers or Reinforcements.".</p>
+<p><strong>An ambusher reaches a mission only through its layer's script and spawners.</strong> <code>duel_00.scripts</code> checks
+<code>QR:GetIsJobGroupAssigned(DBQuestJobGroup.AmbushGroup)</code> and then calls <code>ExMgr_SO:Ambush()</code> (Backup and Backup2
+likewise), with items such as <code>PS_DuelAmbushC2</code> and <code>NemesisStory_Ambush</code>; every duel layer carries spawners for
+PS_Other and the six ambusher and backup jobs (6 of 6). Ambushers enter through per-mission intro branches
+(<code>PS_Intro_Execution_WithAmbusher_SPR</code>, <code>PS_Chase_C2Ambusher_*</code>, <code>PS_FrameAmbusher_ELM</code>).</p>
+<h2 id="outpost-missions">Outpost missions</h2>
+<ul>
+<li><strong>The 50 outpost sim events</strong> (<code>*_Outpost_0&lt;n&gt;</code>, <code>*_UB_OP&lt;n&gt;</code>) have one participant slot each, the commander's.
+  <code>MaxParticipants</code> is 0 on all 50, so the full-event switch above never fires. Each event's assignment picker is its
+  own primary and every one is empty (<code>KillOlogs_Outpost_01</code>: [106]); its Create and Confirm order-scene pickers are
+  empty too (<code>Raid_Caragors</code> has 4 and 4). Their quests start on <code>QS_SingleParticipant_Base_WUIP</code> with <code>StartScreen</code> 0
+  and <code>RequirePlayerConfirmation</code>.</li>
+<li><strong>The 30 outpost layers</strong> (every <code>spawncondition*</code> layer of the six regions) carry 13 spawner jobs each (PS_Subject,
+  the ten <code>SC_&lt;tribe&gt;</code>, <code>Outpost_Commander</code>, <code>SC_DeathThreat</code>) and none for PS_Other, an ambusher or a backup (the six
+  duel layers carry all seven). A spawner asks by alias: the commander's spawner names PS_Subject, his job is
+  <code>SC_Subject_OutpostCommander</code>. So no outpost mission spawns the holder of a second job, at its start or later.</li>
+<li><strong>The outpost layer script has no ambush code</strong> (Nurnen <code>spawnconditionsop1</code>, 3,066 lines: none names Ambush or
+  Backup; it applies events to PS_Subject and <code>SC_Subject_OutpostCommander</code> only).</li>
+<li>The outcome's results name only PS_Subject (<code>ResultPickerJobOther</code> is null on the outpost events).</li>
+</ul>
+<h2 id="open-questions">Open questions</h2>
+<ul>
+<li>Whether the screen opens when the setup sequence above (record 0x4666E8 of <code>[menu+0x518]</code>, layer 0x466758 - 0x48,
+  0x19F0E98 on the placed quest, 0x18E493C, 0x18BB000) is run from outside the game's own callers, on the main thread.</li>
+<li>Whether 0x1B59EF4 and 0x1B59F50 are the order's confirm and cancel; and what plays <code>QS_FortAssault_Edit_Player_WUIP</code>
+  (the war-upgrades layer is the candidate).</li>
+<li>Who fills a stage character's three context cells (<code>+0x6B8</code>, <code>+0x6E0</code>, <code>+0x708</code>); the presentation's setup is the
+  candidate.</li>
+<li>What the second list in the placed quest's job match is for: it passes an entry by <code>Quest/Jobs/List</code> with no member
+  check.</li>
+<li>The event fields not decoded: <code>+0x28</code> (u32 4 on four of five events read, 0x10 on the fort defence), <code>+0x30</code> (16
+  bytes) and the entry's <code>+0x34</code> (0, 1 or larger values).</li>
+<li>Whether an engine function removes one participant entry from an event: the order's cancels act on the pending
+  order only.</li>
+<li>Whether a save keeps a participant entry whose slot, job or group record a later start lacks.</li>
+<li>Which layer owns 0x18DAF8C, a reader of the quest description: it reads <code>[this+0x10110]</code> and <code>[this+0x23558]</code>,
+  past the quest-start layer's 0xE720 bytes.</li>
+</ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
