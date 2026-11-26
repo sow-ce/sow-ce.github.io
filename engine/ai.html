@@ -2,6 +2,7 @@
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
+<a href="builds.html" data-p="builds">Game builds: Steam, GOG and Microsoft Store</a>
 <a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
 <a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
 <a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
@@ -23,11 +24,15 @@
 <a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
 <a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="haedirs.html" data-p="haedirs">Haedirs: towers, seeing stones and fast travel</a>
 <a href="outposts.html" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
 <a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="ai-planning-perception-spawning-and-group-combat">AI: planning, perception, spawning and group combat</h1><p class=\"lede\">How an NPC decides what to do: the planner and its plan tree of steps, target selection and threat, perception, the sighting matrix, alertness and forgetting; how NPCs come into the world through the spawn manager, ambient spawners, spawn channels, templates and summon requests, with gangs, bands and mounts; the AI budget and constants the engine copies at start-up; and the fight pits.</p>
 <p>Every NPC runs one update per frame that selects a target, aims, moves and ticks a tree of planner
@@ -810,6 +815,70 @@ awareness icons and the ranges.</p>
 levels are <code>AI/SpawnAmbient/AlarmLevels</code>: <code>Empty</code>, <code>Low</code>, <code>High</code>, <code>HighWave2</code>, <code>HighWave3</code>, with
 <code>IsElevated</code> true for the three high ones. On the NPC side there is an <code>AreaAlarm</code> service
 (every 0.5 s) and the steps <code>ElevateTransientAlarm</code> and <code>ReactToAreaAlarmLevelChange</code>.</p>
+<h2 id="sides-alignments-the-relation-table-and-teams">Sides: alignments, the relation table and teams</h2>
+<p><strong>The relation table.</strong> <code>[base+0x2A868C0]</code> points to a static object at 0x27977F0: <code>+0x00</code> u32 N, the number of
+<code>Character/Alignments</code> records (52), <code>+0x08</code> a pointer to the N x N byte matrix. It is built once by 0x1C03908, entered
+only by a tail call from 0x1C03BD0 (which stores the pointer, the one write among its 34 references), whose one caller
+0x1B07200 sits in the AI stimulus module. For each alignment record i the builder walks its <code>Alignment</code> rows, each a
+<code>_StructuresRelationship</code> {<code>Stance</code>, turned into a byte by 0x1A98488; <code>Others</code>}, and writes
+<code>matrix[i * N + RecordIndexOf(other)] = stance</code> only while the cell is still 0, so the first row that names a pair
+wins. Because the table is compiled, a later edit of an alignment record reaches nothing. The diagonal: 27 sides are
+friendly to themselves, 5 neutral (<code>Grabbed</code>, <code>Orc_Prisoner</code>, <code>Branded</code>, <code>Explosion_DamageAll</code>, <code>Aligned_DamageAll</code>), 4
+hostile (<code>Troll_Cave</code>, <code>Poison_Barrel_Infight</code>, <code>Trait_Unstable_Follower</code>, <code>Trait_Unstable_Sauron</code>) and 16 unset (0,
+read as 2 by the hit gate). The lookup 0x18BC88(table, row, column) returns the first non-zero cell over the two
+characters' slot ids (the asking side's ids outer), 2 when all are 0 and 0 when either has no side; the hit
+dispatcher's friendly-fire gate drops a hit when it returns 1 (see Combat, "Health and damage").</p>
+<p>The same object holds, inline at <code>+0x818</code>, a 256 x 256 byte cache of relations between live characters, indexed by
+their sighting slot <code>char+0x2BF8</code> (live: follower to enemy 3 on 40 of 40 cells, follower to follower 1 on 380 of 380),
+and a 65,536-bit override set at <code>+0x10818</code>. The cache follows a side change in the same step (a read every second
+showed the new values at once and the old ones again after a reset). 0x1C03BDC(_, a, b) forces one cell to 3 and sets
+its override bit; its one caller is the threat module 0x605D98 (<code>CCharacter::ApplyThreatRecord</code> 0x19B3280, with a
+<code>Combat/Threat</code> record, a target and a float scale).</p>
+<p><strong>Ready-made teams.</strong> The fight pits' <code>Duelist_A</code>, <code>_B</code> and <code>_C</code> are friendly to themselves, hostile to the other two
+both ways and neutral to <code>Spectator</code>; <code>Player</code>, <code>PlayerFollower</code> and <code>Orc_FactionA</code> read the Duelists as 0 or 2, and the
+Duelist rows name neither Talion nor any army. <code>Trait_Unstable_Follower</code> is hostile to itself, the three Duelists,
+<code>Spectator</code>, <code>Orc_FactionA</code>, <code>PlayerFollower</code> and more, and friendly to <code>Player</code>; <code>Poison_Barrel_Infight</code> (the
+free-for-all of the poisoned grog) and <code>Trait_Unstable_Sauron</code> are hostile to <code>Player</code>. Every shipped five-side clique
+of mutually hostile, self-friendly sides contains <code>Player</code> or a follower side.</p>
+<p><strong>A character's side: two stacks.</strong> An NPC (vt_0x1FB3640) keeps a requested stack at <code>char+0x2EC0</code> and the effective
+one at <code>char+0x23E0</code>, both laid out as 7 record pointers (<code>+0x00</code> .. <code>+0x30</code>) and 7 u32 record indices (<code>+0x38</code> ..
+<code>+0x50</code>); 0x18BF0C(stack, slot, record) writes both halves. Slot 6 holds the base side, slot 4 a script override, slot 3
+the Unstable trait's side and slot 2 Hatred (both put there mid-fight by trait catalysts; the refresh's callers include
+the catalyst 0x40D3C4), and slot 0 is the engine's: the NPC update vf119 0x2F79A4 clears it (and may refill it from
+<code>planner+0xA00</code>) when 0x115471C and 0x1A8D1A0 pass. Lower slots sit above higher ones: in a pit fight a trait side in
+slot 3 above the pit's side in slot 4 turned a captain on his own team until the trait's side left.</p>
+<ul>
+<li><code>NPC::SetAlignment</code> 0x7D2ED4 is the script-context check (0x503EF8), a dead test, 0x18BF0C(<code>npc+0x2EC0</code>, 4, record)
+  and 0x440B24(npc, 0); <code>NPC::ResetAlignment</code> 0x7D722C does the same with null. Because of the script-context check,
+  the call works only inside an engine-dispatched script handler (see Scripting).</li>
+<li>The refresh 0x440B24(npc, force), 18 call sites: unforced, it skips while the current attack's
+  <code>_StructuresCombatAIData.AllowAlignmentChange</code> is false, so a request can wait in the requested stack until the next
+  caller. Its source is <code>npc+0x2EC0</code>, or for a ridden mount the rider's effective copy plus
+  <code>Combat/MountData.MountedAlignment</code> in slot 0; 0x440F28 copies it into <code>+0x23E0</code>, the notifiers 0x440F08, 0x440EE4 and
+  0x440CAC run, the planner's <code>+0xA08</code> / <code>+0xAF0</code> are cleared, and the same follows for the mount. A reset sent during
+  an attack therefore lands in the requested stack only, and the effective one keeps the old side until a later
+  refresh.</li>
+<li>Live, 6 of 6 unridden NPCs held requested == effective with the base side in slot 6, and 2 of 2 ridden beasts took
+  their rider's (<code>PlayerFollower_Beast</code> -&gt; <code>PlayerFollower</code>). Two wild wargs carried <code>Aligned_AllFriendly</code> in slot 4
+  outside any script fight, so slot 4 has other writers.</li>
+<li>On Talion <code>char+0x2EC0</code> is something else (the parked inventory while he plays as an orc, see Fight pits), and his
+  planner pointer is a self-pointing container head: the side setters are NPC-only.</li>
+<li><strong>Fall-through.</strong> An override row answers only for the sides it names: the Duelist rows name no Talion and no army,
+  so an enemy captain on <code>Duelist_B</code> still resolves <code>Orc_FactionA</code> -&gt; <code>Player</code> = 3 against Talion, and a follower on a
+  Duelist side resolves <code>PlayerFollower</code> -&gt; <code>Orc_FactionA</code> = 3 against bystanders.</li>
+</ul>
+<p><strong>Making two sides fight.</strong> Putting characters on hostile sides through slot 4 and refreshing does not start a fight
+by itself: friendly NPCs keep no sighting facts about each other, so there is nothing to act on. What the pit script does
+does: the side, a senses cycle and a scripted target. <code>NPC::SetSenses</code> 0x35D6D4(npc, bool) is a dead test, the byte
+<code>+0x2DD5</code> and 0x35D6F8, which combines <code>+0x2DD5</code> .. <code>+0x2DD7</code> into <code>+0x2DD4</code>, flags the perceiver's entry
+<code>idx * 0x38 + 0xB</code> in the table <code>[base+0x26FFBE0]</code> and, when switching off, runs 0x686B94 (the target dropped through
+<code>[npc+0x2D18]</code>, the stimulus list <code>[npc+0x2CE0]+0xD8</code> and the perception block reset). <code>NPC::SetCombatScriptedTarget</code>
+0x1A8DC60(npc, target, 0) (a dead test, the target's combat object 0x11B680, a request 0xF41250(npc, owner, 2) or the
+selector 0x44C644(<code>[npc+0x2D28]</code>, combat object), then the planner 0x1AA1714) creates sighting facts along the targets
+at once (awareness 4, relationship 3); <code>NPC::ClearCombatScriptedTarget</code> 0x1A8B640 undoes it. Three enemy grunts put on
+<code>Duelist_A</code> (two) and <code>Duelist_B</code> (one) this way fought each other within 6 s. <code>CCharacter::SetMinHealthPct</code> 0x19B7294
+(not script-only) sets <code>char+0x2500</code> = pct x the maximum health <code>[combat+0x428]</code>, a floor in health points (1.0 means no
+damage).</p>
 <h2 id="ai-services">AI services</h2>
 <p>The service set <code>[npc+0x2D00]</code> is a list of 0x18-byte entries <code>{service, f64 due time}</code>; 0x2FD960
 runs a service's vf4 only when the world time passes its due time, so services are time-sliced
@@ -1166,6 +1235,62 @@ player skin's <code>AIName</code> is <code>AI/CharacterTypes::Player</code>, whi
 0x1CD454 frees the object (0x4DBD18). Nothing is logged and the summon that asked for it has
 already returned true. With the picker cell empty the model stays <code>AI_Talion</code> (character type
 <code>AI_Talion</code>, tree <code>BasicEnemy</code>) and creation proceeds like any other.</p>
+<h3 id="a-captain-s-body-on-demand">A captain's body on demand</h3>
+<p><code>QueueFmSpawn</code> 0x1A91360(spawn manager, member, <code>&amp;transform</code>, name, callback, int, byte) is the engine's "spawn this
+faction member here", the call the ambush system makes (0x1C7E434, log string "[FACTION|AMBUSH]: ... Requesting to
+spawn faction member %s", which passes itself as the callback). It allocates a 0xB0-byte request (0x3DE238), runs the
+constructor and tail-jumps into the queue push, so its return value is the push's, not the request. The request runs
+later: Execute 0x1A927F8 takes the archetype from the member's own AI class (0x115F788), creates the body (0x1036D0),
+then the brain and configuration and binds member and body (0x1AA20F4). Everything on that path allocates in the
+engine, so it belongs on the main thread.</p>
+<table>
+<thead>
+<tr>
+<th>Request offset (constructor 0x1A90560)</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x00</td>
+<td>vtable 0x1FB3F10</td>
+</tr>
+<tr>
+<td>+0x08</td>
+<td>its queue link {next, previous}, self-linked at construction</td>
+</tr>
+<tr>
+<td>+0x18</td>
+<td>a weak reference to the member (vt_0x1DAB1C0; its target at <code>+0x38</code>), linked into the member's own list at <code>FM+0x08</code> (0x597E84 -&gt; 0x597F00)</td>
+</tr>
+<tr>
+<td>+0x40</td>
+<td>position, f32[3], cm (0x7FD96C)</td>
+</tr>
+<tr>
+<td>+0x4C</td>
+<td>rotation, a quaternion (x, y, z, w) (0x7FE6EC)</td>
+</tr>
+<tr>
+<td>+0x5C</td>
+<td>the name, copied (<code>strncpy_s</code>)</td>
+</tr>
+<tr>
+<td>+0x80</td>
+<td>the callback's weak link (0x1A9028C)</td>
+</tr>
+<tr>
+<td>+0xA8 / +0xAC</td>
+<td>the int and byte arguments</td>
+</tr>
+</tbody>
+</table>
+<p>The transform is seven floats, position then quaternion; <code>CharacterTransform</code> 0x180458(object, out) fills one from an
+object's <code>+0xAC</code> / <code>+0xB8</code> through 0x182110. The queue is a circular intrusive list whose sentinel is the spawn
+manager's <code>+0x98</code>: <code>IntrusiveListPushFront</code> 0x1161ED4(head, node) links <code>request+0x08</code> right after the sentinel and
+asserts "Adding a link that is already inside of a list" when the node is not self-linked. A waiting request is found
+by walking <code>[manager+0x98]</code> back to the sentinel for vtable 0x1FB3F10 with <code>[request+0x38]</code> = the member. The ambient
+spawner skips a member whose body is already in the world (<code>FM+0x48</code> set, with flag bit 1).</p>
 <h3 id="summons">Summons</h3>
 <p>Two script bindings queue spawn requests; neither creates anything itself.</p>
 <ul>
@@ -1526,16 +1651,47 @@ Its layer properties define spawner sets: <code>C1</code> (job <code>PS_Subject<
 <code>Duelist_A</code> (C1), <code>Duelist_B</code> (C2) and <code>Duelist_C</code> (hostile to both, neutral to spectators).</p>
 <ul>
 <li><strong>Timer.</strong> <code>GameData.GauntletTimerValue</code> (150 s) is read at fight start and counted by a script
-  timer in 10 s ticks; with under 135 s left every tick gives both duelists
-  <code>Script_Quest_ArenaDamageScalar</code> (<code>Arena_DamageScalar</code>: +0.15 damage per stack). A timeout is a
-  draw: no global variable is set and the quest awards no items. <code>GauntletTimeRemaining</code> (120) is
-  not read by this script.</li>
+  timer in 10 s ticks; every tick on which <code>ST:GetIntervalRemaining()</code> is below
+  <code>GameData.GauntletTimeRemaining</code> (120) gives both duelists <code>Script_Quest_ArenaDamageScalar</code>
+  (<code>Arena_DamageScalar</code>: +0.15 damage per stack). A timeout is a draw: no global variable is set and
+  the quest awards no items; the newer copy of the script also heals both captains on a timeout and
+  floors them at 50%.</li>
 <li><strong>Outcome.</strong> C2 killed: <code>Gauntlet_BlueOrc_Win</code> on the follower (forced level-up, reward list
   <code>PS_DuelWin_CanChangeRole</code>, <code>LevelsToAdd</code> 0), the objective <code>PS_Gauntlet_Obj</code>, the tier's global
-  variable. Loss: <code>Gauntlet_BlueOrc_Lose</code>, <code>Gauntlet_RedOrc_Win</code> (+1 level, <code>ClearBuilderInstance</code>),
-  <code>AddGauntletEnemy</code> and the picker <code>GauntletEnemy_EnterHierarchy</code> (the champion joins the army).
-  Walking away runs <code>QR:SimulateSimEvent()</code> with the <code>Arena</code> win chance. Dominating either captain
-  ends the fight (<code>SubjectDominated</code> / <code>OtherDominated</code>).</li>
+  variable. Loss: <code>Gauntlet_BlueOrc_Lose</code> on the follower (action 8: he dies, with the event's
+  <code>Resurrection</code> record) and <code>Gauntlet_RedOrc_Win</code> on the champion (<code>LevelsToAdd</code> 1,
+  <code>ClearBuilderInstance</code>, action 2: the champion takes the loser's seat; see Faction-event actions
+  below). Measured in a loss: the champion took the dead follower's exact seat and gained one level.
+  <code>ForceLevelUp</code> adds no level of its own. Walking away runs <code>QR:SimulateSimEvent()</code> with the <code>Arena</code>
+  win chance. Dominating either captain ends the fight (<code>SubjectDominated</code> / <code>OtherDominated</code>).</li>
+<li><strong>Two copies of the script.</strong> The Minas Ithil <code>gauntlet_00.scripts</code> ships in <code>Patch_05</code> (1,332
+  lines) and <code>Patch_06</code> (1,443 lines); both define the class <code>_gauntlet_SO_Script_5eae30cb</code>. The newer
+  copy adds <code>AddLevels</code> (a winning follower gains <code>Gauntlet_AddLevels_01</code> .. <code>_20</code> by the level gap:
+  20 when he is 26 or more levels below the champion, 1 when he is 11 or more above),
+  <code>DLC_IsFriendlyOnlineArena</code> true during the fight, the timeout heal, and <code>PS_Gauntlet_PostFightSpawn</code>
+  when C2 lives, and comments out the loss pair <code>AddGauntletEnemy</code> / <code>GauntletEnemy_EnterHierarchy</code> in
+  all three death branches. Both Lithlad copies (<code>Patch_09</code>, <code>Patch_DLC5</code>) are the newer variant, and in
+  a Lithlad fight <code>DLC_IsFriendlyOnlineArena</code> read true during the fight and false after.</li>
+<li><strong>What the script does to each captain</strong> at spawn: senses off until the intro ends,
+  <code>Script_Item_Intro_2Target</code>, the other's <code>PS_DuelistC1</code> / <code>C2</code>, <code>Script_Item_DoNotBleedOut</code>,
+  <code>Script_DisableSummons</code>, <code>Item_BypassKillStealPrevention</code>, <code>Pass_KillCam_PIS_Test_IT</code>,
+  <code>Arena_DisableWallRecoils</code>, <code>Item_Disable_Retreat</code>, the side, a confinement (<code>SetConfinement</code>, C2's
+  gang too, C1's gang not) and a visible nav marker; on death it fires <code>PS_Arena_DisableCollision</code>.
+  <code>SetAIToSpawn(1, n)</code> fills the captain slot and <code>(2, n)</code> the gang slot sized by <code>GetGangSize()</code>; gang
+  members charge the enemy captain (<code>ApplyThreatRecord(Showdown_Charge)</code>, <code>MonitorCharacter</code>,
+  <code>SetCombatScriptedTarget</code>). <code>MissionEnd</code> decides only by <code>aiCaptain1:IsAlive()</code>. C2's death branches
+  register <code>C1DeathRelay</code> (hash 0xA6106936), so <code>C2DeathRelay</code> never runs and the sim-event result reads
+  <code>SubjectDied</code> when the champion died. A <code>C1Victory</code> (C1 back to his point, C2's gang removed, <code>SetC2</code>
+  re-enabled for a next opponent) has no caller in either copy, and the script never enables the
+  spectator set the layer flags <code>StartEnabled</code>.</li>
+<li><strong>A fight as recorded</strong> (three Lithlad tier-3 fights): when the fighters appear the script's
+  <code>Player:Hide(true)</code> sets Talion's hidden byte <code>+0x3882</code> and his AI-invisible byte <code>+0x2F10</code> in the
+  same tick; the sides go into slot 4 (below) one tick later; the arena camera director takes its two
+  combatants after the intro (20 s) and releases them at the result. The losing captain was held at
+  exactly 10.0 HP until a finishing scene, in all three fights; trait catalysts pushed the Hatred,
+  Victim and Unstable sides above the pit's sides mid-fight (below). The dead captain's member read the
+  dead and shown-dead bits (2, 21), <code>+0x2A8</code> the killer's character type, <code>+0x2B0</code> the finishing sync
+  attack, <code>+0x2C0</code> the resurrection record and a cleared builder link at <code>+0x350</code>.</li>
 <li><strong>Dormant hazards.</strong> The remote-script objects <code>rsOil</code>, <code>rsCaragor</code>, <code>rsGhul</code>, <code>rsArrows</code>,
   <code>rsGas</code>, <code>rsRiot</code> and <code>rsGraug</code> listen to the remote scripts <code>PS_Arena_Oil</code> ... <code>PS_Arena_Graug</code>
   in all 29 gauntlet, arena and online-arena layers, but no shipped script fires them (only
@@ -1546,7 +1702,96 @@ Its layer properties define spawner sets: <code>C1</code> (job <code>PS_Subject<
 </ul>
 <p>The script's play-as branch (<code>QR:GetPlayerFactionMemberIndex()</code> 0x1A50ED8 -&gt; 0x19F4D30, 1 or 2
 when the player's play-as key <code>[player+0x2708]</code> matches the subject's or the other job's captain)
-makes the player captain 1 or 2, but <code>MissionEnd</code> decides the win on <code>aiCaptain1:IsAlive()</code>.</p>
+makes the player captain 1 or 2, but <code>MissionEnd</code> decides the win on <code>aiCaptain1:IsAlive()</code>. The key
+(<code>+0x2710</code> the pool index, -1 for none) is set by <code>CPlayerObj::SetPlayAsFactionMemberNPC</code> (0x19BFA08 -&gt;
+0x19BD070(player, member, 1): the member's seed, personality, class model through
+<code>Character/Models.PlayerVersion</code> and appearance, and the items marked <code>KeepItemWhenOrc</code>). It parks the player's
+real model at <code>player+0x2ED8</code>, his appearance at <code>+0x2EC8</code> and his inventory (the visual component) at <code>+0x2EC0</code>;
+<code>ClearPlayAsFactionMemberNPC</code> (0x19BB794 -&gt; 0x19BB610, secondary vtable 0x1F969A0 slot 12) clears the key and
+restores all three.</p>
+<h3 id="faction-event-actions">Faction-event actions</h3>
+<p>The consequences of a pit's result are the faction events' <code>Actions</code>, a list of values. The handler
+0x40C304 (log string "HandleFactionEventAction: Event = %s; Subject = %s; Other = %s", compiled out)
+resolves the subject and the other through 0x18DDCC, walks the list (accessor 0x40C8F4, element
+0x40CB6C) and switches:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0, 2</td>
+<td>MOVE: the subject takes the other's seat ("Loser (%s) Vacating their position %d, %d": unseat 0x61B274; "Winner (%s) moving into position %d, %d": 0x61E13C(FS, subject, row, column), the row index and column from the event's <code>+0x56</code> / <code>+0x57</code>), only when that row is above the subject's</td>
+</tr>
+<tr>
+<td>1, 7</td>
+<td>the other dies: 0x5966C4(FS, other) with the event's <code>Resurrection</code> record (0x1BB9F84)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>the subject dies, the same way</td>
+</tr>
+<tr>
+<td>3, 4</td>
+<td>the other becomes the subject's henchman ("%s Became Henchmen of %s", 0x1BB767C; 3 also checks the preset's <code>CanEverBeHenchmen</code>)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>0x1BC3F80(subject)</td>
+</tr>
+<tr>
+<td>6</td>
+<td>the subject clears his boss ("%s Cleared his Boss", 0x1BB8E30)</td>
+</tr>
+<tr>
+<td>9</td>
+<td>0x1BB9080(subject) and <code>FS+0x1ED</code> = 1</td>
+</tr>
+<tr>
+<td>10</td>
+<td>swap seats ("Other moving into position %s, %d")</td>
+</tr>
+<tr>
+<td>11 / 12</td>
+<td>the subject / the other leaves his seat (0x61B274)</td>
+</tr>
+<tr>
+<td>14</td>
+<td>the subject is seated in the other's place (0x61B274(other), then 0x61E13C)</td>
+</tr>
+</tbody>
+</table>
+<p>The pit's events: <code>Gauntlet_BlueOrc_Win</code> no action (plus <code>ForceLevelUp</code> and the reward list, one of
+<code>PS_DuelWin_BrawlMaster</code>, <code>_PitFighter</code>, <code>_NothingHappens</code>), <code>Gauntlet_RedOrc_Win</code> 2 (plus <code>ForceLevelUp</code>,
+<code>LevelsToAdd</code> 1, <code>ClearBuilderInstance</code>), <code>Gauntlet_BlueOrc_Lose</code> 8 (<code>LevelsToAdd</code> 1), <code>Gauntlet_RedOrc_Lose</code>
+8 (<code>LevelsToAdd</code> 1, <code>ClearBuilderInstance</code>), <code>AddGauntletEnemy</code> none (a <code>SimEventTagModList</code>). The script
+applies <code>RedOrc_Win</code> with the champion as subject and the follower as other; the Lose events go on the loser
+alone. Both recorded outcomes match: a champion died with <code>Resurrection_LowerBody</code>; a follower died with
+<code>Resurrection_OrcSlash</code> and the champion took his seat.</p>
+<h3 id="the-pit-on-screen">The pit on screen</h3>
+<ul>
+<li>Map and compass: <code>NavMarkerTypeQuest</code> = <code>Interface/NavMarkerTypes::Arena</code>
+  (<code>interface\textures\hud\questicons\new\kraken\powerstruggle.tex</code>, 60 px, <code>PrimaryIconOverride</code> <code>ArenaIcon</code>,
+  minimap <code>questarrow.tex</code>).</li>
+<li>The start card: <code>WorldUIConfirmSequence</code> <code>QS_Gauntlet_Base_WUIP</code> (<code>bundles\animationcharacters\menu\queststart.bndl</code>;
+  steps <code>QS_GauntletEnemy_Setup</code>, <code>_WalkOut</code>, <code>_FadeUp</code>, <code>_Idle_PR</code>; alignment <code>Job_Other</code>; see The mission start
+  screen), the strings <code>PS_Gauntlet_Name</code>, <code>PS_Gauntlet1_Desc</code>, <code>PS_Gauntlet_Desc_Short</code>, <code>PS_Gauntlet_Desc_Comp_MM</code>;
+  complete, failed and simulated results all play <code>PS_Arena_Rewards_EVT</code>; <code>StateTags</code> <code>Arena</code>;
+  <code>OverrideScenarioList</code> <code>RemoveAllAmbient</code>; <code>GauntletStage</code> (1 on <code>MI_Gauntlet</code>). <code>ScoreSetup</code> and
+  <code>DisplayTurnTimer</code> are present and unused.</li>
+<li>The fighter plate: <code>NavMarkerTypeCharacter</code> <code>CharacterArena</code> (<code>SPH-CharacterMarkerCommon</code>, torso + 75 cm, 125 m) -&gt;
+  <code>Interface/NavMarkerCharacterData::NamedOrc_Arena</code>, 18 states (<code>HealthBar</code>, <code>Level</code>, <code>Arena_BorderMember</code> =
+  <code>arena_boarder.tex</code> with the custom draw <code>ArenaShieldBG</code>, <code>PlayerFollower</code>, <code>DefaultMember</code> ...), each with
+  <code>ClipApplyTint</code>, <code>ClipTint</code> (ARGB), <code>ClipTintPredicate</code>, <code>PrimaryIconTint</code>, <code>PrimaryTextureOverride</code> and
+  <code>AuxTintOverrides</code>: a plate's tints are data.</li>
+<li>The champion's job <code>PS_Other_Cap_Gauntlet_&lt;R&gt;</code>: <code>AlwaysUseBuilderRecord</code> True with its builder, <code>AddHenchmen</code> True,
+  <code>OtherJob</code> <code>PS_Subject_Cap_Vs</code>; it also carries the unused <code>UseNemesisForgeNemesis</code>, <code>UseNemesisForgeAlly</code> and
+  <code>UseOnlineArenaOpponent</code>. <code>Quest/Types::Gauntlet</code> sets <code>UIDisplayParticipants</code>, <code>UIProgressGroup</code> <code>PowerStruggles</code>
+  and <code>PlayerItemDuringActivation</code> <code>PC_QuestActivation</code>; its one <code>IsGauntlet</code> reader is the results screen 0xE69B60.</li>
+</ul>
 <h3 id="pit-data-and-objects">Pit data and objects</h3>
 <ul>
 <li><code>Faction/SimEvent/Gauntlet</code> (4: <code>Island</code>, <code>Island2</code>, <code>Island3</code>, <code>SnowMountain</code>) -&gt; <code>GauntletTier</code>
@@ -1583,10 +1828,16 @@ makes the player captain 1 or 2, but <code>MissionEnd</code> decides the win on 
   <code>UI_QuestComplete_Resolution_Gauntlet_Winner</code>, neither <code>UI_QuestComplete_Resolution_Gauntlet_Timeout</code>.
   The same function picks <code>UI_QuestComplete_Resolution_Showdown_Dead</code> from bit 21 and
   <code>UI_QuestComplete_Resolution_Showdown_Recruit</code> from bit 27.</li>
-<li><strong>AutoInfight</strong> 0x1A857F8 stages a fight between two members: it clears the spawn manager's enable
-  byte (<code>+0x194</code>), removes every ambient AI and the dead bodies, queues the members at <code>+0x38</code> and
-  <code>+0x60</code> of its object through 0x1A91360 under the names <code>AutoInfightNPC1</code> and <code>AutoInfightNPC2</code>,
-  and clears the bytes <code>+0xB8</code> and <code>+0xB9</code>.</li>
+<li><strong>AutoInfight</strong> is Monolith's stripped captain-against-captain harness. The script call
+  <code>Faction:DEBUG_StartAutomatedInfighting</code> (0x1B80A3C) reads its three arguments and returns 0, so its driver
+  <code>[FS+0x60]</code> is never created. Behind it the faction system's update 0x1E2BC4 ticks 0x1A73F58(<code>[FS+0x60]</code>): a fight
+  object at <code>+0x38</code> that is done is destroyed (0x1A85488) with a cooldown at <code>+0x40</code>, and without one a new one is built
+  (constructor 0x1A84FC0, vt_0x1FB2C40, 0xF0 bytes, two transforms). 0x1A85550 picks a random pair of the current
+  army (0x1C1B91C), turns the first's follower bit off and the second's on (0x7D52B0, a change that is saved), and
+  0x1A857F8 stages the fight: it clears the spawn manager's enable byte (<code>+0x194</code>), removes every ambient AI and the
+  dead bodies, queues the members at <code>+0x38</code> and <code>+0x60</code> of its object through 0x1A91360 under the names
+  <code>AutoInfightNPC1</code> and <code>AutoInfightNPC2</code> (with itself as the callback, ids 1 and 2), and clears the bytes <code>+0xB8</code> and
+  <code>+0xB9</code>. Its results were written through the file name template <code>%sAutoInfight_%s.txt</code>.</li>
 <li>The gauntlet menu's input actions are <code>SimEventGauntlet_MenuEnter</code> 0x16A, <code>SimEventGauntlet_MenuExit</code>
   0x16B, <code>SimEventGauntlet_ActivateFirst</code> 0x16C and <code>SimEventGauntlet_ActivateLast</code> 0x16D;
   <code>Arena_CameraAdvance</code> is 0x15A (values stored explicitly by the input-action table 0x3123CC, 0x179
@@ -1599,9 +1850,22 @@ makes the player captain 1 or 2, but <code>MissionEnd</code> decides the win on 
 </ul>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>Step status values: both step classes read return 2 for a failed precondition and for a lost
+<li>Which copy of the Minas Ithil pit script runs (<code>Patch_05</code> or <code>Patch_06</code>; the Lithlad copies are the newer variant),
+  and whether <code>ST:GetIntervalRemaining()</code> in its damage ramp is the whole timer's remainder or the current 10 s tick's.</li>
+<li>Why followers put on hostile pit sides did not fight in four attempts (with the senses cycle and scripted targets
+  as for the enemy grunts that did): the target check 0x18BE04 ends in a leash test (the anchor 0x4474DC, radius
+  <code>+0x240</code> around <code>+0xAC</code>) and follower grunts stay anchored to Talion, or followers may never attack followers.</li>
+<li>Whether a load rebuilds the compiled relation matrix, and who applies <code>Trait_Unstable_Follower</code> besides the trait
+  catalysts (no world script does).</li>
+<li>
+<p>Whether followers are capped at Talion's level: two winning followers stopped at 80 while enemy captains read 82 and
+  85 (flag bit 10 is "ignore the player-level cap").</p>
+</li>
+<li>
+<p>Step status values: both step classes read return 2 for a failed precondition and for a lost
   target. Watching a step that completes normally (a <code>GoTo</code> arriving) would show whether 1 means
-  success. What vf8 (<code>return true</code> in both) answers is also open.</li>
+  success. What vf8 (<code>return true</code> in both) answers is also open.</p>
+</li>
 <li>What <code>forced</code> changes in a quest-requested replan beyond the pair byte <code>+8</code>, and what the 0xA8-byte
   entries of the batch 0xF41E30 hold.</li>
 <li>No stack entry parked a non-zero status in a 73.5 s fight capture, and the suspend byte
@@ -1622,4 +1886,4 @@ makes the player captain 1 or 2, but <code>MissionEnd</code> decides the win on 
   another pointer to it. And what the values at <code>+0x184</code> / <code>+0x188</code> are (40 and 8 in one reading,
   30 and 8 in a later one, both in Lithlad): no code in the offset index reads or writes them
   directly.</li>
-</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
+</ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
