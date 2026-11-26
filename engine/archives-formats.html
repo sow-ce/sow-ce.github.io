@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -318,18 +318,18 @@ the folder records (0x11AE154), then copies the archive's own path to <code>arch
 </tr>
 </tbody>
 </table>
-<p>The two bytes trail every record, the last one included. Opening an entry (0x3DDAB8 -&gt; 0x11AE510):
-when the byte at +0x1D is 0 the entry is read as a plain byte range (0x11DC110); otherwise +0x1C
-selects the reader, 1 the chunked stream (0x11DC4B8) and 0 a streaming source with its own 512 KB
-buffer (0x11DCC64, <code>VirtualAlloc</code> of 0x80000 bytes, "Failed to allocate memory for source
+<p>The two bytes trail every record, the last one included. To open an entry (0x3DDAB8 -&gt; 0x11AE510),
+the engine reads it as a plain byte range (0x11DC110) when the byte at +0x1D is 0. Otherwise +0x1C
+selects the reader: 1 the chunked stream (0x11DC4B8), and 0 a streaming source with its own 512 KB
+buffer (0x11DCC64; <code>VirtualAlloc</code> of 0x80000 bytes, "Failed to allocate memory for source
 resource"). Underneath, 0xC37B50 reads from memory when the whole archive is resident
 (<code>archive+0x30</code>) and otherwise opens the archive file again by its path (<code>archive+0x50</code>, through
 0xC3C1B0: <code>CreateFileW</code> for reading, read sharing only, overlapped; stream class vt_0x1E70EA8).</p>
-<p>The two entry streams differ in one property that callers test: the plain byte range
-(vt_0x1E70F00) can seek, the chunked stream (vt_0x1E70F88) cannot, since its slot 3 answers no and
-its seek only sets an error flag. A shipped entry is always chunked (kind 1, flag 9 on every record),
-so a loader that needs to seek, such as the GameDB loader looking for a patch database, does so only
-for a plain entry or a loose file (see GameDB).</p>
+<p>The two entry streams differ in one property that callers test. The plain byte range (vt_0x1E70F00)
+can seek, while the chunked stream (vt_0x1E70F88) cannot: its slot 3 answers no, and its seek only
+sets an error flag. A shipped entry is always chunked (kind 1, flag 9 on every record), so a loader
+that needs to seek, such as the GameDB loader looking for a patch database, can do so only for a plain
+entry or a loose file (see GameDB).</p>
 <p><strong>Folder record (16 bytes):</strong> <code>{u32 name, u32 first child, u32 next sibling, u32 file count}</code>, with
 0xFFFFFFFF for "none". The name is the folder's full path (<code>database\string\enus</code>), the root folder
 (record 0) has an empty name, and the reader turns the two links into pointers to 0x30-byte folder
@@ -339,24 +339,24 @@ archives, 16,226 of 16,226 non-root folders extend their parent's path and the c
 file count.</p>
 <p><strong>Lookup.</strong> 0x3DDAD8 splits a path at its last <code>\</code> or <code>/</code>, finds the folder by binary search over the
 folder records (0x3DDB90, case-insensitive), then binary-searches that folder's leaf names with
-<code>_stricmp</code> and returns the file record. Both tables are kept sorted for this: the leaf names inside
-every folder are in case-insensitive order (16,299 of 16,299 folders), and the folder records are in
-case-insensitive order of their full paths compared as if each ended in a backslash (76 of 76
-archives; plain order differs in 7 archives, only where one folder name is a prefix of another, such
-as <code>bundles\dlc</code> and <code>bundles\dlc4</code>).</p>
+<code>_stricmp</code> and returns the file record. Both tables are kept sorted for this. The leaf names inside
+every folder are in case-insensitive order (16,299 of 16,299 folders). The folder records are in
+case-insensitive order of their full paths, compared as if each ended in a backslash (76 of 76
+archives); plain order differs in 7 archives, and only where one folder name is a prefix of another,
+such as <code>bundles\dlc</code> and <code>bundles\dlc4</code>.</p>
 <h3 id="names-what-is-a-file-fact-and-what-is-a-reader-trap">Names: what is a file fact and what is a reader trap</h3>
 <ul>
 <li>A record's name offset points at its own leaf, relative to 0x30. Read that way, with folders taken
   from the folder table, every typed entry's content matches its extension: 482,736 of 482,736 entries
   of 16 typed extensions (<code>.bndl</code>, <code>.embb</code>, <code>.tex</code>, <code>.mesh</code>, <code>.anix</code>, <code>.bnk</code> ...), and each of the 39
-  extensions in the install maps to one format (catalogue below). No per-archive naming rule is
+  extensions in the install maps to one format (catalog below). No per-archive naming rule is
   needed.</li>
 <li>The pool is not a list of entries in order. It also holds the folder paths, and it stores each leaf
   string once: 56,018 records share a leaf string with another record (<code>string.strdb</code> in 14 language
   folders), while full paths are unique within each archive (0 duplicates). A reader that takes "the
   string after the previous name", or resolves offsets against a wrong base (0x18 instead of 0x30),
-  names a neighbouring file: on the same records those rules give a name whose extension contradicts
-  the content for 396,483 and 388,454 records. The result looks plausible because a neighbour's name
+  names a neighboring file: on the same records those rules give a name whose extension contradicts
+  the content for 396,483 and 388,454 records. The result looks plausible because a neighbor's name
   is still a real path.</li>
 <li>A path names a file only within one archive; the same path in another archive is another copy,
   chosen by the search order above.</li>
@@ -390,9 +390,9 @@ or a middle one, and in every file type whose length leaves a short tail (<code>
 <code>.texuhd</code>, <code>.mat</code>, <code>.scripts</code> and so on). The reader passes every chunk to <code>OodleLZ_Decompress</code>,
 which dispatches on the header, so a rebuilt chunk may use any compressor the DLL decodes.</p>
 <h3 id="the-path-index-archivepatchloosefiles-txt">The path index (<code>ArchivePatchLooseFiles.txt</code>)</h3>
-<p>37 archives (<code>Patch_01</code> - <code>Patch_11</code>, <code>Patch_13</code> and <code>Patch_DLC1</code> - <code>Patch_DLC5</code> with their <code>_LC</code>
-twins, <code>Global</code>, <code>HotChunk</code>, <code>soundbundles</code>) carry a root file <code>archivepatchloosefiles.txt</code> as
-record 0:</p>
+<p>A root file, <code>archivepatchloosefiles.txt</code>, is record 0 in 37 archives (<code>Patch_01</code> - <code>Patch_11</code>,
+<code>Patch_13</code> and <code>Patch_DLC1</code> - <code>Patch_DLC5</code> with their <code>_LC</code> twins, <code>Global</code>, <code>HotChunk</code>,
+<code>soundbundles</code>):</p>
 <pre><code>u32 1 | u32 string bytes | strings (NUL-terminated full paths) | u32 count | count x {u32 hash, u32 string offset}
 </code></pre>
 <p>The rows are sorted by hash and every hash is <code>StringHash</code> of its path (73,038 of 73,038). The index
@@ -470,8 +470,8 @@ sections). All 190,407 containers are version 5 and all pass the header rules (o
 chained by padded length, size exact, padding all NUL); 2,441 are empty, the largest holds 11,178
 members, 428,440 members in all. Walking the chain of 780 containers (up to 30 per archive, each at
 most 64 MB) ends exactly at the end of the file in 780 of 780, with no zero-size or overrunning
-section. A member's size word is the only thing that locates the next one, so a payload whose size
-word disagrees with its length makes the loader read the next size from inside the payload.</p>
+section. A member's size word alone locates the next member, so a payload whose size word disagrees
+with its length makes the loader read the next size from inside the payload.</p>
 <h3 id="bndl-v6">BNDL v6</h3>
 <table>
 <thead>
@@ -598,7 +598,7 @@ equal another copy's. <code>globalbundles\globaldatabase.bndl</code> declares th
 </ul>
 <p>Distinct asset paths by where they ship (manifests and containers excluded): 238,588 only inside
 containers, 34,409 only loose (mostly texture tiers), 14,172 both.</p>
-<h2 id="format-catalogue">Format catalogue</h2>
+<h2 id="format-catalog">Format catalog</h2>
 <p>Every file starts with a 4-character tag, and the extension decides it: across all 488,752 records
 each extension maps to one format (<code>.txt</code> aside). Section tags inside containers follow the same table
 (12,031 of 12,031 walked sections), with one exception: a <code>.tex</code> section is <code>TEXR</code> or <code>SLVT</code> (9 of
@@ -754,7 +754,7 @@ handler's vtable.</p>
 <td><code>GADB</code> 17</td>
 <td>305</td>
 <td>0x503694 (database reader)</td>
-<td>behaviour graphs (see Animation)</td>
+<td>behavior graphs (see Animation)</td>
 </tr>
 <tr>
 <td><code>.wldclnt</code></td>
@@ -984,7 +984,7 @@ The loader 0x5030EC accepts <code>TEXR</code> version 8 and <code>SLVT</code> ve
 </tr>
 </tbody>
 </table>
-<p>The stored DXGI format is always the UNORM one; the sRGB flag marks colour textures (set on 5,128 of
+<p>The stored DXGI format is always the UNORM one; the sRGB flag marks color textures (set on 5,128 of
 5,203 <code>_d</code> diffuse maps, 1 of 4,712 <code>_n</code> normal maps, 17 of 3,485 <code>_s</code> maps, 95 of 2,511 <code>_m</code> masks).
 Texture creation (0x1E71F0) maps each format to a typeless / UNORM / sRGB triplet from the table at
 0x2777E20. Normal maps store X in green and Y in alpha (the shaders decode <code>(G * 2 - 1, A * 2 - 1)</code>);
@@ -1019,22 +1019,49 @@ Texture creation (0x1E71F0) maps each format to a typeless / UNORM / sRGB triple
 </table>
 <p>The tiers of one texture do not always describe the same size: the <code>.tex0</code> and <code>.texuhd</code> of a stem
 agree in 5,873 of 6,165 stems, a <code>.tex</code> and its <code>.tex0</code> in 497 of 1,037, and the level ranges of
-neighbouring tiers can overlap. The name field of a <code>.tex0</code> or <code>.texuhd</code> names its own <code>.tex</code> (21,928
+neighboring tiers can overlap. The name field of a <code>.tex0</code> or <code>.texuhd</code> names its own <code>.tex</code> (21,928
 of 21,928); a <code>.tex</code> names its <code>.tex0</code> (2,697) or itself (1,083); 12,673 world textures under
 <code>worlds\</code> leave it empty. Only <code>.tex</code> and <code>.texa</code> files are bundle members (61,622 and 7,949
 container members, no higher tier in any container or manifest); the higher tiers are loose entries
 streamed after base data (see Resource streaming). For the Ranger's starting sword the diffuse ships at
 512 x 1024 (<code>.tex</code>, 11 levels), 1024 x 2048 (<code>.tex0</code>, 3 levels) and 2048 x 4096 (<code>.texuhd</code>, 1 level).</p>
 <p><strong>Which tiers the engine asks for</strong> is written in the base file. Its two tier bytes after the name
-agree in all 17,821 shipped 2D container textures: 0 = this file holds the whole chain (6,795), 1 =
-one level less, plus a <code>.tex0</code> (3,008), 2 = one level less, plus a <code>.tex0</code> and a <code>.texuhd</code> (8,018). The
-loader asks for a tier by the base file's own path with the extension swapped (0x3E0BD4), never by the
-name field; with tier bytes of 2 and no level skipped it asks for the <code>.texuhd</code>, otherwise for the
-<code>.tex0</code>. Levels are skipped by <code>max(0, 2 - TextureQuality + (tiered ? 1 : 0) - bias)</code> (0x5019F4; the
-quality setting at <code>[base+0x2A374A4]</code>). The bytes at 0x08, 0x09 and 0x0B are a second copy of the described size (equal to the one after the name
-in 17,820 of 17,821 files), and they are what the texture object keeps (<code>+0x60</code>, written by 0x6A10C0;
-the object is created by 0x6A0C30). The GOG and Microsoft Store builds ship without the <code>uhdmip</code>
-archives, so they lack most <code>.texuhd</code> files (see Game builds).</p>
+agree in all 17,821 shipped 2D container textures:</p>
+<table>
+<thead>
+<tr>
+<th>Tier bytes</th>
+<th>Meaning</th>
+<th>Textures</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>this file holds the whole chain</td>
+<td>6,795</td>
+</tr>
+<tr>
+<td>1</td>
+<td>one level less, plus a <code>.tex0</code></td>
+<td>3,008</td>
+</tr>
+<tr>
+<td>2</td>
+<td>one level less, plus a <code>.tex0</code> and a <code>.texuhd</code></td>
+<td>8,018</td>
+</tr>
+</tbody>
+</table>
+<p>The loader asks for a tier by the base file's own path with the extension swapped (0x3E0BD4), never
+by the name field. With tier bytes of 2 and no level skipped it asks for the <code>.texuhd</code>; otherwise it
+asks for the <code>.tex0</code>. The number of levels skipped is
+<code>max(0, 2 - TextureQuality + (tiered ? 1 : 0) - bias)</code> (0x5019F4), with the quality setting at
+<code>[base+0x2A374A4]</code>. The bytes at 0x08, 0x09 and 0x0B are
+a second copy of the described size, equal to the one after the name in 17,820 of 17,821 files, and
+they are what the texture object keeps (<code>+0x60</code>, written by 0x6A10C0; the object is created by
+0x6A0C30). The GOG and Microsoft Store builds ship without the <code>uhdmip</code> archives, so they lack most
+<code>.texuhd</code> files (see Game builds).</p>
 <p><strong>Texture arrays</strong> (<code>TEXA</code> v1, 1,946 files: <code>.texa</code>, <code>.texa0</code>, <code>.texauhd</code>) carry a header, their own
 path and the source path of each slice, then a DX10 DDS whose array size is the slice count, slices
 stored one after another with full mip chains. In a measured area of Cirith Ungol they textured about
@@ -1117,39 +1144,47 @@ stored one after another with full mip chains. In a measured area of Cirith Ungo
 </tbody>
 </table>
 <p>All 711 loose meshes follow this exactly: the arena sizes add up to the rest of the file and every arena
-index is in range or -1. The descriptor block holds, at <code>+0x2C</code>, the cull distance (500 on 376 meshes,
-400 on 153, 140 on 126) and at <code>+0x30</code> a bounding sphere (centre, radius); one 48-byte record per arena
-<code>{u32 vertex bytes, u32 index bytes, u32 palette bytes, u32 group count, u16[16] LOD triangle ladder}</code>,
-the ladder rising to the arena's triangle count (index bytes / 6: 16-bit indices), found for 4,377 of
-4,377 arenas; and the object records again as 16-byte <code>{flags, object id, arena, material slot}</code> entries,
-where an object's consecutive records are its LOD chain.</p>
+index is in range or -1.</p>
+<p>The descriptor block holds:</p>
+<ul>
+<li>at <code>+0x2C</code> the cull distance (500 on 376 meshes, 400 on 153, 140 on 126), and at <code>+0x30</code> a
+  bounding sphere (center, radius);</li>
+<li>one 48-byte record per arena,
+  <code>{u32 vertex bytes, u32 index bytes, u32 palette bytes, u32 group count, u16[16] LOD triangle ladder}</code>,
+  the ladder rising to the arena's triangle count (index bytes / 6: 16-bit indices), found for
+  4,377 of 4,377 arenas;</li>
+<li>the object records again, as 16-byte <code>{flags, object id, arena, material slot}</code> entries, where an
+  object's consecutive records are its LOD chain.</li>
+</ul>
 <p>The groups are listed in one table of 40-byte records inside the descriptor block, arena after arena:
 <code>+0x00</code> vertex count, <code>+0x04</code> first index, <code>+0x08</code> index count, <code>+0x10</code> palette length and <code>+0x1C</code> a
 vertex-format id whose stride is fixed per file (<code>+0x0C</code>, <code>+0x14</code> .. <code>+0x1B</code> and <code>+0x20</code> .. <code>+0x27</code>
-are not covered by the sums below). For every arena the vertex counts times their format's stride add
-up to its vertex bytes, the index counts times 2 to its index bytes and the palette lengths to its
-palette bytes, and the index ranges follow on from 0; searching the block for a table that closes
-like this finds it in all 348 distinct loose meshes (the 711 loose entries without copies; 2,124
-arenas, 2,569 groups, and 93 meshes with an arena drawn as more than one group).</p>
+are not covered by the sums below). For every arena, the vertex counts times their format's stride
+add up to its vertex bytes, the index counts times 2 add up to its index bytes and the palette
+lengths add up to its palette bytes, and the index ranges follow on from 0. A search of the block
+for a table that closes in this way finds it in all 348 distinct loose meshes (the 711 loose entries
+without copies), with 2,124 arenas and 2,569 groups; 93 of the meshes have an arena drawn as more
+than one group.</p>
 <p>An arena is drawn as one or more groups that share its buffers; a group's vertices are two streams:</p>
 <ul>
 <li>stream A, 16 bytes per vertex: half4 position with w = 1, ubyte4 weights summing to 255, ubyte4
   indices into the group's palette;</li>
 <li>stream B, the rest of the stride (60, 64, 68, 72 ... bytes in all): the UV area, then normal, tangent
-  and binormal as float3 at <code>stride - 40</code>, <code>- 28</code>, <code>- 16</code>, and a 4-byte colour. UV0 is a float32 pair at
+  and binormal as float3 at <code>stride - 40</code>, <code>- 28</code>, <code>- 16</code>, and a 4-byte color. UV0 is a float32 pair at
   <code>+0</code> on stride 68 and <code>+8</code> on stride 72; one LOD chain can mix strides.</li>
 </ul>
 <p>Weights are stored in BGRA order against RGBA indices: the weight of index slot k is byte
 <code>(2, 1, 0, 3)[k]</code>. A palette byte indexes the skeleton's name-table order, not its bind order.</p>
-<p><strong>Shipped weapons and armour.</strong> The Numenorean sword (<code>player_numenoreanswordt1.mesh</code>) has its grip
-at the origin, the blade along +Y, width along Z and thickness along X (bounds X +-4.35, Y -34.9 to
-102.1, Z +-7.74 cm), 810 vertices and 1,320 triangles on one bone <code>Twitch</code>, stride 64, cull distance
-140; blades are about four times thicker than real ones (9.23 x 2.30 cm at y = 16). Tangents run
-along +dP/du and binormals along +dP/dv (median 0.996 and 0.997 over 16 weapon and armour meshes).
+<p><strong>Shipped weapons and armor.</strong> The Numenorean sword (<code>player_numenoreanswordt1.mesh</code>) has its grip
+at the origin, the blade along +Y, the width along Z and the thickness along X (bounds X +-4.35,
+Y -34.9 to 102.1, Z +-7.74 cm). It has 810 vertices and 1,320 triangles on one bone, <code>Twitch</code>, a
+stride of 64 and a cull distance of 140. Blades are about four times thicker than real ones
+(9.23 x 2.30 cm at y = 16). Tangents run
+along +dP/du and binormals along +dP/dv (median 0.996 and 0.997 over 16 weapon and armor meshes).
 Player weapons mostly ship one LOD (57 of 93) with 1:2 textures (81 of 93) and 1,500 - 2,348 LOD0
 triangles; orc and olog weapons 1,334 - 1,996 LOD0 triangles with 1:1 textures (56 of 77). LOD chains
 follow two presets, 1 : 0.50 : 0.125 (a falchion: 2,000 / 1,000 / 250) and 1 : 0.7 : 0.4 : 0.2.
-Armour LOD0: helmets 1,661 - 2,857, chests 3,741 - 6,275, shoulder pairs 2,551 - 4,158 (both shoulders
+Armor LOD0: helmets 1,661 - 2,857, chests 3,741 - 6,275, shoulder pairs 2,551 - 4,158 (both shoulders
 in one skinned mesh, vertex alpha 16 on the left and 64 on the right), legs 1,996 - 2,573.</p>
 <h2 id="skeletons-skel-v17">Skeletons (<code>SKEL</code> v17)</h2>
 <pre><code>0x00  'SKEL'
@@ -1177,10 +1212,10 @@ cloth (see Cloth). All 973 loose skeletons satisfy the header identities and car
 73,958 bones all hold unit quaternions. The largest has 241 bones; the orc base rig
 (<code>orcs\base\orc_base.skel</code>) has 100, the player's 128, a Gondorian's 95 and the olog's 89. Vertex
 palettes and the live pose arrays index bones in the skeleton's name-table order, not in the
-depth-first record order. Binds are in model space, in centimetres, Y up.</p>
-<p>Header word 15 counts extra animation tracks: each a name, a P919 type and default bytes, stored
-after the bone records, and the masks then carry a value for every bone and every extra track. 8 of
-the 4,589 distinct shipped skeletons have them (the head parameter rig with 235, a camera rig with 40,
+depth-first record order. Binds are in model space, in centimeters, Y up.</p>
+<p>Header word 15 counts extra animation tracks. Each has a name, a P919 type and default bytes, stored
+after the bone records, and the masks then carry a value for every bone and every extra track. Of
+the 4,589 distinct shipped skeletons, 8 have them (the head parameter rig with 235, a camera rig with 40,
 shields and a crossbow). Read this way, all 4,589 distinct skeletons, bundled and loose, are accounted
 for byte for byte.</p>
 <h2 id="string-tables-skdb-v9-strdb">String tables (<code>SKDB</code> v9, <code>.strdb</code>)</h2>
@@ -1189,7 +1224,7 @@ for byte for byte.</p>
 0x1C  key count x {u32 key hash, u32 text offset}, strictly ascending by hash
 then  UTF-16LE text, NUL-terminated strings, exactly `text units` code units to the end of the file
 </code></pre>
-<p>140 of 140 shipped tables follow this (version, header size, strictly ascending keys, offsets in range,
+<p>Every shipped table follows this (140 of 140: version, header size, strictly ascending keys, offsets in range,
 text ending at the file's end). There is one table per file and no per-language section: each language
 folder ships its own <code>string.strdb</code> and <code>string_uwp.strdb</code>. The English table has 68,547 keys. A key
 is <code>StringHash</code> of the key name and an offset counts UTF-16 units: <code>UI_1Sword_Starting_N</code> (0xDCDB4713)
@@ -1282,7 +1317,7 @@ string tables use the same format (10 languages of 32,643 keys).</p>
   <code>+0x48</code>) with <code>_strnicmp</code>, whose length its main caller 0x3DDAD8 passes as 0x105, and a mounted
   archive keeps its folders in the on-disk order (79 of 79 mounted archives compared, the seven
   below included). Replaying that search over every archive, 15 of 16,302 folders cannot be found,
-  all names that are a prefix of a neighbour: <code>bundles\dlc4</code> in <code>Patch_09</code>, <code>Patch_10</code> and
+  and every one of them is a name that is a prefix of a neighbor: <code>bundles\dlc4</code> in <code>Patch_09</code>, <code>Patch_10</code> and
   <code>Patch_DLC4</code>; in <code>HighMip</code> the prefab folders <code>fort\stairsfortwallb</code> and <code>stairsfortwallc</code>,
   <code>wilderness\human\mdbuildingb</code>, <code>flair\mystic\mystwalllow</code>, <code>volcano\architecture\bridge\walkway</code>
   and <code>balrogpit\balrogpltfrm_05bot</code>; in <code>uhdmip</code> <code>mystwalllow03</code> and <code>balrogpltfrm_05bot2</code>; in
