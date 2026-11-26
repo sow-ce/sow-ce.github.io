@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -49,9 +49,9 @@ the debug menu.</p>
   0x17BDF6C(<code>[player+0x2F98]</code>, quest).</li>
 <li><strong>0x17BDF6C picks the screen.</strong> It takes the quest's <code>StartLayers</code> when set; otherwise ActivationType 5 gives the
   matchmaking layer and 6 the online arena layer, a fort quest the <code>QuestStartFort_Full</code> layer list, and anything else
-  <code>QuestStart</code>. It queues the push at <code>[menu+0x5B0]</code>, runs 0x188F2C0 -&gt; 0x188F2CC(UIManager, quest), which hands the
-  quest to the matchmaking layer (<code>+0xEA0</code>) and the online arena layer (<code>+0x1C338</code>) as well and runs the setup
-  0x18E493C(layer, quest), and sets <code>+0x60</code> of the player component it was given to 6.</li>
+  <code>QuestStart</code>. It queues the push at <code>[menu+0x5B0]</code> and runs 0x188F2C0 -&gt; 0x188F2CC(UIManager, quest), which also
+  hands the quest to the matchmaking layer (<code>+0xEA0</code>) and the online arena layer (<code>+0x1C338</code>) and runs the setup
+  0x18E493C(layer, quest). Finally it sets <code>+0x60</code> of the player component it was given to 6.</li>
 <li><strong>The push.</strong> 0x18BB000(menu, layer record) pushes at once (0x31A034) when <code>[menu+0x728]</code> is set, else queues the
   record at <code>[menu+0x568]</code>.</li>
 <li><strong>Two more doors.</strong> The console command <code>UI.EnterQuestStartFlow</code> (0x17C09BC) takes the region's <code>FortAssaultQuest</code>,
@@ -101,11 +101,48 @@ the debug menu.</p>
 </tr>
 </tbody>
 </table>
-<p>On the menu-layer vtable 0x1F7E110: vf12 0x7D507C takes raw input (0x21 = Cancel; all input is swallowed while
-<code>+0xE710</code> is set); vf19 0x31C290 is the action handler (the base slot 0x7F4660 returns 0); vf27 0x31CE70 refreshes the
-prompt bar; vf28 0x31B324 runs when the layer is covered; vf29 0x328484 is the enter method (widgets, the <code>+0xA10</code>
-request, the <code>QuestStartScreenKey</code> sound; coming back from the war-upgrades layer it recomputes the mode); vf30
-0x327D74 is the exit method (clears <code>+0x6BF8</code>, <code>+0x6C00</code>, <code>+0xE710</code> and <code>+0xE718</code>).</p>
+<p>The methods on the menu-layer vtable 0x1F7E110:</p>
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Address</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vf12</td>
+<td>0x7D507C</td>
+<td>takes raw input (0x21 = Cancel; all input is swallowed while <code>+0xE710</code> is set)</td>
+</tr>
+<tr>
+<td>vf19</td>
+<td>0x31C290</td>
+<td>the action handler (the base slot 0x7F4660 returns 0)</td>
+</tr>
+<tr>
+<td>vf27</td>
+<td>0x31CE70</td>
+<td>refreshes the prompt bar</td>
+</tr>
+<tr>
+<td>vf28</td>
+<td>0x31B324</td>
+<td>runs when the layer is covered</td>
+</tr>
+<tr>
+<td>vf29</td>
+<td>0x328484</td>
+<td>the enter method: widgets, the <code>+0xA10</code> request and the <code>QuestStartScreenKey</code> sound; coming back from the war-upgrades layer, it recomputes the mode</td>
+</tr>
+<tr>
+<td>vf30</td>
+<td>0x327D74</td>
+<td>the exit method: clears <code>+0x6BF8</code>, <code>+0x6C00</code>, <code>+0xE710</code> and <code>+0xE718</code></td>
+</tr>
+</tbody>
+</table>
 <table>
 <thead>
 <tr>
@@ -441,7 +478,7 @@ points at it from <code>[FM+0x4F0]</code>. Read live on five events:</p>
 </tr>
 <tr>
 <td>+0x20</td>
-<td>a <code>Faction/FortUpgrade/Definitions</code> record on fort-defence entries, else 0</td>
+<td>a <code>Faction/FortUpgrade/Definitions</code> record on fort-defense entries, else 0</td>
 </tr>
 <tr>
 <td>+0x28 / +0x30</td>
@@ -457,7 +494,7 @@ points at it from <code>[FM+0x4F0]</code>. Read live on five events:</p>
 </tr>
 </tbody>
 </table>
-<p>In one save, eight outpost events were up, each with one entry, the commander; in the same pass <code>Raid_Caragors</code> and
+<p>In one save, eight outpost events were active, each with one entry, the commander; in the same pass <code>Raid_Caragors</code> and
 <code>Execution2</code> had two (PS_Subject-aliased, then PS_Other-aliased) and <code>FortDefense</code> 13. Over every army: 44 events with
 one entry, 4 with two, 3 with 13. An entry names its slot record, so a member on an event always sits in a slot that
 is a record of <code>Faction/Events/SimEventParticipant</code>.</p>
@@ -478,8 +515,8 @@ is a record of <code>Faction/Events/SimEventParticipant</code>.</p>
 - If <code>[FM+0x4F0]</code> holds another event, it ends that event (0x61DB24(other, 1)): a member is on one event at a time.
 - It moves the member's list node at <code>FM+0x4D0</code> onto this event (0x40E6E4 unlinks and relinks it, <code>+0x20</code> = the
   event), so <code>FM+0x4F0</code> then names this event.
-- It clears <code>FM+0x51D</code>, sets the interrogation state 0xB (0x23 when <code>[FM+0x510] &amp; 1</code>), hands the slot's <code>Purposes</code> to
-  0x1B5E36C(FS, member) unless flag bit 2 is set, and 0x4AA210(<code>GM+0x6C80</code>, member) can raise a UI refresh flag.</p>
+- It clears <code>FM+0x51D</code>, sets the interrogation state 0xB (0x23 when <code>[FM+0x510] &amp; 1</code>) and hands the slot's <code>Purposes</code>
+  to 0x1B5E36C(FS, member) unless flag bit 2 is set; 0x4AA210(<code>GM+0x6C80</code>, member) can then raise a UI refresh flag.</p>
 <p><strong>Ending an event</strong> is 0x61DB24(event, force), 40 callers (the member's death 0x626E38, the seat move 0x61E13C,
 unseating 0x61B274, the per-turn expiry 0x1BF00C0, the follower setter 0x7D52B0 ...), all with force 1. It returns at
 once when <code>[event+0x9D]</code> is set; otherwise 0x61EE0C(FS, event) unbinds the event's quest (0x4FA558 the placed quest,
@@ -579,7 +616,7 @@ PS_Other and the six ambusher and backup jobs (6 of 6). Ambushers enter through 
   candidate.</li>
 <li>What the second list in the placed quest's job match is for: it passes an entry by <code>Quest/Jobs/List</code> with no member
   check.</li>
-<li>The event fields not decoded: <code>+0x28</code> (u32 4 on four of five events read, 0x10 on the fort defence), <code>+0x30</code> (16
+<li>The event fields not decoded: <code>+0x28</code> (u32 4 on four of five events read, 0x10 on the fort defense), <code>+0x30</code> (16
   bytes) and the entry's <code>+0x34</code> (0, 1 or larger values).</li>
 <li>Whether an engine function removes one participant entry from an event: the order's cancels act on the pending
   order only.</li>
