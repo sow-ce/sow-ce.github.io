@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -36,7 +36,7 @@
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
 <a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="ai-planning-perception-spawning-and-group-combat">AI: planning, perception, spawning and group combat</h1><p class=\"lede\">How an NPC decides what to do: the planner and its plan tree of steps, target selection and threat, perception, the sighting matrix, alertness and forgetting; how NPCs come into the world through the spawn manager, ambient spawners, spawn channels, templates and summon requests, with gangs, bands and mounts; the AI budget and constants the engine copies at start-up; and the fight pits.</p>
 <p>Every NPC runs one update per frame that selects a target, aims, moves and ticks a tree of planner
-steps whose priority order decides its behaviour. NPCs enter the world as requests queued on the
+steps whose priority order decides its behavior. NPCs enter the world as requests queued on the
 spawn manager, made by ambient spawners, scripts and summons, and resolved from a spawn channel to a
 template, a model and a character type.</p>
 <h2 id="the-ai-world-and-the-npc">The AI world and the NPC</h2>
@@ -120,18 +120,18 @@ components hang off the character:</p>
 distance-based rate (Threads and the frame has the scheduler and the cost of each part). Inside the
 AI update <code>vt_0x1FB3640::vf119</code> (0x2F79A4) the order is fixed by the call sites: target selection
 (vf113 -&gt; 0x11B230), aim and look-at (vf112 -&gt; 0x11AEB8), movement (0x2F5E6C), the plan tree tick
-(0x1919C8), collision avoidance, the service set (0x2FD960), morale, talk, awareness markers, and
-last context actions and perception target overrides (tail 0x2F6420). Per NPC per frame the plan
+(0x1919C8), collision avoidance, the service set (0x2FD960), morale, talk, awareness markers and,
+last, context actions and perception target overrides (tail 0x2F6420). Per NPC per frame the plan
 tree takes about 35% of the update and target selection about 26%; an NPC in <code>Attack</code> costs about
 2.7 times an idle one.</p>
 <h2 id="the-planner">The planner</h2>
 <p>The planner <code>[npc+0x2CE8]</code> is a 0xFF8-byte object with no vtable. The NPC class builds it in
 0x49B858: 0x49CB20 allocates 0xFF8 bytes and runs the constructor 0x45F354, which builds seven
 0x58-byte sub-objects at <code>+0x118 .. +0x328</code>. The character's destructor 0x49CEC0 tears down
-<code>+0x2CE8</code>, <code>+0x2CE0</code> and <code>+0x2CD8</code> in reverse order. 779 functions load the pointer, among them
+<code>+0x2CE8</code>, <code>+0x2CE0</code> and <code>+0x2CD8</code> in reverse order. In all, 779 functions load the pointer, among them
 the script natives <code>NPC::Search</code> and <code>NPC::CircleMidPoint</code> and the character methods vf19, vf54,
 vf75 and vf111.</p>
-<p>The planner holds no step. Members read by the code around it:</p>
+<p>The planner holds no step. The code around it reads these members:</p>
 <table>
 <thead>
 <tr>
@@ -188,7 +188,7 @@ vf75 and vf111.</p>
 </table>
 <h3 id="step-types">Step types</h3>
 <p>A step type is a GameDB category under <code>AI/Planner/Steps/</code>; its records carry the tuning
-(<code>FleeAmbush.TraitsRequired</code>, <code>FleeAmbush.SearchDistance</code> ...) and a C++ class implements it.
+(for example <code>FleeAmbush.TraitsRequired</code> and <code>FleeAmbush.SearchDistance</code>) and a C++ class implements it.
 <code>AI/Planner</code> has 69 categories: <code>Context</code>, <code>Steps</code> (the base), <code>Trees</code> and 66 step types:</p>
 <p>Animate, AssembleAtNode, Attack, AttackPreview, Attract, BaitAttract, BeckonWithTalk,
 CaptureBattleNode, CheerExitCombatSpaceSource, CircleAlly, CircleTarget, CombatRecoil, CombatState,
@@ -208,9 +208,9 @@ order, <code>PerformSyncAction</code>, <code>Fall</code>, <code>CombatRecoil</co
 <code>NodeAnimate</code> and <code>PresentationIdle</code> before its own entries; <code>BasicEnemy</code> inserts
 <code>Attack_HighPriority</code> right after <code>ForcedAttack</code>. <code>Idle</code>'s only step is <code>Idle</code>.</p>
 <h3 id="step-classes">Step classes</h3>
-<p>A step's GameDB record type selects its C++ class (below). Classes read from live plan stacks
-(the vtable at <code>step+0</code> against the category of the record at <code>step+0x10</code>: 12 of 12 pairs one to
-one) and classes named by the categories their own methods read:</p>
+<p>A step's GameDB record type selects its C++ class. The table combines classes read from live plan stacks
+(the vtable at <code>step+0</code> against the category of the record at <code>step+0x10</code>, which paired one to one in 12 of 12
+cases) with classes named by the categories their own methods read:</p>
 <table>
 <thead>
 <tr>
@@ -340,8 +340,8 @@ step's class.</p>
 <p>A step object holds <code>+0x08</code> the NPC, <code>+0x10</code> its definition record (<code>AI/Planner/Steps/&lt;Type&gt;</code>; the
 field accessors take it) and <code>+0x19</code> a byte that vf1 reports. A Flee step is 0x5F0 bytes.</p>
 <h3 id="the-step-interface">The step interface</h3>
-<p>Read from Flee (vt_0x1DC5010) and FleeAmbush (vt_0x1FBCCC8), and from the tree code that calls the
-slots:</p>
+<p>The interface is read from Flee (vt_0x1DC5010) and FleeAmbush (vt_0x1FBCCC8), and from the tree code that calls
+the slots:</p>
 <table>
 <thead>
 <tr>
@@ -384,7 +384,7 @@ slots:</p>
 </tr>
 <tr>
 <td>vf10</td>
-<td>END(reason): 1 when the step finished with status 1, else 2. Flee cancels its move request (0x44344C), stops fleeing (0x359988), clears <code>planner+0x697</code> and sets <code>planner+0x500</code> to 1.0</td>
+<td>END(reason): 1 when the step finished with status 1, otherwise 2. Flee cancels its move request (0x44344C), stops fleeing (0x359988), clears <code>planner+0x697</code> and sets <code>planner+0x500</code> to 1.0</td>
 </tr>
 <tr>
 <td>vf11</td>
@@ -415,8 +415,8 @@ slots:</p>
 <p>A step's preconditions are code in vf5 and vf9 and its tuning is its record, so whether an NPC
 flees is decided by <code>NPC::IsFleeing</code> and the record's gates, not by the Flee step's existence.</p>
 <p><strong>The planner's debug output is compiled in but never switched on.</strong> The switch 0x2A361F1 is read by
-seven instructions (0x191030, vt_0x1DB55F0 vf5, vt_0x1FBC5E8 vf5 and vf6) and written by none; it
-lies in zero-initialised memory, so it stays 0 in a normal run. The two filters are string objects
+seven instructions (0x191030, vt_0x1DB55F0 vf5, vt_0x1FBC5E8 vf5 and vf6) and written by none. It
+lies in zero-initialized memory, so it stays 0 in a normal run. The two filters are string objects
 created at start-up (0xC16F0, 0xC1780) that the vf17 match 0x1B04B68 compares with an object's name.</p>
 <h3 id="construction-and-the-step-factory">Construction and the step factory</h3>
 <p>The plan tree is built once, at character set-up, from the NPC's <code>AI/CharacterTypes.PlanTree</code>
@@ -430,7 +430,7 @@ branches resolve to a category and a class vtable. The factory recurses (0x45CEE
 <code>[npc+0x2D38]</code> by move-assignment (0x75F2DC); the old tree is freed by 0x3EB630.</p>
 <p>The services are built from the type's <code>AI/CharacterTypes.ServiceSet</code> records by the loop
 0x45B1B8, which calls 0x45B290 with <code>[npc+0x2D00]</code> and each record. If the character type has no
-<code>PlanTree</code>, the brain lookup returns null and the creator frees the new object (see Spawning).</p>
+<code>PlanTree</code>, the brain lookup returns null and the creator frees the new object (see Spawning below).</p>
 <h2 id="the-plan-tree">The plan tree</h2>
 <p><code>[npc+0x2D38]</code> is a unique pointer to the plan tree:</p>
 <table>
@@ -473,49 +473,49 @@ branches resolve to a category and a class vtable. The factory recurses (0x45CEE
 </table>
 <p>A live read of 115 NPCs found a tree on every one: <code>BasicEnemy</code> 92 (53 steps in the list),
 <code>BasicEnemy_Archer</code> 20 (49 steps), <code>Warg</code> 2, <code>Troll</code> 1. A typical stack is <code>Priority:Passive -&gt;
-FollowRoute:FollowRoute</code> or a single <code>Idle</code>. The leaves in that read: Idle 57, FollowRoute 25,
+FollowRoute:FollowRoute</code> or a single <code>Idle</code>. The leaves in that read were Idle 57, FollowRoute 25,
 Attack 13, CircleTarget 5, CombatRecoil 4, Mounted 4, UseWorkNode (record <code>UseMenaceNode</code>) 3, and
 one each of FindPreceivedOpponent, ReactToAlertnessChange, GoToPreferredAttackPosition and Flee.
 Child steps appear only on active stacks; the <code>+0x30</code> list holds the top-level priority entries.</p>
 <h3 id="the-tick">The tick</h3>
 <p><code>0x1919C8(tree, forced)</code> is called by the AI update (vf119, forced = 0, skipped while
-0x11548E0(npc), i.e. while <code>npc+0x2C21</code> is set) and by 0x2FD850 (forced = 1, which checks the same
+0x11548E0(npc) holds, that is, while <code>npc+0x2C21</code> is set) and by 0x2FD850 (forced = 1, which checks the same
 byte). 0x2FD850 is reached from the batch 0xF41E30 right after
-<code>Quest_AI_REPLAN_Requesting_replan...</code>: a replan a quest requests ticks at once.</p>
+<code>Quest_AI_REPLAN_Requesting_replan...</code>, so a replan that a quest requests ticks at once.</p>
 <ol>
 <li><strong>Reset.</strong> With <code>+0x52</code> set, 0x3EB9C4 ends every active step (vf10) and clears the stack.</li>
-<li><strong>Presentation.</strong> The planner's presentation state (0x190FF0) is latched in <code>+0x51</code>; on its
-   rising edge 0x4E7E04 ("presentation started") unwinds the plan, so a scene pre-empts whatever the
+<li><strong>Presentation.</strong> The planner's presentation state (0x190FF0) is latched in <code>+0x51</code>. On its
+   rising edge 0x4E7E04 ("presentation started") unwinds the plan, so a scene pre-empts anything the
    NPC was doing.</li>
-<li><strong>Select</strong> 0x191030, when <code>+0x50</code> is set and the character's vf113(1) is true, or the stack is
-   empty (through 0x3F65F4): walk <code>+0x30</code> in order, skip the running step and every pair not
-   allowed now (0x191374: a forced tick needs byte <code>+8</code>, a presentation byte <code>+9</code>), call vf3 then
+<li><strong>Select</strong> 0x191030 runs when <code>+0x50</code> is set and the character's vf113(1) is true, or when the stack is
+   empty (through 0x3F65F4). It walks <code>+0x30</code> in order, skips the running step and every pair not
+   allowed now (0x191374: a forced tick needs byte <code>+8</code>, a presentation byte <code>+9</code>), and calls vf3 then
    vf5; <strong>the first step whose vf5 returns 0 is pushed</strong>. List order is priority order.</li>
-<li><strong>Update</strong> 0x191ADC: each stack entry with <code>ticks != 0</code> and status 0 gets vf9; a non-zero result
+<li><strong>Update</strong> 0x191ADC gives vf9 to each stack entry with <code>ticks != 0</code> and status 0. A non-zero result
    either parks in the entry (when a deeper entry follows) or finishes the top step.</li>
-<li><strong>Unwind</strong> 0x376E28 / 0x3763A8: the finished step gets vf10(reason) and vf4 and is popped; its
-   parent gets vf13 or vf12 with the child's status and ends too when that returns non-zero.</li>
+<li><strong>Unwind</strong> 0x376E28 / 0x3763A8 gives the finished step vf10(reason) and vf4 and pops it. Its
+   parent gets vf13 or vf12 with the child's status and ends too when that call returns non-zero.</li>
 </ol>
 <p>The pair bytes and the list order are per-NPC heap state rebuilt with the tree, so a change to them
-lasts until the NPC's tree is rebuilt; a step's record is read by vf5 and vf9 each time they run.</p>
-<p>In play the tick takes 33-38% of the NPC update, 0.50-0.73 ms per frame for 121-159 NPCs: selection
-4-5%, running steps 29-33%. The heaviest running steps are Attack (its attack picking 0x4612D8 over
+lasts until the NPC's tree is rebuilt. A step's record is read by vf5 and vf9 each time they run.</p>
+<p>In play the tick takes 33-38% of the NPC update, 0.50-0.73 ms per frame for 121-159 NPCs, of which
+selection takes 4-5% and the running steps 29-33%. The heaviest running steps are Attack (its attack picking 0x4612D8 over
 the combat tree's nodes and pools, 7-15%), FollowLeader (3-9%, band movement 0xF498C0),
 CircleTarget and FollowRoute.</p>
 <h3 id="fights-in-the-planner">Fights in the planner</h3>
 <p>During a fight against the player (73.5 s of world time, 1,215 samples, up to 17 NPCs engaged, one
 fight circle), the NPCs whose leaf step was <code>Attack</code> numbered 0 in 65 of 122 timeline samples, 1 in
-32 and 2 in 25, never 3 or more; a typical snapshot had 10-12 in <code>CircleTarget</code> and 1-2 in
-<code>Attack</code>. The leaf transitions: CircleTarget -&gt; Attack 30, Attack -&gt; CircleTarget 25,
+32 and 2 in 25, and never 3 or more. A typical snapshot had 10-12 in <code>CircleTarget</code> and 1-2 in
+<code>Attack</code>. The leaf transitions were CircleTarget -&gt; Attack 30, Attack -&gt; CircleTarget 25,
 GoToPreferredAttackPosition -&gt; CircleTarget 25, CircleTarget -&gt; CombatRecoil 19, CircleTarget -&gt;
-GoToPreferredAttackPosition 17, CombatRecoil -&gt; CircleTarget 16. The <code>CircleTarget</code> / <code>Attack</code>
+GoToPreferredAttackPosition 17 and CombatRecoil -&gt; CircleTarget 16. The <code>CircleTarget</code> / <code>Attack</code>
 alternation is the fight circle handing out attack turns; the circle itself is in Combat.</p>
 <h2 id="target-selection">Target selection</h2>
 <p>The first call in the AI update, vf113(5) -&gt; 0x11B230, picks the NPC's target:</p>
 <ol>
 <li><strong>Threat.</strong> The target selector <code>[npc+0x2D28]</code> (0x11BCC8 -&gt; 0x11C9AC) scores candidates in
-   0x2FA99C from <code>AI/CombatThreat</code> (43 records, one per kind: <code>Infantry_Orc</code>, <code>Archer_Orc</code>,
-   <code>Troll_Cave</code>, <code>Balrog</code>, <code>Player</code>, <code>Nazgul</code> ...): <code>CombatThreatTargetWeight</code>,
+   0x2FA99C from <code>AI/CombatThreat</code> (43 records, one per kind, among them <code>Infantry_Orc</code>, <code>Archer_Orc</code>,
+   <code>Troll_Cave</code>, <code>Balrog</code>, <code>Player</code> and <code>Nazgul</code>), using <code>CombatThreatTargetWeight</code>,
    <code>DefaultInitialDetection</code>, <code>DefaultMax</code>, <code>DistanceInfluence</code>, <code>CombatThreatAttenuationRange</code>,
    ally and opponent proximity influences and distances, <code>CombatThreatInitialValues</code> and
    <code>CombatThreatThreshold</code>, plus the fight circle's <code>RingSettings.TargetWeightAdjustment</code>. A
@@ -524,14 +524,14 @@ alternation is the fight circle handing out attack turns; the circle itself is i
    just changed", "Selecting %s against %s") -&gt; 0x11BE00 -&gt; <strong>0x11BF60</strong>, the scan of the target
    pickers.</li>
 </ol>
-<p>The pickers live in a table at <code>[base+0x26FFCC0]</code>: <code>+0x00</code> u32 count (27), <code>+0x10</code> an array of
+<p>The pickers live in a table at <code>[base+0x26FFCC0]</code>, whose <code>+0x00</code> holds the u32 count (27) and <code>+0x10</code> an array of
 picker pointers (0x11C018 returns entry i). 0x11BF60 returns at once when <code>planner+0x430</code> is set or
-the bitset <code>planner+0x440</code> is empty; otherwise, in table order, it skips every picker whose key
+the bitset <code>planner+0x440</code> is empty. Otherwise it walks the table in order: it skips every picker whose key
 (<code>picker+0x08</code>) is not in the NPC's bitset, returns the current one if it is reached, and otherwise
 calls the picker's vf3 and returns the first that passes. <code>AI/TargetSelects</code> has 27 records whose
-<code>Class</code> field names 22 classes, four records sharing <code>AlertnessSource</code> and three <code>Disturbance</code>; the
-27 table objects have the same shape, 22 classes in the vtable range 0x22FF778 - 0x22FFD18 with
-vt_0x22FF778 four times and vt_0x22FF9B8 three times:</p>
+<code>Class</code> field names 22 classes, with four records sharing <code>AlertnessSource</code> and three sharing <code>Disturbance</code>. The
+27 table objects have the same shape: 22 classes in the vtable range 0x22FF778 - 0x22FFD18, with
+vt_0x22FF778 four times and vt_0x22FF9B8 three times.</p>
 <table>
 <thead>
 <tr>
@@ -646,15 +646,15 @@ vt_0x22FF778 four times and vt_0x22FF9B8 three times:</p>
 <p>The other fields are <code>Delay</code> and <code>ChainDelay</code> (pool ranges), <code>MaxChainDelayCount</code>,
 <code>UseSuperJumpAgainstPlayer</code>, <code>UsePursuitConstraint</code>, <code>Stimulus</code> (<code>CombatThreat</code> and
 <code>CombatScripted</code> list <code>FactionThreatSound</code>, <code>AlertLookoutSound</code>, <code>AttackingTarget</code>,
-<code>BandMateThreatSound</code>, <code>AlertLookoutVisible</code>) and <code>Validation</code> (<code>Surprised</code>, <code>Alert</code>,
-<code>LostPlayerFromAlert</code>, <code>OpponentDamage</code> ...). A character type chooses its set in
-<code>AI/CharacterTypes.TargetSelectSet</code> (<code>Default</code>, <code>Default_Monster</code> ...).</p>
+<code>BandMateThreatSound</code>, <code>AlertLookoutVisible</code>) and <code>Validation</code> (for example <code>Surprised</code>, <code>Alert</code>,
+<code>LostPlayerFromAlert</code> and <code>OpponentDamage</code>). A character type chooses its set in
+<code>AI/CharacterTypes.TargetSelectSet</code> (for example <code>Default</code> or <code>Default_Monster</code>).</p>
 <p>An AI's target comes from this pass, not from its attacks: <code>AttackData.Target</code> is null on all 34
 Balrog and AI-Talion attacks sampled. <code>NPC::SetCombatScriptedTarget</code> 0x1A8DC60 refuses a dead NPC
 and hands a script's target to the target selector <code>[npc+0x2D28]</code> (0x44C644) and then the planner.</p>
 <h3 id="the-character-type">The character type</h3>
-<p><code>AI/CharacterTypes</code> (81 records, 62 fields) gathers everything above for one kind of AI. For
-<code>Troll_Cave</code>: <code>PlanTree</code> <code>Troll</code>, <code>TargetSelectSet</code> <code>Default_Monster</code>, <code>Alignment</code> <code>Troll_Cave</code>,
+<p><code>AI/CharacterTypes</code> (81 records, 62 fields) gathers everything above for one kind of AI.
+<code>Troll_Cave</code>, for example, sets <code>PlanTree</code> <code>Troll</code>, <code>TargetSelectSet</code> <code>Default_Monster</code>, <code>Alignment</code> <code>Troll_Cave</code>,
 <code>PlayerFollowerAlignment</code> <code>PlayerFollower_Beast</code>, <code>BrandedAlignment</code> / <code>ActivatedBrandAlignment</code>
 <code>WraithInfight_Beast</code>, <code>SensorSet</code> <code>Trolls</code>, <code>ServiceSet</code> <code>Troll</code>, <code>AlertnessProfile</code> <code>Troll</code>,
 <code>Perception</code> <code>CaveTroll</code>, <code>PerceptionTarget</code> <code>Trolls</code>, <code>CombatThreatPicker</code> <code>Troll_Cave</code>,
@@ -665,8 +665,8 @@ mounted-collision shape fields.</p>
 <h2 id="perception">Perception</h2>
 <h3 id="the-perception-table">The perception table</h3>
 <p><code>AI/Perception/Types</code> (240 records) is compiled once, at start-up, into a table of the AI system
-<code>[base+0x26FFBF8]</code>: <code>+0x300</code> the rows, <code>+0x308</code> u32 count (240, all <code>AI/Perception/Types</code>), 0x58
-bytes per row:</p>
+<code>[base+0x26FFBF8]</code>, with the rows at <code>+0x300</code> and the u32 count at <code>+0x308</code> (240, all <code>AI/Perception/Types</code>). Each
+row is 0x58 bytes:</p>
 <table>
 <thead>
 <tr>
@@ -722,9 +722,9 @@ bytes per row:</p>
 </tbody>
 </table>
 <p>The FOV fields are half-angles in degrees: <code>Alertness_Spider_Drone</code> 70 / 25 is stored as 0.342 /
-0.423, <code>Biped_AlertSuspicious_TargetKnown_Trolls</code> 120 / 60 as -0.5 / 0.866; the radii and delays in
+0.423, and <code>Biped_AlertSuspicious_TargetKnown_Trolls</code> 120 / 60 as -0.5 / 0.866. The radii and delays in
 the rows equal the records' values (3 records checked field by field). The table survives loading
-screens. Each AI then copies its own values: the perception refresh <strong>0x499724</strong>(component =
+screens. Each AI then copies its own values. The perception refresh <strong>0x499724</strong>(component =
 <code>[npc+0x2CF0]</code>) reads the current alertness level (<code>UseSneakingPerceptionDistanceFactor</code>), the
 faction row's <code>PerceptionOverride</code>, <code>AI/Perception.DefaultPerceptionList</code>, the weather modifier
 (<code>AI/Perception/PerceptionWeatherMod.WeatherModifier</code>), <code>AdditionalSensorSet</code>,
@@ -736,22 +736,22 @@ every record by 0.5 left three AIs' copies unchanged): the radii, angles and del
 from the start-up table through 0x499724.</p>
 <h3 id="sensors-and-stimuli">Sensors and stimuli</h3>
 <p>A character type's <code>SensorSet</code> (13 records in <code>AI/SensorSets</code>) composes <strong>observers</strong> and
-<strong>interpreters</strong>, with includes: <code>_BasicObservers</code> = BandMate, Audible, SuspectsTarget,
-NearBandLeader, MountedCharacter, RecognizeRange, FOV, CloseTarget, Obscured, SightRange;
-<code>_BipedObservers</code> adds Gathering and HiddenCharacter; <code>Default</code> (bipeds) interprets Attract,
+<strong>interpreters</strong>, with includes. <code>_BasicObservers</code> holds BandMate, Audible, SuspectsTarget,
+NearBandLeader, MountedCharacter, RecognizeRange, FOV, CloseTarget, Obscured and SightRange, and
+<code>_BipedObservers</code> adds Gathering and HiddenCharacter. <code>Default</code> (bipeds) interprets Attract,
 EnemyDelayedDisturbance, MoraleVictimAudible, FactionDisturbance, MoraleAudible, Distract,
-FactionDamaged, FactionThreat, EnemyDisturbance and BrandedDefendPlayer; <code>Monsters</code> adds BaitAttract;
+FactionDamaged, FactionThreat, EnemyDisturbance and BrandedDefendPlayer, and <code>Monsters</code> adds BaitAttract.
 <code>Wargs</code>, <code>Trolls</code> and <code>Balrog</code> add their own hidden-character observers.</p>
 <p>Characters emit stimuli named by their type (<code>CharacterVisibleStimulus</code>,
 <code>CharacterAudibleStimulus</code>, <code>CharacterSneakingAudibleStimulus</code>, <code>AssaultCharacterVisibleStimulus</code>).
 The player's emitters are built from <code>AI/CharacterTypes</code> by 0x440F80, whose only caller is the
-player's stimulus update 0x7AA29C (player vtable slot 59): sight at <code>player+0x2190</code>, sound at
+player's stimulus update 0x7AA29C (player vtable slot 59). Sight sits at <code>player+0x2190</code> and sound at
 <code>player+0x21B8</code>, each with the live emitter at <code>+0x20</code>.</p>
 <h3 id="the-sighting-matrix">The sighting matrix</h3>
 <p><code>[base+0x26FFC48]</code> (also the AI world's <code>+0x50</code>) is a 4.6 MB block of 256 perceiver blocks of
 0x4808 bytes: <code>+0x00</code> the owning character, then 256 facts of 0x48 bytes. The fact a perceiver holds
-about character c is at <code>block + 8 + idx * 0x48</code>, idx = u32 <code>c+0x2BF8</code> (below 256; the player is 0).
-116 of the 256 blocks had an owner in one read.</p>
+about character c is at <code>block + 8 + idx * 0x48</code>, where idx = u32 <code>c+0x2BF8</code> (below 256; the player is 0).
+In one read, 116 of the 256 blocks had an owner.</p>
 <table>
 <thead>
 <tr>
@@ -789,15 +789,15 @@ has relationship 3: 0x2E6EE4 makes the perceiver (<code>[owner+0x2D28]</code>) d
 focus (<code>+0xF0</code>; 0x2E6EB0 -&gt; 0x11C9AC), queues the player's combat object at
 <code>[base+0x26FFB70]+0x1050</code> (0x442F84), and 0x2229C0 resets the fact (target 0, relationship 2). It
 wipes every hostile AI's knowledge of the character however it was gained, by sight, sound or a
-hit. Callers: the player's stimulus update, <code>Combat/Buffs.ClearNPCAwareness</code> (0x452ED8),
+hit. Its callers are the player's stimulus update, <code>Combat/Buffs.ClearNPCAwareness</code> (0x452ED8),
 <code>ClearAIDetectionBrush</code> volumes (0x2B3B74) and the attack path 0x4CDE54.</p>
 <p><strong>AI-spectator invisibility.</strong> <code>CPlayerObj::SetAISpectatorInvisible</code>(player, bool) 0x19BF378 writes
 the byte <code>player+0x2F10</code> and runs the stimulus update 0x7AA29C. While the byte is set (or the
 spectator state 0x171A78 holds), the update releases both emitters (0x4410E0), runs the forget
 path and zeroes the player combat object's <code>+0x596</code>; otherwise it rebuilds the emitters from the
 character type. Since 0x440F80 has no other caller, nothing is emitted while the byte is set,
-whatever the GameDB says. The byte is written only by the setter and the constructor (0x19B8D8C,
-0). Engine users: <code>SetHidden</code> (player vf32 0x19BF91C, which also sets <code>SetSpectatorInvisible</code> at
+regardless of the GameDB. The byte is written only by the setter and the constructor (0x19B8D8C,
+0). Its engine users are <code>SetHidden</code> (player vf32 0x19BF91C, which also sets <code>SetSpectatorInvisible</code> at
 <code>+0x3882</code>), hiding places (0x1A001E0) and the script binding <code>CPlayerObj.SetAISpectatorInvisible</code>
 (0x1BA7D48, unused by the shipped scripts). The engine clears the byte after those uses, and a save
 load builds a fresh player object.</p>
@@ -808,74 +808,75 @@ load builds a fresh player object.</p>
 0, Suspicious 0.33, Surprised 0.67, Alert 1.0), <code>UseSneakingPerceptionDistanceFactor</code> (read by the
 perception refresh), <code>CombatReady</code>, <code>PreserveCharacterFacts</code>,
 <code>DismissDisturbancesImmediately</code>, map rendering and <code>AllowRestrictedNodes</code>. A character type's
-<code>AlertnessProfile</code> (16 records: <code>Default</code>, <code>DefaultMonster</code>, <code>AlwaysAlert</code>, <code>Coward</code>, <code>Troll</code>,
-<code>Warg</code>, <code>FortAssault</code> ...) sets the default, simulated, inactive and exit-forced levels, the
+<code>AlertnessProfile</code> (16 records, among them <code>Default</code>, <code>DefaultMonster</code>, <code>AlwaysAlert</code>, <code>Coward</code>, <code>Troll</code>,
+<code>Warg</code> and <code>FortAssault</code>) sets the default, simulated, inactive and exit-forced levels, the
 awareness icons and the ranges.</p>
 <p>The AI world's alarm system (<code>+0x38</code>) is ticked by 0x607838 as the transient alarms. Area alarm
-levels are <code>AI/SpawnAmbient/AlarmLevels</code>: <code>Empty</code>, <code>Low</code>, <code>High</code>, <code>HighWave2</code>, <code>HighWave3</code>, with
+levels are <code>AI/SpawnAmbient/AlarmLevels</code>: <code>Empty</code>, <code>Low</code>, <code>High</code>, <code>HighWave2</code> and <code>HighWave3</code>, with
 <code>IsElevated</code> true for the three high ones. On the NPC side there is an <code>AreaAlarm</code> service
 (every 0.5 s) and the steps <code>ElevateTransientAlarm</code> and <code>ReactToAreaAlarmLevelChange</code>.</p>
 <h2 id="sides-alignments-the-relation-table-and-teams">Sides: alignments, the relation table and teams</h2>
-<p><strong>The relation table.</strong> <code>[base+0x2A868C0]</code> points to a static object at 0x27977F0: <code>+0x00</code> u32 N, the number of
-<code>Character/Alignments</code> records (52), <code>+0x08</code> a pointer to the N x N byte matrix. It is built once by 0x1C03908, entered
+<p><strong>The relation table.</strong> <code>[base+0x2A868C0]</code> points to a static object at 0x27977F0, which holds at <code>+0x00</code> the u32
+N, the number of <code>Character/Alignments</code> records (52), and at <code>+0x08</code> a pointer to the N x N byte matrix. It is built once by 0x1C03908, entered
 only by a tail call from 0x1C03BD0 (which stores the pointer, the one write among its 34 references), whose one caller
 0x1B07200 sits in the AI stimulus module. For each alignment record i the builder walks its <code>Alignment</code> rows, each a
 <code>_StructuresRelationship</code> {<code>Stance</code>, turned into a byte by 0x1A98488; <code>Others</code>}, and writes
 <code>matrix[i * N + RecordIndexOf(other)] = stance</code> only while the cell is still 0, so the first row that names a pair
-wins. Because the table is compiled, a later edit of an alignment record reaches nothing. The diagonal: 27 sides are
-friendly to themselves, 5 neutral (<code>Grabbed</code>, <code>Orc_Prisoner</code>, <code>Branded</code>, <code>Explosion_DamageAll</code>, <code>Aligned_DamageAll</code>), 4
+wins. Because the table is compiled, a later edit of an alignment record reaches nothing. On the diagonal, 27 sides
+are friendly to themselves, 5 neutral (<code>Grabbed</code>, <code>Orc_Prisoner</code>, <code>Branded</code>, <code>Explosion_DamageAll</code>, <code>Aligned_DamageAll</code>), 4
 hostile (<code>Troll_Cave</code>, <code>Poison_Barrel_Infight</code>, <code>Trait_Unstable_Follower</code>, <code>Trait_Unstable_Sauron</code>) and 16 unset (0,
 read as 2 by the hit gate). The lookup 0x18BC88(table, row, column) returns the first non-zero cell over the two
-characters' slot ids (the asking side's ids outer), 2 when all are 0 and 0 when either has no side; the hit
+characters' slot ids (the asking side's ids outer), 2 when all are 0 and 0 when either has no side. The hit
 dispatcher's friendly-fire gate drops a hit when it returns 1 (see Combat, "Health and damage").</p>
 <p>The same object holds, inline at <code>+0x818</code>, a 256 x 256 byte cache of relations between live characters, indexed by
-their sighting slot <code>char+0x2BF8</code> (live: follower to enemy 3 on 40 of 40 cells, follower to follower 1 on 380 of 380),
-and a 65,536-bit override set at <code>+0x10818</code>. The cache follows a side change in the same step (a read every second
+their sighting slot <code>char+0x2BF8</code> (in a live read, follower to enemy was 3 on 40 of 40 cells and follower to follower
+1 on 380 of 380), and a 65,536-bit override set at <code>+0x10818</code>. The cache follows a side change in the same step (a read every second
 showed the new values at once and the old ones again after a reset). 0x1C03BDC(_, a, b) forces one cell to 3 and sets
-its override bit; its one caller is the threat module 0x605D98 (<code>CCharacter::ApplyThreatRecord</code> 0x19B3280, with a
+its override bit. Its one caller is the threat module 0x605D98 (<code>CCharacter::ApplyThreatRecord</code> 0x19B3280, with a
 <code>Combat/Threat</code> record, a target and a float scale).</p>
 <p><strong>Ready-made teams.</strong> The fight pits' <code>Duelist_A</code>, <code>_B</code> and <code>_C</code> are friendly to themselves, hostile to the other two
-both ways and neutral to <code>Spectator</code>; <code>Player</code>, <code>PlayerFollower</code> and <code>Orc_FactionA</code> read the Duelists as 0 or 2, and the
+both ways and neutral to <code>Spectator</code>. <code>Player</code>, <code>PlayerFollower</code> and <code>Orc_FactionA</code> read the Duelists as 0 or 2, and the
 Duelist rows name neither Talion nor any army. <code>Trait_Unstable_Follower</code> is hostile to itself, the three Duelists,
-<code>Spectator</code>, <code>Orc_FactionA</code>, <code>PlayerFollower</code> and more, and friendly to <code>Player</code>; <code>Poison_Barrel_Infight</code> (the
+<code>Spectator</code>, <code>Orc_FactionA</code>, <code>PlayerFollower</code> and other sides, and friendly to <code>Player</code>. <code>Poison_Barrel_Infight</code> (the
 free-for-all of the poisoned grog) and <code>Trait_Unstable_Sauron</code> are hostile to <code>Player</code>. Every shipped five-side clique
 of mutually hostile, self-friendly sides contains <code>Player</code> or a follower side.</p>
 <p><strong>A character's side: two stacks.</strong> An NPC (vt_0x1FB3640) keeps a requested stack at <code>char+0x2EC0</code> and the effective
 one at <code>char+0x23E0</code>, both laid out as 7 record pointers (<code>+0x00</code> .. <code>+0x30</code>) and 7 u32 record indices (<code>+0x38</code> ..
-<code>+0x50</code>); 0x18BF0C(stack, slot, record) writes both halves. Slot 6 holds the base side, slot 4 a script override, slot 3
+<code>+0x50</code>). 0x18BF0C(stack, slot, record) writes both halves. Slot 6 holds the base side, slot 4 a script override, slot 3
 the Unstable trait's side and slot 2 Hatred (both put there mid-fight by trait catalysts; the refresh's callers include
-the catalyst 0x40D3C4), and slot 0 is the engine's: the NPC update vf119 0x2F79A4 clears it (and may refill it from
+the catalyst 0x40D3C4). Slot 0 is the engine's: the NPC update vf119 0x2F79A4 clears it (and may refill it from
 <code>planner+0xA00</code>) when 0x115471C and 0x1A8D1A0 pass. Lower slots sit above higher ones: in a pit fight a trait side in
 slot 3 above the pit's side in slot 4 turned a captain on his own team until the trait's side left.</p>
 <ul>
-<li><code>NPC::SetAlignment</code> 0x7D2ED4 is the script-context check (0x503EF8), a dead test, 0x18BF0C(<code>npc+0x2EC0</code>, 4, record)
-  and 0x440B24(npc, 0); <code>NPC::ResetAlignment</code> 0x7D722C does the same with null. Because of the script-context check,
-  the call works only inside an engine-dispatched script handler (see Scripting).</li>
-<li>The refresh 0x440B24(npc, force), 18 call sites: unforced, it skips while the current attack's
+<li><code>NPC::SetAlignment</code> 0x7D2ED4 consists of the script-context check (0x503EF8), a dead test,
+  0x18BF0C(<code>npc+0x2EC0</code>, 4, record) and 0x440B24(npc, 0). <code>NPC::ResetAlignment</code> 0x7D722C does the same with null.
+  Because of the script-context check, the call works only inside an engine-dispatched script handler (see Scripting).</li>
+<li>The refresh 0x440B24(npc, force) has 18 call sites. Unforced, it skips while the current attack's
   <code>_StructuresCombatAIData.AllowAlignmentChange</code> is false, so a request can wait in the requested stack until the next
   caller. Its source is <code>npc+0x2EC0</code>, or for a ridden mount the rider's effective copy plus
-  <code>Combat/MountData.MountedAlignment</code> in slot 0; 0x440F28 copies it into <code>+0x23E0</code>, the notifiers 0x440F08, 0x440EE4 and
+  <code>Combat/MountData.MountedAlignment</code> in slot 0. 0x440F28 copies it into <code>+0x23E0</code>, the notifiers 0x440F08, 0x440EE4 and
   0x440CAC run, the planner's <code>+0xA08</code> / <code>+0xAF0</code> are cleared, and the same follows for the mount. A reset sent during
   an attack therefore lands in the requested stack only, and the effective one keeps the old side until a later
   refresh.</li>
-<li>Live, 6 of 6 unridden NPCs held requested == effective with the base side in slot 6, and 2 of 2 ridden beasts took
-  their rider's (<code>PlayerFollower_Beast</code> -&gt; <code>PlayerFollower</code>). Two wild wargs carried <code>Aligned_AllFriendly</code> in slot 4
-  outside any script fight, so slot 4 has other writers.</li>
-<li>On Talion <code>char+0x2EC0</code> is something else (the parked inventory while he plays as an orc, see Fight pits), and his
-  planner pointer is a self-pointing container head: the side setters are NPC-only.</li>
+<li>In a live read, 6 of 6 unridden NPCs held requested == effective, with the base side in slot 6, and 2 of 2 ridden
+  beasts took their rider's side (<code>PlayerFollower_Beast</code> -&gt; <code>PlayerFollower</code>). Two wild wargs carried
+  <code>Aligned_AllFriendly</code> in slot 4 outside any script fight, so slot 4 has other writers.</li>
+<li>On Talion <code>char+0x2EC0</code> is something else (the parked inventory while he plays as an orc; see Fight pits below), and
+  his planner pointer is a self-pointing container head: the side setters are NPC-only.</li>
 <li><strong>Fall-through.</strong> An override row answers only for the sides it names: the Duelist rows name no Talion and no army,
   so an enemy captain on <code>Duelist_B</code> still resolves <code>Orc_FactionA</code> -&gt; <code>Player</code> = 3 against Talion, and a follower on a
   Duelist side resolves <code>PlayerFollower</code> -&gt; <code>Orc_FactionA</code> = 3 against bystanders.</li>
 </ul>
 <p><strong>Making two sides fight.</strong> Putting characters on hostile sides through slot 4 and refreshing does not start a fight
-by itself: friendly NPCs keep no sighting facts about each other, so there is nothing to act on. What the pit script does
-does: the side, a senses cycle and a scripted target. <code>NPC::SetSenses</code> 0x35D6D4(npc, bool) is a dead test, the byte
-<code>+0x2DD5</code> and 0x35D6F8, which combines <code>+0x2DD5</code> .. <code>+0x2DD7</code> into <code>+0x2DD4</code>, flags the perceiver's entry
-<code>idx * 0x38 + 0xB</code> in the table <code>[base+0x26FFBE0]</code> and, when switching off, runs 0x686B94 (the target dropped through
-<code>[npc+0x2D18]</code>, the stimulus list <code>[npc+0x2CE0]+0xD8</code> and the perception block reset). <code>NPC::SetCombatScriptedTarget</code>
-0x1A8DC60(npc, target, 0) (a dead test, the target's combat object 0x11B680, a request 0xF41250(npc, owner, 2) or the
-selector 0x44C644(<code>[npc+0x2D28]</code>, combat object), then the planner 0x1AA1714) creates sighting facts along the targets
-at once (awareness 4, relationship 3); <code>NPC::ClearCombatScriptedTarget</code> 0x1A8B640 undoes it. Three enemy grunts put on
+by itself: friendly NPCs keep no sighting facts about each other, so there is nothing to act on. The pit script's
+sequence does start one: the side, a senses cycle and a scripted target. <code>NPC::SetSenses</code> 0x35D6D4(npc, bool) consists
+of a dead test, the byte <code>+0x2DD5</code> and 0x35D6F8. That function combines <code>+0x2DD5</code> .. <code>+0x2DD7</code> into <code>+0x2DD4</code>, flags
+the perceiver's entry <code>idx * 0x38 + 0xB</code> in the table <code>[base+0x26FFBE0]</code> and, when switching off, runs 0x686B94 (the
+target dropped through <code>[npc+0x2D18]</code>, the stimulus list <code>[npc+0x2CE0]+0xD8</code> and the perception block reset).
+<code>NPC::SetCombatScriptedTarget</code> 0x1A8DC60(npc, target, 0) consists of a dead test, the target's combat object
+0x11B680, either a request 0xF41250(npc, owner, 2) or the selector 0x44C644(<code>[npc+0x2D28]</code>, combat object), and then
+the planner 0x1AA1714. It creates sighting facts along the targets at once (awareness 4, relationship 3), and
+<code>NPC::ClearCombatScriptedTarget</code> 0x1A8B640 undoes it. Three enemy grunts put on
 <code>Duelist_A</code> (two) and <code>Duelist_B</code> (one) this way fought each other within 6 s. <code>CCharacter::SetMinHealthPct</code> 0x19B7294
 (not script-only) sets <code>char+0x2500</code> = pct x the maximum health <code>[combat+0x428]</code>, a floor in health points (1.0 means no
 damage).</p>
@@ -942,8 +943,8 @@ interval in seconds:</p>
 </table>
 <h2 id="spawning">Spawning</h2>
 <h3 id="the-spawn-manager">The spawn manager</h3>
-<p><code>[base+0x26FFBE8]</code> (also the AI world's <code>+0x30</code>) is null at the main menu. Engine core gives its
-role as the in-world test and the entry layout; the rest of the object:</p>
+<p>The spawn manager <code>[base+0x26FFBE8]</code> (also the AI world's <code>+0x30</code>) is null at the main menu. Engine core gives its
+role as the in-world test and its entry layout; the table gives the rest of the object:</p>
 <table>
 <thead>
 <tr>
@@ -1002,7 +1003,7 @@ same way. 0x4A2D84 erases a given character's entry (called from character slot 
 finds the character there and lowers <code>+0x190</code> by one (called from character slot 128 and from
 0x360988). A spawn (0x1A932F8, which logs <code>Spawned AI %s from Spawner %s</code>) appends to the main array
 and raises <code>+0x190</code>. The roster was empty (begin equal to end) in every one of 219 reads through a
-same-region fast travel and the 20 s after it; the first qword of its buffer then read vt_0x1DAAA20,
+same-region fast travel and the 20 s after it. The first qword of its buffer then read vt_0x1DAAA20,
 a base vtable that 1,309 constructors and destructors write, which is what an element's destructor
 leaves behind.</p>
 <p>The same fast travel tore the ambient population down and rebuilt it: <code>+0x190</code> fell to 0 and rose
@@ -1010,11 +1011,11 @@ to 7 within 20 s of arrival, although the region did not change.</p>
 <p>When 0x5C133C copies <code>MaxAmbientAI</code> it also walks the 200 slots and opens the first
 <code>MaxAmbientAI</code> of them (slot byte <code>+0xE8</code> cleared), closing the rest, so a budget above 200 opens no
 more slots. Dead characters leave the array (0 corpses among 107 entries with a fresh corpse at the
-player's feet), so its length counts the living; the AI list <code>[base+0x2728ED0]</code> ..
+player's feet), so its length counts the living. The AI list <code>[base+0x2728ED0]</code> ..
 <code>[base+0x2728ED8]</code> (begin, end) keeps dead AIs too (60 of 111 entries in one read). The manager
-is reallocated during travel; its destructor 0x1A90C60 clears the global and deletes every queued
+is reallocated during travel. Its destructor 0x1A90C60 clears the global and deletes every queued
 request, so a fast travel discards pending spawns.</p>
-<p>Script interface (<code>AISpawnManager</code>): <code>Enable</code> 0x1B81FB4, <code>Disable</code> 0x1B819D4,
+<p>The script interface <code>AISpawnManager</code> offers <code>Enable</code> 0x1B81FB4, <code>Disable</code> 0x1B819D4,
 <code>RemoveAllAmbientAI</code> 0x1BA2AB8, <code>ForceAISpawnerSet</code> 0x1B830A8, <code>AddScenarioOverrideRecord</code>
 0x7B91DC, <code>SummonGrunts</code> 0x1BB138C and <code>SummonNPCs</code> 0x1BB1468.
 The same table (registered by 0x1B91DC8, twelve functions) also holds <code>ForceAISpots</code> 0x7B9264,
@@ -1027,8 +1028,8 @@ distance, predicate, removal and node-tag accessors, <code>Create</code>, <code>
 <h3 id="ambient-spawners">Ambient spawners</h3>
 <p><strong>Live census.</strong> In one loaded desert world, walking the world contexts' object tables found
 5,002 <code>AISpawnerAmbientNormal</code> objects (vt_0x1DC5800), packed at a stride of 0x1D0 (4,556 of the
-neighbour gaps). Their channels (<code>+0x1C0</code>): <code>Owner_DifficultyMelee</code> 915, <code>Owner_Infantry</code> 779,
-<code>Goblin_Difficulty</code> 480, <code>Owner_Warg</code> 475, <code>Owner_DifficultyAny</code> 378, <code>Spider_AI</code> 286 ... and 233
+neighbor gaps). Their channels (<code>+0x1C0</code>) include <code>Owner_DifficultyMelee</code> 915, <code>Owner_Infantry</code> 779,
+<code>Goblin_Difficulty</code> 480, <code>Owner_Warg</code> 475, <code>Owner_DifficultyAny</code> 378, <code>Spider_AI</code> 286 and 233
 <code>Enemy_*</code>. On 400 of them <code>+0x158</code> held an <code>AI/SpawnAmbient/Areas</code> record (400), <code>+0x160</code> an
 <code>AI/SpawnAmbient/AlarmAreas</code> record (387), <code>+0x170</code> an <code>AutoNodeTag</code> (4), <code>+0x178</code> / <code>+0x190</code> the
 <code>FortAssault/Side</code> / <code>StageList</code> records (5) and <code>+0x198</code> an <code>Inventory/Transform</code> (30).</p>
@@ -1117,32 +1118,38 @@ includes <code>SetAIToSpawn</code> (0x5EB1F8). <code>AISpawnCloset</code> (0x250
 three channels are named for closets (<code>Owner_Closet_Gang</code>, <code>Owner_Closet_GangSmall</code>,
 <code>Owner_Closet_GangNoArcher</code>) and <code>AI/Constants.SpawnClosetIdle</code> is <code>Bip_SpCloset_Idle</code>.
 <code>ScenarioOverrideVolume</code> objects (0x160 bytes, 16 on the due lists) also update there.</p>
-<p><strong>Can a spawner spawn?</strong> The base check <code>vt_0x1DC5988::vf38</code> 0x16588C refuses, in order: no player
-object; the flag <code>+0x1B2</code> set ("Waiting to snap to nav-mesh"); evaluations not passed (<code>+0x1B1</code>
-clear; the message reports <code>+0x1AF</code> as "updating" and <code>+0x1B8</code> as "checked"); a spawn predicate
-that fails (0x165B68, below); and a full spawner. The count check uses signed bytes: <code>MaxSpawn</code> at
+<p><strong>When a spawner may spawn.</strong> The base check <code>vt_0x1DC5988::vf38</code> 0x16588C refuses, in this order, when:</p>
+<ul>
+<li>there is no player object;</li>
+<li>the flag <code>+0x1B2</code> is set ("Waiting to snap to nav-mesh");</li>
+<li>the evaluations have not passed (<code>+0x1B1</code> clear; the message reports <code>+0x1AF</code> as "updating" and <code>+0x1B8</code> as
+  "checked");</li>
+<li>a spawn predicate fails (0x165B68, below);</li>
+<li>the spawner is full.</li>
+</ul>
+<p>The count check uses signed bytes: <code>MaxSpawn</code> at
 <code>+0x1AD</code> (0 = no limit) and <code>CurSpawned</code> at <code>+0x1AE</code>, refusing when <code>CurSpawned &gt;= MaxSpawn</code>
 (the message's arguments fix which byte is which). <code>AISpawnerAmbientNormal</code>'s
 vf38 0x165844 runs that check first, then resolves its channel (0x114B1BC calls the channel
 resolver <code>CreateEntityFromArchetype</code> 0x1B3098 with the channel at <code>+0x1C0</code> and the spawner's alarm
-area at <code>+0x160</code>) and the character-bundle gate 0x16652C (see Resource streaming). The resolver walks
+area at <code>+0x160</code>) and runs the character-bundle gate 0x16652C (see Resource streaming). The resolver walks
 the channel's <code>AI/SpawnAmbient/AITypes</code> entries and keeps the templates of the best <code>Priority</code>
 (below 101). When the channel is <code>DifficultyBased</code>, the alarm area decides which table applies:
 0x1B62F6C turns the area into its current alarm level (0x11FBC8: the live alarm state looked up
-through <code>[base+0x26FFBF0]</code>, else the area's <code>TransientAlarmSettings.RequiredDefaultAlarmLevel</code>) and
+through <code>[base+0x26FFBF0]</code>, otherwise the area's <code>TransientAlarmSettings.RequiredDefaultAlarmLevel</code>) and
 takes the first table in <code>[GM+0x6CC8]+0x18</code> whose <code>AlarmLevelList.AlarmLevels</code> contains that level
 (0x465CE8). A spawner in an alarmed area therefore spawns from a different difficulty table than
 the same spawner at rest. Every refusal is formatted for <code>[AI|SPAWNAMBIENT|REJECT]:</code>, but
 the logging function 0x19C83AC is empty in the shipped build.</p>
 <p><strong>The predicate.</strong> 0x165B68 takes the given predicate or the spawner's own (<code>+0x168</code>, an
-<code>AI/SpawnAmbient/Predicates</code> record, 67 exist); with none it passes. When the bytes <code>+0x1A8</code>,
+<code>AI/SpawnAmbient/Predicates</code> record, of which 67 exist). With none, it passes. When the bytes <code>+0x1A8</code>,
 <code>+0x1A9</code> and <code>+0x1AB</code> are all set it computes the distance from the spawner (<code>+0xAC</code>) to the player
 and evaluates the predicate on it (0x165C4C); otherwise it passes both positions (0x166DF8). A
 predicate record has <code>CanSpawnWithoutEntry</code>, <code>ProcessAllValidIntervals</code> and <code>Entries</code>
 (<code>_StructuresAISpawnAmbientPredicateEntry</code>: <code>Distance</code>, <code>RandomWeightRange</code>, <code>MustBeOffScreen</code>,
-<code>MustBeLineOfSight</code>); <code>AmbShort</code>, <code>AmbLong</code> and <code>AmbDesert</code> are three of the 67.</p>
-<p><strong>The budget.</strong> 0x1A92F18 lets a request through when <code>[SM+0x190] + requested &lt;= [SM+0x180]</code>;
-past the budget it passes only when the scenario's <code>AI/SpawnAmbient/SpawnScenarioSetup.ForceAISpots</code>
+<code>MustBeLineOfSight</code>). <code>AmbShort</code>, <code>AmbLong</code> and <code>AmbDesert</code> are three of the 67.</p>
+<p><strong>The budget.</strong> 0x1A92F18 lets a request through when <code>[SM+0x190] + requested &lt;= [SM+0x180]</code>.
+Past the budget, it passes only when the scenario's <code>AI/SpawnAmbient/SpawnScenarioSetup.ForceAISpots</code>
 is set and the caller's flag is clear.</p>
 <p><strong>Spawner sets</strong> are refused by 0x1AB9E0C for eleven reasons, each formatted for
 <code>[AI|SPAWNAMBIENTSET]:</code>: not enough AI slots, the set cooldown, the quest-finish cooldown, the time
@@ -1153,11 +1160,11 @@ to the empty logging function 0x19C83AC.</p>
 <p><strong>Scenarios.</strong> <code>AI/SpawnAmbient/SpawnScenarioSetup</code> (282 records) gives <code>Priority</code>,
 <code>ScenarioType</code>, <code>RequiredAITypes</code>, global and instance cooldowns, <code>ForceNextScenario</code>,
 <code>ForceAISpots</code>, <code>MaxConcurrent</code>, <code>MaxConcurrentAI</code>, <code>MinDistance</code>, <code>ScenarioCategories</code>,
-<code>StartDisabled</code>, <code>IgnoreMaxConcurrent</code>, <code>AutoCooldownChance</code> and <code>AllowFailedSpawn</code>;
+<code>StartDisabled</code>, <code>IgnoreMaxConcurrent</code>, <code>AutoCooldownChance</code> and <code>AllowFailedSpawn</code>.
 <code>AI/SpawnAmbient/SpawnScenario</code> (53) gives <code>Priority</code>, <code>FrequencyDecay</code>, <code>MaxConcurrent</code>,
 <code>MaxConcurrentAI</code>, <code>StartDisabled</code> and <code>ScenarioCategories</code>. Removal rules are
-<code>AI/SpawnAmbient/Removal</code> (45 records: <code>AmbShort_R</code>, <code>AmbLong_R</code>, <code>Offscreen</code>, <code>AwayFromPlayer</code>,
-<code>Never</code>, <code>Stronghold_Removal50M</code> ...); areas are <code>AI/SpawnAmbient/Areas</code> (180).</p>
+<code>AI/SpawnAmbient/Removal</code> (45 records, among them <code>AmbShort_R</code>, <code>AmbLong_R</code>, <code>Offscreen</code>, <code>AwayFromPlayer</code>,
+<code>Never</code> and <code>Stronghold_Removal50M</code>), and areas are <code>AI/SpawnAmbient/Areas</code> (180).</p>
 <h3 id="spawn-channels">Spawn channels</h3>
 <p>A spawn channel is an <code>AI/SpawnAmbient/AITypes</code> record (250; the scripts call the type
 <code>DBAISpawnTemplate</code>). Its fields are <code>DifficultyBased</code>, <code>PlayerWeightOnly</code>, <code>EnsureClassUnlocked</code>,
@@ -1207,7 +1214,7 @@ to the empty logging function 0x19C83AC.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Entries.</strong> Live, every channel carries an <code>Entries</code> array of <code>_StructuresAISpawnAmbientTypeEntry</code>
+<p><strong>Entries.</strong> In a live read, every channel carries an <code>Entries</code> array of <code>_StructuresAISpawnAmbientTypeEntry</code>
 primaries <code>{Priority, AITemplate}</code> (250 of 250). The channel resolver <strong>0x1B3098</strong> reads
 <code>EnsureClassUnlocked</code> and <code>PlayerWeightOnly</code>, walks <code>Entries</code> (accessor 0x1B3DD0, priority 0x1B3D64,
 template 0x1B3CFC), collects the templates by priority, and takes a further path through the game
@@ -1218,16 +1225,16 @@ their channel argument.</p>
 <h3 id="from-channel-to-character">From channel to character</h3>
 <p>The chain is plain data: channel <code>Entries[].AITemplate</code> -&gt; <code>AI/Templates</code> (177 records; fields
 <code>GlobalVarUnlock</code>, <code>CharacterModel</code>, <code>CombatProp</code>, <code>Alignment</code>, <code>DisplayInMenu</code>,
-<code>DefaultAISetMountData</code>) -&gt; <code>Character/Models</code> (281 records, 102 fields: <code>CombatTree</code>,
-<code>SimpleModel</code>, <code>Skeleton</code>, <code>AIName</code> ...) -&gt; <code>AIName</code> = the <code>AI/CharacterTypes</code> record -&gt; its
+<code>DefaultAISetMountData</code>) -&gt; <code>Character/Models</code> (281 records, 102 fields, among them <code>CombatTree</code>,
+<code>SimpleModel</code>, <code>Skeleton</code> and <code>AIName</code>) -&gt; <code>AIName</code> = the <code>AI/CharacterTypes</code> record -&gt; its
 <code>PlanTree</code>. Of the 177 templates, 167 reach a character type with a <code>PlanTree</code> and 125 one with
 <code>PlayerFollowerAlignment</code> filled (Balrog, every troll and graug, drakes, the Carnan beasts,
 <code>GP_Bruz</code>, <code>GP_Ranger</code>, Baranor, Idril, <code>Prototype_Celebrimbor</code>). All 13 Nazgul templates
 (the Witch-king, Isildur and both forms of Sauron among them) have a brain but an empty
-<code>PlayerFollowerAlignment</code>; <code>Talion</code>, <code>Dark_Talion</code>, <code>Idril</code>, <code>Carnun</code> and <code>Shelob_FairForm</code> are
+<code>PlayerFollowerAlignment</code>. <code>Talion</code>, <code>Dark_Talion</code>, <code>Idril</code>, <code>Carnun</code> and <code>Shelob_FairForm</code> are
 presentation types whose tree is <code>Idle</code>.</p>
 <p><strong>The model picker.</strong> <code>Character/Models.CharacterModelPicker</code> (<code>+0x208</code> of the record instance)
-names a <code>Character/Models/ModelPicker</code>; at creation 0x3FAE4C walks its <code>Entries</code> and returns the
+names a <code>Character/Models/ModelPicker</code>. At creation 0x3FAE4C walks its <code>Entries</code> and returns the
 first <code>CharacterModel</code> whose <code>GlobalVarPredicate</code> passes, or the model itself. Only <code>AI_Talion</code>
 carries a picker (<code>ModelPicker::Talion</code>), and its entries return the player's equipped skin. Every
 player skin's <code>AIName</code> is <code>AI/CharacterTypes::Player</code>, which has no <code>PlanTree</code>, so in the AI set-up
@@ -1240,8 +1247,8 @@ already returned true. With the picker cell empty the model stays <code>AI_Talio
 faction member here", the call the ambush system makes (0x1C7E434, log string "[FACTION|AMBUSH]: ... Requesting to
 spawn faction member %s", which passes itself as the callback). It allocates a 0xB0-byte request (0x3DE238), runs the
 constructor and tail-jumps into the queue push, so its return value is the push's, not the request. The request runs
-later: Execute 0x1A927F8 takes the archetype from the member's own AI class (0x115F788), creates the body (0x1036D0),
-then the brain and configuration and binds member and body (0x1AA20F4). Everything on that path allocates in the
+later. Its Execute 0x1A927F8 takes the archetype from the member's own AI class (0x115F788), creates the body
+(0x1036D0), then the brain and configuration, and binds member and body (0x1AA20F4). Everything on that path allocates in the
 engine, so it belongs on the main thread.</p>
 <table>
 <thead>
@@ -1285,7 +1292,7 @@ engine, so it belongs on the main thread.</p>
 </tr>
 </tbody>
 </table>
-<p>The transform is seven floats, position then quaternion; <code>CharacterTransform</code> 0x180458(object, out) fills one from an
+<p>The transform is seven floats, position then quaternion. <code>CharacterTransform</code> 0x180458(object, out) fills one from an
 object's <code>+0xAC</code> / <code>+0xB8</code> through 0x182110. The queue is a circular intrusive list whose sentinel is the spawn
 manager's <code>+0x98</code>: <code>IntrusiveListPushFront</code> 0x1161ED4(head, node) links <code>request+0x08</code> right after the sentinel and
 asserts "Adding a link that is already inside of a list" when the node is not self-linked. A waiting request is found
@@ -1307,7 +1314,7 @@ spawner skips a member whose body is already in the world (<code>FM+0x48</code> 
   It always returns 1. Its requests carry no summoner, so their characters keep the alignment of
   the channel's type: an <code>AI_Talion</code> summoned this way is <code>Orc_FactionA</code>, hostile.</li>
 </ul>
-<p>The main tick drains the list first in, first out, within about 2 ms of a call in play; while the
+<p>The main tick drains the list first in, first out, within about 2 ms of a call in play. While the
 world is paused nothing drains, and requests queued meanwhile all spawn at the transform they
 captured. Both processors resolve the channel (0x1B3098) and create through
 <strong>0x1036D0</strong>(world context, class 0x1FB3EC8, &amp;position, template, 1, 1, 0, 0, 0). A summoned NPC
@@ -1315,37 +1322,37 @@ is named <code>SpawnReq...</code> (for example <code>SpawnReqGrunt80</code>) and
 due list before it appears in the spawn manager's array. A summon made with the player as summoner
 and <code>Summon_Grunts</code> comes out <code>PlayerFollower</code> (<code>npc+0x2410</code>) with the follower byte <code>npc+0x23B8</code>
 = 1, 0.3-2 m from the player about 3 s later.</p>
-<p><strong>Summon data</strong> (<code>Combat/SummonData</code>, 55 records; the scripts' <code>DBAISummonData</code>): <code>AIBandType</code>,
+<p><strong>Summon data</strong> (<code>Combat/SummonData</code>, 55 records; the scripts' <code>DBAISummonData</code>) holds <code>AIBandType</code>,
 <code>RemovalRecord</code>, <code>NavMarker</code>, <code>ScriptTags</code>, <code>AudioKey</code>, <code>MatchSummonerPlayerFollower</code>,
 <code>ItemsToGive</code>, <code>GruntTrait</code>, <code>RemoteScript</code>, <code>Alignment</code>, <code>UseSuperJump</code>, <code>AINodeTags</code>,
 <code>AINodeTagsAreMandatory</code>, <code>GoToAndMount</code>, <code>Ambushes</code>, <code>SpawnAtCombatTeleportPoint</code> and
-<code>EntranceSmartObject</code>. <code>Summon_Grunts</code>: band <code>HenchmenMob</code>, removal <code>AmbLong_R</code>, tag
-<code>AmbSummonOrcTag</code>, <code>MatchSummonerPlayerFollower</code> True, remote script <code>AmbSummonedOrcs</code>.
-<code>Summon_Bait</code>: removal <code>AmbShort_R</code>, tags <code>BaitSummonNPC</code> and <code>BaitNPC</code>, spawned at the
+<code>EntranceSmartObject</code>. <code>Summon_Grunts</code> has the band <code>HenchmenMob</code>, the removal <code>AmbLong_R</code>, the tag
+<code>AmbSummonOrcTag</code>, <code>MatchSummonerPlayerFollower</code> True and the remote script <code>AmbSummonedOrcs</code>.
+<code>Summon_Bait</code> has the removal <code>AmbShort_R</code> and the tags <code>BaitSummonNPC</code> and <code>BaitNPC</code>, and spawns at the
 <code>AI_Bait_Generic</code> combat teleport point.</p>
-<p><strong>NPC summons</strong> (<code>Combat/NPCSummon</code>, 107 records) are the trait- and ability-driven layer on top:
+<p><strong>NPC summons</strong> (<code>Combat/NPCSummon</code>, 107 records) are the trait- and ability-driven layer on top, with
 <code>AISpawnType</code> (a channel) or <code>AISpawnTypePicker</code>, <code>Count</code>, <code>TeleportSettings</code>, <code>SummonData</code>,
 <code>SummonPlayerBodyguards</code>, <code>MakeGangMember</code> and <code>SpawnFactionMemberMount</code>.</p>
 <h3 id="gangs-bands-and-followers">Gangs, bands and followers</h3>
-<p>A captain's gang is a trait (<code>Faction/Traits/Definitions</code>, see Captain traits). For
-<code>Quirk_HasGang_Normal_Hunters</code>: <code>GangLeader</code> True, <code>GangClassTypes</code> -&gt; the channel
+<p>A captain's gang is a trait (<code>Faction/Traits/Definitions</code>, see Captain traits).
+<code>Quirk_HasGang_Normal_Hunters</code>, for example, sets <code>GangLeader</code> True, <code>GangClassTypes</code> -&gt; the channel
 <code>GangType_Hunters</code>, <code>GangSize</code> 4, <code>Catalyst</code> <code>Gang_SummonOnSpawn</code>, <code>Item</code> <code>Item_Quirk_HasGang</code>, and
 <code>GangNPCSummon</code> -&gt; <code>Combat/NPCSummon::Gang_Normal_Hunters_SpawnIn</code>, which summons <code>GangType_Hunters</code>
-with <code>MakeGangMember</code> True and summon data <code>Summon_Gang</code>. The 23 <code>GangType_*</code> channels (Archers,
+with <code>MakeGangMember</code> True and summon data <code>Summon_Gang</code>. The 23 <code>GangType_*</code> channels (among them Archers,
 Defenders, Warriors, Hunters, Savages, Ologs, Graugs, Caragors, Ghuls, Spiders, FellBeast,
-Easterling squads, summon groups ...) are ordinary spawn channels.</p>
-<p>Groups move as <strong>bands</strong>: <code>AI/BandTypes</code> (66 records: <code>Mob</code>, <code>HenchmenMob</code>, <code>Bodyguard</code>,
+Easterling squads and summon groups) are ordinary spawn channels.</p>
+<p>Groups move as <strong>bands</strong>, defined by <code>AI/BandTypes</code> (66 records, among them <code>Mob</code>, <code>HenchmenMob</code>, <code>Bodyguard</code>,
 <code>FollowLeader</code>, <code>SingleFile</code>, <code>TwoColumns</code>, <code>March</code>, <code>Skirmish_5Man</code>, <code>DiamondSurround</code>,
-<code>ChainGang</code>, <code>Wargs</code>, <code>FlyingV</code>, <code>GP_Buddy</code> ...) with <code>BandData</code>, <code>MovementData</code>,
-<code>NewLeaderOnRemoval</code>, <code>FollowDelay</code> and <code>NativePredicates</code>; summon data names a band
+<code>ChainGang</code>, <code>Wargs</code>, <code>FlyingV</code> and <code>GP_Buddy</code>) with <code>BandData</code>, <code>MovementData</code>,
+<code>NewLeaderOnRemoval</code>, <code>FollowDelay</code> and <code>NativePredicates</code>. Summon data names a band
 (<code>Summon_Grunts</code> -&gt; <code>HenchmenMob</code>). The band steps are <code>FollowLeader</code>, <code>FollowWaitForBand</code> and
-<code>ReturnToBandLeader</code>, with the target select <code>WaitForBandMember</code>; FollowLeader's update 0x48DB00
+<code>ReturnToBandLeader</code>, with the target select <code>WaitForBandMember</code>. FollowLeader's update 0x48DB00
 calls the band movement 0xF498C0. The AI world ticks the buddy and follower system at <code>+0xB0</code>
 (0x3608C8), and buddies have their own target select (<code>BuddyCommand</code>) and alertness level
 (<code>ActiveBuddy</code>).</p>
 <h3 id="leading-the-player">Leading the player</h3>
 <p>Story characters that guide Talion somewhere (Ratbag, Idril, Blade, Gollum, the Ranger, the third
-story DLC's Architect, Thrall and Flint, the fourth's Gondorians) run a lead behaviour configured by
+story DLC's Architect, Thrall and Flint, the fourth's Gondorians) run a lead behavior configured by
 one of the 16 <code>AI/LeadPlayer</code> records (distances in cm, times in seconds):</p>
 <table>
 <thead>
@@ -1427,24 +1434,24 @@ pause (0x1AE7B5C). The planner's <code>LeadPlayer</code> step (vt_0x1FBCA70) doe
 <code>FleeSpawnMountChance</code> 0.25 and <code>FleeSummonMount</code> -&gt; <code>Combat/NPCSummon::Flee_Mount_Warg</code> (channel
 <code>Enemy_Warg</code>). A rider's gang of beasts walking alongside is a separate gang trait. A template's
 <code>DefaultAISetMountData</code> names its ride (<code>Warg_Tamed</code> -&gt; <code>AI_SetMount_Warg</code>).</p>
-<p><code>Combat/MountData</code> (31 records, 24 fields) describes each ride: <code>SetMount</code> is 2 on the 24
-<code>SetMount_*</code> / <code>AI_SetMount_*</code> records and 3 on the 7 <code>Dismount*</code> ones; <code>CombatBehaviorState</code>
-(<code>RidingWarg</code>, <code>RidingTroll</code>, <code>RidingOlog</code>, <code>RidingMedic</code>, <code>GrabbingAI</code> ...); <code>AttachNode</code>
+<p><code>Combat/MountData</code> (31 records, 24 fields) describes each ride. <code>SetMount</code> is 2 on the 24
+<code>SetMount_*</code> / <code>AI_SetMount_*</code> records and 3 on the 7 <code>Dismount*</code> ones. The other fields include <code>CombatBehaviorState</code>
+(for example <code>RidingWarg</code>, <code>RidingTroll</code>, <code>RidingOlog</code>, <code>RidingMedic</code> and <code>GrabbingAI</code>), <code>AttachNode</code>
 (<code>Saddle</code> on 20 of the 24 mounting records; <code>SocketAttach</code> for carrying an ally and for the medic,
-<code>attach</code> for the meat shield, <code>Null</code> for the spider); behaviour nodes for rider and mount,
+<code>attach</code> for the meat shield, <code>Null</code> for the spider), behavior nodes for rider and mount,
 visibility, the attack types used when the mount or the attached target dies,
-<code>MountedAlignment</code>, buff and item lists. The planner steps for it are <code>GoToAndMount</code> and
+<code>MountedAlignment</code>, and buff and item lists. The planner steps for it are <code>GoToAndMount</code> and
 <code>Mounted</code>.</p>
 <h2 id="the-ai-budget-and-constants">The AI budget and constants</h2>
 <h3 id="the-ai-count-configuration">The AI count configuration</h3>
 <p><code>AI/Count/Configuration</code> (16 records) sets the budget: <code>MaxAmbientAI</code>, <code>MaxHighPriority</code>,
 <code>MaxMedPriority</code>, <code>MaxLowPriority</code>, <code>MaxDeadBodies</code>, <code>RunSimulation</code>, <code>MaxSimulatedAnimations</code>,
 <code>PrioDefinition</code>, <code>PrioTokenDefinition</code> and the LOD configurations. The active configuration is
-<code>[base+0x2A63018]</code> (<code>+0x28</code> of the static object at 0x2A62FF0 that 0x201DE8 initialises once);
-free roam uses <code>Default</code> (shipped: <code>MaxAmbientAI</code> 100, priorities 10 / 10 / 30, <code>MaxDeadBodies</code>
-10). Quests switch configurations through 0x5C1294 (<code>MaxAmbientAI</code> 10-200 and <code>MaxDeadBodies</code>
-10-60 across the others: <code>Assault</code> 160 / 10, <code>CarnanSideMissions</code> 100 / 60, <code>DLC3_MoreBodies</code>
-100 / 55 ...). The switch takes a configuration only if the validator <strong>0x5C1638</strong> passes:
+<code>[base+0x2A63018]</code> (<code>+0x28</code> of the static object at 0x2A62FF0 that 0x201DE8 initializes once).
+Free roam uses <code>Default</code> (as shipped: <code>MaxAmbientAI</code> 100, priorities 10 / 10 / 30, <code>MaxDeadBodies</code>
+10). Quests switch configurations through 0x5C1294; across the others, <code>MaxAmbientAI</code> ranges over 10-200 and
+<code>MaxDeadBodies</code> over 10-60 (for example <code>Assault</code> 160 / 10, <code>CarnanSideMissions</code> 100 / 60 and <code>DLC3_MoreBodies</code>
+100 / 55). The switch takes a configuration only if the validator <strong>0x5C1638</strong> passes:
 <code>MaxAmbientAI + MaxDeadBodies &lt;= 230</code> and <code>MaxHighPriority + MaxMedPriority + MaxLowPriority +
 MaxDeadBodies &lt;= 256</code>; otherwise it silently keeps the old one. <code>MaxAmbientAI</code> reaches the spawn
 manager only through the copy 0x5C133C (re-run by the script command <code>SetAICount</code> and by quests), so
@@ -1453,7 +1460,7 @@ a later edit of the record is not seen until that copy runs again.</p>
 <code>MaxDeadBodies</code> and walks the dead-body list (head <code>[base+0x2672CB8]</code> <code>{+0 last, +8 first}</code>, node
 at <code>char+0x2298</code>, next at <code>+8</code>), removing every body past that index, off-screen ones first.</p>
 <h3 id="ai-constants">AI constants</h3>
-<p><code>AI/Constants</code> has one record, <code>Constants</code>: <code>PersonalBubbleDistance</code> 50, <code>ThreatUnseenTime</code> 10 s,
+<p><code>AI/Constants</code> has one record, <code>Constants</code>, which sets <code>PersonalBubbleDistance</code> 50, <code>ThreatUnseenTime</code> 10 s,
 <code>OnScreenCheckDelay</code> 0.1 s, <code>NodeClusterRadius</code> 120, <code>RetreatThreshold</code> 3, <code>RetreatCount</code> -1,
 <code>BrandedDefendPlayerMinimumRange</code> 500, <code>MinimumPlayerTargetedStimulusDuration</code> 1.0,
 <code>DamagedAtNodeAvoidanceTime</code> 40-80, the unreachable-position delays (first 2.5-6, new 15-30,
@@ -1467,11 +1474,11 @@ directions.</p>
 <code>[[GM]+0x6C60]+0x588</code> (ally) or <code>+0x58C</code> (opponent) wins when it is 0 or more; otherwise the record
 is read (the integer read defaults to 3). Both overrides read -1 in free roam. <code>Quest/Quests</code>
 carries the same field (registered <code>min=-1;max=10</code>).</p>
-<p><strong>Crowd AI.</strong> <code>AI/Simulation</code> (15 categories) is the cheap AI of army battles: 12
-<code>Configurations</code> (<code>OrcDefender</code>, <code>Spiders</code>, <code>FellBeast</code> ...) pick animation pools (idle, movement,
+<p><strong>Crowd AI.</strong> <code>AI/Simulation</code> (15 categories) is the cheap AI of army battles. Its 12
+<code>Configurations</code> (for example <code>OrcDefender</code>, <code>Spiders</code> and <code>FellBeast</code>) pick animation pools (idle, movement,
 off-mesh, activity, attack, recoil), <code>CanTargetNonSimulated</code>, potential riders and an attack budget
 <code>AttackThrottling {AttackCapacity, AttackWeight}</code>: Grunt 4 / 1 (four grunts on one target), Named
-4 / 4 (one), Warg 8 / 4, Troll 20 / 20, FellBeast 40 / 4. This is a second attacker limit,
+4 / 4 (one), Warg 8 / 4, Troll 20 / 20 and FellBeast 40 / 4. This is a second attacker limit,
 separate from the fight circle. The count configuration also carries <code>RunSimulation</code> (read by
 0x4428B0) and <code>MaxSimulatedAnimations</code>.</p>
 <h3 id="values-the-engine-copies">Values the engine copies</h3>
@@ -1526,15 +1533,15 @@ separate from the fight circle. The count configuration also carries <code>RunSi
 </tr>
 </tbody>
 </table>
-<p>GameDB instance data is deserialised again on some loading screens, so record edits do not
+<p>GameDB instance data is deserialized again on some loading screens, so record edits do not
 survive them.</p>
 <h2 id="fight-pits-and-arenas">Fight pits and arenas</h2>
 <h3 id="sim-events">Sim events</h3>
-<p>Captain events that can be played or simulated (duels, pit fights ...) are <strong>sim events</strong>
-(<code>Faction/Events/SimEvent</code>, 431 records, 41 fields: <code>Type</code>, <code>Participants</code>, <code>WinChance</code>,
+<p>Captain events that can be played or simulated (for example duels and pit fights) are <strong>sim events</strong>
+(<code>Faction/Events/SimEvent</code>, 431 records, 41 fields, among them <code>Type</code>, <code>Participants</code>, <code>WinChance</code>,
 <code>WinChanceJobSubject</code> / <code>WinChanceJobOpposition</code>,
-<code>SubjectWinsSimulate</code> / <code>OtherWinsSimulate</code>, <code>Results</code>, life spans, <code>RequiredCooldown</code>,
-<code>UniqueSimEventGroup</code> ...). 0x834F50 builds the engine's table of sim-event kind names (hashed,
+<code>SubjectWinsSimulate</code> / <code>OtherWinsSimulate</code>, <code>Results</code>, life spans, <code>RequiredCooldown</code> and
+<code>UniqueSimEventGroup</code>). 0x834F50 builds the engine's table of sim-event kind names (hashed,
 eight entries): 0 <code>Automatic</code>, 1 <code>Story</code>, 2 <code>SimEventSingle</code>, 3 <code>SimEventDuel</code>, 4
 <code>SimEventAugment</code>, 5 <code>FortAssault</code>, 6 <code>Conquest</code>, 7 <code>FortAssaultUnfinished</code>.</p>
 <p>Sim-event records use per-record descriptor runs (<code>Arena</code> has 56 cells, <code>Gauntlet</code> 51), so field
@@ -1545,7 +1552,8 @@ offsets differ from record to record. <code>Participants</code> is an ordinary f
 <code>JobRecord</code>, <code>JobGroup</code>, <code>Exclusive</code>, <code>CanBeBodyguard</code>, <code>Purposes</code>, <code>RewardList</code>, <code>ChanceToFill</code>
 and the bodyguard builders.</p>
 <p><strong>Win chance</strong> decides only a simulated outcome, when the player walks away from a fight; a
-watched fight is decided by the fight. <code>Faction/Events/SimEventChance</code> (34 records):</p>
+watched fight is decided by the fight itself. <code>Faction/Events/SimEventChance</code> has 34 records, four of which compare
+as follows:</p>
 <table>
 <thead>
 <tr>
@@ -1612,7 +1620,7 @@ watched fight is decided by the fight. <code>Faction/Events/SimEventChance</code
 <code>ClampFinalChance</code> (a pool range).
 <code>SubjectAlwaysWins</code> and <code>SubjectAlwaysLoses</code> differ only in <code>StartChance</code> (1.0 and 0.0; every
 scalar 0, both <code>*Max</code> -1.0). <code>Arena</code>, <code>ArenaFollower</code>, <code>ArenaTest</code> and <code>Gauntlet</code> to <code>Gauntlet3</code>
-link <code>WinChance</code> to <code>Arena</code>; <code>Duel</code> and <code>Duel_Origin</code> to <code>Duel</code>; <code>DuelG</code> to <code>Default_1orc_general</code>.</p>
+link <code>WinChance</code> to <code>Arena</code>, <code>Duel</code> and <code>Duel_Origin</code> link it to <code>Duel</code>, and <code>DuelG</code> to <code>Default_1orc_general</code>.</p>
 <p>The chance is computed by 0x1BEDA40, the only reader of <code>StartChance</code>: <code>StartChance</code>, plus the level
 difference times <code>CharacterLevelDeltaScalar</code>, plus the henchman difference times
 <code>HenchmanDeltaScalar</code>, plus two further terms (0x1BEF460 and 0x1BEDD84), plus the subject's supporter
@@ -1623,18 +1631,20 @@ is clamped to the <code>ClampFinalChance</code> range.</p>
 <p>The pits in the Army menu are <code>Quest/Quests</code> records of type <code>Quest/Types::Gauntlet</code> (<code>IsGauntlet</code>,
 <code>ActivationType</code> 1, <code>CanReplay</code> and <code>XPAwardOnReplay</code> True, <code>ItemAwardOnReplay</code> False):
 <code>&lt;MI|MP|IS|DE|VO|SM&gt;_Gauntlet</code>, <code>_Gauntlet2</code> and <code>_Gauntlet3</code> (18) plus three <code>PS_Gauntlet*</code>
-records without a job set-up. Per tier only the record differs: <code>JobSetupSimple</code> -&gt;
-<code>&lt;R&gt;_Gauntlet_Lvl_N</code> -&gt; the job <code>PS_Other_Cap_Gauntlet_&lt;R&gt;[_Lvl_N]</code> -&gt; the champion's builder
-<code>Faction/FactionMemberBuilder::Gauntlet_&lt;Region&gt;_LvlN</code>; the rewards (tier 1 <code>SkillPoint</code>, tier 2
-<code>PC_Mirian_Comb_Arena2_&lt;Region&gt;</code>, 5,000 Mirian, tier 3 <code>Gauntlet3_CitadelUnlock_&lt;Region&gt;</code>, in
-Minas Ithil <code>PS_Raise_Child1_UNLOCK</code>); and <code>Predicates</code> (tier N needs
-<code>&lt;R&gt;_Gauntlet_Lvl_{N-1}_Complete</code> and a living follower captain of the region army through
-<code>Faction/CountFilters::IS_Gauntlet</code>). Every pit quest owns its predicate primary (27 of 27
-unshared). Completion is the global variable
+records without a job set-up. Per tier, only the following differ:</p>
+<ul>
+<li>the job chain <code>JobSetupSimple</code> -&gt; <code>&lt;R&gt;_Gauntlet_Lvl_N</code> -&gt; the job <code>PS_Other_Cap_Gauntlet_&lt;R&gt;[_Lvl_N]</code> -&gt; the
+  champion's builder <code>Faction/FactionMemberBuilder::Gauntlet_&lt;Region&gt;_LvlN</code>;</li>
+<li>the rewards (tier 1 <code>SkillPoint</code>, tier 2 <code>PC_Mirian_Comb_Arena2_&lt;Region&gt;</code>, 5,000 Mirian, tier 3
+  <code>Gauntlet3_CitadelUnlock_&lt;Region&gt;</code>, in Minas Ithil <code>PS_Raise_Child1_UNLOCK</code>);</li>
+<li>the <code>Predicates</code> (tier N needs <code>&lt;R&gt;_Gauntlet_Lvl_{N-1}_Complete</code> and a living follower captain of the region army
+  through <code>Faction/CountFilters::IS_Gauntlet</code>).</li>
+</ul>
+<p>Every pit quest owns its predicate primary (27 of 27 unshared). Completion is the global variable
 <code>&lt;R&gt;_Gauntlet_Lvl_N</code>, set by the fight script.</p>
-<p>The predicate Int <code>PlayerMustOwnZone</code> means 0 any region, 1 a region the player owns, 2 a region the
+<p>The predicate Int <code>PlayerMustOwnZone</code> takes 0 for any region, 1 for a region the player owns and 2 for a region the
 player does not own (availability 0x1E00C4, see Quests, story and scenes). The three Minas Ithil
-pits ship 0, the other fifteen 1. An empty <code>PlayerMustOwnZoneFactions</code> falls back to the current
+pits ship 0, and the other fifteen 1. An empty <code>PlayerMustOwnZoneFactions</code> falls back to the current
 region's faction (0x1B5C820(FS, 1)), and <code>MinPlayerFollowerFactionMembersInZone</code> 1 refuses a region
 whose army has no living follower captain. Inactive quests are not re-checked on their own: the
 quest system re-runs every quest's predicates only when its timer cell <code>QuestSystem+0xE8</code> (u32) is
@@ -1651,52 +1661,52 @@ Its layer properties define spawner sets: <code>C1</code> (job <code>PS_Subject<
 <code>Duelist_A</code> (C1), <code>Duelist_B</code> (C2) and <code>Duelist_C</code> (hostile to both, neutral to spectators).</p>
 <ul>
 <li><strong>Timer.</strong> <code>GameData.GauntletTimerValue</code> (150 s) is read at fight start and counted by a script
-  timer in 10 s ticks; every tick on which <code>ST:GetIntervalRemaining()</code> is below
+  timer in 10 s ticks. Every tick on which <code>ST:GetIntervalRemaining()</code> is below
   <code>GameData.GauntletTimeRemaining</code> (120) gives both duelists <code>Script_Quest_ArenaDamageScalar</code>
   (<code>Arena_DamageScalar</code>: +0.15 damage per stack). A timeout is a draw: no global variable is set and
-  the quest awards no items; the newer copy of the script also heals both captains on a timeout and
+  the quest awards no items. The newer copy of the script also heals both captains on a timeout and
   floors them at 50%.</li>
-<li><strong>Outcome.</strong> C2 killed: <code>Gauntlet_BlueOrc_Win</code> on the follower (forced level-up, reward list
-  <code>PS_DuelWin_CanChangeRole</code>, <code>LevelsToAdd</code> 0), the objective <code>PS_Gauntlet_Obj</code>, the tier's global
-  variable. Loss: <code>Gauntlet_BlueOrc_Lose</code> on the follower (action 8: he dies, with the event's
+<li><strong>Outcome.</strong> When C2 is killed, the outcome is <code>Gauntlet_BlueOrc_Win</code> on the follower (forced level-up, reward list
+  <code>PS_DuelWin_CanChangeRole</code>, <code>LevelsToAdd</code> 0), the objective <code>PS_Gauntlet_Obj</code> and the tier's global
+  variable. A loss gives <code>Gauntlet_BlueOrc_Lose</code> on the follower (action 8: he dies, with the event's
   <code>Resurrection</code> record) and <code>Gauntlet_RedOrc_Win</code> on the champion (<code>LevelsToAdd</code> 1,
   <code>ClearBuilderInstance</code>, action 2: the champion takes the loser's seat; see Faction-event actions
-  below). Measured in a loss: the champion took the dead follower's exact seat and gained one level.
+  below). In a measured loss, the champion took the dead follower's exact seat and gained one level.
   <code>ForceLevelUp</code> adds no level of its own. Walking away runs <code>QR:SimulateSimEvent()</code> with the <code>Arena</code>
   win chance. Dominating either captain ends the fight (<code>SubjectDominated</code> / <code>OtherDominated</code>).</li>
 <li><strong>Two copies of the script.</strong> The Minas Ithil <code>gauntlet_00.scripts</code> ships in <code>Patch_05</code> (1,332
-  lines) and <code>Patch_06</code> (1,443 lines); both define the class <code>_gauntlet_SO_Script_5eae30cb</code>. The newer
+  lines) and <code>Patch_06</code> (1,443 lines), and both define the class <code>_gauntlet_SO_Script_5eae30cb</code>. The newer
   copy adds <code>AddLevels</code> (a winning follower gains <code>Gauntlet_AddLevels_01</code> .. <code>_20</code> by the level gap:
   20 when he is 26 or more levels below the champion, 1 when he is 11 or more above),
-  <code>DLC_IsFriendlyOnlineArena</code> true during the fight, the timeout heal, and <code>PS_Gauntlet_PostFightSpawn</code>
-  when C2 lives, and comments out the loss pair <code>AddGauntletEnemy</code> / <code>GauntletEnemy_EnterHierarchy</code> in
+  <code>DLC_IsFriendlyOnlineArena</code> true during the fight, the timeout heal and <code>PS_Gauntlet_PostFightSpawn</code>
+  when C2 lives. It also comments out the loss pair <code>AddGauntletEnemy</code> / <code>GauntletEnemy_EnterHierarchy</code> in
   all three death branches. Both Lithlad copies (<code>Patch_09</code>, <code>Patch_DLC5</code>) are the newer variant, and in
   a Lithlad fight <code>DLC_IsFriendlyOnlineArena</code> read true during the fight and false after.</li>
 <li><strong>What the script does to each captain</strong> at spawn: senses off until the intro ends,
   <code>Script_Item_Intro_2Target</code>, the other's <code>PS_DuelistC1</code> / <code>C2</code>, <code>Script_Item_DoNotBleedOut</code>,
   <code>Script_DisableSummons</code>, <code>Item_BypassKillStealPrevention</code>, <code>Pass_KillCam_PIS_Test_IT</code>,
   <code>Arena_DisableWallRecoils</code>, <code>Item_Disable_Retreat</code>, the side, a confinement (<code>SetConfinement</code>, C2's
-  gang too, C1's gang not) and a visible nav marker; on death it fires <code>PS_Arena_DisableCollision</code>.
-  <code>SetAIToSpawn(1, n)</code> fills the captain slot and <code>(2, n)</code> the gang slot sized by <code>GetGangSize()</code>; gang
+  gang too, C1's gang not) and a visible nav marker. On death it fires <code>PS_Arena_DisableCollision</code>.
+  <code>SetAIToSpawn(1, n)</code> fills the captain slot and <code>(2, n)</code> the gang slot sized by <code>GetGangSize()</code>. Gang
   members charge the enemy captain (<code>ApplyThreatRecord(Showdown_Charge)</code>, <code>MonitorCharacter</code>,
   <code>SetCombatScriptedTarget</code>). <code>MissionEnd</code> decides only by <code>aiCaptain1:IsAlive()</code>. C2's death branches
   register <code>C1DeathRelay</code> (hash 0xA6106936), so <code>C2DeathRelay</code> never runs and the sim-event result reads
   <code>SubjectDied</code> when the champion died. A <code>C1Victory</code> (C1 back to his point, C2's gang removed, <code>SetC2</code>
   re-enabled for a next opponent) has no caller in either copy, and the script never enables the
   spectator set the layer flags <code>StartEnabled</code>.</li>
-<li><strong>A fight as recorded</strong> (three Lithlad tier-3 fights): when the fighters appear the script's
+<li><strong>A fight as recorded</strong> in three Lithlad tier-3 fights: when the fighters appear, the script's
   <code>Player:Hide(true)</code> sets Talion's hidden byte <code>+0x3882</code> and his AI-invisible byte <code>+0x2F10</code> in the
-  same tick; the sides go into slot 4 (below) one tick later; the arena camera director takes its two
-  combatants after the intro (20 s) and releases them at the result. The losing captain was held at
-  exactly 10.0 HP until a finishing scene, in all three fights; trait catalysts pushed the Hatred,
-  Victim and Unstable sides above the pit's sides mid-fight (below). The dead captain's member read the
+  same tick. The sides go into slot 4 (see Sides above) one tick later, and the arena camera director takes its
+  two combatants after the intro (20 s) and releases them at the result. In all three fights the losing captain was
+  held at exactly 10.0 HP until a finishing scene, and trait catalysts pushed the Hatred, Victim and Unstable sides
+  above the pit's sides mid-fight (see Sides above). The dead captain's member read the
   dead and shown-dead bits (2, 21), <code>+0x2A8</code> the killer's character type, <code>+0x2B0</code> the finishing sync
   attack, <code>+0x2C0</code> the resurrection record and a cleared builder link at <code>+0x350</code>.</li>
 <li><strong>Dormant hazards.</strong> The remote-script objects <code>rsOil</code>, <code>rsCaragor</code>, <code>rsGhul</code>, <code>rsArrows</code>,
-  <code>rsGas</code>, <code>rsRiot</code> and <code>rsGraug</code> listen to the remote scripts <code>PS_Arena_Oil</code> ... <code>PS_Arena_Graug</code>
+  <code>rsGas</code>, <code>rsRiot</code> and <code>rsGraug</code> listen to the remote scripts <code>PS_Arena_Oil</code> through <code>PS_Arena_Graug</code>
   in all 29 gauntlet, arena and online-arena layers, but no shipped script fires them (only
   <code>PS_Arena_DisableCollision</code> is fired). <code>Riot()</code> is the only hazard with a working body (each
-  spectator joins Duelist A, B or C at random); the arrow, oil and ghul hazards walk groups
+  spectator joins Duelist A, B or C at random). The arrow, oil and ghul hazards walk groups
   (<code>GArrows</code>, <code>GSpouts</code>, <code>GGhuls</code>) that none of the 20 pit layers sets, and the caragor, gas and
   graug hazards only print.</li>
 </ul>
@@ -1704,16 +1714,16 @@ Its layer properties define spawner sets: <code>C1</code> (job <code>PS_Subject<
 when the player's play-as key <code>[player+0x2708]</code> matches the subject's or the other job's captain)
 makes the player captain 1 or 2, but <code>MissionEnd</code> decides the win on <code>aiCaptain1:IsAlive()</code>. The key
 (<code>+0x2710</code> the pool index, -1 for none) is set by <code>CPlayerObj::SetPlayAsFactionMemberNPC</code> (0x19BFA08 -&gt;
-0x19BD070(player, member, 1): the member's seed, personality, class model through
+0x19BD070(player, member, 1), which applies the member's seed, personality, class model through
 <code>Character/Models.PlayerVersion</code> and appearance, and the items marked <code>KeepItemWhenOrc</code>). It parks the player's
-real model at <code>player+0x2ED8</code>, his appearance at <code>+0x2EC8</code> and his inventory (the visual component) at <code>+0x2EC0</code>;
+real model at <code>player+0x2ED8</code>, his appearance at <code>+0x2EC8</code> and his inventory (the visual component) at <code>+0x2EC0</code>.
 <code>ClearPlayAsFactionMemberNPC</code> (0x19BB794 -&gt; 0x19BB610, secondary vtable 0x1F969A0 slot 12) clears the key and
 restores all three.</p>
 <h3 id="faction-event-actions">Faction-event actions</h3>
 <p>The consequences of a pit's result are the faction events' <code>Actions</code>, a list of values. The handler
 0x40C304 (log string "HandleFactionEventAction: Event = %s; Subject = %s; Other = %s", compiled out)
 resolves the subject and the other through 0x18DDCC, walks the list (accessor 0x40C8F4, element
-0x40CB6C) and switches:</p>
+0x40CB6C) and switches on each value:</p>
 <table>
 <thead>
 <tr>
@@ -1764,59 +1774,60 @@ resolves the subject and the other through 0x18DDCC, walks the list (accessor 0x
 </tr>
 </tbody>
 </table>
-<p>The pit's events: <code>Gauntlet_BlueOrc_Win</code> no action (plus <code>ForceLevelUp</code> and the reward list, one of
-<code>PS_DuelWin_BrawlMaster</code>, <code>_PitFighter</code>, <code>_NothingHappens</code>), <code>Gauntlet_RedOrc_Win</code> 2 (plus <code>ForceLevelUp</code>,
+<p>The pit's events carry these actions: <code>Gauntlet_BlueOrc_Win</code> none (plus <code>ForceLevelUp</code> and the reward list, one of
+<code>PS_DuelWin_BrawlMaster</code>, <code>_PitFighter</code> and <code>_NothingHappens</code>), <code>Gauntlet_RedOrc_Win</code> 2 (plus <code>ForceLevelUp</code>,
 <code>LevelsToAdd</code> 1, <code>ClearBuilderInstance</code>), <code>Gauntlet_BlueOrc_Lose</code> 8 (<code>LevelsToAdd</code> 1), <code>Gauntlet_RedOrc_Lose</code>
-8 (<code>LevelsToAdd</code> 1, <code>ClearBuilderInstance</code>), <code>AddGauntletEnemy</code> none (a <code>SimEventTagModList</code>). The script
-applies <code>RedOrc_Win</code> with the champion as subject and the follower as other; the Lose events go on the loser
-alone. Both recorded outcomes match: a champion died with <code>Resurrection_LowerBody</code>; a follower died with
-<code>Resurrection_OrcSlash</code> and the champion took his seat.</p>
+8 (<code>LevelsToAdd</code> 1, <code>ClearBuilderInstance</code>) and <code>AddGauntletEnemy</code> none (a <code>SimEventTagModList</code>). The script
+applies <code>RedOrc_Win</code> with the champion as subject and the follower as other, and the Lose events go on the loser
+alone. Both recorded outcomes match: in one a champion died with <code>Resurrection_LowerBody</code>, and in the other a
+follower died with <code>Resurrection_OrcSlash</code> and the champion took his seat.</p>
 <h3 id="the-pit-on-screen">The pit on screen</h3>
 <ul>
-<li>Map and compass: <code>NavMarkerTypeQuest</code> = <code>Interface/NavMarkerTypes::Arena</code>
+<li>On the map and compass, <code>NavMarkerTypeQuest</code> is <code>Interface/NavMarkerTypes::Arena</code>
   (<code>interface\textures\hud\questicons\new\kraken\powerstruggle.tex</code>, 60 px, <code>PrimaryIconOverride</code> <code>ArenaIcon</code>,
   minimap <code>questarrow.tex</code>).</li>
-<li>The start card: <code>WorldUIConfirmSequence</code> <code>QS_Gauntlet_Base_WUIP</code> (<code>bundles\animationcharacters\menu\queststart.bndl</code>;
+<li>The start card uses the <code>WorldUIConfirmSequence</code> <code>QS_Gauntlet_Base_WUIP</code> (<code>bundles\animationcharacters\menu\queststart.bndl</code>;
   steps <code>QS_GauntletEnemy_Setup</code>, <code>_WalkOut</code>, <code>_FadeUp</code>, <code>_Idle_PR</code>; alignment <code>Job_Other</code>; see The mission start
-  screen), the strings <code>PS_Gauntlet_Name</code>, <code>PS_Gauntlet1_Desc</code>, <code>PS_Gauntlet_Desc_Short</code>, <code>PS_Gauntlet_Desc_Comp_MM</code>;
-  complete, failed and simulated results all play <code>PS_Arena_Rewards_EVT</code>; <code>StateTags</code> <code>Arena</code>;
-  <code>OverrideScenarioList</code> <code>RemoveAllAmbient</code>; <code>GauntletStage</code> (1 on <code>MI_Gauntlet</code>). <code>ScoreSetup</code> and
-  <code>DisplayTurnTimer</code> are present and unused.</li>
-<li>The fighter plate: <code>NavMarkerTypeCharacter</code> <code>CharacterArena</code> (<code>SPH-CharacterMarkerCommon</code>, torso + 75 cm, 125 m) -&gt;
-  <code>Interface/NavMarkerCharacterData::NamedOrc_Arena</code>, 18 states (<code>HealthBar</code>, <code>Level</code>, <code>Arena_BorderMember</code> =
-  <code>arena_boarder.tex</code> with the custom draw <code>ArenaShieldBG</code>, <code>PlayerFollower</code>, <code>DefaultMember</code> ...), each with
-  <code>ClipApplyTint</code>, <code>ClipTint</code> (ARGB), <code>ClipTintPredicate</code>, <code>PrimaryIconTint</code>, <code>PrimaryTextureOverride</code> and
-  <code>AuxTintOverrides</code>: a plate's tints are data.</li>
-<li>The champion's job <code>PS_Other_Cap_Gauntlet_&lt;R&gt;</code>: <code>AlwaysUseBuilderRecord</code> True with its builder, <code>AddHenchmen</code> True,
-  <code>OtherJob</code> <code>PS_Subject_Cap_Vs</code>; it also carries the unused <code>UseNemesisForgeNemesis</code>, <code>UseNemesisForgeAlly</code> and
-  <code>UseOnlineArenaOpponent</code>. <code>Quest/Types::Gauntlet</code> sets <code>UIDisplayParticipants</code>, <code>UIProgressGroup</code> <code>PowerStruggles</code>
-  and <code>PlayerItemDuringActivation</code> <code>PC_QuestActivation</code>; its one <code>IsGauntlet</code> reader is the results screen 0xE69B60.</li>
+  screen) and the strings <code>PS_Gauntlet_Name</code>, <code>PS_Gauntlet1_Desc</code>, <code>PS_Gauntlet_Desc_Short</code> and
+  <code>PS_Gauntlet_Desc_Comp_MM</code>. Complete, failed and simulated results all play <code>PS_Arena_Rewards_EVT</code>. The quest also
+  sets <code>StateTags</code> <code>Arena</code>, <code>OverrideScenarioList</code> <code>RemoveAllAmbient</code> and <code>GauntletStage</code> (1 on <code>MI_Gauntlet</code>);
+  <code>ScoreSetup</code> and <code>DisplayTurnTimer</code> are present and unused.</li>
+<li>The fighter plate is the <code>NavMarkerTypeCharacter</code> <code>CharacterArena</code> (<code>SPH-CharacterMarkerCommon</code>, torso + 75 cm,
+  125 m) -&gt; <code>Interface/NavMarkerCharacterData::NamedOrc_Arena</code>, with 18 states (among them <code>HealthBar</code>, <code>Level</code>,
+  <code>Arena_BorderMember</code> = <code>arena_boarder.tex</code> with the custom draw <code>ArenaShieldBG</code>, <code>PlayerFollower</code> and
+  <code>DefaultMember</code>), each with <code>ClipApplyTint</code>, <code>ClipTint</code> (ARGB), <code>ClipTintPredicate</code>, <code>PrimaryIconTint</code>,
+  <code>PrimaryTextureOverride</code> and <code>AuxTintOverrides</code>. A plate's tints are therefore data.</li>
+<li>The champion's job <code>PS_Other_Cap_Gauntlet_&lt;R&gt;</code> sets <code>AlwaysUseBuilderRecord</code> True with its builder, <code>AddHenchmen</code>
+  True and <code>OtherJob</code> <code>PS_Subject_Cap_Vs</code>. It also carries the unused <code>UseNemesisForgeNemesis</code>, <code>UseNemesisForgeAlly</code>
+  and <code>UseOnlineArenaOpponent</code>. <code>Quest/Types::Gauntlet</code> sets <code>UIDisplayParticipants</code>, <code>UIProgressGroup</code>
+  <code>PowerStruggles</code> and <code>PlayerItemDuringActivation</code> <code>PC_QuestActivation</code>. Its one <code>IsGauntlet</code> reader is the results
+  screen 0xE69B60.</li>
 </ul>
 <h3 id="pit-data-and-objects">Pit data and objects</h3>
 <ul>
-<li><code>Faction/SimEvent/Gauntlet</code> (4: <code>Island</code>, <code>Island2</code>, <code>Island3</code>, <code>SnowMountain</code>) -&gt; <code>GauntletTier</code>
-  (<code>Stages</code>) -&gt; <code>GauntletTierStage</code> (<code>SimEvent</code>, <code>Configuration</code>) -&gt; the <code>Gauntlet*</code> sim events.
+<li><code>Faction/SimEvent/Gauntlet</code> (4: <code>Island</code>, <code>Island2</code>, <code>Island3</code>, <code>SnowMountain</code>) leads through <code>GauntletTier</code>
+  (<code>Stages</code>) and <code>GauntletTierStage</code> (<code>SimEvent</code>, <code>Configuration</code>) to the <code>Gauntlet*</code> sim events.
   These records are not what the playable pits run.</li>
 <li><strong>GauntletMgr</strong> saves its tiers (0x1A825EC): <code>+0x48</code> an array of 0x10-byte entries
   <code>{TierRecord, u32 NumCompletes}</code>, <code>+0x50</code> their count. Loading (0x1A824E4) zeroes every
   <code>NumCompletes</code>, reads the saved tiers back and sets the byte <code>+0xB0</code>.</li>
-<li>Pit spawn scenarios: <code>AI/SpawnAmbient/SpawnScenario</code> <code>ArenaCombatants</code>, <code>ArenaCombatantsKeep</code>,
-  <code>ArenaEvent</code>, <code>ArenaEventActivator</code>, <code>ArenaEventActivatorKeep</code>, and in <code>SpawnScenarioSetup</code> the
-  beast and orc pairings (<code>ArenaGraugVsGraug</code>, <code>ArenaCaragorsVsCaragors</code>, <code>ArenaOrcsVsOrcs</code>,
-  <code>ArenaNamedVsOrcs</code>, <code>ArenaOlogVsOlogKeep</code>, <code>ArenaEventFight</code>, <code>ArenaEventRandom</code> ...).</li>
+<li>The pit spawn scenarios are the <code>AI/SpawnAmbient/SpawnScenario</code> records <code>ArenaCombatants</code>, <code>ArenaCombatantsKeep</code>,
+  <code>ArenaEvent</code>, <code>ArenaEventActivator</code> and <code>ArenaEventActivatorKeep</code>, and in <code>SpawnScenarioSetup</code> the
+  beast and orc pairings (among them <code>ArenaGraugVsGraug</code>, <code>ArenaCaragorsVsCaragors</code>, <code>ArenaOrcsVsOrcs</code>,
+  <code>ArenaNamedVsOrcs</code>, <code>ArenaOlogVsOlogKeep</code>, <code>ArenaEventFight</code> and <code>ArenaEventRandom</code>).</li>
 <li><strong>The arena camera director</strong> is <code>[[base+0x26FFA98]+0x8B8]</code>, held by the client shell (the
-  getter 0x2F6D1C asserts it is non-null; live it is an object of vt_0x22F3E48). The script class
+  getter 0x2F6D1C asserts it is non-null; in a live game it is an object of vt_0x22F3E48). The script class
   <code>ArenaCameraDirector</code> (<code>Start</code> 0x1BB0118) hands it the two combatants through 0x1D78EB4 -&gt;
-  0x179EE48; the finish 0x179CADC (also the console command <code>Arena.Camera.Finish</code>) resolves them
+  0x179EE48. The finish 0x179CADC (also the console command <code>Arena.Camera.Finish</code>) resolves them
   from handles at <code>+0xB0</code> and <code>+0xB8</code> through its tracker at <code>+0x2A0</code> (0x179D410, 0x179D49C, each
   cast to a character), makes both the player's bodyguards, and reads the gauntlet stage from the
   quest at <code>[+0x700]+0x258</code> (<code>Quest/Quests.GauntletStage</code>). The camera data is
   <code>Arena/CameraDirector::Duel_ACD</code> (camera lists, picker, HUD state, <code>ArenaRadius</code>).</li>
-<li><code>Duel_ACD</code> is the only <code>Arena/CameraDirector</code> record: <code>ArenaRadius</code> 1350; <code>StartCameraList</code> 3,
+<li><code>Duel_ACD</code> is the only <code>Arena/CameraDirector</code> record. It has <code>ArenaRadius</code> 1350; <code>StartCameraList</code> 3,
   <code>PrimaryCameraList</code> 6, <code>SecondaryCameraList</code> 3 and <code>TertiaryCameraList</code> 1 entries (10 distinct
-  <code>Arena/CameraEntry</code> records); <code>CameraPicker</code> <code>ArenaList</code>, <code>HUDState</code> <code>OrcArena</code>, <code>CommandSet</code>
+  <code>Arena/CameraEntry</code> records); and <code>CameraPicker</code> <code>ArenaList</code>, <code>HUDState</code> <code>OrcArena</code> and <code>CommandSet</code>
   <code>ArenaCamera</code>. <code>Arena/CameraObject</code> holds eight objects (<code>Center_OBJ</code>, <code>Combatant1_OBJ</code>,
-  <code>Combatant2_OBJ</code>, <code>Fallback_OBJ</code>, <code>Stands1_OBJ</code> .. <code>Stands4_OBJ</code>); the director's set-up 0x179E3C8
+  <code>Combatant2_OBJ</code>, <code>Fallback_OBJ</code>, <code>Stands1_OBJ</code> .. <code>Stands4_OBJ</code>). The director's set-up 0x179E3C8
   looks up <code>Combatant1_OBJ</code>, <code>Combatant2_OBJ</code> and <code>Center_OBJ</code> and reads <code>ArenaRadius</code>. Eight
   <code>Mob/MobDefinition</code> records (<code>Arena_EnemyDef_MD</code>, <code>Arena_EnemyInf_MD</code>, <code>Arena_EnemyArmy_MD</code>,
   <code>Arena_EnemyOlog_MD</code> and the four <code>Arena_Friendly*_MD</code>) each hold one <code>Members</code> field.</li>
@@ -1824,8 +1835,8 @@ alone. Both recorded outcomes match: a champion died with <code>Resurrection_Low
   when bit 2 of its <code>FactionMember+0x508</code> is set, or else when <code>CCharacter::IsDead</code> (0x190F1C) holds
   for the character at <code>+0x48</code> of the same FactionMember, and reports <code>Combatant 1</code>, <code>Combatant 2</code>,
   <code>Draw</code> or <code>Both Dead</code>. The quest-complete screen 0xE69B60 tests bit 21 (0x200000) of <code>+0x508</code> on
-  both combatants: both set gives <code>UI_QuestComplete_Resolution_Gauntlet_BothDead</code>, one set
-  <code>UI_QuestComplete_Resolution_Gauntlet_Winner</code>, neither <code>UI_QuestComplete_Resolution_Gauntlet_Timeout</code>.
+  both combatants: both set gives <code>UI_QuestComplete_Resolution_Gauntlet_BothDead</code>, one set gives
+  <code>UI_QuestComplete_Resolution_Gauntlet_Winner</code>, and neither gives <code>UI_QuestComplete_Resolution_Gauntlet_Timeout</code>.
   The same function picks <code>UI_QuestComplete_Resolution_Showdown_Dead</code> from bit 21 and
   <code>UI_QuestComplete_Resolution_Showdown_Recruit</code> from bit 27.</li>
 <li><strong>AutoInfight</strong> is Monolith's stripped captain-against-captain harness. The script call
@@ -1833,14 +1844,14 @@ alone. Both recorded outcomes match: a champion died with <code>Resurrection_Low
   <code>[FS+0x60]</code> is never created. Behind it the faction system's update 0x1E2BC4 ticks 0x1A73F58(<code>[FS+0x60]</code>): a fight
   object at <code>+0x38</code> that is done is destroyed (0x1A85488) with a cooldown at <code>+0x40</code>, and without one a new one is built
   (constructor 0x1A84FC0, vt_0x1FB2C40, 0xF0 bytes, two transforms). 0x1A85550 picks a random pair of the current
-  army (0x1C1B91C), turns the first's follower bit off and the second's on (0x7D52B0, a change that is saved), and
-  0x1A857F8 stages the fight: it clears the spawn manager's enable byte (<code>+0x194</code>), removes every ambient AI and the
+  army (0x1C1B91C) and turns the first's follower bit off and the second's on (0x7D52B0, a change that is saved).
+  0x1A857F8 then stages the fight: it clears the spawn manager's enable byte (<code>+0x194</code>), removes every ambient AI and the
   dead bodies, queues the members at <code>+0x38</code> and <code>+0x60</code> of its object through 0x1A91360 under the names
   <code>AutoInfightNPC1</code> and <code>AutoInfightNPC2</code> (with itself as the callback, ids 1 and 2), and clears the bytes <code>+0xB8</code> and
   <code>+0xB9</code>. Its results were written through the file name template <code>%sAutoInfight_%s.txt</code>.</li>
 <li>The gauntlet menu's input actions are <code>SimEventGauntlet_MenuEnter</code> 0x16A, <code>SimEventGauntlet_MenuExit</code>
-  0x16B, <code>SimEventGauntlet_ActivateFirst</code> 0x16C and <code>SimEventGauntlet_ActivateLast</code> 0x16D;
-  <code>Arena_CameraAdvance</code> is 0x15A (values stored explicitly by the input-action table 0x3123CC, 0x179
+  0x16B, <code>SimEventGauntlet_ActivateFirst</code> 0x16C and <code>SimEventGauntlet_ActivateLast</code> 0x16D.
+  <code>Arena_CameraAdvance</code> is 0x15A (the input-action table 0x3123CC stores the values explicitly; it has 0x179
   entries).</li>
 <li>Arena telemetry names the arena type (0x1B2A1F4: 0 <code>Gauntlet</code>, 1 <code>Blood Duel</code>, 2
   <code>Assassination</code>, 3 <code>Online Ranked</code>, 4 <code>Online Friendly</code>) and the event (0x1B2A1C0: 0 <code>Started</code>, 1
@@ -1850,40 +1861,36 @@ alone. Both recorded outcomes match: a champion died with <code>Resurrection_Low
 </ul>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>Which copy of the Minas Ithil pit script runs (<code>Patch_05</code> or <code>Patch_06</code>; the Lithlad copies are the newer variant),
-  and whether <code>ST:GetIntervalRemaining()</code> in its damage ramp is the whole timer's remainder or the current 10 s tick's.</li>
-<li>Why followers put on hostile pit sides did not fight in four attempts (with the senses cycle and scripted targets
-  as for the enemy grunts that did): the target check 0x18BE04 ends in a leash test (the anchor 0x4474DC, radius
+<li>Which copy of the Minas Ithil pit script runs, <code>Patch_05</code> or <code>Patch_06</code> (the Lithlad copies are the newer variant)?
+  Is <code>ST:GetIntervalRemaining()</code> in its damage ramp the whole timer's remainder or the current 10 s tick's?</li>
+<li>Why did followers put on hostile pit sides not fight in four attempts (with the senses cycle and scripted targets,
+  as for the enemy grunts that did)? Either the target check 0x18BE04 ends in a leash test (the anchor 0x4474DC, radius
   <code>+0x240</code> around <code>+0xAC</code>) and follower grunts stay anchored to Talion, or followers may never attack followers.</li>
-<li>Whether a load rebuilds the compiled relation matrix, and who applies <code>Trait_Unstable_Follower</code> besides the trait
-  catalysts (no world script does).</li>
-<li>
-<p>Whether followers are capped at Talion's level: two winning followers stopped at 80 while enemy captains read 82 and
-  85 (flag bit 10 is "ignore the player-level cap").</p>
-</li>
-<li>
-<p>Step status values: both step classes read return 2 for a failed precondition and for a lost
-  target. Watching a step that completes normally (a <code>GoTo</code> arriving) would show whether 1 means
-  success. What vf8 (<code>return true</code> in both) answers is also open.</p>
-</li>
-<li>What <code>forced</code> changes in a quest-requested replan beyond the pair byte <code>+8</code>, and what the 0xA8-byte
-  entries of the batch 0xF41E30 hold.</li>
-<li>No stack entry parked a non-zero status in a 73.5 s fight capture, and the suspend byte
-  <code>npc+0x2C21</code> was never seen set in it; reading it during a mount, a synchronised kill and a
-  dialogue would show which systems set it besides the queued teleport.</li>
-<li>50 step types have no class named from their own field reads; the factory map gives every one a
-  vtable, but the table above lists only the ones read live or named.</li>
+<li>Does a load rebuild the compiled relation matrix, and who applies <code>Trait_Unstable_Follower</code> besides the trait
+  catalysts (no world script does)?</li>
+<li>Are followers capped at Talion's level? Two winning followers stopped at 80 while enemy captains read 82 and
+  85 (flag bit 10 is "ignore the player-level cap").</li>
+<li>What do the step status values mean? Both step classes read return 2 for a failed precondition and for a lost
+  target; watching a step that completes normally (a <code>GoTo</code> arriving) would show whether 1 means
+  success. What does vf8 (<code>return true</code> in both) answer?</li>
+<li>What does <code>forced</code> change in a quest-requested replan beyond the pair byte <code>+8</code>, and what do the 0xA8-byte
+  entries of the batch 0xF41E30 hold?</li>
+<li>Which systems set the suspend byte <code>npc+0x2C21</code> besides the queued teleport? No stack entry parked a non-zero
+  status in a 73.5 s fight capture, and the byte was never seen set in it; reading it during a mount, a synchronized
+  kill and a dialogue would show the answer.</li>
+<li>Which classes implement the 50 step types that have no class named from their own field reads? The factory map
+  gives every one a vtable, but the table above lists only the ones read live or named.</li>
 <li>Is the target-select table ordered by <code>Cost</code>? Mapping each of the 27 objects (<code>picker+0x08</code>) to
   its record would show it, and which pickers dominate the scan.</li>
-<li>Which <code>Enemy_*</code> channels are replaced by <code>Owner_*</code> / <code>Invader_*</code> channels when a region loads: in one
+<li>Which <code>Enemy_*</code> channels are replaced by <code>Owner_*</code> / <code>Invader_*</code> channels when a region loads? In one
   loaded desert, 233 of the 5,002 live ambient spawners (4.7%) still carried <code>Enemy_*</code> channels, so the
   replacement is not applied to all of them.</li>
-<li>Why a Balrog summoned onto the player's side follows but never fights: its combat tree has no
+<li>Why does a Balrog summoned onto the player's side follow but never fight? Its combat tree has no
   <code>CombatCircleNodes</code>, unlike the AI Talion's (<code>AI_Talion_CombatCircle</code>). Comparing the attack
   decision of an AI Talion against an orc with the Balrog's would locate the difference.</li>
-<li>What puts a character into the spawn manager's second roster at <code>+0x168</code>: no function that
+<li>What puts a character into the spawn manager's second roster at <code>+0x168</code>? No function that
   loads the manager writes the vector or takes its address to append, so the append goes through
-  another pointer to it. And what the values at <code>+0x184</code> / <code>+0x188</code> are (40 and 8 in one reading,
-  30 and 8 in a later one, both in Lithlad): no code in the offset index reads or writes them
+  another pointer to it. What are the values at <code>+0x184</code> / <code>+0x188</code> (40 and 8 in one reading,
+  30 and 8 in a later one, both in Lithlad)? No code in the offset index reads or writes them
   directly.</li>
 </ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
