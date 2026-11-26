@@ -1,7 +1,8 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Outposts, strongholds and fortress upgrades - Shadow of War engine reference</title><meta name="description" content="How the game&#x27;s outposts work across every layer: the engine&#x27;s own name for them (strongholds), the per-outpost switch and the warchief missions it gates, Lithlad&#x27;s outposts as seats of an army, the fortress-upgrade table every army keeps and who picks it, the spawn-scenario tables that fill a stronghold, the world scripts that drive them, and the world map that draws them."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Outposts, strongholds and fortress upgrades - Shadow of War engine reference</title><meta name="description" content="How the game&#x27;s outposts work across every layer: the engine&#x27;s own name for them (strongholds), the per-outpost switch and the warchief missions it gates from generation to the commander&#x27;s walk-out, who can command an outpost, the alarm, captain spots and the HUD block, Lithlad&#x27;s outposts as seats of an army with their assault missions, retakes and boosts, the fortress-upgrade table every army keeps, the endless Shadow War&#x27;s sieges, the spawn-scenario tables that fill a stronghold, the world scripts that drive them, and the world map that draws them."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
+<a href="builds.html" data-p="builds">Game builds: Steam, GOG and Microsoft Store</a>
 <a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
 <a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
 <a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
@@ -23,19 +24,23 @@
 <a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
 <a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="haedirs.html" data-p="haedirs">Haedirs: towers, seeing stones and fast travel</a>
 <a href="outposts.html" class="cur" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
-<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="outposts-strongholds-and-fortress-upgrades">Outposts, strongholds and fortress upgrades</h1><p class=\"lede\">How the game&#x27;s outposts work across every layer: the engine&#x27;s own name for them (strongholds), the per-outpost switch and the warchief missions it gates, Lithlad&#x27;s outposts as seats of an army, the fortress-upgrade table every army keeps and who picks it, the spawn-scenario tables that fill a stronghold, the world scripts that drive them, and the world map that draws them.</p>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="outposts-strongholds-and-fortress-upgrades">Outposts, strongholds and fortress upgrades</h1><p class=\"lede\">How the game&#x27;s outposts work across every layer: the engine&#x27;s own name for them (strongholds), the per-outpost switch and the warchief missions it gates from generation to the commander&#x27;s walk-out, who can command an outpost, the alarm, captain spots and the HUD block, Lithlad&#x27;s outposts as seats of an army with their assault missions, retakes and boosts, the fortress-upgrade table every army keeps, the endless Shadow War&#x27;s sieges, the spawn-scenario tables that fill a stronghold, the world scripts that drive them, and the world map that draws them.</p>
 <p>Every region has outposts: warchief strongholds whose missions, map zones and signal fires follow one saved switch
 each, and in Lithlad five outposts that are seats of an army with a commander and a reward. The engine's data and
 scripts mostly call them strongholds; the population inside one is shaped by spawn-scenario tables, and a fortress
 keeps a table of upgrades that its army's tribe and warchiefs choose.</p>
 <p>The army, seats and faction events are in The Nemesis system; quests and the campaign store in Quests, story and
-scenes; spawning in AI; the map's interface in User interface.</p>
+scenes; spawning in AI; the menus in User interface.</p>
 <h2 id="two-names-for-one-thing">Two names for one thing</h2>
 <p>The game's text says "outpost"; most of the spawn data and the world scripts say "stronghold". Across the shipped
 database, 2,335 record names in 131 categories contain either word. The spawn tables are almost all strongholds:</p>
@@ -87,7 +92,7 @@ interface game-state predicates, 18 remote scripts (<code>EnableAllOutposts</cod
 executable, 103 functions carry an outpost or stronghold name in their own strings or field registrations: 8 schema
 builders, 33 field registrars, 45 field bindings and 11 string users. One script binding is exposed:
 <code>Faction::GetOutpostCount_PlayerFollowerOrEmpty</code> (implementation 0xF647F0).</p>
-<h2 id="the-outpost-switch-and-the-warchief-missions">The outpost switch and the warchief missions</h2>
+<h2 id="the-outpost-switch">The outpost switch</h2>
 <p>Each region's warchiefs live at outposts: Lithlad <code>DE_Outpost_Central / East / North / NorthWest / West</code>, Núrnen
 <code>I_Outpost_Harbor / Lighthouse / RiverRuins</code>, Cirith Ungol <code>MP_Outpost_Arena / LostHearth / Shelob</code>, Seregost
 <code>SM_Outpost_ArmyCamp / FrozenLake / Summit</code>, Gorgoroth <code>V_Outpost_BlackIron / Camp / Ledge</code>, Minas Ithil
@@ -102,29 +107,129 @@ builders, 33 field registrars, 45 field bindings and 11 string users. One script
 <li><strong>Its readers:</strong> the region's stronghold controller (below) subscribes to the variable's change event; the 889
   <code>GetValue</code> reads are all in side-activity layers' <code>CheckMapCanvas</code> (caravans, guarded caragors, camps, feasts, war
   councils, labour, supplies, drills), which run only while the outpost is active.</li>
-<li><strong>The missions.</strong> At a world turn, a captain seated in the region's captain rows generates <code>&lt;R&gt;_Outpost_OP&lt;n&gt;</code> when
-  its <code>GlobalVarPredicate</code> passes (0x5935DC; in Lithlad the switch AND NOT the outpost's DLC capture flag). Each event
-  weighs 999 against 0, so one per outpost per army. The generating captain must pass the job
-  <code>SC_Subject_OutpostCommander</code> himself (0x61EF8C -&gt; 0x61FC88 -&gt; 0x622170, job matcher 0xF9BB20): captain rank, enemy,
-  alive, not a prisoner, spy or vow holder, not on another sim event (<code>FM+0x4F0</code>), not an Easterling, not tagged
-  <code>OP&lt;n&gt;_UnfinishedBusiness</code>, no revenge within 3 turns, not a bodyguard, not in the world, not on a DLC outpost seat.
-  The event binds to a placed quest whose predicates pass (0x597884 -&gt; 0x19EFAB4), so a mission is offered only while
-  its region is loaded. The quests are <code>SpawnCondition</code> quests (<code>&lt;R&gt;_SC_OP&lt;n&gt;_KillArchers</code>, <code>_KillBerserkers</code>,
-  <code>_SustainedAlarm</code>, <code>_RapidStealth</code> ...); <code>Quest/Types::SpawnCondition</code> is replayable, so completion blocks nothing
-  and the switch is the only lock. Variant gates such as <code>DE_Outpost_01_Berserkers</code> add a class unlock
-  (<code>BerserkersUnlocked</code>) to the outpost's gate.</li>
 <li><strong>The zone</strong> on the map is <code>Interface/MapCanvasSettings::&lt;R&gt;_ZoneMap_&lt;X&gt;</code> (Núrnen 3, Cirith Ungol 3, Seregost 3,
-  Gorgoroth 3, Minas Ithil 6, Lithlad 5). Its game-state predicate is the outpost's own switch, so a zone is drawn
-  while the outpost is active and dropped once it is cleared.</li>
+  Gorgoroth 3, Minas Ithil 6, Lithlad 5). Its game-state predicate is the outpost's own switch
+  (<code>IS_Outpost_Harbor</code> = <code>I_Outpost_Harbor == true</code>; Minas Ithil adds a story stage, 100+ or 200+, or
+  <code>IsVendettaMode</code>, and maps <code>Common</code>, <code>Noble</code>, <code>TradeWest</code>, <code>TradeEast</code> and <code>Wild</code> to <code>MIOutpost_01</code> to <code>05</code>;
+  <code>MI_ZoneMap_Keep</code> has only the story stage; Lithlad adds NOT <code>DLC4_OPCaptured_&lt;X&gt;</code>), so a zone is drawn while the
+  outpost is active and dropped once it is cleared. Its <code>QuestPredicates</code> only hide it while the outpost's own quest
+  list runs. The <code>mc*</code> map-canvas objects placed at outposts belong to side-activity layers, not to these zones.</li>
 <li><strong>Where an outpost is:</strong> the centre of its commander spawn points, <code>AISpawnerAmbientQuestJob</code> objects such as
   <code>SC_Sp_&lt;nn&gt;.OutpostCmdr</code> in the region's <code>spawnconditions_op&lt;n&gt;</code> layer (116 placed objects carry "Outpost" in their
-  name, every one a quest-job spawner; the points of one outpost spread 22 to 91 m).</li>
+  name, every one a quest-job spawner; the points of one outpost spread 22 to 91 m). Seregost's Frozen Lake has no
+  commander spawner (the 88 quest-job spawners within 120 m of its zone all belong to nemesis activities), but the
+  region's map information names each outpost zone's canvas with a position (<code>mcOP_ArmyCamp</code>, <code>mcOP_Summit</code>,
+  <code>mcOP_FrozenLake</code>), whose x and z sit within 16 to 32 m of the spawn centres while their heights are not the ground's.</li>
 <li>Setting a switch back to true through the engine's own variable setter (0x59A1D8 on <code>[GM+0x6C58]</code>) relights the
   signal fires at once (the controller's change handler) and the outpost's missions are offered again from a later
-  world turn.</li>
+  world turn: completion blocks nothing (below), so the switch is the only lock.</li>
 <li>In Desolation of Mordor's mode (<code>DLC_DLC4Active</code>) the same <code>DeactivateOutpost</code> captures instead of clearing: a win
   sets <code>DLC4_OPCaptured_&lt;X&gt;</code> true and the outpost's <code>D_OP_*</code> areas player-owned, and leaves <code>DE_Outpost_&lt;X&gt;</code> true.</li>
+<li><code>OutpostsDisabled</code> is not a feature switch: it is the data of the achievement <code>OutpostDisabled</code>, a count of the
+  outposts the player cleared. <code>Quest/Types::Outpost</code> is genuinely unused (no quest has it as its type).</li>
 </ul>
+<h2 id="the-warchief-missions-end-to-end">The warchief missions, end to end</h2>
+<p>The game's own outpost assault is data plus the nemesis turn engine:</p>
+<ol>
+<li><strong>Generation at a world turn.</strong> <code>AdvanceTurn</code> 0x1B5EE88 -&gt; <code>FactionSimEventGenerate</code> 0x597A9C(army context) -&gt;
+   the candidate pass 0x597C7C over the seats -&gt; per member 0x5924EC (his row <code>FM+0x268</code>, flag bit 27) -&gt; the row's
+   <code>SimEventGenerationSetup</code> entries in order -&gt; a weighted pick 0x5926EC (per-type weights in the pass's own context
+   at <code>+0xA8 / +0xB0</code>) -&gt; 0x5935DC creates the event. The captain rows' setups (<code>Island_Captain</code>, <code>SnowMtn_Captain</code>
+   ...) list the region's outpost types first (3 or 5 entries).</li>
+<li><strong>The outpost type</strong> <code>&lt;R&gt;_Outpost_OP&lt;n&gt;</code> (Minas Ithil <code>OutpostGeneric_OP&lt;n&gt;_NoAct1</code>, Gorgoroth <code>VO_</code>, Núrnen <code>IS_</code>,
+   Cirith Ungol <code>MP_</code>, Seregost <code>SM_</code>, Lithlad <code>DE_</code>): its <code>GlobalVarPredicate</code> is the switch (in Lithlad the switch
+   AND NOT the capture flag; Minas Ithil's also wants StoryState 200 or more), 7 events (<code>Kill{Archers, Berserkers,
+   Defenders, Ologs, Spearmen}_Outpost_0&lt;n&gt;</code>, <code>RapidStealth_</code>, <code>SustainedAlarm_</code>), the high-priority
+   <code>ReleasePrisoners_UB_OP&lt;n&gt;</code> (for a captain tagged <code>UnfinishedBusiness_OP&lt;n&gt;</code>), and weights <code>[999, 0]</code>: one event
+   per outpost per army. Variant predicates such as <code>DE_Outpost_01_Berserkers</code> add a class unlock
+   (<code>BerserkersUnlocked</code>).</li>
+<li><strong>The event</strong> <code>&lt;Challenge&gt;_Outpost_0&lt;n&gt;</code>: its participant job <code>SC_Subject_OutpostCommander</code> (row rank Captain,
+   enemy, alive, not on an event, not a bodyguard, spy, prisoner or vow holder, not an Easterling, no revenge within 3
+   turns, not tagged <code>OP&lt;n&gt;_UnfinishedBusiness</code>, not on a DLC outpost seat), <code>AddHenchmen</code>, <code>PreventHenchmenSelection</code>,
+   the builder <code>OutpostCommander</code> at chance 1.0; <code>EventOnAssignSubject</code> <code>Outpost_Commander_Subject</code> (one level more);
+   the results SubjectFled, SubjectKilledByPlayer, SubjectKilled_Fallback, SubjectDominated, Shamed, Shunned,
+   PlayerFledWarchief and SubjectSucceeded; Army-screen presentations, a portrait and <code>AlwaysShowMemberNavMarkers</code>.
+   The commander holds it at <code>[FM+0x4F0]</code> (<code>+0x48</code> the sim event, <code>+0x50</code> the quest record).</li>
+<li><strong>The quest</strong> <code>&lt;R&gt;_SC_OP&lt;n&gt;_&lt;Challenge&gt;</code> (Seregost names its three <code>SM_SC_W_</code>, <code>_P_</code> and <code>_AC_</code>): predicates {the
+   event, the switch, NOT <code>OP&lt;n&gt;_Retry</code> running}; type <code>SpawnCondition</code> (<code>ActivationType</code> 3, shown on the zone map,
+   shown as new, kept on the HUD, replayable with XP and items on replay, startable in combat, disabling travel
+   points); objectives {the challenge, <code>SpawnCon_KillChief_Obj</code> "Defeat {1!s}"} and an extra objective picker
+   <code>Optional_Kills</code>; player confirmation with the start screen <code>QS_SingleParticipant_Base_WUIP</code>; rewards
+   <code>Outpost_&lt;Region&gt;0&lt;n&gt;Complete</code> and <code>Outpost_XP</code>; <code>MapCanvas</code> the outpost's zone; <code>LimitGroup LG_OutpostMission</code>;
+   markers <code>OutpostAlarm</code> / <code>CharacterOutpost</code>. One quest list per outpost (<code>DE_Outpost_01..05</code>, <code>IS_Outpost_01..03</code>,
+   <code>MI_Outpost_01..05</code>, <code>SM_Outpost_01..03</code> ...) plus <code>Outpost_Retry</code> and a progress count per outpost.</li>
+<li><strong>Placement.</strong> The event binds a placed quest whose predicates pass (0x597884 -&gt; 0x19EFAB4, the map at
+   <code>QS+0x518</code>; 0x19EFAB4 prefers the variant with the fewest completions), so a mission is offered only while its
+   region is loaded; placed is state 2 (quest object <code>+0x128</code>), running Active is 17.</li>
+<li><strong>The commander comes out.</strong> While the challenge runs the commander is not in the world. The layer script's
+   <code>OnObjectiveComplete</code> waits for <code>SC_ConditionObjectives</code>, then a spawner set brings him and his gang
+   (<code>SC_Sp_&lt;nn&gt;.OutpostCmdr</code>, <code>SetOnScenarioSpawningComplete</code>). He walks to a menace node while
+   <code>Player:QueuePresentation(WarchiefIntro_RL, him)</code> plays his walk-out; when it finishes his senses, traits and pathing
+   come on, his henchmen follow him and <code>SpawnCon_KillChief_Obj</code> is displayed. A spy among his henchmen gets
+   <code>ActiveRevealSpyGuard</code> and him <code>Warchief_Betrayed_IT</code> (the betrayal branch of the same presentation).
+   <code>WarchiefIntro_EVT</code> has five sequences; the default <code>WC_Default</code> asks of its target only that the attack category
+   <code>PC_DisallowShowdown</code> is excluded, and <code>IsPlayerFollower</code> is empty on every object predicate of all five branches,
+   so the walk-out plays on any captain (read from Núrnen's <code>spawnconditionsop1</code> layer; the outpost missions of every
+   region run the same <code>spawnconditions*</code> prefab).</li>
+<li><strong>The end.</strong> The mission's scripts run <code>DeactivateOutpost</code> (the switch false) on its win paths, and the outcome's
+   job events apply to the commander. <code>Quest/Types::SpawnCondition</code> is replayable (<code>CanReplay</code>, with XP and item awards
+   on replay), and no predicate tests a completed quest, so completion blocks nothing.</li>
+</ol>
+<p><strong>Clearing an outpost</strong> turns its alarm off (<code>&lt;R&gt;_Outpost_&lt;n&gt;_Comp</code>, "You disabled the alarm in ... Outpost") and gives
+XP (<code>Combat/XP/EventQuest::Outpost_XP</code> = <code>FloatArray::Outpost_XP</code> by player level, 2,526 at level 1 to 66,306 at 99,
+times <code>XP_LevelDiff</code>) and an <code>Outpost_&lt;Region&gt;0&lt;n&gt;Complete</code> item (<code>Faction/Loot/LootItemLists::OutpostProgress</code>,
+<code>ContributesToProgress</code>, <code>ShadowWarItem</code>): the Shadow War progress trophy. No stat bonus.</p>
+<p><strong>The card's text.</strong> Every outpost mission's <code>DescriptionPicker</code> is one of 11 <code>Quest/JobStringPickerGroup::Outpost_*</code>
+groups, all the same two entries on <code>SC_Subject_OutpostCommander</code> with <code>PassIfNoMember</code> true: <code>IsNameKnown</code> -&gt;
+<code>SC_&lt;Challenge&gt;_Outpost_Desc</code> ("Draw out {1!s} by ...") and <code>IsUnknown</code> -&gt; <code>..._Desc_Unk</code> ("Draw out the Outpost leader
+by ..."), both <code>MemberHasNameUnlocked</code> = 0x1149E60(fm) = <code>[FM+0x510] &amp; 1</code>. The quest's <code>Description</code>,
+<code>ShortDescription</code> and <code>StartPointDescription</code> point at one string, and missions of different outposts share pickers,
+so the text is per challenge, not per outpost. <code>SpawnCon_KillChief_Obj</code> is shared by 855 quests (outpost 233, vendetta
+294, warchief and fort 100, other 228). A quest's text resolver is 0xCF9D90 (see User interface).</p>
+<p><strong>Outpost names.</strong> Each base outpost's <code>AlarmAreas</code> record names its switch in its HUD predicate, and its
+<code>DisplayName</code> is the key <code>&lt;tag&gt;_Outpost_&lt;n&gt;</code>; the mission's <code>SC_&lt;tag&gt;_Outpost_&lt;n&gt;_Name</code> and the capture line's
+<code>&lt;tag&gt;_Outpost_&lt;n&gt;_Comp</code> print the same name for the same n (17 of 17). n is not the outpost's order in its region:
+Seregost's Frozen Lake is 2 ("Oroshnalkh"), Summit 3 ("Gordumi Orlû"), Army Camp 1 ("Zunakh'mi Khaargh"); Minas
+Ithil's <code>MIOutpost_01</code> is 2 ("Taghumi Ghor"), <code>_02</code> 5 ("Taghumi Omakh"), <code>_03</code> 3, <code>_04</code> 4 and <code>_05</code> 1 ("Shulgumi
+Shaghkam"). Seregost's quests number them OP1 Frozen Lake (<code>SM_SC_W_*</code>), OP2 Summit (<code>SM_SC_P_*</code>) and OP3 Army Camp
+(<code>SM_SC_AC_*</code>); <code>SM_SC_AC_RapidStealth</code> names the sim event <code>SustainedAlarm_Outpost_03</code> as its predicate, a data quirk.</p>
+<h2 id="who-can-command-an-outpost">Who can command an outpost</h2>
+<p><strong>The commander is the captain the generator is working on, or nobody.</strong> 0x5935DC puts the generating captain in the
+cast list with the eligibility check on; the evaluation 0x61EF8C places him first (0x61FC88 -&gt; 0x622170 -&gt; 0x621834, a
+one-candidate run of the job matcher 0xF9BB20) and drops the whole event when he fails ("Fill Failed - Participant %s
+not able to assign to Job %s"). The job's builder is read only by the job filler 0x1BD40C4, and only when its seventh
+argument allows building; the evaluation calls it through 0x1BD2A54 with that argument 0, and lets a required slot
+stay empty when its job has a builder (0x7D7CB4 at 0x61F41B). So no outpost commander is ever built by a generation
+pass: the builder serves the quest side and the participant re-fill 0x5969A4.</p>
+<p><strong>The generator's own candidate tests.</strong> 0x597A9C returns at once while <code>[ctx+0x1F8]</code> is set, then collects the seated
+members of every row (0x597C7C -&gt; 0x597D7C) into two lists by <code>FM+0x51D</code>, skipping a follower with flag bits 27 and 28,
+a member already on an event (<code>FM+0x4F0</code>), a dead member not coming back (bit 2 without bit 4, 0x597E2C), flag bit 21,
+and a preset whose <code>Faction/PresetMembers.DisableSimEvents</code> is set. Before generating for a candidate 0x597F28 skips
+flag bit 29, bit 43 when 0x1B5CFBC(FS, <code>FM+0x2C8</code>) says so, and a member whose body is loaded in the world (<code>[FM+0x48]</code>
+set with flag bit 1, unless an entry of the <code>[FM+0x158]</code> list, 0x10 bytes each, has its byte <code>+0xE</code> set): a captain
+standing near the player gets no mission. <code>SimEventGenerationType.ZoneMustBePlayerOwned</code> is 0 (no requirement) on every
+outpost type; 1 (must be the player's) on <code>NeverEndingShadowWar</code> and <code>DeathThreats_OwnZone</code>; 2 (must not) is tested at
+0x59365A.</p>
+<p><strong>Bodyguards are refused.</strong> A job's <code>MustBeBodyguard</code> is 0 (no check), 1 (must be) or 2 (must not), tested as
+<code>FM+0x2D0 != -1</code> (0xF9F14B; <code>FM+0x2D0</code> is the pool index of the member he guards, part of the boss key at <code>FM+0x2C8</code>).
+Late in a campaign most captains are a warchief's bodyguard (in one save, captain rows: Gorgoroth 16 of 19, Minas Ithil 16
+of 19, Cirith Ungol 13 of 19), and only free enemy captains who guard nobody can command an outpost, so with 15 of 22
+switches on one outpost had its mission. A refused captain falls through to the <code>Location</code> filler
+(<code>EvalChanceIfNoOtherExists</code>); no event releases a warchief's bodyguard (<code>Faction/Events/Events</code> has only
+<code>RemoveBodyguardToPlayer</code>, its DLC4 twin and the <code>BecomeBodyguard*</code> family). Arriving in a region gives every free
+captain a <code>SimEvent::Location</code> filler (type 2, lifespan 3 turns, weight 5), so missions appear from the turn those
+expire.</p>
+<p><strong>A pass without a turn.</strong> The script native <code>System.FactionSimEventGenerate</code> (0x1B82860) runs 0x597A9C on the current
+region's army; no shipped world script calls it. The engine's own <code>[SIMEVENT]</code> and <code>[QUEST|JOB]</code> log lines are compiled
+in behind byte switches (0x2A34DA0, 0x2A34DAF, in the block 0x2A34D98 .. 0x2A34DB7), and the retail logger 0x19C83AC is a
+three-instruction stub, so the lines are produced and dropped.</p>
+<p><strong>No base-game event sends the player's captain at an outpost.</strong> Of 431 sim events, 163 let a required follower face a
+required enemy; the attacks among the generated ones are six (<code>Duel</code>, <code>CampRaid2</code>, <code>Raid_Caragors</code>, <code>Raid_Checkpoint</code>,
+<code>Raid_Supplies</code>, <code>Chase</code>; a follower's win kills the enemy), and only the <code>Duel</code> moves a seat. No faction event and no
+sim event clears an outpost mission; only the quest's own <code>DeactivateOutpost</code> clears the switch. All 15 event results
+with an <code>AreaOwnershipTransform</code> are Lithlad's. None of the 50 outpost events (<code>*_Outpost_0&lt;n&gt;</code>, <code>*_UB_OP&lt;n&gt;</code>) carries
+a slot beyond the commander's (an ambush or reinforcement slot exists on 19 and 24 other events), and none of the 30
+outpost layers holds a spawner for a second job.</p>
 <h2 id="the-stronghold-controller">The stronghold controller</h2>
 <p>One world-script class, <code>strongholdcontrol</code>, runs both the fortresses and the warchief outposts of the five base
 regions (its own comment: "Set to a default value so that outposts don't do fort stuff!"); Lithlad uses
@@ -160,6 +265,33 @@ regions (its own comment: "Set to a default value so that outposts don't do fort
   (<code>BerserkersUnlocked</code> has 98 users, <code>AI/Templates::Orc_Berserker</code> among them): they decide which orc classes any
   garrison can contain.</li>
 </ul>
+<h2 id="the-alarm-the-hud-block-and-captain-spots">The alarm, the HUD block and captain spots</h2>
+<p><strong>The alarm level.</strong> <code>System.SetAlarmLevel</code> (script stub 0x1BA7EA4) is 0x1AA0A80(alarm area, level, flag); its only
+other caller is a quest's own <code>AlarmLevel</code> (0x4F86E8). It takes an <code>AI/SpawnAmbient/AlarmAreas</code> record and accepts
+only two levels of the area's <code>TransientAlarmSettings</code>: <code>RequiredDefaultAlarmLevel</code> (meter 0) and <code>ElevatedAlarmLevel</code>
+(meter = <code>ElevatedAlarmLevelMeterMin</code>, the elevated flag on); any other level returns without a change. It writes the
+transient-alarm manager's entry for the area (<code>[base+0x26FFBF0]</code>: <code>+0x40</code> level, <code>+0x48</code> meter) and notifies the alarm
+system; 0x11FBC8(area) reads it back (the entry's level, else the area's default). All 22 outposts' areas use
+<code>TransientAlarmSettings::Default</code>: Low and High, meter minimum 300, falling 5 a second, so an elevated alarm falls back
+by itself in about a minute.</p>
+<p><strong>The block over the minimap.</strong> <code>minimap.gfx</code>'s <code>MM-Combat</code> (<code>Interface/HUD/Widget::Combat</code>; the C++ widget
+vt_0x1F7CF88 at <code>[[UIManager]+0x30]+0x48</code>) has two parts: <code>PlayerLevel</code> (the player's own level,
+<code>[[player+0x26A8]+0x568] + 1</code>) and <code>Alarm</code>, the area's name, icon and cooldown. The area is the highest-priority alarm
+area brush around the player (0x60763C -&gt; <code>player+0x26E8</code> -&gt; <code>UIManager+0x1A8</code>). The redraw 0x18D1974 runs when the area,
+the alarm level or its trend changes; with no trend it asks the record's <code>HUDPredicates</code> (instance <code>+0x10</code>, through
+0x1DDBE0) and hides the alarm part when it is false, its only reader. The 17 base outposts' predicate is
+<code>Interface/Predicates/GameState::&lt;switch&gt;</code>, true while the enemy holds the outpost (Minas Ithil's also want StoryState
+100 or 200); Lithlad's five, the fortresses and the Lumbermill have none. That is why Desolation of Mordor shows the
+name and alarm of an outpost the player holds and the base game shows them only for an enemy's.</p>
+<p><strong>Captain spots.</strong> Every base outpost has captain spots (<code>AI/SpawnAmbient/Locations</code>), listed by each region's captain
+rows: <code>&lt;R&gt;_Outpost&lt;X&gt;_Tribal</code> in <code>Faction/Rows.Locations</code> and <code>&lt;R&gt;_Outpost_&lt;X&gt;</code> in <code>LocationsLowPriority</code> (28 spots for
+the 17 base outposts; Black Iron and Minas Ithil's have no Tribal one). The location picker 0x78ADB8 (called from the
+location writer 0xFE3790, the one writer of <code>FM+0x330</code> and <code>FM+0x338</code>, from the fortress defence 0x1C1F244 and from the
+army's passes) filters each spot through 0x592F9C -&gt; 0x591D98(spot, the candidate's follower bit, ...): when a spot's
+<code>MustBePlayerFollower</code> link is set, its <code>Combat/Predicates/Bool.Value</code> must equal the candidate's follower bit, and then
+<code>PlayerFollowerMustMatchOverlord</code> applies (0 on every outpost spot). All 28 outpost spots name <code>Bool::False</code>: enemy
+captains only, whoever holds the outpost. The game's own follower spots (the Overlord's, the follower war camps: 28
+locations) name <code>Bool::True</code>.</p>
 <h2 id="spawn-scenarios-and-override-lists">Spawn scenarios and override lists</h2>
 <p>What stands in a stronghold is ambient spawning: spawn scenarios (<code>AI/SpawnAmbient/SpawnScenario</code>) grouped into
 categories (<code>SpawnScenarioCategory</code>) and filled through setups (<code>SpawnScenarioSetup</code>). An override list
@@ -234,27 +366,26 @@ values back. The list priority is read in three places (0x5ED1B8, 0x5ED360, 0x5E
 line of sight), despawn rules <code>Stronghold_Removal50M</code> to <code>Stronghold_Removal150M</code> and <code>StrongholdCaptain</code>, node tags
 <code>Stronghold_Core</code>, <code>Stronghold_Leader</code>, <code>Stronghold_Gather</code>, <code>Outpost_Guard</code>, <code>Outpost_Captain</code>, <code>Outpost_Defense</code>.</p>
 <h2 id="lithlad-s-outposts-seats-of-an-army">Lithlad's outposts: seats of an army</h2>
-<p>Desolation of Mordor's five Lithlad outposts are records of <code>Faction/Outposts</code> (fields <code>Row</code>, <code>Column</code>, <code>UIName</code>,
-<code>GlobalVarToSet</code>, <code>CreateSimEventOnDie</code>, <code>CreateSimEventOnVacate</code>, <code>PlayerOwnedItemGiverPicker</code>): seats in an army's
-row table that a captain holds as the outpost's commander.</p>
+<p>Desolation of Mordor's five Lithlad outposts are records of <code>Faction/Outposts</code> (6 records with <code>DE_Fort</code>; fields <code>Row</code>,
+<code>Column</code>, <code>UIName</code>, <code>GlobalVarToSet</code>, <code>CreateSimEventOnDie</code>, <code>CreateSimEventOnVacate</code>, <code>PlayerOwnedItemGiverPicker</code>):
+seats in an army's row table that a captain holds as the outpost's commander. The campaign's Lithlad is the same
+world (<code>WorldInfo::desert</code>), with these systems placed and switched off.</p>
 <ul>
-<li><strong>The capture flag.</strong> <code>GlobalVarToSet</code> (<code>DLC4_OPCaptured_&lt;X&gt;</code>) is written by the faction system through the boolean
-  setter 0x59A1D8, which fires the variable's change event. Its binding 0x100F4C0 has 5 callers: 0xFE2E90 (a seat
+<li><strong>The capture flag.</strong> <code>GlobalVarToSet</code> (<code>DLC4_OPCaptured_&lt;X&gt;</code>) is written through the boolean setter 0x59A1D8,
+  which fires the variable's change event. Its faction-side binding 0x100F4C0 has 5 callers: 0xFE2E90 (a seat
   change: true when the new holder is a player follower, false otherwise; true on vacate, then
   <code>CreateSimEventOnVacate</code>), 0xFD4DE0 and 0xFDCAB0 (bulk false), 0xFE0A60 (recompute) and 0x1010750 (a setter
-  wrapper).</li>
+  wrapper). Scripts write it too: <code>DeactivateOutpost</code> in Desolation's mode and a debug script.</li>
 <li><strong>The garrison follows the owner.</strong> Each outpost's gameplay layer has a controller (script object
   <code>outpostcontroldlc</code>) that runs <code>OutpostStatusInit</code> on the capture flag: with the player as owner it switches on a
   <code>ScenarioOverrideVolume</code> (vtable 0x1FB4BA0, <code>+0x120</code> -&gt; the override list <code>PlayerControlledSH_DLC4</code>) and shows the
-  outpost's faction-member props; with Sauron as owner the volume is off and the props hidden.</li>
-<li><strong>The reward.</strong> <code>PlayerOwnedItemGiverPicker</code> names <code>DLC4_OutpostItems</code>: 16 givers
-  (<code>Faction/Outposts/ItemGiver::OutpostBoost_&lt;X&gt;</code>), each with 3 entries selected by the commander's rarity
-  (<code>RequiredRarity</code>), and each entry's <code>Items</code> hold a <code>CombatType</code> filter (the player, or a mercenary class) and the
-  items to give (33 <code>OutpostReward_*</code> items whose passive stat modifications are the boost).</li>
+  outpost's faction-member props; with Sauron as owner the volume is off and the props hidden. Desolation applies the
+  Easterling garrison inside each held outpost only.</li>
 <li><strong>Who has outposts.</strong> <code>Faction/Definition.Outposts</code> lists the five on 2 of the 38 armies, <code>Faction_desert_DLC4</code> and
   <code>Faction_desert_mercs_DLC4</code>. <code>Quest/FactionOutpostPredicate::DLC4_AllOutpostsOwned</code> asks for 5 seats held by a
   player follower, dead or empty (the count <code>Faction::GetOutpostCount_PlayerFollowerOrEmpty</code> returns);
-  <code>DLC4_NotAllOutpostsOwned</code> for 0 to 4.</li>
+  <code>DLC4_NotAllOutpostsOwned</code> for 0 to 4. <code>Inventory/FactionIntelGiver::GiveIntel_OutpostCommanders</code> unlocks outpost
+  data, and Desolation's game-mode record sets an <code>OutpostValue</code> of 1000.</li>
 <li><strong>The spawn areas change hands too.</strong> <code>Faction/AreaOwnershipTransform::DLC4_Outpost_&lt;X&gt;_To_Player</code> sets the
   outpost's <code>AI/SpawnAmbient/Areas</code> player-owned (1) and <code>_To_Sauron</code> sets them back (2): <code>D_OP_Umbral</code> (West),
   <code>D_OP_SorrowSea</code> (North), <code>D_OP_SouthWatch</code> (North-West), <code>D_OP_SootGulch</code> (East), <code>D_OP_Stillwind</code> and
@@ -262,21 +393,168 @@ row table that a captain holds as the outpost's commander.</p>
   <code>_to_Sauron</code>, 10 records). <code>DLC4_Outpost_N_To_Sauron</code> holds no area entry, so the North outpost's area is never
   returned through its transform.</li>
 <li><strong>Two systems on one spot.</strong> The warchief outpost's gate in Lithlad is <code>DE_Outpost_&lt;X&gt; == true AND
-  DLC4_OPCaptured_&lt;X&gt; == false</code>, and its mission generation uses the same gate: held by the player the spot runs the
-  seat system, lost it runs the warchief system.</li>
-<li><strong>The intro.</strong> <code>Presentation/Events::DLC4_Outpost_Intro_EVT</code> (priority <code>Quest_Urgent</code>, blocks fast travel) has one
-  sequence of nine elements: a camera cut that disables the player (<code>DLC4_Outpost_Teleport_Hold_ELM</code>, which teleports
-  nothing), the outpost's fixed frames, a start camera and its voice, an identify hold, then the enter-zone camera and
-  the return transition <code>DLC4_Outpost_Return_TR</code>. Its predicate assumes no target (<code>Target_Empty_OPR</code>). The frames
-  are per outpost (<code>DLC4_Outpost_&lt;X&gt;_WF1_Begin</code> / <code>_End</code> / <code>_RTP</code>), chosen through the camera pools
-  <code>DLC4_Outpost_Begin_CP</code>, <code>_End_CP</code> and <code>_RTP_CP</code>, whose predicates <code>Outpost_&lt;X&gt;_CPR</code> require the assault mission's
-  camera type <code>D4OA_&lt;X&gt;_CT</code>: the intro frames the right outpost only when it is queued with that camera type. The one
-  relay named for outposts, <code>Presentation/Relays::PS_Outpost_Intro_00</code>, has no event and no camera type.</li>
-<li>No shipped record has an enemy captain attack a player-held outpost commander: a job's
-  <code>MustBeAssignedToOutpostPosition</code> (0 ignore, 1 must hold a DLC outpost seat, 2 must not) is 2 on 245 of 849 jobs,
-  including every duel and power-struggle job, and the job matcher rejects at 0xF9F5BF. An outpost is lost only when
-  its commander dies or leaves the seat.</li>
+  DLC4_OPCaptured_&lt;X&gt; == false</code> (OP1 North, OP2 East, OP3 West, OP4 Central, OP5 North-West), and its mission
+  generation uses the same gate: held by the player the spot runs the seat system, lost it runs the warchief system.
+  Desolation's captain generation (<code>DLC4_Desert_Captain</code>) differs from the campaign's <code>Desert_Captain</code> only by the five
+  <code>DLC4_EnemyOutpostCommander_&lt;X&gt;</code> types and two DLC3 hunting and power-struggle types.</li>
+<li><strong>The map.</strong> No outpost controller of Lithlad holds a map canvas (of 207 <code>MapCanvas</code> objects in 416 desert layers
+  none is in the main layer or an outpost gameplay layer); Desolation marks an outpost on the map only through its
+  assault quest (<code>NavMarkerTypeQuest Quest_OutpostAssault</code>, map target <code>OutpostAssault</code>), and the marker type
+  <code>Quest_OutpostAssault_Empty</code> is referenced by no record or script. The <code>DE_ZoneMap_&lt;X&gt;</code> zones draw whenever their
+  game-state predicates pass, with or without a mission, in the record's own colours (the enemy red, the values of
+  <code>Stronghold_ZoneMap</code>).</li>
+<li><strong>No enemy attacks a held seat.</strong> No shipped record has an enemy captain attack a player-held outpost commander: a
+  job's <code>MustBeAssignedToOutpostPosition</code> (0 ignore, 1 must hold a DLC outpost seat, 2 must not) is 2 on 245 of 849
+  jobs (12 are 1), including every duel, power-struggle, hunting and location job, and the job matcher rejects at
+  0xF9F5BF. Only the 6 <code>Faction/Outposts</code> records exist, all in Lithlad.</li>
 </ul>
+<h3 id="the-assault-missions">The assault missions</h3>
+<p>Each Lithlad outpost has an assault mission (<code>D4OA_C</code>, <code>_E</code>, <code>_N</code>, <code>_NW</code>, <code>_W</code>; quest type <code>DLC4_OutpostAssault</code>,
+listed only by <code>GameModes::DLC4</code>, whose type table 0x598804 rebuilds; predicate <code>DLC4Active</code>), generated at a world
+turn while an enemy captain commands the outpost (<code>DLC4_EnemyOutpostCommander_&lt;X&gt;</code>). Starting one:</p>
+<ol>
+<li>The start plays <code>Presentation/Events::QuestScreen_Confirm_EVT</code>, whose one element <code>Quest_Confirm_FadeToBlack_ELM</code>
+   (camera hold, combat paused, slow motion, HUD cinematic, a fade action) takes the screen fader's lock 3: the screen
+   goes black.</li>
+<li>The quest goes fade-out (4), loading (11 / 13), Active (17). The mission layer <code>pD4OA_&lt;X&gt;</code> runs <code>QuestStart</code>:
+   the player is teleported to <code>tpPlayerStart</code>, then <code>SpawnerSetup</code>.</li>
+<li><code>SpawnerSetup</code> asks the set <code>pD4OA_&lt;X&gt;.setOwnCap</code> (scenario setup <code>0_Missions</code>) for 1 + N owner captains, N =
+   <code>Faction:GetOutpostCount_PlayerFollowerOrEmpty(Faction_desert_DLC4)</code> (0xF647F0 -&gt; 0xFD92F0), at most 4.</li>
+<li>Only the set's <code>OnScenarioSpawningComplete</code> queues the intro <code>D4OA_Intro</code> on the leader; the intro's fade-up
+   releases lock 3, and its end runs <code>StartAssault</code>. The set spawns as one batch (5 bodies within 0.05 s).</li>
+</ol>
+<p><strong>The owner-captain slots</strong> are <code>AISpawnerAmbientQuestJob</code> objects (vt_0x1DC5360, 0x1E0 bytes, the job record at
+<code>+0x1C0</code>): slot 1 is <code>PS_Subject</code> (the sim event's subject, the outpost commander), slots 2 to 5 <code>D4OA_Own_02</code> to <code>_05</code>.
+Slot 38 of the spawner (0x1AC21B8) takes its member from 0x1AC2288: the active quest (0x43D984; the container at
+<code>QS+0x3D8</code>) <code>+0x1C8</code> -&gt; <code>{begin, end}</code> of 0x38-byte job entries (<code>+0x08</code> the job, <code>+0x10</code> its alias, <code>+0x20 / +0x28</code> the
+member key <code>{FM+0x178, FM+0x174}</code>); 0x1BD5544 matches the job (0x4FBE3C) and skips a member with flag bit 1, or with
+bit 2 unless the spawner's <code>+0x1D1</code> allows it; without a member it does not spawn ("%s unable to spawn - FactionMember
+not found", compiled out). The setup's <code>JobsToFill</code> are <code>D4OA_Own_02</code> to <code>_05</code> (the subject comes from the event). The
+job filler 0x1BD40C4 skips the pool search when <code>AlwaysUseBuilderRecord</code> is 1 (0xF9A320), then rolls
+<code>FactionMemberBuilderChance</code> (0x1B3C6C; "%s Failed random roll"): a failure leaves the job empty, with no retry. With
+no member in a slot the set never completes, no intro plays, and lock 3 stays held over an Active mission (a region
+change clears it). In the campaign the count reads <code>Faction_desert_DLC4</code>, which has no members there, and an empty
+seat counts as the player's, so every campaign assault asks for 1 + 4 owner captains whatever the player holds.</p>
+<p><strong>The outposts' life is in the mission script</strong> (<code>dlc4_outpostassault_*</code>). <code>FinalizeResults</code> picks the sim event's
+result: won with the commander dead <code>SubjectDied</code>; lost with him alive <code>SubjectSuccess</code> (his <code>DLC4_Defended_Outpost</code>
+event); lost with him dead <code>SubjectKilledButPlayerLost</code> and a new commander through
+<code>CreateFactionMemberBuilder(DLC4_OutpostCommander_Understudy_&lt;X&gt;)</code>. The script binding
+<code>Faction:CreateFactionMemberBuilder</code> (0x1B7F544, 31 instructions) calls 0x1B5B824(FS, builder, faction 0, jobs 0): a
+null faction means the current region's army. <code>IfVictory</code> on a first capture sets <code>DLC4_OPCapturedFirstTime_&lt;X&gt;</code> and
+raises <code>DLC4_NumberOfOutpostsLeveledUp</code>, whose change adds all five <code>DLC4_OutpostLeaderLevelUp_&lt;X&gt;</code> pickers (three
+levels) to the faction; their participant needs an empty seat while their result targets the commander. Understudies
+are enemies of level 30 or more, seated by <code>DLC4_PromoteUnderstudy_&lt;X&gt;</code> -&gt; <code>DLC4_TakeOutpost</code>. Every dispatched
+defender gets <code>DLC4_Died_DefendingOutpost</code> from the script's <code>OwnerCaptainFactionEvent</code>. Unused even in Desolation (no
+record links them): the generation types <code>DLC4_FakeOutpostDefense_&lt;X&gt;</code> and <code>OutpostCommanders</code>.</p>
+<h3 id="retakes-and-duels">Retakes and duels</h3>
+<ul>
+<li><strong>Retake timing.</strong> <code>DLC4_FakeOutpostDefense_Empty_&lt;X&gt;</code> (type 1, lifespan 3 turns, <code>SubjectAlwaysWins</code>, bound to the
+  cut defend quest <code>D4FD_&lt;X&gt;</code>, which has no placed object, so nothing shows): an empty seat falls 3 turns after it
+  empties. The cut defend missions <code>D4FD_C/E/N/NW/W</code> and <code>D4FD_REF</code> are power-struggle stubs with no job setup, no
+  outpost link, no marker and no placed object.</li>
+<li><strong>Retake commanders.</strong> <code>Faction/FactionMemberBuilder::DLC4_OutpostTakers</code> has one level field, <code>MinLevel</code> 20: every
+  retaken outpost gets a level-20 commander.</li>
+<li><strong>Duels move outposts.</strong> A <code>Duel</code> (<code>DE_Duel_00</code> to <code>_02</code>, generation <code>PowerStruggle_Act2</code>) pits <code>PS_Subject_Cap_Duel</code>
+  against <code>PS_Other_Cap_Duel</code>; its action code 7 kills the loser and 10 swaps their seats. With the two jobs'
+  <code>MustBeAssignedToOutpostPosition</code> opened, a retaken outpost's new enemy commander generated a duel against a
+  follower captain; the follower won and took the outpost seat, <code>DLC4_OPCaptured_&lt;X&gt;</code> turned true, and enemy captains
+  refilled the row he had left. Desolation's own "Assign Outpost Leader" (<code>SlotMemberMove_DLC4Outpost</code>, success text
+  <code>DLC4_Orders_Success_DefendOutpost</code>) takes only an empty, dead or follower-held outpost seat.
+  <code>DLC4_Debug_MercDuelIntoOutpost</code> (a merc killing an enemy outpost commander) has one referrer, a sim-event picker of
+  the same name, which nothing references or scripts fire.</li>
+</ul>
+<h3 id="the-boosts">The boosts</h3>
+<p><code>PlayerOwnedItemGiverPicker</code> names <code>DLC4_OutpostItems</code>: 16 givers (<code>Faction/Outposts/ItemGiver::OutpostBoost_&lt;X&gt;</code>),
+each with 3 entries (<code>_StructuresFactionOutpostItem</code>) selected by the commander's rarity (<code>RequiredRarity</code>), with
+<code>UIName</code> "<Rarity> Mercenary Leader", a description and effects, and <code>Items</code> (<code>_StructuresFactionOutpostItemData</code>: a
+<code>CombatType</code> filter, the player and / or an Easterling class, and one of 33 <code>OutpostReward_*</code> items to give). A
+reward item's <code>PassiveVariableMod</code> (<code>Combat/Stat/Variable/Modifications</code>) adds to float variables or sets bools whose
+numbers live in the formulas that test them; archetype items gate the Combat Master, Guardian and Quartermaster
+rewards. Only Lithlad's outposts give boosts:</p>
+<table>
+<thead>
+<tr>
+<th>Giver</th>
+<th>Common</th>
+<th>Epic</th>
+<th>Legendary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CaptureBoost</td>
+<td>capture rate x1.3</td>
+<td>the player and allies take x0.65 damage while capturing</td>
+<td>+0.035 health regeneration while capturing</td>
+</tr>
+<tr>
+<td>SummonCooldown</td>
+<td>the player's <code>FollowerCoolDown</code> x0.65</td>
+<td>x0.5</td>
+<td>x0.25</td>
+</tr>
+<tr>
+<td>MoneyDrop</td>
+<td>the mercenaries' kills drop coin</td>
+<td>the player's kills drop coin</td>
+<td>both</td>
+</tr>
+<tr>
+<td>Damage</td>
+<td>mercenaries +0.25 damage</td>
+<td>the player +0.25</td>
+<td>both</td>
+</tr>
+<tr>
+<td>Defense</td>
+<td>mercenaries +0.25 defence (clamped 0 to 0.9)</td>
+<td>the player +0.25</td>
+<td>both</td>
+</tr>
+<tr>
+<td>CommandMight</td>
+<td>mercenaries' charge meter x1.4</td>
+<td>the player's Might x1.3</td>
+<td>both</td>
+</tr>
+<tr>
+<td>CurseDef / FireDef / PoisonDef (mercenaries)</td>
+<td>resistance</td>
+<td>immunity</td>
+<td>healed by it (curse: also no fleeing)</td>
+</tr>
+<tr>
+<td>BoostArcher / Defender / Infantry</td>
+<td>that class +0.35 defence</td>
+<td>+0.5 damage</td>
+<td>a fire weapon, unless an elemental weapon comes from a trait</td>
+</tr>
+<tr>
+<td>BoostGrunts</td>
+<td>all three classes +0.5 defence</td>
+<td>+1.0 damage</td>
+<td>both</td>
+</tr>
+<tr>
+<td>BoostGuardian / Quartermaster / CombatMaster</td>
+<td>that archetype +0.35 defence</td>
+<td>+0.5 damage</td>
+<td>both</td>
+</tr>
+</tbody>
+</table>
+<p>Coin drops (<code>DLC4_PLBar_Coin_Comb_*_Bonus</code>, 12 items gated on the two coin rewards): an orc 10, a stealth kill 25, an
+Olog 100, a looted body 100, a common captain 250, a rare beast 750; an outpost mission itself gives 1,500
+(<code>DLC4_Coin_OutpostMission</code>).</p>
+<h3 id="the-intro">The intro</h3>
+<p><code>Presentation/Events::DLC4_Outpost_Intro_EVT</code> (priority <code>Quest_Urgent</code>, blocks fast travel) has one sequence of nine
+elements: a camera cut that disables the player (<code>DLC4_Outpost_Teleport_Hold_ELM</code>, which teleports nothing), the
+outpost's fixed frames, a start camera and its voice, an identify hold, then the enter-zone camera and the return
+transition <code>DLC4_Outpost_Return_TR</code>. Its predicate assumes no target (<code>Target_Empty_OPR</code>). The frames are per outpost
+(<code>DLC4_Outpost_&lt;X&gt;_WF1_Begin</code> / <code>_End</code> / <code>_RTP</code>), chosen through the camera pools <code>DLC4_Outpost_Begin_CP</code>, <code>_End_CP</code> and
+<code>_RTP_CP</code>, whose predicates <code>Outpost_&lt;X&gt;_CPR</code> require the assault mission's camera type <code>D4OA_&lt;X&gt;_CT</code>: the intro frames
+the right outpost only when it is queued with that camera type. The one relay named for outposts,
+<code>Presentation/Relays::PS_Outpost_Intro_00</code>, has no event and no camera type.</p>
 <h2 id="fortress-upgrades-one-table-per-army">Fortress upgrades: one table per army</h2>
 <p>Every army keeps one fort-upgrade set at <code>[armyCtx+0x40]</code>, where <code>armyCtx</code> is an army context (an entry of the
 faction system's context map at <code>FS+0x98</code>, plus 8):</p>
@@ -315,7 +593,7 @@ faction system's context map at <code>FS+0x98</code>, plus 8):</p>
 rating adds a warchief's group contribution only when it does) -&gt; 0x4F66D8 (the army context for a faction)
 -&gt; 0x10681C -&gt; 0x107A74. In a loaded late campaign, 31 of 38 contexts held this table. An enemy fortress fills one
 <code>Defense_*</code> row per family: 6 of 6 rows on each of the two enemy-held fortresses, 0 on each of the four whose
-Overlord served the player.</p>
+Overlord served the player, and 2 on Lithlad's invasion army, whose Overlord also served the player.</p>
 <p><strong>Who chooses.</strong> <code>Faction/FortUpgrade/PickerEntry</code> records select a definition by the fort's tribe list
 (<code>IncludedTribe</code> -&gt; <code>Faction/Tribes/Lists</code>) or by a warchief's trait marker list. The tribe lists group the tribes:</p>
 <table>
@@ -467,16 +745,32 @@ spouts, <code>IsCommander</code> -&gt; fire mines.</p>
 </tbody>
 </table>
 <p>Prices are <code>Faction/FortUpgrade/Group.CurrencyAmount</code> in the player's currency item: walls 1,000 / 3,000 / 7,500;
-structures 750 / 750 / 1,100; army 800; siege beasts 875; beasts 950; archers 1,025; battlefield 1,100.</p>
+structures 750 / 750 / 1,100; army 800; siege beasts 875; beasts 950; archers 1,025; battlefield 1,100; the defence
+levels <code>Defense_Lvl_01</code> to <code>06</code> 700 to 1,050; offence 700 to 1,100.</p>
 <p><strong>A graugapult is a tamed graug and an item list.</strong> The AI types <code>Troll_Graugapult</code>, <code>_Poison</code> and <code>_Curse</code> all build
 the template <code>Troll_Tame</code>; what makes the siege beast is <code>GruntPlayerAllyItems</code> / <code>GruntPlayerEnemyItems</code> (the list
 used depends on the side): <code>Graug_A_Pult</code>, <code>Wep_Graug_A_Pult</code>, <code>Troll_Graugapult_Marker</code>,
 <code>Troll_Graugapult_Disabled_SetRenderID</code>, the four box items and the element (<code>FM_Siege_FireBeast</code> on
-<code>Troll_Graugapult</code>, which also carries <code>Attack_Structures</code>; <code>FM_Siege_CurseBeast</code> on <code>_Curse</code>).</p>
+<code>Troll_Graugapult</code>, which also carries <code>Attack_Structures</code>; <code>FM_Siege_CurseBeast</code> on <code>_Curse</code>). The one allied
+graugapult type is <code>DLC3_GP_Troll_Ice_Graugapult</code>.</p>
 <p><strong>An AI type's side.</strong> Orc types carry it in <code>GruntPlayerFollowerStatus</code>: 0 enemy or wild, 1 a player follower,
 2 the area's owner, 3 an invader, 4 and 5 the two sides of a fortress assault. Beasts carry it in <code>GruntBrandStatus</code>
 instead: the <code>*_Branded</code> types (<code>Warg_Brown_Branded</code>, <code>Troll_Branded</code>, <code>FellBeast_Branded</code> ...) read follower status
-0 and brand status 1.</p>
+0 and brand status 1. No archer-named orc type is a player follower (enemy 0, owner 2, invader 3, assault 4 / 5), and
+<code>Summon_OrcSapper_Poison</code> reads 0.</p>
+<h2 id="the-endless-shadow-war-sieges-after-the-ending">The endless Shadow War: sieges after the ending</h2>
+<p><code>Faction/Events/SimEventGenerationType::NeverEndingShadowWar</code> (global-variable predicate <code>PostShadowWar</code>,
+<code>ZoneMustBePlayerOwned</code> 1, high-priority event <code>FortDefense</code>, weight 1) attacks a fortress the player holds.
+<code>SimEvent::FortDefense</code> has as participants an enemy Overlord, 5 warchiefs and 6 reinforcement captains against
+<code>FortDefense_PlayerOverlord</code>, the quest <code>FD_&lt;Region&gt;</code>, the scenes <code>FortDefense_Intro_EVT</code> and
+<code>FortDefense_OverlordArrival_EVT</code>, lifespan 0 and <code>SimulateOnQuestTimeout</code> false: it waits until it is played. In
+one late campaign 3 of 38 armies held one (Lithlad's <code>FD_Desert</code> placed on the map; Seregost's not placed, another
+region; Núrnen's with no quest bound yet). Enemy-held fortresses carry <code>FortAssault</code> (<code>SC_FA_&lt;R&gt;</code>). Its own
+settlement results: <code>SubjectWinsSimulate</code> -&gt; <code>OtherKilledBySubject</code> (the other side is <code>FD_Overlord</code>: the player's
+Overlord dies) and <code>OtherWinsSimulate</code> -&gt; <code>SubjectKilledByOther</code>; none of the three results carries an
+<code>AreaOwnershipTransform</code>, and the odds are <code>SimEventChance::FortDefense</code>. An event settles at its expiry turn (a duel
+with lifespan 3 and <code>SimulateOnQuestTimeout</code> false was seen settling at its expiry), so a siege's deadline is its
+<code>LifeSpanGenerated</code> alone.</p>
 <h2 id="the-world-map">The world map</h2>
 <p>The world map is a model of the region drawn far below the world. Its object is <code>[base+0x26FFAC8]</code> (vtable
 0x1F715F8; null while the map is closed):</p>
@@ -553,28 +847,172 @@ with the rectangle at <code>info+0x18</code>:</p>
 projection agrees with it (P00 1.1309, P11 2.1445 at 3840 x 2025). The cursor is in pixels at
 <code>[[CGameClientShell+0xE38]+0xEC]</code> / <code>+0xF0</code>, the viewport at <code>[CGameClientShell+0xC00]</code>. The camera list at
 <code>[[CGameClientShell+0xE38]+0x220]</code> holds a free camera (vtable 0x22F4E18, unused by default) and the HUD minimap's
-camera (vtable 0x22F4F20).</p>
+camera (vtable 0x22F4F20). Each region's 3D map is the section <code>Regions/Region.ZoneMapWorldSection</code> textured with
+<code>ZoneMapTexture</code> (Lithlad: <code>prefabs\ui\zonemaps\desert\desertzonemap_d.tex</code>, BC3 2048 x 2048), captured at
+<code>MapCaptureHeight</code> (95,000; Lithlad 30,000).</p>
+<p><strong>The zones are built when the map shows a region.</strong> 0x1800EA0(zone map, mode) ("Too many dynamic zone shapes") has
+two callers, <code>MapMenuActivate</code> 0xEED810 and 0x17E6724 (reached from the map's region switch, 0x18DC74C). It returns at
+once when the zone map is already the current one (<code>[base+0x26FFAC8]</code>) and <code>[zm+0x164]</code> is the mode asked. Otherwise it
+closes the zone map built before (0x1802900), or tears down its own shapes (0x18028CC: the mesh <code>[zm+0x2F0]</code> destroyed
+by 0x17FF1D0 and freed, 0x3D0 bytes; the shape list <code>[zm+0x2E0]</code> cleared by 0x17FF510), stores itself and the mode
+(0x1800F30) and builds the shapes from the region's <code>Interface/MapCanvasSettings</code> zones (their gates and colours,
+0x4DF148 / 0x4DF294). Each region has its own zone map object (0x18003A0 finds it by <code>+0x2C0</code>). A zone's gate that
+changes while the map is open therefore shows only at the next open or region switch.</p>
+<p><strong>The icons come from a baked list.</strong> 0x18E81A0 builds the map's icons each time it shows a region, from that region's
+baked map information: 0x188E208(region) -&gt; 0x17DDE1C -&gt; 0x1794FC0(<code>[CGameClientShell+0x8C8]</code>, region) returns the
+region's <code>UIWD</code> blob (magic "UIWD", version 4, the rectangle at <code>+0x18</code>): <code>+0x40</code> the icon list, <code>+0x48</code> its count
+(Núrnen 345, repeated at header <code>+0x14</code>), <code>+0x30 / +0x38</code> the map-canvas list (117). An entry is 0x40 bytes: <code>+0x00</code> u8
+type, <code>+0x08</code> name (<code>char*</code>), <code>+0x10</code> game-mode name, <code>+0x18</code> canvas name (ties the icon's height to a zone), <code>+0x20</code>
+position (x, y, z in cm), <code>+0x30</code> three u32 slot ids and a hash that the builder does not read.</p>
+<table>
+<thead>
+<tr>
+<th>Entry type</th>
+<th>What it names</th>
+<th>Icon kind</th>
+<th>Núrnen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>a <code>Quest/Quests</code> record</td>
+<td>0, or 2 (the quest's captain, 0x61D0F8) when the quest type's <code>UIDisplayAsQuest</code> is false</td>
+<td>186</td>
+</tr>
+<tr>
+<td>1</td>
+<td>a <code>Regions/TravelPoint</code></td>
+<td>3</td>
+<td>7</td>
+</tr>
+<tr>
+<td>2</td>
+<td>an <code>Inventory/Items</code> record, drawn only while the player holds the item (the Haedir towers, collectibles)</td>
+<td>1</td>
+<td>133</td>
+</tr>
+<tr>
+<td>3</td>
+<td>a map canvas</td>
+<td>positions only</td>
+<td>14</td>
+</tr>
+<tr>
+<td>4</td>
+<td>an <code>Interface/MapMarker</code></td>
+<td>6</td>
+<td>5 (the monuments)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>a <code>Regions/ZoneInfoNode</code> and a game mode</td>
+<td>7</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>A first pass counts what will draw and a second builds it (0x18E6A40(layer, kind, record, &amp;position, target, ...)).
+Hunting captains come from a separate pass over the region's own army (0x77AB2C). This is how the map shows the icons of
+regions the player is not in: it never needs their worlds. Every reader of the list tests an entry's type first and
+copies what it needs (the builder reads every type; the zone build 0x1800EA0 and the Army screen's hierarchy map
+0x334E90 read canvases only; the position lookups 0x17DDE30, 0x17DB9A4 and 0x17DF220 read types 3, 2 and 0); nothing
+keeps a pointer into the array, and a name the GameDB lacks draws nothing (0x59A728 returns no rules for a null
+record). The map finds a <code>MapMarker</code> record by name (0x1B08870, the category's index).</p>
+<p><strong>MapMarker records</strong> (<code>Interface/MapMarker</code>, 28 shipped: 25 <code>&lt;Region&gt;_0N_Monument</code>, <code>Desert_06_Monument</code>,
+<code>Test_ForgeTower</code> ...) have one field, <code>NavMarkerPredicateList</code> -&gt; <code>_StructuresMapMarkerPredicate</code> entries
+{<code>AllowedGameModes</code> (0xD03B90 against <code>[UIManager+0x430]</code>), <code>Predicates</code> [{<code>Variable</code>, value}] tested against the
+GameData store <code>[GM+0x6C58]</code> (0x1DFC4C), a <code>NavMarker</code> type}. 0x59A404 returns the type of the first entry whose game
+mode and every predicate pass (an empty list passes); the monuments read <code>&lt;Region&gt;_0N_Status</code>. No <code>MapMarker</code> record
+exists for an outpost.</p>
+<p><strong>The placed MapMarker objects are the HUD's.</strong> The world class "MapMarker" (vt_0x1F74D58, 0x158 bytes) is placed with
+a property naming its record (read by slot 12, 0x1835E68) and registered in <code>[0x2A25F38 .. 0x2A25F40)</code> (slot 21,
+0x1835D9C; rebuilt at new addresses by every world load): <code>+0xAC</code> position, <code>+0x128</code> / <code>+0x148</code> the bound world nav
+marker, <code>+0x120</code> its own nav-marker component when none is bound, <code>+0x150</code> the record. Its refresh 0x59A280 takes the
+type from 0x59A404, then enables and types the marker; the engine re-runs it for each MapMarker whose rules name a
+variable whenever that variable is set through the GameData setters (0x59A1D8, 0x59B024, 0x1B4747C -&gt; 0x59A53C -&gt;
+0x59A584). A MapMarker can be the current target (type 6, 0x1835F24).</p>
+<p><strong>A nav marker's map flags are the minimap's.</strong> The component vt_0x1DC0708 sits at <code>NavMarker+0x120</code>. <code>NavMarker::SetType</code>
+(0x1162DE4) skips an unchanged type (0x3576A4); its body 0x3576B8 writes <code>+0x38</code> the type and <code>+0xE0</code> its
+<code>DefaultMapTarget</code>, re-reads the HUD configuration, sets up the marker's effect (0x357CD4), writes the type into its
+widget (<code>[marker+0x60]+0x2C0</code>) and sets the rebuild flag (<code>+0x48 |= 1</code>). Three condition sets of three u64 masks
+(forbidden, need-one, need-one; tested by 0x1CD170 against the HUD state word <code>[0x2725120]</code>) come from the type's
+<code>HUDStateConfig</code> (<code>+0x3C8</code>, giving <code>+0x30</code>), the map target's (<code>+0x3E0</code>, giving <code>+0x417</code>) and
+<code>AltDisplayRangeHUDStateConfig</code> (<code>+0x3F8</code>); 0x1CD0C8 evaluates them and fills the widget: <code>+0x32D</code> = (enabled <code>+0x28</code>
+or forced <code>+0x418</code>) and <code>+0x30</code>, <code>+0x32E</code> = 0x109ECC. The only reader of <code>+0x32E</code> is 0x1C5E08, the placement of the
+minimap and compass. The HUD state word reads 0x00080000 in play and 0x01080800 with the map open. The 3D map never
+draws placed nav markers, only its baked list: renaming one list entry to another <code>MapMarker</code> record drew that record's
+icon, card and prompt at the entry's position, while enabling a monument's world nav marker drew nothing on the map.
+A held Lithlad outpost has no marker of its own: the commander's <code>CharacterOutpost</code> marker (attached to his torso,
+icon <code>Outpost_NamedIcon</code> = <code>hud\questicons\new\kraken\chief.tex</code>, map target <code>OutpostAlarm</code>) is the orange mark
+shown there, and both outpost map targets (<code>OutpostAssault</code>, <code>OutpostAlarm</code>) are quest markers (bucket
+<code>GoldenPathQuest</code>, <code>MapTargetType</code> 4), where forts have an owner pair of types <code>Fort</code> / <code>Fort_Owned</code>.</p>
+<p><strong>The open map's layer.</strong> While the map is open its layer (<code>CUI3DZoneMapLayer</code>, vt_0x1F7E570) is the top of the menu
+system's layer stack (menu <code>[UIManager+0x50]</code>, layers at <code>+0x520</code>, up to 8, count u32 at <code>+0x560</code>); a layer's <code>+0x6B8</code>
+is its menu system and <code>+0x6C0</code> its <code>MenuLayer</code> record (<code>[UIManager+0xF0]</code> holds the top layer's record, not the
+layer). 0xDAC2B0(layer) gives the icon under the cursor (<code>[+0xA78]</code>, else <code>[+0xA70]</code>, else <code>[+0xA80]</code>), and the card
+dispatcher 0x18E6358 builds its card by kind (2: the captain card 0x18EACD0). The icon pool is <code>[layer+0xA38 ..
++0xA40)</code>, 0x3A80 bytes an icon, refilled at every region shown: <code>+0x00</code> the kind (u32), <code>+0x08</code> the list entry's
+record, <code>+0x3A20</code> a captain key (army record, pool index at <code>+0x3A28</code>; <code>{0, -1}</code> none) read only through 0x170794, and
+<code>+0x3A68</code> the shown region (<code>[layer+0xA10]</code>). The hover setter 0x7C1274 reads <code>[FM+0x330]</code> of a set key's member with no
+null check (0x7C12F3).</p>
+<ul>
+<li><strong>A captain icon</strong> (0x18E68B4): kind 2 and his key, the widget from his marker type's target, then LoadTarget
+  0x18EA410, which passes his states (0x18EA334 -&gt; 0x10BD90) to the <code>NamedOrc</code> character data: a player follower
+  blue 0xFF09D5ED, a default member the enemy orange 0xFFED5F09, an unknown one grey with no level.</li>
+<li><strong>Keys</strong> (<code>Profile/Commands</code>, dispatched by the layer's slot 12): <code>MenuEnter</code> (Space or Enter, the pad's A) -&gt;
+  0x18E9AD4: on an icon whose map target has <code>AllowAsWaypoint</code> off it returns at once (0x18E9C88 -&gt; 0x18EA300); on a
+  captain icon it marks him as the target (0x18928A8; his <code>HierarchyOrc</code> type allows it); on free ground it sets a point
+  waypoint (0x189286C -&gt; 0x17A98AC(<code>[GM+0x6C80]</code>, &amp;position, <code>[layer+0xA10]</code>)); all behind the map's quest lock
+  <code>[layer+0xA30]</code>. <code>MenuAux06</code> (key 2) -&gt; 0x18E97FC: on any hovered icon that is not a region it tests only the key at
+  <code>+0x3A20</code>, and when it resolves and 0x1149E60 passes it opens <code>MenuManager.FactionMemberLayer</code>, his captain screen
+  with his 3D model. <code>MenuAux08</code> (Home) cycles the icons and <code>Map</code> (M) closes the map.</li>
+<li><strong>The clip and the states.</strong> The builder 0x18E6A40 and LoadTarget 0x18EA410 both ask whether the icon's marker type
+  (0x18E73B4: for kind 6 the type its MapMarker rule picks; for kind 2 the member's own type, 0x4AA220) has
+  <code>CharacterData</code>, and whether its target (the type's <code>DefaultMapTarget</code>, 0x18E7394) has
+  <code>InheritParentCharacterStates</code> on. If both, the clip is the type's <code>IconMovieClip</code>, LoadTarget runs the states
+  (0xD88020) and puts the picture in the clip's child <code>LoadTarget</code>, else <code>Content</code> &gt; <code>LoadTarget</code>; otherwise the clip is
+  the target's <code>Symbol</code>, sent to its <code>normal</code> label (clip slot 112), with the picture only at <code>Content</code> &gt; <code>LoadTarget</code>.
+  With no holder nothing is loaded and the clip's own placeholder shows. The picture is a state's texture override,
+  else the target's <code>ZoneMapTexture</code>, <code>IconTexture</code>, then the type's <code>IconTexture</code>; a map icon draws only a resident
+  texture (<code>IconTexture</code> is a bare path that nothing loads; only a card picture's <code>DescriptionImgBundle</code> loads a
+  bundle). In <code>sphud.gfx</code>, <code>SPH-UserWaypoint</code>, <code>SPH-SimpleMarker</code> and <code>SPH-CharacterMarkerCommon</code> keep <code>LoadTarget</code> at
+  the top with no <code>Content</code>; <code>minimap.gfx</code>'s <code>MM-LoadTarget</code> (labels normal, new, blink) has <code>Content</code> &gt; <code>LoadTarget</code>.
+  Of 30 <code>Interface/NavMarkerCharacterData</code> records, <code>ForgeTower</code> tints its default state 0xFFED5F09 (state 6
+  <code>SoP_Targeted</code> 0xFFFFC640, 15 <code>PlayerFollower</code> 0xFF09D5ED), <code>Collectible</code>'s default does not tint, and <code>NamedOrc</code>
+  (42 types) runs a captain icon's 20 states; 21 of the 525 shipped <code>Interface/NavMarkerTypes</code> use <code>Collectible</code>, all on
+  <code>SPH-UserWaypoint</code> with their target's flag on. An icon's states (0x18EA334) are state 0 always; kind 6 adds state 6
+  while the map's current target is this marker; kind 2 takes the member's own.</li>
+</ul>
 <p><strong>The waypoint.</strong> The current target lives at <code>[GM+0x6C80]</code>: <code>+0x20</code> its type (7 a point, 1 a tracked target),
-<code>+0x10</code> position, <code>+0x28</code> region, <code>+0x90</code> its marker. The map's SPACE action (0x18E9AD4 -&gt; 0x189286C) sets a point
-with 0x17A98AC(targets, &amp;position, region record); <code>System::ClearCurrentTarget</code> is 0x17A8C5C. The action handler keeps
-the hovered target as a variant at <code>[layer+0xA78]</code> (types 0, 1, 3, 6, 7) and the region at <code>[layer+0xA10]</code>
-(0x18003A0 finds the map object by its <code>+0x2C0</code>). The waypoint's marker (vtable 0x1DC0708) holds
-<code>NavMarkerTypes::UserWaypoint</code> at <code>+0x38</code> and <code>MapDisplay/Targets::UserWaypoint</code> at <code>+0xE0</code>. <code>NavMarker::SetType</code>
-(0x1162DE4) skips an unchanged type (0x3576A4); its body 0x3576B8 re-reads the default map target and the HUD
-configuration, sets up the marker's effect (0x357CD4), writes the type into its widget (<code>[marker+0x60]+0x2C0</code>) and
-sets the rebuild flag (<code>+0x48 |= 1</code>). The legend's outpost glyph is <code>Interface/Menu/MenuTreeNode/Legend::Outposts</code>
-(<code>interface\textures\hud\glyph\outpost.tex</code>).</p>
+<code>+0x10</code> position, <code>+0x28</code> region, <code>+0x90</code> its marker. 0x17A98AC(targets, &amp;position, region record) sets a point and
+<code>System::ClearCurrentTarget</code> 0x17A8C5C clears it. The waypoint's marker (vtable 0x1DC0708) holds
+<code>NavMarkerTypes::UserWaypoint</code> at <code>+0x38</code> and <code>MapDisplay/Targets::UserWaypoint</code> at <code>+0xE0</code>. The legend's outpost glyph is
+<code>Interface/Menu/MenuTreeNode/Legend::Outposts</code> (<code>interface\textures\hud\glyph\outpost.tex</code>).</p>
+<p><strong>The quest lock.</strong> <code>[GM+0x6C80]</code> is one cell for a quest's target, the Army screen's Mark Target and the map waypoint,
+and its setters test nothing (the shared clear-first core 0x17A8F6C and its 9 callers): each screen asks first. The
+Army screen (0x321508) refuses when the active quest (0x103508: the first running, Active quest that stays on the HUD)
+has <code>+0x2B0</code> set (no target) or requires one (0x624AC4: <code>+0x2A8</code> not -1 with <code>+0x2B0</code> clear). The world map (slot 29,
+0x18E954C, run as the map opens) sets <code>[layer+0xA30]</code> to 0, and so refuses SPACEBAR, when the tracked quest record
+<code>[UIManager+0xE0]</code> has <code>TargetForcedToNone</code> or its quest object (<code>[GM+0x6C60]+0x18</code>, 0x40 bytes a record index, the quest
+at <code>+0x28</code>; 0x4FA590) requires a target; <code>+0x2B0</code> alone holds nothing there, since it is copied from the field only when
+the quest starts (0x57407C). 60 quests set <code>TargetForcedToNone</code>; on one of them the game itself answers SPACEBAR with
+"You cannot change your Target while on this mission".</p>
 <p><strong>Outposts on the map's own data.</strong> The world map lights outposts through material parameters:
 <code>Interface/Menu/MenuLayer/WorldMap.OutpostStateParameters</code> holds one entry, <code>k_vOwned4567</code> (ownership) and
 <code>k_vSelected4567</code> (selection), with four outpost slots of which two are bound (<code>DE_Outpost_Central</code>,
 <code>DE_Outpost_West</code>). The world map's update applies it (0xF252F0, together with the <code>DLC4AreaMaterial</code> region
 material) only when 0xD0B350 passes, which compares the current game mode against the name "DLC4": the lighting runs
-in Desolation of Mordor's own mode and never in the campaign. The zone map plays <code>d4_menu_zonemap_outpost_over</code> when the cursor is over an outpost
-(<code>3DZoneMap.OutpostSFX</code>) and steps an outpost's widget through stages of 2, 2 and 1 seconds
-(<code>Interface/Shared.ZoneMapWidgetOutpostStageDurations</code>). Of the 103 map canvases, every outpost zone and the
-<code>Stronghold_ZoneMap</code>, <code>Stronghold_Cave</code> and <code>Stronghold_Alarm1</code> to <code>3</code> canvases carry the enemy colours (zone fill
-0xE6A41606, outline 0xFFA41606); <code>Friendly_Strongholds</code> and <code>Friendly_Stronghold_Cave</code> the friendly ones (0xE609D5ED,
-0xFF09D5ED).</p>
+in Desolation of Mordor's own mode and never in the campaign. The zone map plays <code>d4_menu_zonemap_outpost_over</code> when the
+cursor is over an outpost (<code>3DZoneMap.OutpostSFX</code>) and steps an outpost's widget through stages of 2, 2 and 1 seconds
+(<code>Interface/Shared.ZoneMapWidgetOutpostStageDurations</code>). In that mode a focused outpost (<code>[layer+0xA90]</code>, written by
+0x18E934C and by 0xD608B0, whose one caller 0xEF2F00 is one of the zone-map material's outpost bindings) gets its own card
+(0xDAECF0, which sets <code>[layer+0xFAC0]</code>), and key 2 with nothing hovered opens <code>MenuManager.MercenaryLayer</code> on that
+outpost's <code>Faction/Outposts.Row</code> / <code>Column</code> through <code>System::EnterFortAssaultCompleteFlow</code> (0xD64800). Of the 103 map
+canvases, every outpost zone and the <code>Stronghold_ZoneMap</code>, <code>Stronghold_Cave</code> and <code>Stronghold_Alarm1</code> to <code>3</code> canvases
+carry the enemy colours (zone fill 0xE6A41606, outline 0xFFA41606); <code>Friendly_Strongholds</code> and
+<code>Friendly_Stronghold_Cave</code> the friendly ones (0xE609D5ED, 0xFF09D5ED); <code>CP_Offense</code> and <code>CP_Defense</code> are an orange and
+the friendly cyan.</p>
 <h2 id="the-generic-banner">The generic banner</h2>
 <p>The interface keeps a generic two-line banner that any text can fill. The script binding
 <code>CPlayerObj::DEMO_ShowGenericBanner</code> (a press-demo leftover, stub 0x1B80E20, two arguments: the player and a string
@@ -601,4 +1039,16 @@ appears beside the minimap.</p>
 <li>Whether the world map's material has a <code>k_vOwned0123</code> twin, and what the unbound slots of <code>k_vOwned4567</code> draw in
   Desolation of Mordor's mode.</li>
 <li>What the North outpost's missing <code>_To_Sauron</code> area entry changes when Sauron retakes it.</li>
-</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
+<li>Where the "Bad record index" assert met when an assault mission's defender jobs build from <code>D4OD_OACaptain</code>
+  (filler -&gt; 0x1B5B824 -&gt; 0x1C1D240 -&gt; builder 0x1BBF928 -&gt; the role pass 0x1BD6A48 met a job-list handle naming an
+  <code>Inventory/MaterialOverride</code> record) comes from.</li>
+<li>Whether the action codes of a duel (7 kills the other, 10 swaps the seats) mean that in every event: they are read
+  from the 2,039 events' use, not from the code.</li>
+<li>Whether the outpost missions of every region spawn their commander through the same <code>spawnconditions*</code> prefab code
+  read in Núrnen.</li>
+<li>Whether a campaign map ever reaches Desolation's focused-outpost card (<code>[layer+0xA90]</code>): reading it while hovering a
+  Lithlad outpost zone in the campaign would settle it.</li>
+<li>Whether a siege's <code>LifeSpanGenerated</code> is read only when the event is created, so that only sieges generated after a
+  change get the new deadline.</li>
+<li>What the stronghold script's high-wave fear burst does to orcs at an outpost the player holds.</li>
+</ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
