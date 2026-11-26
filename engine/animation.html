@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Animation: clips, behaviour graphs and the runtime - Shadow of War engine reference</title><meta name="description" content="The engine&#x27;s own animation system (Havok Animation and Behavior are not used): the .anix clip format, its codecs and the codec registry, where a loaded clip lives and how events are pre-parsed, the event commands and which verbs the engine knows, which characters can play a clip, skeletons in memory (the loaded binds, the skinning palette, piece maps, followers and rest copies), how rigs compare, the .bvr behaviour graphs, the per-frame runtime from the behaviour state through clip trackers to the pose job on the animation worker threads, and death ragdolls."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Animation: clips, behavior graphs and the runtime - Shadow of War engine reference</title><meta name="description" content="The engine&#x27;s own animation system (Havok Animation and Behavior are not used): the .anix clip format, its codecs and the codec registry, where a loaded clip lives and how events are pre-parsed, the event commands and which verbs the engine knows, which characters can play a clip, skeletons in memory (the loaded binds, the skinning palette, piece maps, followers and rest copies), how rigs compare, the .bvr behavior graphs, the per-frame runtime from the behavior state through clip trackers to the pose job on the animation worker threads, and death ragdolls."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" class="cur" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" class="cur" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -34,7 +34,7 @@
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
 <a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
-<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="animation-clips-behaviour-graphs-and-the-runtime">Animation: clips, behaviour graphs and the runtime</h1><p class=\"lede\">The engine&#x27;s own animation system (Havok Animation and Behavior are not used): the .anix clip format, its codecs and the codec registry, where a loaded clip lives and how events are pre-parsed, the event commands and which verbs the engine knows, which characters can play a clip, skeletons in memory (the loaded binds, the skinning palette, piece maps, followers and rest copies), how rigs compare, the .bvr behaviour graphs, the per-frame runtime from the behaviour state through clip trackers to the pose job on the animation worker threads, and death ragdolls.</p>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="animation-clips-behavior-graphs-and-the-runtime">Animation: clips, behavior graphs and the runtime</h1><p class=\"lede\">The engine&#x27;s own animation system (Havok Animation and Behavior are not used): the .anix clip format, its codecs and the codec registry, where a loaded clip lives and how events are pre-parsed, the event commands and which verbs the engine knows, which characters can play a clip, skeletons in memory (the loaded binds, the skinning palette, piece maps, followers and rest copies), how rigs compare, the .bvr behavior graphs, the per-frame runtime from the behavior state through clip trackers to the pose job on the animation worker threads, and death ragdolls.</p>
 <h2 id="the-engine-s-own-system">The engine's own system</h2>
 <p>Animation is written by Monolith, not Havok. The executable carries run-time type information for
 exactly one Havok animation class, <code>hkaSkeleton</code> (kept for cloth deformation), and for no Havok
@@ -92,10 +92,11 @@ LITH     {keys, n2, n3, times[keys], 0}
 </tr>
 </tbody>
 </table>
-<p><strong>The codec registry.</strong> Every codec's block evaluator is registered by its FourCC through one routine, 0x11B51BC (the
-FourCC as an immediate in edx, the evaluator in r8; it leaves r8 alone, so the shipped code registers SQ02 with SQ01's
-evaluator), into one registry object at 0x2A55CF0, returned by the thread-safe accessor 0x261618 (evaluator slots
-inside it, for example 0x2A55D18 SQ03 and 0x2A55D38 AQ03). Three tables fill it:</p>
+<p><strong>The codec registry.</strong> Every codec's block evaluator is registered by its FourCC through one routine, 0x11B51BC,
+into one registry object at 0x2A55CF0. The routine takes the FourCC as an immediate in edx and the evaluator in r8, and
+it leaves r8 alone, so the shipped code registers SQ02 with SQ01's evaluator. The thread-safe accessor 0x261618 returns
+the registry, and the evaluator slots sit inside it (for example 0x2A55D18 SQ03 and 0x2A55D38 AQ03). Three tables fill
+it:</p>
 <table>
 <thead>
 <tr>
@@ -122,12 +123,12 @@ inside it, for example 0x2A55D18 SQ03 and 0x2A55D38 AQ03). Three tables fill it:
 executable (see Game builds: Steam, GOG and Microsoft Store).</p>
 <p><strong>Event commands.</strong> A clip's event text is a list of commands separated by <code>;</code> (<code>snd fol_cmn_attack_windup; BPW;
 STARTFACING; AFACE Angry;</code>), stored under the KeyString hash 0xB9010BE0. The character's animation-event handler
-(vt_0x1F96818 vf19, 0x4CD070) hashes each command's verb - 0x813BCC upper-cases the first character and 0x569FF8 folds
-the rest, <code>h = h * 31 + upper(c)</code> (the keyword hash below) - and hands the hash to each component (<code>+0x2680</code>, the combat
-object <code>+0x26A8</code>, the visual component <code>+0x2348</code> and, for an NPC, <code>+0x1AF0</code>), each of which compares it against
+(vt_0x1F96818 vf19, 0x4CD070) hashes each command's verb: 0x813BCC upper-cases the first character, and 0x569FF8 folds
+the rest as <code>h = h * 31 + upper(c)</code> (the keyword hash below). It hands the hash to each component (<code>+0x2680</code>, the
+combat object <code>+0x26A8</code>, the visual component <code>+0x2348</code> and, for an NPC, <code>+0x1AF0</code>), and each compares it against
 constants. The table at 0x1F96580 holds 16-byte rows {u32 hash, padding, <code>char*</code> name} (the row at 0x1F96658 is
 <code>AUDIO_HOOK_KEY</code>, hash 0x88C44F8C). <code>AUDIO_HOOK_KEY</code> is compared in six functions (0x4CDA66, 0x769598, 0x787ED2,
-0x7A3FB8, 0x7BA2EC, 0x1A3B2AC); <code>FOOTSTEP_L</code> / <code>_R</code> / <code>_KEY</code>, <code>BODY_IMPACT</code>, <code>SURFACEIMPACT</code>, <code>GROUNDCHECK</code> and
+0x7A3FB8, 0x7BA2EC, 0x1A3B2AC). <code>FOOTSTEP_L</code> / <code>_R</code> / <code>_KEY</code>, <code>BODY_IMPACT</code>, <code>SURFACEIMPACT</code>, <code>GROUNDCHECK</code> and
 <code>AUDIO_HOOK_KEY_UI</code> / <code>_UI_ALWAYS</code> also have their hashes in code. <strong>The engine has no SND verb:</strong> the hashes of <code>SND</code>,
 <code>SND_GROUND</code>, <code>SND_SCUFF</code>, <code>SND_PIVOT</code>, <code>SND_UI</code>, <code>DIALOG_EVENT</code>, <code>DIALOG_KEY</code>, <code>SOUNDEVENT</code>, <code>FOOTSTEP</code> and
 <code>FOOTSTEP_FL</code> / <code>_FR</code> occur nowhere in the executable as compared constants, while 144 of the 204 verbs the orc clips
@@ -146,7 +147,7 @@ expressions <code>AFACE</code> / <code>RFACE</code> / <code>CLFACE</code>.</p>
   several blocksets that share their boundary key, with absolute LITH times, an AQ03 block header
   of (start time, end time, keys) and one STRI group per blockset.</li>
 <li>Unused SQ03 slots must hold a valid quaternion: zero bits decode to a negative value under the
-  square root, and the vectorised SQ03 evaluator asserts. Shipped files never leave them zero.</li>
+  square root, and the vectorized SQ03 evaluator asserts. Shipped files never leave them zero.</li>
 <li>The clip root is the character's position, about 1 m above the feet (the same reference as the
   live position at <code>CCharacter+0xAC</code>).</li>
 <li>One path can be several different files: <code>pl_sync_chordkill_front.anix</code> ships as a 466,997-byte
@@ -167,10 +168,11 @@ skeleton indexed by the file's track index and built at load, so a clip with a d
 layout cannot replace a loaded one in place. A region change reloads the region's animation files.</p>
 <p><strong>Events are pre-parsed.</strong> When an anim object attaches, 0x4B9E58 parses the file's event
 dictionary (the anim chunk's <code>+0x0C</code>: a path, clip names, every event string, then each clip's
-events) into per-clip objects in an arena: anim object <code>+0x40</code> arena / <code>+0x48</code> size, <code>+0x50 .. +0x58</code>
-a vector of <code>{u32 hash(clip), object*}</code>; a clip object holds <code>+0x10</code> frames, <code>+0x14</code> count, <code>+0x18</code>
-duration (ms), <code>+0x20</code> a u32 frame per event (<code>+0x28</code> count), <code>+0x30</code> the events as <code>(string index
-&lt;&lt; 24) | ms</code> with 0xFF meaning no text (<code>+0x38</code> count), and <code>+0x40</code> the strings (<code>+0x48</code> count).
+events) into per-clip objects in an arena. The anim object holds the arena at <code>+0x40</code> (its size at
+<code>+0x48</code>) and, at <code>+0x50 .. +0x58</code>, a vector of <code>{u32 hash(clip), object*}</code>. A clip object holds
+<code>+0x10</code> frames, <code>+0x14</code> count, <code>+0x18</code> duration (ms), <code>+0x20</code> a u32 frame per event (<code>+0x28</code> count),
+<code>+0x30</code> the events as <code>(string index &lt;&lt; 24) | ms</code> with 0xFF meaning no text (<code>+0x38</code> count), and
+<code>+0x40</code> the strings (<code>+0x48</code> count).
 Playback reads these tables, never the STRI tracks.</p>
 <p><strong>Which characters can play a clip.</strong> A character plays a clip by name from its skeleton family's
 clip table (0x302540): <code>[[[[char+0x110]+0x1C0]+0x50]+0xB0]</code> (vt_0x1E6F3F8). A table takes clips only
@@ -181,20 +183,21 @@ archive (2,107 of the orc list's) is an unused slot. Loading a bundle registers 
 unregisters them. The orc, Gondorian and Easterling families share many entries (one anim object
 for <code>orc_deathtaunts.anix</code> in all three); the olog's list is separate. Six tables served 47 spawned
 characters in one scene.</p>
-<p>Armour shoulder-pad helper bones (<code>L/R_SPadX</code>) are keyed at half of the arm's swing (correlation 0.99
-- 1.00 on five sprint clips), so they follow the arm by design data, not by a constraint. The orc clips never key the
+<p>Armor shoulder-pad helper bones (<code>L/R_SPadX</code>) are keyed at half of the arm's swing (correlation 0.99 to
+1.00 on five sprint clips), so they follow the arm by design data, not by a constraint. The orc clips never key the
 ten twist helpers (<code>L/R_ArmuX</code>, <code>_Bicep</code>, <code>_Forearm</code>, <code>_Wrist</code>, <code>_Thigh</code>: 0 of 4,463 clips in 351 files), so the engine
 places those itself; every other orc bone is keyed somewhere, the fingers in 99% of clips (<code>L_Index1</code> in 4,421). The
 weapon grip is a layer as well as baked into clips: <code>orc_awareness_misc.anix</code> ships <code>Orc_L_Hand_Weapon</code> /
 <code>Orc_R_Hand_Weapon</code>, and a fight plays the right one at run time (41 starts in 250 s of one fight).</p>
 <h2 id="skeletons-at-run-time">Skeletons at run time</h2>
-<p>The <code>.skel</code> file format is in Archives and file formats; its header word 15 counts extra animation tracks (<code>Track</code>:
-a name, a P919 type and default bytes) stored after the bone records, and the masks then hold one value per bone and
-per track (8 of 4,589 distinct shipped skeletons carry them: <code>param_head</code> 235, <code>camrig</code> 40, shields, a crossbow). The
+<p>The <code>.skel</code> file format is described in Archives and file formats. Its header word 15 counts extra animation tracks
+(<code>Track</code>: a name, a P919 type and default bytes) stored after the bone records, and the masks then hold one value per
+bone and per track (of the 4,589 distinct shipped skeletons, 8 carry them: <code>param_head</code> 235, <code>camrig</code> 40, shields, a
+crossbow). The
 name table's order is the runtime bone index, not the depth-first record order.</p>
 <p><strong>The loaded skeleton.</strong> The resource table <code>[base+0x2A86758] + (P919(path) &amp; 0x7FF) * 0x18</code> gives a resource whose
 <code>+0x08</code> entry holds the Skeleton at <code>[entry+0x08]</code> (0xB8 bytes, loader 0x504420): <code>+0x10</code> the bone set (0x98 bytes),
-<code>+0xB0</code> the clip table (see Which characters can play a clip).</p>
+<code>+0xB0</code> the clip table (see Which characters can play a clip above).</p>
 <table>
 <thead>
 <tr>
@@ -229,15 +232,15 @@ name table's order is the runtime bone index, not the depth-first record order.<
 </tr>
 </tbody>
 </table>
-<p>The loader (0x4127F8 -&gt; 0x411110) inverts the file's model-space binds in place (0x341280, without normalising the
-quaternions) and keeps the file's own values nowhere: a scan of 3,440 MB found no copy outside the skeleton arrays, and
+<p>The loader (0x4127F8 -&gt; 0x411110) inverts the file's model-space binds in place (0x341280, without normalizing the
+quaternions) and keeps the file's own values nowhere. A scan of 3,440 MB found no copy outside the skeleton arrays, and
 1,486 of 1,491 resident skeletons (44,757 bones) equal their shipped files on every array. Because the inverse does
-not normalise, inverting it again scales the translation by |q| to the fourth power.</p>
+not normalize, inverting it again scales the translation by |q| to the fourth power.</p>
 <p><strong>The skinning palette.</strong> 0x183B90(out, bone set, N, pose) computes <code>out[i] = pose[i] * [boneset+0x88][i]</code>, reading
 the stored inverses on every call; it is called from the per-model publish 0x251534 (from 0x187A38 and 0x3053AC). The
 model (vt_0x1F6F950) holds its own part at <code>+0xC8</code> (vt_0x1DB7380: <code>+0x1D8</code> the skeleton, <code>+0x198</code> the buffer handle,
 the real buffer <code>[[handle+0x10 + i*8]]</code>, four slots) and a holder at <code>+0x240</code> (<code>[holder+0x40]</code> the pose node: <code>+0x10</code>
-data, <code>+0x1C</code> count). 959 of 960 live palettes equal the formula (175 heads, 176 bases; another model's pose fails as
+data, <code>+0x1C</code> count). Of 960 live palettes, 959 equal the formula (175 heads, 176 bases; another model's pose fails as
 a control). So a changed inverse bind shows at the next palette build: after one in a running game, 4 of 21 models
 drawn with that head already held the new palette while the game stood paused, and 17 did not yet.</p>
 <p><strong>Who draws with which skeleton.</strong> Of 1,410 live parts, heads (175) and weapons and props draw by their own palette
@@ -248,9 +251,54 @@ set.</p>
 <p><strong>Piece maps.</strong> A piece worn on a rig goes through one <code>CModelSkeletonMap</code> per (rig, piece) (vt_0x1DC7220, 0x2F0
 bytes, constructor 0x702870, built by 0x6D5B30 -&gt; 0x6D5D68 -&gt; 0x199990), owned by <code>[GameManager+0x40]</code> (find-or-create
 0x1CC280 over four sorted vectors). Besides the bone-number table at <code>+0x38</code> (see Captain appearance, "Pieces on other
-skeletons"), it holds <code>+0x10</code> / <code>+0x14</code> the rig's and the piece's hashes, <code>+0x30</code> its own parent, <code>+0x32</code> FORCE,
-<code>+0x50</code> roots, <code>+0x68</code> pairs {rig bone, piece bone, rig parent}, <code>+0x80</code> deltas (f32[3], the rig's local translation
-minus the piece's), <code>+0x98</code> the count, <code>+0xA8</code> / <code>+0xB0</code> the two skeletons and <code>+0x2C0</code> listeners. A piece bone whose
+skeletons"), it holds:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>+0x10</code> / <code>+0x14</code></td>
+<td>the rig's and the piece's hashes</td>
+</tr>
+<tr>
+<td><code>+0x30</code></td>
+<td>its own parent</td>
+</tr>
+<tr>
+<td><code>+0x32</code></td>
+<td>FORCE</td>
+</tr>
+<tr>
+<td><code>+0x50</code></td>
+<td>roots</td>
+</tr>
+<tr>
+<td><code>+0x68</code></td>
+<td>pairs {rig bone, piece bone, rig parent}</td>
+</tr>
+<tr>
+<td><code>+0x80</code></td>
+<td>deltas (f32[3], the rig's local translation minus the piece's)</td>
+</tr>
+<tr>
+<td><code>+0x98</code></td>
+<td>the count</td>
+</tr>
+<tr>
+<td><code>+0xA8</code> / <code>+0xB0</code></td>
+<td>the two skeletons</td>
+</tr>
+<tr>
+<td><code>+0x2C0</code></td>
+<td>listeners</td>
+</tr>
+</tbody>
+</table>
+<p>A piece bone whose
 local translation lies 0.1 cm or more from the rig's (squared distance 0.01, the float at 0x202E820), and everything
 below it, is retargeted (table flag 0x1000); FORCE retargets every matched bone. That rule reproduces 217 of 217 live
 maps (1,116 pairs); 53 are forced (heads). A part (vt_0x1FE1A00: <code>+0x48</code> its render object, <code>+0x70</code> the piece
@@ -274,7 +322,7 @@ chains, Neck (34.4 degrees) and Spine4 (26.2) differing by pure swing, a twist d
 15.6 degrees, and 1.58 times the height. Talion's locomotion clip <code>pl_movaction.anix</code> keys 55 of the player's 128 bones
 and, played by bone name, drives 47 of the Olog's 89. Shadow of Mordor's orc skeletons (<code>SKEL</code> v8) share the same space
 (see Comparison with Shadow of Mordor).</p>
-<h2 id="behaviour-graphs-bvr">Behaviour graphs (<code>.bvr</code>)</h2>
+<h2 id="behavior-graphs-bvr">Behavior graphs (<code>.bvr</code>)</h2>
 <p>A <code>.bvr</code> is a GameDB database whose root type is <code>BlendDB</code>. Its categories are node types
 (<code>BlendState</code>, <code>StateTransition</code>, <code>Animation.SimpleAnimation</code>, <code>Predicate.And</code>, <code>Modifier.*</code> ...);
 its records are the graph's nodes, mostly named secondary records, with inline structures
@@ -296,7 +344,7 @@ player graph has 139,198 records in 270 categories: 46,400 structures, 22,229 st
 </tr>
 <tr>
 <td><code>BlendState</code></td>
-<td>one animation state: AnimationLink (the animation tree), Links (outgoing transitions) with a normalised-time window each and a minimum character LOD; Modifiers; Rate, DefaultBlendTime, BlendInterpolationMethod, Looping, Mirrored, gravity and foot / hand IK, movement / rotation / collision scale, NativeState, AIPosture, Priority</td>
+<td>one animation state: AnimationLink (the animation tree), Links (outgoing transitions) with a normalized-time window each and a minimum character LOD; Modifiers; Rate, DefaultBlendTime, BlendInterpolationMethod, Looping, Mirrored, gravity and foot / hand IK, movement / rotation / collision scale, NativeState, AIPosture, Priority</td>
 </tr>
 <tr>
 <td><code>CameraBlendState</code></td>
@@ -309,18 +357,18 @@ player graph has 139,198 records in 270 categories: 46,400 structures, 22,229 st
 </tbody>
 </table>
 <p><strong>The 29 graphs</strong> hold 10,702 blend states and 73,448 transition links. The four player graphs
-(player_elf, el2, elt, bar) have about 2,050 states and 1,700 camera states each; the warg 431, the
-troll 218, the five orc class graphs 132-136, and smaller graphs serve the Easterlings, ologs,
+(player_elf, el2, elt, bar) have about 2,050 states and 1,700 camera states each; the warg has 431,
+the troll 218 and the five orc class graphs 132-136. Smaller graphs serve the Easterlings, ologs,
 humans, the AI Talion, the fellbeast, Sauron's war form, the Nazgul, the Balrog, Gollum, goblins and
-spiders. 73,017 links resolve to a state, 431 have no target and none names a missing state. 5,300
-states are reachable by transitions from the start state; the rest are entered by code (grabs,
-riding, ladders, mount deaths: the states that synchronised attacks and presentations force).
+spiders. Of the links, 73,017 resolve to a state and 431 have no target; none names a missing state.
+From the start state, 5,300 states are reachable by transitions; the rest are entered by code (grabs,
+riding, ladders, mount deaths: the states that synchronized attacks and presentations force).
 All 17,606 clip references of the states resolve to a clip in some <code>.anix</code> (the <code>.skel</code>
 animation-set paths the nodes name ship nowhere, so the join goes through the clips' own names).</p>
 <p><strong>A BlendDB record is a native structure.</strong> Its header byte <code>+0x01</code> is 0x1A (flag 0x10) on all
 318,372 live records, so its fields sit at <code>instance + SlotOffset(type, field)</code> (SlotOffset 0x251C24,
-size step 0x251CAC) instead of the GameDB slot rule, and compiled code reads them as plain members;
-by-name getters divert such records to the reflected path (GetFloatByName 0x115B43C -&gt; 0x5DA0FC).
+size step 0x251CAC) instead of the GameDB slot rule, and compiled code reads them as plain members.
+By-name getters divert such records to the reflected path (GetFloatByName 0x115B43C -&gt; 0x5DA0FC).
 <code>BlendState</code> live layout: Mirrored <code>+0x68</code>, Priority <code>+0x80</code>, DefaultBlendTime <code>+0x88</code>, StartPct
 <code>+0x98</code>, Rate <code>+0xA8</code>, Gravity <code>+0x110</code>, Looping <code>+0x118</code>, Links <code>+0x138</code> (<code>{pointer, count}</code>);
 editor-only fields take no bytes. Six fields read live equal the disk decode for 10,697 of 10,697
@@ -329,7 +377,7 @@ records.</p>
 <code>PlayAs_Spider</code> and <code>PlayAs_Gollum</code>, and <code>Client/PlayerMovement</code> has exactly five records
 (PlayerMovement, PlayerMovement_Alt01, SpiderMovement, GollumMovement, DwarfMovement).</p>
 <h2 id="the-runtime">The runtime</h2>
-<h3 id="the-behaviour-state-of-a-character">The behaviour state of a character</h3>
+<h3 id="the-behavior-state-of-a-character">The behavior state of a character</h3>
 <table>
 <thead>
 <tr>
@@ -340,7 +388,7 @@ records.</p>
 <tbody>
 <tr>
 <td>+0x120</td>
-<td>the behaviour-interface base subobject (constructor 0x45520C; vt_0x1F96C68 on the player, vt_0x1FB3AA8 on NPCs)</td>
+<td>the behavior-interface base subobject (constructor 0x45520C; vt_0x1F96C68 on the player, vt_0x1FB3AA8 on NPCs)</td>
 </tr>
 <tr>
 <td>+0x140</td>
@@ -502,17 +550,74 @@ character):</p>
    body cleanup 0x6C00A0 (<code>Lifetime</code>, <code>SinkDistance</code>); otherwise 0x145218 relaxes the hit reaction
    (<code>RelaxTime</code>, start and end friction and tau factor).</li>
 </ol>
-<p>The thresholds are initialised data (<code>[base+0x26736A4]</code> 15.0, <code>[base+0x26736AC]</code> 15.0,
+<p>The thresholds are initialized data (<code>[base+0x26736A4]</code> 15.0, <code>[base+0x26736AC]</code> 15.0,
 <code>[base+0x26736B0]</code> 3.0, enable bytes <code>[base+0x26736A8]</code> and <code>[base+0x26736C0]</code>), each read only by
 this step. The two <code>BodyCleanup</code> records, <code>Troll</code> (15 models) and <code>Fellbeast</code> (2), set
 <code>AtRestSpeed</code> to 1,000,000, so those bodies rest at once; the other 264 models use the default.</p>
 <p>The per-character body settings are copied from <code>Character/Models/Global</code> when the character is
-created (0xFCFB4, from its slot 16), into <code>char+0x1E50</code>: <code>+0x239</code> <code>BodyRagdoll</code>, <code>+0x218</code>
-<code>BodyDeathDirMinY</code>, <code>+0x238</code> <code>BodyDeathForce</code>, <code>+0x21C</code> <code>BodyDeathForceScale</code>, <code>+0x234</code>
-<code>BodyDirDeathForce</code>, <code>+0x220</code> <code>BodyDirDeathForceScale</code>, <code>+0x228</code> <code>BodyStickDist</code>, <code>+0x22C</code>
-<code>BodyStickTime</code>, <code>+0x230</code> <code>BodyDeathScaleVelocity</code> and <code>+0x224</code> <code>BodyDeathClampVelocityMax</code> (shipped:
-true, 0.4, true, 0.5, true, 1.5, 400, 0.3, 1.0, 800). A later edit of the record reaches only
-characters created afterwards.</p>
+created (0xFCFB4, from its slot 16), into <code>char+0x1E50</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Field</th>
+<th>Shipped</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>+0x239</code></td>
+<td><code>BodyRagdoll</code></td>
+<td>true</td>
+</tr>
+<tr>
+<td><code>+0x218</code></td>
+<td><code>BodyDeathDirMinY</code></td>
+<td>0.4</td>
+</tr>
+<tr>
+<td><code>+0x238</code></td>
+<td><code>BodyDeathForce</code></td>
+<td>true</td>
+</tr>
+<tr>
+<td><code>+0x21C</code></td>
+<td><code>BodyDeathForceScale</code></td>
+<td>0.5</td>
+</tr>
+<tr>
+<td><code>+0x234</code></td>
+<td><code>BodyDirDeathForce</code></td>
+<td>true</td>
+</tr>
+<tr>
+<td><code>+0x220</code></td>
+<td><code>BodyDirDeathForceScale</code></td>
+<td>1.5</td>
+</tr>
+<tr>
+<td><code>+0x228</code></td>
+<td><code>BodyStickDist</code></td>
+<td>400</td>
+</tr>
+<tr>
+<td><code>+0x22C</code></td>
+<td><code>BodyStickTime</code></td>
+<td>0.3</td>
+</tr>
+<tr>
+<td><code>+0x230</code></td>
+<td><code>BodyDeathScaleVelocity</code></td>
+<td>1.0</td>
+</tr>
+<tr>
+<td><code>+0x224</code></td>
+<td><code>BodyDeathClampVelocityMax</code></td>
+<td>800</td>
+</tr>
+</tbody>
+</table>
+<p>A later edit of the record reaches only characters created afterwards.</p>
 <table>
 <thead>
 <tr>
@@ -620,7 +725,7 @@ one read 15 corpses lay in the world and two held slots.</p>
 </tr>
 <tr>
 <td><code>+0x20</code>, <code>+0x28</code></td>
-<td>the current and the prior behaviour controller</td>
+<td>the current and the prior behavior controller</td>
 </tr>
 <tr>
 <td><code>+0x48</code></td>
@@ -632,7 +737,7 @@ one read 15 corpses lay in the world and two held slots.</p>
 </tr>
 <tr>
 <td><code>+0x2D4</code>-<code>+0x2E8</code></td>
-<td>time stationary, moving, on ground, in air, in the current behaviour, in total</td>
+<td>time stationary, moving, on ground, in air, in the current behavior, in total</td>
 </tr>
 <tr>
 <td><code>+0x2EC</code></td>
@@ -642,37 +747,40 @@ one read 15 corpses lay in the world and two held slots.</p>
 </table>
 <p>The brain step 0x30F6D4 runs only while the controller holds a slot. It updates the samples and the
 timers (the brain's <code>OnGround</code> and <code>Stationary</code> float ranges decide which timers run), then walks
-<code>Brain.BehaviorControllers</code> in order and takes the first controller whose conditions all pass:
-float ranges on height, velocity, average body velocity, time on ground, in air, stationary, moving,
-in the current behaviour and in total, spine upright, head severed, include and exclude hints, the
-current and prior controller, and the combat state. On a change it records the prior controller,
-resets the behaviour timer, picks a <code>BehaviorSet</code> whose <code>RequiredRagdollConfig</code> is the controller's
-config, picks one of its behaviours and starts the behaviour's <code>Sequences</code>.</p>
+<code>Brain.BehaviorControllers</code> in order and takes the first controller whose conditions all pass. The
+conditions cover float ranges (height, velocity, average body velocity, and the time on ground, in
+air, stationary, moving, in the current behavior and in total), spine upright, head severed, include
+and exclude hints, the current and prior controller, and the combat state. On a change it records the prior controller,
+resets the behavior timer, picks a <code>BehaviorSet</code> whose <code>RequiredRagdollConfig</code> is the controller's
+config, picks one of its behaviors and starts the behavior's <code>Sequences</code>.</p>
 <p><code>Orc_Base</code> lists ten controllers (<code>DieHeadSeveredController</code>, <code>DieController</code>,
 <code>FallingBraceImpactController</code>, <code>TuckAndRollController</code>, <code>FallForwardBraceController</code>,
 <code>WritheOnGroundController</code>, <code>PanicLostGroundController</code>, the two leg-kicking controllers and
-<code>FallbackController</code>); <code>OlogHai_Base</code> three. A behaviour (<code>Ragdoll/Behaviors</code>, 18) sets strength and
+<code>FallbackController</code>); <code>OlogHai_Base</code> three. A behavior (<code>Ragdoll/Behaviors</code>, 18) sets strength and
 stiffness ranges, joint masks and scalar mappings; a sequence (<code>Ragdoll/Sequences</code>, 16) plays timed
 target poses (<code>Clamp</code>, <code>PingPong</code>), and a target pose sets per-joint pitch, yaw and roll. In one
 read of eleven corpses with a brain, three ran <code>DieHeadSeveredController</code>, four <code>DieController</code> and
 four <code>WritheOnGroundController</code> (one entered from <code>FallForwardBraceController</code>).</p>
 <h3 id="clip-keywords">Clip keywords</h3>
-<p>Two keyword tables name the ragdoll controls a clip can carry: at 0x1E658B0 (<code>RAGDOLL</code>, <code>DESTROY</code>,
-<code>RESUMERAGDOLL</code>, <code>DISALLOWRAGDOLL</code>, <code>ALLOWRAGDOLL</code>, <code>DELAYRAGDOLL</code>, <code>COLLISION_CHECK_NONE</code>,
-<code>COLLISION_CHECK_WORLD_ONLY</code>, <code>COLLISION_CHECK_ALL</code>, <code>GROUNDCHECK</code>, <code>RAGDOLL_STIFFNESS</code>,
-<code>NEVER_RAGDOLL</code>, <code>FREEZERAGDOLL</code>, <code>BEHAVIOR_HINT</code>) and at 0x1F9FC40 for sync actions
-(<code>SYNCACTION_ALLOWDEATH</code>, <code>SYNCACTION_DELAYDEATH</code>, <code>RESUMERAGDOLL</code>, <code>ALLOWRAGDOLL</code>, <code>RAGDOLL</code>,
-<code>DELAYRAGDOLL</code>, <code>STOP_ALIGN</code>), each entry a 32-bit hash and the name (the second table has no
-terminator; its seven entries run into a string). The hash is the multiply-by-31 string hash over the
+<p>Two keyword tables name the ragdoll controls a clip can carry, each entry a 32-bit hash and the name:</p>
+<ul>
+<li>at 0x1E658B0: <code>RAGDOLL</code>, <code>DESTROY</code>, <code>RESUMERAGDOLL</code>, <code>DISALLOWRAGDOLL</code>, <code>ALLOWRAGDOLL</code>,
+  <code>DELAYRAGDOLL</code>, <code>COLLISION_CHECK_NONE</code>, <code>COLLISION_CHECK_WORLD_ONLY</code>, <code>COLLISION_CHECK_ALL</code>,
+  <code>GROUNDCHECK</code>, <code>RAGDOLL_STIFFNESS</code>, <code>NEVER_RAGDOLL</code>, <code>FREEZERAGDOLL</code> and <code>BEHAVIOR_HINT</code>;</li>
+<li>at 0x1F9FC40, for sync actions: <code>SYNCACTION_ALLOWDEATH</code>, <code>SYNCACTION_DELAYDEATH</code>, <code>RESUMERAGDOLL</code>,
+  <code>ALLOWRAGDOLL</code>, <code>RAGDOLL</code>, <code>DELAYRAGDOLL</code> and <code>STOP_ALIGN</code> (this table has no terminator; its seven
+  entries run into a string). The hash is the multiply-by-31 string hash over the
 upper-cased, sign-extended bytes: 0x569FF8(rest of the string, seed) computes <code>seed * 31 + c</code> per
 character, recursively, and its callers seed it with the upper-cased first character, so a keyword
 matches in any case (17 of 17 table entries reproduce). The same hash has 18 callers, among them the
-slot-19 method of four classes.</p>
+slot-19 method of four classes.</li>
+</ul>
 <p>The keywords are not turned into flags when a clip loads: the dead-body step asks the clip at run time.
-0x75BB34(character, attack) copies the <code>RAGDOLL</code> and <code>RESUMERAGDOLL</code> entries to the stack and
-0x2C5DD8(character, attack) uses the <code>DESTROY</code> entry; both pass the key set to 0x4CAB0C, which walks
+0x75BB34(character, attack) copies the <code>RAGDOLL</code> and <code>RESUMERAGDOLL</code> entries to the stack, and
+0x2C5DD8(character, attack) uses the <code>DESTROY</code> entry. Both pass the key set to 0x4CAB0C, which walks
 the events of the clip the character is playing (when <code>[[char+0x26A8]+0x114]</code> is not -1) and compares
-each event name's hash with the keys, or else to 0x2C5E10, which checks the attack's own animation:
+each event name's hash with the keys; otherwise they pass it to 0x2C5E10, which checks the attack's
+own animation:
 the clip named by <code>AnimationData.Name</code> (looked up in the character's set by 0x4C8A0C) or, without one,
 the <code>AnimationData.BehaviorNode</code>, where each key is tested by name (0x1BDEA50). The dead-body step
 0x2F8460 is the only caller of 0x75BB34 and one of two callers of 0x2C5DD8 (the other is 0x19B6D1C).
