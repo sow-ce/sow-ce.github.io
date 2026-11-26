@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" class="cur" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -73,13 +73,13 @@ by the engine from data.</p>
 <code>+0x10</code> the trait a story mission unlocked for it, <code>+0x18</code> a u16 flag word, <code>+0x1A</code> an i16 option
 index (-1 = none). A picker's options are <code>Picker.Traits</code> -&gt; <code>_StructuresFactionTraitPickerEntry</code>
 records (<code>.Trait</code>); an option entry is a primary record (its header byte <code>+0x01</code> is 0x00, not 0x0A).
-493 pickers exist, for 484 traits.</p>
+There are 493 pickers, for 484 traits.</p>
 <p><strong>At most 64 active traits.</strong> Activation (0x3566B0) ends in 0x355114, which counts the active set and,
 above 64 (0x40) entries, deactivates traits picked at random from a candidate list (0x1BBA324) until 64
 remain.</p>
 <h2 id="the-flag-word-is-the-gate-list-and-the-re-roll-mask">The flag word is the gate list and the re-roll mask</h2>
 <p>When a slot is added, its u16 at <code>+0x18</code> is copied from the faction system's table <code>FS+0xE0</code>
-(indexed by the picker's record index; 18,508 of 18,508 entries match). It is two things at once:</p>
+(indexed by the picker's record index; 18,508 of 18,508 entries match). It serves two purposes at once:</p>
 <ul>
 <li><strong>the gate list</strong> - 0x1234E0(&amp;slot+0x18, bit) (<code>bt</code>) decides which tests the resolver runs: bit 1
   minimum level, 2 required row rank, 3 player follower, 4 required other traits, 6 intel level, 7 a
@@ -123,30 +123,35 @@ per slot: new = resolver(slot, &amp;mask, &amp;ctx)
   source 8), registers a spawner hijack (0x1A32D88) for captains of the current region, and starts a
   catalyst only when he has a body. The give checks <code>RequiredCharacterType</code> against the type of his
   combat tree (<code>FM+0x188</code>; 0x30CF30, exclusion 0x36686C) before giving a weapon item (olog flamethrower
-  or harpoon, the power-shot crossbow, grenades), and its first loop writes the item's flair colours
+  or harpoon, the power-shot crossbow, grenades). Its first loop also writes the item's flair colors
   into the list at <code>FM+0x118</code> (<code>{u8, u32 channel at +4, ARGB at +8}</code> via 0x1C10E54 / 0x1C11A74, seeded
   by <code>FM+0x168</code>).</li>
 </ul>
 <p><strong>What an away captain keeps.</strong> The give files an item only when it has an <code>ItemBuilder</code>, a
 <code>BodyModelChange</code> or <code>PassiveMaterialOverrides</code> (see Captain appearance), so a trait's plain items do
-not reach the record of a captain who is not in the world: <code>CursedWeapon</code> was in neither his 25 item
-slots (<code>FM+0x50</code>) nor his look-record list on 0 of 22 such captains with the curse weapon, and
-<code>FlamingWeapon</code> on 0 of 26. The trait items kept away from the world are weapons, one per loot slot
-(19 items over 557 captains, source byte 8): crossbows in slot 2, the Olog harpoon or flamethrower in
-slot 3, so two traits that want one slot cannot both hold it. Gangs, bombs, mines, mounts and
+not reach the record of a captain who is not in the world. Of 22 such captains with the curse weapon,
+0 had <code>CursedWeapon</code> in their 25 item slots (<code>FM+0x50</code>) or their look-record list, and of 26 with the
+fire weapon, 0 had <code>FlamingWeapon</code>. The trait items kept away from the world are weapons, one per loot
+slot (19 items over 557 captains, source byte 8): crossbows in slot 2, and the Olog harpoon or
+flamethrower in slot 3. Two traits that want one slot therefore cannot both hold it. Gangs, bombs, mines, mounts and
 immunities are applied when the captain is built in the world.</p>
 <p><strong>Exclusive groups.</strong> 51 <code>PickerGroup_*</code> records cover 207 of the 493 pickers
 (<code>Picker.ExclusiveGroup</code>). 0x19F66C collects the groups of every slot a captain has, rolled or not,
-and 0x7DABFC refuses a picker that shares one. They are of three kinds: design limits
-(<code>DLC4_Ultimate</code> 10 pickers, <code>DLC4_Opener</code> 3, <code>BodySlamThroatGrab</code> 2, <code>Mannerisms_Pool</code> 23 audio
-mannerisms that never appear on the card); one-of-a-kind features (<code>GangOrPet</code> 13, <code>HasMount</code> 2,
-<code>ElementalWeapon</code> 5); and a strength paired with its own opposite (<code>Resist_&lt;element&gt;</code> - immune or
-resistant against vulnerable or mortal to one element; every <code>&lt;X&gt;_Fear_Hate</code>; <code>BeastSlayerOrDismount</code>;
-<code>AggressiveUnAgressive</code>; <code>LastChanceModifiers</code>; <code>RepositionMoveAway</code>; <code>VaultBreaker</code>;
-<code>BodyguardDefeat</code>; <code>HateBossDefeat</code>; <code>KillOtherCaptain</code>; <code>WeakByHate_PinningShot</code>; <code>Alone_Fear</code>;
-<code>Blocks</code>). No rarity picker (<code>Picker_OrcRarity_*</code>, 3), advanced-class picker
-(<code>Picker_BaseStrength_&lt;advanced class&gt;</code>, 10) or class-bonus picker (<code>Picker_BaseStrength_&lt;class&gt;</code>, 6) carries a group, so the group test never refuses a second one: a member holding
-two advanced-class slots has both <code>BaseStrength_*</code> traits active (one such member read live).</p>
+and 0x7DABFC refuses a picker that shares one. They are of three kinds:</p>
+<ul>
+<li>design limits: <code>DLC4_Ultimate</code> (10 pickers), <code>DLC4_Opener</code> (3), <code>BodySlamThroatGrab</code> (2) and
+  <code>Mannerisms_Pool</code> (23 audio mannerisms that never appear on the card);</li>
+<li>one-of-a-kind features: <code>GangOrPet</code> (13), <code>HasMount</code> (2) and <code>ElementalWeapon</code> (5);</li>
+<li>a strength paired with its own opposite: <code>Resist_&lt;element&gt;</code> (immune or resistant against
+  vulnerable or mortal to one element), every <code>&lt;X&gt;_Fear_Hate</code>, <code>BeastSlayerOrDismount</code>,
+  <code>AggressiveUnAgressive</code>, <code>LastChanceModifiers</code>, <code>RepositionMoveAway</code>, <code>VaultBreaker</code>,
+  <code>BodyguardDefeat</code>, <code>HateBossDefeat</code>, <code>KillOtherCaptain</code>, <code>WeakByHate_PinningShot</code>, <code>Alone_Fear</code> and
+  <code>Blocks</code>.</li>
+</ul>
+<p>No rarity picker (<code>Picker_OrcRarity_*</code>, 3), advanced-class picker
+(<code>Picker_BaseStrength_&lt;advanced class&gt;</code>, 10) or class-bonus picker (<code>Picker_BaseStrength_&lt;class&gt;</code>, 6)
+carries a group, so the group test never refuses a second one: a member holding two advanced-class
+slots has both <code>BaseStrength_*</code> traits active (one such member read live).</p>
 <p><strong>The first option he qualifies for wins.</strong> <code>Picker_GangOfDoppelgangers</code> (flags 0x83: level and a
 campaign gate; group <code>GangOrPet</code>; excluded markers <code>Marker_SpecialButterfly</code>, <code>Marker_Deranged</code>)
 lists <code>Quirk_HasGang_Doppelgangers_Elite</code> (minimum level 35) before
@@ -164,12 +169,16 @@ index, not the save.)</p>
 <h2 id="traits-the-card-never-draws">Traits the card never draws</h2>
 <p>A trait is on the card when its <code>UIGroup</code> is one of the eight card rows' <code>TraitGroups</code> (below) and its
 <code>CanDisplayInUI</code> is not false (an absent cell is true). Of the 484 <code>Faction/Traits/Definitions</code>, 331 are
-on the card and 153 never are: 143 have no <code>UIGroup</code>; 3 have a group no row lists
-(<code>UIGroup_MiscPassives</code> for <code>Quirk_Adaptable</code>, <code>UIGroup_OrcRarity_Epic</code> / <code>_Legendary</code>); and 7 sit on a
-row's group with <code>CanDisplayInUI</code> false (<code>Easterling_Deadly_Rage</code>, <code>_Lifesteal</code>, <code>_TargetsCaptains</code> and
-<code>_TripleShot</code> on Classes, <code>Easterling_Dismount_Rider</code> on Bonuses, <code>DEMO_ImmuneToCurse</code> on Immunities,
-<code>Resistant_GroundTakedown</code> on the hint row).</p>
-<p><strong>Who gives them.</strong> 150 of the 153 are an option of some picker (control: 327 of the 331 card traits).
+on the card and 153 never are:</p>
+<ul>
+<li>143 have no <code>UIGroup</code>;</li>
+<li>3 have a group no row lists (<code>UIGroup_MiscPassives</code> for <code>Quirk_Adaptable</code>, <code>UIGroup_OrcRarity_Epic</code>
+  / <code>_Legendary</code>);</li>
+<li>7 sit on a row's group with <code>CanDisplayInUI</code> false (<code>Easterling_Deadly_Rage</code>, <code>_Lifesteal</code>,
+  <code>_TargetsCaptains</code> and <code>_TripleShot</code> on Classes, <code>Easterling_Dismount_Rider</code> on Bonuses,
+  <code>DEMO_ImmuneToCurse</code> on Immunities, <code>Resistant_GroundTakedown</code> on the hint row).</li>
+</ul>
+<p><strong>Who gives them.</strong> Of the 153, 150 are an option of some picker (control: 327 of the 331 card traits).
 Combat moves have small pickers of their own (<code>Picker_BodySlam</code>, <code>Picker_BlockCounter</code> with
 <code>Block_Counter_1</code> / <code>_2</code>, <code>Picker_ThroatGrab</code>, <code>Picker_AudioMannerism_01_howl</code> ...). No picker gives
 <code>Marker_Is_Archer</code> (named by <code>Faction/Predicates/TraitLists</code>) or <code>Quirk_BloodBrother_AttackedByAI</code> /
@@ -182,19 +191,24 @@ gives are the nemesis system's own: <code>Hate_Nemesis</code>, <code>Terror_Neme
 <code>ParentItem_CounterBlock1</code>, <code>Counter_Stun</code> -&gt; <code>CounterStun</code>); the five <code>Terror_*</code> give
 <code>Item_Terror_General</code> with <code>OnAppliedItem</code> <code>Fear_LowHealth</code>; <code>Quirk_FalseRetreat</code> has only an
 <code>OnAppliedItem</code>; the betrayal traits, <code>Prevent_Resurrection</code>, <code>Quirk_Ambusher</code> and <code>Quirk_Sneaky</code> carry
-no item. By their record names the 153 are roughly 46 combat moves (counters, dodges, jump attacks, body
-slam, throat grab, whirlwind, grenades at his feet, dismount and their Easterling variants), 34
-behaviours (aggressive or cautious, ambusher, sneaky, false retreat, second wind, terror alone or at low
-health), 11 company traits (elite gangs, summoned caragors, bodyguard counts, a DLC mount), 36 story
-traits (betrayal, blood brothers, last words, no resurrection, self-raise, a DLC island's items), 21 voice
-mannerisms (<code>Mannerism_01</code> to <code>_21</code>) and 5 system traits (<code>Marker_In_Hierarchy</code>, <code>Marker_Is_Archer</code>,
-the three <code>OrcRarity_*</code>).</p>
+no item. By their record names, the 153 are roughly:</p>
+<ul>
+<li>46 combat moves (counters, dodges, jump attacks, body slam, throat grab, whirlwind, grenades at his
+  feet, dismount and their Easterling variants);</li>
+<li>34 behaviors (aggressive or cautious, ambusher, sneaky, false retreat, second wind, terror alone or
+  at low health);</li>
+<li>11 company traits (elite gangs, summoned caragors, bodyguard counts, a DLC mount);</li>
+<li>36 story traits (betrayal, blood brothers, last words, no resurrection, self-raise, a DLC island's
+  items);</li>
+<li>21 voice mannerisms (<code>Mannerism_01</code> to <code>_21</code>);</li>
+<li>5 system traits (<code>Marker_In_Hierarchy</code>, <code>Marker_Is_Archer</code>, the three <code>OrcRarity_*</code>).</li>
+</ul>
 <p>A trait's row is its record's <code>UIGroup</code>, not its kind: <code>Quirk_OlogHarpoon</code> is <code>UIGroup_Classes</code>
 (<code>StrengthPriority</code> 10, items <code>Olog_2HR_Harpoon</code> and <code>Olog_Harpoon</code>; it comes from the Tracker and Beast
-Master advanced classes), <code>Quirk_OlogFlameThrower</code> <code>UIGroup_Bonuses</code> (36).</p>
+Master advanced classes), and <code>Quirk_OlogFlameThrower</code> is <code>UIGroup_Bonuses</code> (36).</p>
 <h2 id="how-elements-are-handed-out">How elements are handed out</h2>
 <p>The elemental weapons (curse, fire, poison, the necromancer's) are traits the reward system rolls; the
-game ships frost only for Talion and as captain defence (<code>Immune_Frost</code>, <code>Resistant_Frost</code>, <code>Hate_Frost</code>),
+game ships frost only for Talion and as captain defense (<code>Immune_Frost</code>, <code>Resistant_Frost</code>, <code>Hate_Frost</code>),
 with no frost-weapon record, picker, reward, hit effect or text. <code>Picker_Curse_Weapon</code> is held by 28
 reward definitions through <code>PickerGroupsToGive</code> (<code>EpicOrc_*</code>, <code>LT_*</code>, <code>KillPlayer_*</code>), 22 titles
 (<code>Faction/Roles/Definitions.PickerTraits</code>) and 10 presets. Everything on that path is read live: the
@@ -211,7 +225,7 @@ under 0x350500), <code>PickerGroupsToGive</code> (0x351AF8) and the level table 
   <code>MarkerList_StatusEffect_Not&lt;X&gt;</code>, and <code>Marker_NoStatusEffect</code> sits in all three lists, so one element
   bars the others; <code>MarkerList_StatusEffect_All</code> lists every element.</li>
 <li>The level tables also hold level-1 entries of chance 1.0 (<code>Default_OrcRarity</code>, <code>Default_Resistances</code>).
-  43 of the 1,239 reward definitions are held by no record.</li>
+  Of the 1,239 reward definitions, 43 are held by no record.</li>
 </ul>
 <h2 id="class-advanced-class-and-personality">Class, advanced class and personality</h2>
 <p><strong>Class</strong> = <code>FM+0x278</code> (a <code>Character/Models</code> record) + <code>FM+0x188</code> (that model's own combat tree) +
@@ -238,16 +252,16 @@ retreat, grenades at his feet, fire weapon), the markers <code>Marker_Specializa
 empty for nonverbal and undead characters). Base tables live in <code>Faction/PersonalityTable</code> (11 orc, 3
 olog, 4 mercenary). The engine's setter 0x1BC60A0(fm, record) (used by the reward <code>SetPersonality</code>
 0x3523EB and by role changes that force a personality) removes the old personality's marker traits
-(0x79A1D4), writes <code>FM+0x270</code>, re-registers a captain in the world with the new voice (0x73D548:
-<code>CCharacter+0x2B28</code> and <code>AudioHooks/List.CharacterSpawns</code> on <code>[char+0x2808]</code>), then adds the new marker
-traits (0x7D3EA4), skipping markers while bit 38 is set. 0x7D3EA4 refuses a marker whose exclusive
+(0x79A1D4) and writes <code>FM+0x270</code>. It then re-registers a captain in the world with the new voice
+(0x73D548: <code>CCharacter+0x2B28</code> and <code>AudioHooks/List.CharacterSpawns</code> on <code>[char+0x2808]</code>) and adds the
+new marker traits (0x7D3EA4), skipping markers while bit 38 is set. 0x7D3EA4 refuses a marker whose exclusive
 group is already held (every <code>PersonalityMarker_*</code> is in <code>MarkerGroup_Personality</code>), and the setter
 removes only the markers of the personality it replaces.</p>
 <h2 id="the-trait-card">The trait card</h2>
-<p>The card's rows are <code>Interface/Menu/MenuTreeNode/TraitGroup</code> records (<code>.TraitGroups</code>, the UI
-groups; TraitType 0 / 1 = strengths / weaknesses): Immunities; Hates; Class traits = Classes;
-Bonuses = Bonuses + Epics; Mortal weaknesses = MortalVulnerabilities + Terrors; Vulnerabilities;
-"Dazed by" = WeakenedBy + Fears; and a hint row of the resistances. A row shows at most
+<p>The card's rows are <code>Interface/Menu/MenuTreeNode/TraitGroup</code> records, each listing its UI groups in
+<code>.TraitGroups</code> (TraitType 0 / 1 = strengths / weaknesses). The rows are Immunities; Hates; Class
+traits (Classes); Bonuses (Bonuses and Epics); Mortal weaknesses (MortalVulnerabilities and Terrors);
+Vulnerabilities; "Dazed by" (WeakenedBy and Fears); and a hint row of the resistances. A row shows at most
 <code>MaxVisTraits</code> traits (7; the hint row 3), a limit read only by the Details layer (4 readers), so it
 caps the card and not the captain. Miscellaneous passives and rarity are not drawn. The number under each
 row's icon is the captain's trait count in that row.</p>
@@ -261,8 +275,8 @@ loads the DLC4 trait art: 41 of those icons (all but <code>easterling_caragortam
 base set) are resident in no campaign bundle, and the card's request is registered with no data and
 draws a placeholder. The icons also ship as loose files, but a loose path alone stays absent: only a
 bundle makes them resident. The card builds from the path, so a reopened card shows art that has
-arrived since. Over 484 traits there are 161 distinct icons; 68 traits have no icon, 54 name
-<code>pda\orcattributes\placeholder.tex</code> (resident, a real picture), and 116 of those 122 have no <code>UIGroup</code>;
+arrived since. The 484 traits use 161 distinct icons. Of the traits, 68 have no icon and 54 name
+<code>pda\orcattributes\placeholder.tex</code> (resident, a real picture); 116 of those 122 have no <code>UIGroup</code>.
 <code>immunities\immune_curse.tex</code> (only <code>DEMO_ImmuneToCurse</code>) ships in no bundle. The four DLC3 light traits
 share <code>fx\characters\shared\combat\blade_light.tex</code>, which the campaign's bundle carries. Monolith shipped
 identical pixels under several file names (<code>damageboostenemyhealthlow</code> = <code>defenseboostselfhealthlow</code>,
@@ -270,27 +284,28 @@ identical pixels under several file names (<code>damageboostenemyhealthlow</code
 four images.</p>
 <p><strong>Text.</strong> The localization strings carry the card's markup (counts over the base game's 63,493 strings):</p>
 <ul>
-<li>colour runs <code>{Color_&lt;Alias&gt;}text&lt;/font&gt;</code> (Enemy 593, Player 498, Objective 305, Broken 46, Intel 43,
+<li>color runs <code>{Color_&lt;Alias&gt;}text&lt;/font&gt;</code> (Enemy 593, Player 498, Objective 305, Broken 46, Intel 43,
   Epic 35, Follower 16, Reward 6, Weakened 5 ...); among trait names only Epic, which wraps 35 names whole
   (<code>{Color_Epic}Epic Trait: Slayer Counter&lt;/font&gt;</code>); 36 of the 484 traits' <code>Summary</code> strings carry markup;</li>
 <li>font runs <code>&lt;font face="$INTHUD"&gt;...&lt;/font&gt;</code> (51), glyph and button tokens (<code>{Poison}</code>,
   <code>{CombatPrimary03}</code>, <code>{EpicSkull}</code>), format arguments (<code>{1!s}</code>, <code>{2!d}</code>) and voice cues (<code>&lt;laugh&gt;</code>).</li>
 </ul>
-<p>A colour alias is a <code>Profile/ActionAlias</code> record (<code>Color_Epic</code>; GamepadString, KBMString, FontColor)
+<p>A color alias is a <code>Profile/ActionAlias</code> record (<code>Color_Epic</code>; GamepadString, KBMString, FontColor)
 whose <code>FontColor</code> links an <code>Interface/Color</code> record with an ARGB <code>Color</code>. The token pass
 <code>ReplaceActionsWithDevices</code> 0x2995F8 (named by its own assert) turns each <code>{name}</code> that is an action alias
-into a <code>&lt;font color&gt;</code> run of that colour (0xD06CF0), after the game's own formatting. The aliases: Enemy
-0xFFED5F09, Player 0xFF09D5ED, Objective 0xFFFFC640, Epic 0xFFE24E2C, Intel / Broken / Green 0xFF359737,
-Follower 0xFF09D5ED, Reward 0xFFED5F09, Weakened 0xFF94BFD6, Red 0xFFA42E06, Hate 0xFFDF4E2C; Legendary
-0xFF4700BF, Yellow 0xFFFFC640, Disabled 0xFF626262, Vulnerable 0xFF5279BD, Terrified 0xFF81294A and Immune
-0xFFDC9B50 are used by no string.</p>
-<p>21 card names belong to two or three traits each; the record names' family words tell them apart
+into a <code>&lt;font color&gt;</code> run of that color (0xD06CF0), after the game's own formatting. The aliases in
+use: Enemy 0xFFED5F09, Player 0xFF09D5ED, Objective 0xFFFFC640, Epic 0xFFE24E2C, Intel / Broken / Green 0xFF359737,
+Follower 0xFF09D5ED, Reward 0xFFED5F09, Weakened 0xFF94BFD6, Red 0xFFA42E06 and Hate 0xFFDF4E2C.
+Legendary 0xFF4700BF, Yellow 0xFFFFC640, Disabled 0xFF626262, Vulnerable 0xFF5279BD, Terrified
+0xFF81294A and Immune 0xFFDC9B50 are defined but used by no string.</p>
+<p>There are 21 card names that belong to two or three traits each; the record names' family words tell
+them apart
 (Easterling / East, D4RES / DLC, DEMO, Elite, Rare, Six, Archer, CMT for Combat Master, Perm, ET):
 "Decoys" / "Decoys (Elite)" / the DLC's six-decoy version, "Agile" and its Easterling twin, and so on.</p>
 <p><strong>Looks from traits.</strong> Of 334 addable traits, none sets <code>ModelHide</code>, <code>BodyModelChange</code> or
-<code>AppearanceTags</code>. Only <code>Quirk_Undead</code> changes the body and colours: <code>Body_Scar_BodyReplacement</code> -&gt;
+<code>AppearanceTags</code>. Only <code>Quirk_Undead</code> changes the body and colors: <code>Body_Scar_BodyReplacement</code> -&gt;
 <code>IB_Body_Scar</code> -&gt; <code>AD_Body_Scar.ModelPicker</code> (the scarred orc and olog bodies) plus
-<code>I_Am_Undead_Appearance(_OLOG)</code> (flair colours, cataract-eye material overrides, material-set variants
+<code>I_Am_Undead_Appearance(_OLOG)</code> (flair colors, cataract-eye material overrides, material-set variants
 and the undead effect).</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
@@ -302,7 +317,7 @@ and the undead effect).</p>
   and 0x1BC3CB4's only caller is the deactivation; spawning such a captain and reading his company would
   settle it.</li>
 <li>Which events give the four nemesis card traits (<code>Hate_Nemesis</code>, <code>Terror_Nemesis</code>,
-  <code>Hate_SuperiorDamage</code>, <code>Quirk_BloodBrother</code>), and which code reads the item-less behaviour traits
+  <code>Hate_SuperiorDamage</code>, <code>Quirk_BloodBrother</code>), and which code reads the item-less behavior traits
   (betrayal, <code>Prevent_Resurrection</code>, <code>Quirk_Ambusher</code>, <code>Quirk_Sneaky</code>) by name.</li>
 <li>Whether promotions run the level-up reward path that hands out elements, and whether the engine's
   reward filter 0x105AEC(fm, reward) is where the element markers bar a second element: emulated against
