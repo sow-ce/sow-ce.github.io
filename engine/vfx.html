@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" class="cur" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -52,10 +52,10 @@ GameManager +0x6DB8 = the FX performance / budget manager (ClientFxPerfMgr.cpp)
 </code></pre>
 <h2 id="the-fxp-file-and-its-loader">The <code>.fxp</code> file and its loader</h2>
 <p>An <code>.fxp</code> starts with <code>LTFX</code> and version 8, followed by a GameDB database (<code>FxGlobalProps</code> and one
-record per node). The magic occurs exactly once in the executable, in the loader 0x48FBB90: it reads 8
-bytes from a stream, checks <code>LTFX</code> and version 8, allocates the 0x60-byte <code>FxResource</code>, reads the
-database from the stream (0x74CF10) into <code>FxResource+0x48</code>, and fails with "Failed to load the
-database out of a stream." The loader is vf3 and the processor vf4 0x3E4540 of the effect resource
+record per node). The magic occurs exactly once in the executable, in the loader 0x48FBB90. The
+loader reads 8 bytes from a stream, checks <code>LTFX</code> and version 8 and allocates the 0x60-byte
+<code>FxResource</code>; it then reads the database from the stream (0x74CF10) into <code>FxResource+0x48</code>, or fails
+with "Failed to load the database out of a stream." The loader is vf3 and the processor vf4 0x3E4540 of the effect resource
 handler (vt_0x2312410); path resolution happens upstream, so the loader only sees a stream.</p>
 <p>The file ends with a u32: the count of the database's (u32, u32) pair table (<code>db+0x68</code>), 0 in all 968
 shipped effects checked. A file without it makes the body reader 0x4B9B50 read 4 bytes past the end
@@ -205,38 +205,93 @@ class's vtable inside their KeyData blocks, two snapshots):</p>
 <p>A key object belongs to the loaded effect, so it is shared by every instance of that effect. Counted
 over all resident effects: 9,100 ParticleSystem keys, 3,746 MaterialController, 1,874
 StandardGPUParticleSystem, 1,246 Sound and 1,235 Model.</p>
-<p><strong>The property schema</strong> is built at start-up into the uninitialised data section by per-type
-initialisers: each type's property array is cleared (<code>memset</code>, size = count x 0x48), then one
-registration call per property: <code>PropRegister(slot, "Name", type code, &amp;default, annotation, 1, sub,
-accessor)</code>, where the type code is the database's own field type (2 float, 5 string enum with an
-annotation such as <code>type=EImpulseFilter</code>, and so on). The descriptor table at 0x263F800 (stride
-0x40: <code>+0x00</code> property array, <code>+0x08</code> count, <code>+0x10</code> short name, <code>+0x20</code> <code>"ClientFX.&lt;Type&gt;"</code>,
-<code>+0x28</code> parent, <code>+0x38</code> flags) lists <strong>50 classes with 2,228 properties</strong> (2,227 named): the 36 node
-types plus their shared bases - <code>BaseFX</code> (15 properties, the common header of every visual node),
+<p><strong>The property schema</strong> is built at start-up, into the uninitialized data section, by per-type
+initializers. Each initializer clears its type's property array (<code>memset</code>, size = count x 0x48),
+then makes one registration call per property,
+<code>PropRegister(slot, "Name", type code, &amp;default, annotation, 1, sub, accessor)</code>, where the type code
+is the database's own field type (2 float, 5 string enum with an annotation such as
+<code>type=EImpulseFilter</code>, and so on).</p>
+<p>The descriptor table at 0x263F800 has a stride of 0x40: <code>+0x00</code> the property array, <code>+0x08</code> the
+count, <code>+0x10</code> the short name, <code>+0x20</code> <code>"ClientFX.&lt;Type&gt;"</code>, <code>+0x28</code> the parent and <code>+0x38</code> flags. It
+lists <strong>50 classes with 2,228 properties</strong> (2,227 named): the 36 node types plus their shared bases - <code>BaseFX</code> (15 properties, the common header of every visual node),
 <code>BaseSpriteFX</code> (41), <code>BaseCreateFX</code> (38), <code>LightningComponent</code> (6), <code>FlareComponent</code> (4),
 <code>DebrisType</code> (8), <code>OcclusionQueryFX</code> (19), <code>ReferenceFX</code> (2), <code>FxGlobalProps</code> (5) and five curve
 classes (<code>CurveFloat</code>, <code>Int</code>, <code>Vector</code>, <code>Color</code>, <code>File</code>). Per-type counts include the inherited ones.
 A node record carries only a subset of its type's properties, so the engine binds fields by hash,
 not by position.</p>
-<p>33 of the 36 node types are used by shipped effects. AnimatedPhysicsModel, Tracer and VolumetricCloud
+<p>Shipped effects use 33 of the 36 node types. AnimatedPhysicsModel, Tracer and VolumetricCloud
 have full property schemas (76, 37 and 39 properties) but appear in no shipped effect.</p>
 <h2 id="the-managers">The managers</h2>
 <p><code>CGameClientShell::InitializeSubsystems</code> 0x1772E1C creates five managers, one per time domain
 ("Could not init SimulationClientFXMgr!", RealTime, PlayerTime, CompanionTime, WorldUI): factories
 0x176DC70 (Simulation, a 1 MB arena) and 0x176DBF4 (the others, 512 KB); wrapper constructor
-0x1779A64, inner constructor 0x1779B20, initialisation 0x177BB44(manager, time source, flag). Three
+0x1779A64, inner constructor 0x1779B20, initialization 0x177BB44(manager, time source, flag). Three
 more managers exist outside the client shell (updated from 0x224430, vt_0x1FFAFF0 vf18 0x1C815B4,
 0x179AF98 and the <code>UI.Portrait</code> path 0x335E9C); eight in all are in the global list.</p>
 <p><strong>The wrapper</strong> (vt_0x22F3178): <code>+0x08</code> its link in the global list <code>[base+0x26C6A98]</code>, <code>+0x18</code> a
 <code>{vt_0x1DAA870, time source}</code> pair, <code>+0x28</code> the inner manager. Its vf1 0x482DE0 and vf2 0x482EB4
 receive resource events: the wrapper is a resource listener, so an effect resource that unloads
 removes its instances from every manager (0x482EC0 -&gt; 0x177C824 under the manager's lock).</p>
-<p><strong>The inner manager</strong> (vt_0x1F67400, 32 slots): <code>+0x08</code> the FX thread object, <code>+0x11</code> threaded (queue
-work to the FX thread, otherwise run it inline), <code>+0xB8</code> the <strong>instance vector</strong>, <code>+0x108</code>
-work-pending, <code>+0x110</code> / <code>+0x128</code> work lists (<code>+0x128</code> = background), <code>+0x148</code> the time-source pair,
-<code>+0x178</code> arena bytes, <code>+0x19C</code> / <code>+0x1A0</code> cost per key (128 / 64), <code>+0x1A4</code> budget left this frame,
-<code>+0x1B0</code> the per-frame arena, <code>+0x18268 .. +0x18320</code> six deferred queues, <code>+0x18328</code> the work-done
-event. vf2 0x3E9E30 is <code>CreateClientFX</code>.</p>
+<p><strong>The inner manager</strong> (vt_0x1F67400, 32 slots):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>+0x08</code></td>
+<td>the FX thread object</td>
+</tr>
+<tr>
+<td><code>+0x11</code></td>
+<td>threaded: queue work to the FX thread, otherwise run it inline</td>
+</tr>
+<tr>
+<td><code>+0xB8</code></td>
+<td>the <strong>instance vector</strong></td>
+</tr>
+<tr>
+<td><code>+0x108</code></td>
+<td>work pending</td>
+</tr>
+<tr>
+<td><code>+0x110</code> / <code>+0x128</code></td>
+<td>work lists (<code>+0x128</code> = background)</td>
+</tr>
+<tr>
+<td><code>+0x148</code></td>
+<td>the time-source pair</td>
+</tr>
+<tr>
+<td><code>+0x178</code></td>
+<td>arena bytes</td>
+</tr>
+<tr>
+<td><code>+0x19C</code> / <code>+0x1A0</code></td>
+<td>cost per key (128 / 64)</td>
+</tr>
+<tr>
+<td><code>+0x1A4</code></td>
+<td>the budget left this frame</td>
+</tr>
+<tr>
+<td><code>+0x1B0</code></td>
+<td>the per-frame arena</td>
+</tr>
+<tr>
+<td><code>+0x18268 .. +0x18320</code></td>
+<td>six deferred queues</td>
+</tr>
+<tr>
+<td><code>+0x18328</code></td>
+<td>the work-done event</td>
+</tr>
+</tbody>
+</table>
+<p>vf2 0x3E9E30 is <code>CreateClientFX</code>.</p>
 <p>In an open-world scene the Simulation manager held 541-569 instances, RealTime 2, PlayerTime 1-2,
 CompanionTime 0 and WorldUI 4; with the world map open WorldUI rose to 85 (the map's forest-fire
 and smoke effects run in the WorldUI domain, as do the army screen's effects).</p>
@@ -358,10 +413,10 @@ the record, and destroys it through <code>+0x30</code> on failure. An effect res
 <li><strong>Main thread.</strong> <code>CGameClientShell</code> vf1 0x1A864C (after the performance manager's 0x69909C) calls
    0x1AA1F8 for the five managers in slot order; it takes dt from the manager's time source (0 when
    paused) and calls <code>ClientFXMgr::Update</code> 0x1AAAFC.</li>
-<li><strong>Update</strong> finishes last frame's work first when <code>+0x108</code> is set (0x1A9F20, 0x1AC584, 0x1AA000),
-   drains the deferred queues, resets the frame arena, reserves the work list at twice the instance
-   count, sets the budget to a quarter of the arena, runs the instance loop 0x24E040, then queues itself
-   to the FX thread (or runs 0x1AC638 inline) and sets <code>+0x108</code>.</li>
+<li><strong>Update</strong> finishes last frame's work first when <code>+0x108</code> is set (0x1A9F20, 0x1AC584, 0x1AA000).
+   It then drains the deferred queues, resets the frame arena, reserves the work list at twice the
+   instance count, sets the budget to a quarter of the arena and runs the instance loop 0x24E040.
+   Finally it queues itself to the FX thread (or runs 0x1AC638 inline) and sets <code>+0x108</code>.</li>
 <li><strong>The instance loop</strong> 0x24E040 computes visibility from the squared camera distance against the
    entry's radii; charges the budget (keys x 128 the first time, keys x 64 for an admitted instance;
    over budget goes to 0x177BFE8); advances KeyData timing (0x24F2F0); and pushes the container to the
@@ -402,19 +457,44 @@ all occur. One skeleton can carry both kinds: the player's 128-bone base rig has
 <code>R_Hand</code>, <code>L_Foot</code>, <code>R_Toe</code> and <code>Upper_Torso</code>, and sockets such as <code>Torso</code>, <code>Head</code>, <code>LeftHand</code>,
 <code>RightHand</code>, <code>LeftFoot</code>, <code>RightFoot</code>, <code>Pelvis</code>, <code>SocketHead</code>, <code>SocketAttach</code> and <code>Socket_Ring</code>. The
 player's own burn effect attaches to <code>R_Toe</code>, <code>L_Foot</code>, <code>Upper_Torso</code> and <code>Arrow_R_Bicep</code>, the last a
-socket that is no bone: sockets are a table of their own beside the bones, so a bone list is no
-filter for attach names. A key's <code>UpdatePos</code> mode is <code>SocketAttach</code> (a socket or a bone name),
-<code>NodeAttach</code> (a bone name) or <code>Follow</code> (the character's frame); the base key loader (vt_0x1DB46A8 vf1
-0x3E2D90) gives <code>NodeAttach</code> and <code>SocketAttach</code> the same flags (bits 3 and 5 of the key's u16 at
-<code>+0x80</code>; <code>Follow</code> sets bit 3, the <code>*Pos</code> modes add bit 0 and the <code>*WSOffset</code> modes bit 8) and keeps the
-name as a string at key <code>+0x18</code>. The string <code>null</code> means unattached.</p>
+socket that is no bone. Sockets are a table of their own beside the bones, so a bone list cannot
+validate attach names.</p>
+<p>A key's <code>UpdatePos</code> mode is <code>SocketAttach</code> (a socket or a bone name), <code>NodeAttach</code> (a bone name) or
+<code>Follow</code> (the character's frame). The base key loader (vt_0x1DB46A8 vf1 0x3E2D90) gives <code>NodeAttach</code>
+and <code>SocketAttach</code> the same flags, bits 3 and 5 of the key's u16 at <code>+0x80</code>; <code>Follow</code> sets bit 3, the
+<code>*Pos</code> modes add bit 0 and the <code>*WSOffset</code> modes bit 8. The loader keeps the name as a string at key
+<code>+0x18</code>. The string <code>null</code> means unattached.</p>
 <h2 id="effect-sequences-on-a-character">Effect sequences on a character</h2>
 <p>A <code>Client/ClientFXSequence</code> plays in three phases on a pooled sequence player (vt_0x1DB7540, pool
-0x2A34E88, allocated by 0x7A8760, constructor 0x4EDF7C): <code>+0x08</code> state, <code>+0x0C</code> pending, <code>+0x10</code>
-timer, <code>+0x20</code> / <code>+0x28</code> / <code>+0x30</code> the Enter / Loop / Exit effect handles, <code>+0xD0</code> the sequence record
-and <code>+0xD8</code> / <code>+0xE0</code> / <code>+0xE8</code> per-instance Enter / Loop / Exit paths, which the constructor clears on
-every allocation. Its vf2(state, kind) dispatches the kinds CanEnter (0), CanExit (1), OnEnter (2),
-Update (3) and OnExit (4):</p>
+0x2A34E88, allocated by 0x7A8760, constructor 0x4EDF7C):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x08 / +0x0C / +0x10</td>
+<td>state / pending state / timer</td>
+</tr>
+<tr>
+<td>+0x20 / +0x28 / +0x30</td>
+<td>the Enter / Loop / Exit effect handles</td>
+</tr>
+<tr>
+<td>+0xD0</td>
+<td>the sequence record</td>
+</tr>
+<tr>
+<td>+0xD8 / +0xE0 / +0xE8</td>
+<td>per-instance Enter / Loop / Exit paths, cleared by the constructor on every allocation</td>
+</tr>
+</tbody>
+</table>
+<p>Its vf2(state, kind) dispatches the kinds CanEnter (0), CanExit (1), OnEnter (2), Update (3) and
+OnExit (4):</p>
 <table>
 <thead>
 <tr>
@@ -445,11 +525,11 @@ Update (3) and OnExit (4):</p>
 </tr>
 </tbody>
 </table>
-<p>Each phase's path accessor (0x15A328, 0x15A55C, 0x15AA2C) reads the player's own path field first,
-then the record's <code>&lt;phase&gt;_FXLookupTable</code>, then its <code>EnterFX</code> / <code>LoopFX</code> / <code>ExitFX</code> cell, at the moment
-the phase is entered; an empty path creates nothing. 0x19E16CC enters state 0 inside the call (vf1 at
+<p>Each phase's path accessor (0x15A328, 0x15A55C, 0x15AA2C) runs at the moment the phase is entered.
+It reads the player's own path field first, then the record's <code>&lt;phase&gt;_FXLookupTable</code>, then its
+<code>EnterFX</code> / <code>LoopFX</code> / <code>ExitFX</code> cell; an empty path creates nothing. 0x19E16CC enters state 0 inside the call (vf1 at
 0x19E17C4), so the Enter phase is running when it returns and the Loop phase is entered on a later
-update. The active sequences are keyed by (target, sequence). 76 of the 1,727 sequence records carry
+update. The active sequences are keyed by (target, sequence). Of the 1,727 sequence records, 76 carry
 no effect in any phase. A looping effect whose length is not above 0.0 (<code>[0x202E584]</code>) fails an
 engine assert in <code>ClientFXMgr::Update</code> (0x24F2F0 -&gt; 0x10B1546); all 4,139 resident effects in one
 scene had a length above 0 (the shortest 0.020 s).</p>
@@ -460,26 +540,28 @@ scene had a length above 0 (the shortest 0.020 s).</p>
 effect it sets bit 1 of the key's u16 flags at <code>+0x80</code> (0x3E4A50), which the particle system's KeyData
 constructor 0x1BCE3C reads, with the instance's looping bit, to keep emitting across a loop instead of
 starting over.</p>
-<p><strong>The instance clock</strong> (0x24F2F0, called by the instance loop with the instance's <code>+0xBC</code>): each frame
-the previous time takes the time and the time advances by the step; a looping instance past its length
-adds <code>floor(time / length)</code> to its loop count and wraps the time into [0, length]; a non-looping one
-whose previous time passed its length is finished (0x1A9CF8).</p>
+<p><strong>The instance clock</strong> is 0x24F2F0, which the instance loop calls with the instance's <code>+0xBC</code>. Each
+frame the previous time takes the current time, and the time advances by the step. A looping instance
+that has passed its length adds <code>floor(time / length)</code> to its loop count and wraps the time into
+[0, length]; a non-looping instance whose previous time has passed its length is finished (0x1A9CF8).</p>
 <p><strong>Curves are shared by value inside one loaded effect.</strong> A float curve is a u32 count followed by
 (f32 t, f32 v) pairs, t being the key's life fraction, and identical curves are stored once: one flat
 0.5 curve served five parameters of one effect (a material slot and four particle parameters). A
 change to a curve's values changes every parameter that points at it.</p>
 <p><strong>The MaterialController</strong> (key vt_0x1DCC0A0) holds 8 float slots at <code>+0xA8</code>, 0x20 bytes each:
-<code>{char* name, u32 P919("k_f" + name) at +0x08, curve* at +0x10}</code>, and per-frame masks: <code>+0xA1</code> for the
-float slots, <code>+0xA2</code> a second scalar bank at <code>+0x1A8</code>, <code>+0xA4</code> a bank at <code>+0x3A8</code> interpolated as four
-floats, <code>+0xA5</code> a bank at <code>+0x4A8</code> interpolated as byte colours (0x267060). Its KeyData (0x699A20, 0xA0
-bytes: <code>+0x10</code> the instance's clock container, <code>+0x18</code> the key) registers three update callbacks
-(0x747958, 0x747960, 0x677390). The last, through 0x24A664, computes t = (time - start) / (end - start)
-clamped to [0, 1], activates the key when its window is entered (0x2E94EC), deactivates it on exit
-(vf29), and otherwise calls 0x249988, which evaluates the curves of the slots whose mask bit is set
-and pushes (hash, value) pairs to the material through the manager's vf4. The parser (vf1 0x70850C)
-sets a slot's bit only when its curve's keys differ (0x186104), so a constant slot reaches the
-material once, at activation, and a later change to its curve is never pushed; with the bit set and a
-changed curve, the update pushes the new values every frame.</p>
+<code>{char* name, u32 P919("k_f" + name) at +0x08, curve* at +0x10}</code>. Per-frame masks select what is
+updated: <code>+0xA1</code> covers the float slots, <code>+0xA2</code> a second scalar bank at <code>+0x1A8</code>, <code>+0xA4</code> a bank at
+<code>+0x3A8</code> interpolated as four floats, and <code>+0xA5</code> a bank at <code>+0x4A8</code> interpolated as byte colors
+(0x267060).</p>
+<p>Its KeyData (0x699A20, 0xA0 bytes: <code>+0x10</code> the instance's clock container, <code>+0x18</code> the key) registers
+three update callbacks: 0x747958, 0x747960 and 0x677390. The last, through 0x24A664, computes
+t = (time - start) / (end - start), clamped to [0, 1]. It activates the key when its window is entered
+(0x2E94EC) and deactivates it on exit (vf29); in between it calls 0x249988, which evaluates the curves
+of the slots whose mask bit is set and pushes (hash, value) pairs to the material through the
+manager's vf4.</p>
+<p>The parser (vf1 0x70850C) sets a slot's bit only when its curve's keys differ (0x186104). A constant
+slot therefore reaches the material once, at activation, and a later change to its curve is never
+pushed. With the bit set and a changed curve, the update pushes the new values every frame.</p>
 <p><strong>What draws.</strong> The resident effects in one scene decode to known node types without exception
 (4,140 of 4,140), and 837 of them draw nothing on screen: 502 are sound, camera shake or spawn effects,
 137 screen overlays, 123 lights only and 75 MaterialControllers only. A <code>ParentedModel</code> with
@@ -487,8 +569,8 @@ changed curve, the update pushes the new values every frame.</p>
 material swap; the player's burn is such a swap (16 translucent slots to one material) plus 15 child
 effects at his sockets. Fades are per node type (<code>FadeInStartDist</code> / <code>FadeEndDist</code> on sprites,
 <code>SystemFadeInStart</code> / <code>SystemFadeOutEnd</code> on the newer GPU particles); 912 drawing nodes fade out 2 to
-4.5 m from the camera. 1,873 nodes carry <code>InclusiveContexts</code> gates (day or night, wraith, blood by race,
-orc rarity, kill camera and similar).</p>
+4.5 m from the camera. <code>InclusiveContexts</code> gates (day or night, wraith, blood by race, orc rarity, kill camera and
+similar) sit on 1,873 nodes.</p>
 <h2 id="models-with-their-own-skeleton">Models with their own skeleton</h2>
 <p><code>ClientFX.AnimatedModel</code> draws a skinned model with its own skeleton playing its own clip, attached to
 a character. It has 71 properties: <code>ClientFX.Model</code>'s plus <code>AnimName</code>, <code>AnimLength</code>
@@ -535,10 +617,10 @@ socket, the bola, the orc snare and the warg chains.</p>
   <code>ClientFXMgr.FXInstanceBudget</code> (0x266D4A0) feeds the two costs.</li>
 <li><strong>Per effect group</strong> (<code>Client/ClientFXBudget</code>, 7 records: MaxSimultaneousFX / MaxNewFX): OnFire 30 /
   10, Blinded 25 / 10, BloodDecals 30 / 4, Poisoned 30 / 10, Footsteps 100 / 10,
-  Easterling_SmokeScreen 2 / 2, OnFire_Balefire 30 / 10, with a budget-exceeded behaviour and pooling
+  Easterling_SmokeScreen 2 / 2, OnFire_Balefire 30 / 10, with a budget-exceeded behavior and pooling
   rules. They are copied once at start-up: 0x177BCE0 (from 0x1783DD0; skipped while the byte at
   0x266D4F8 is set) builds one budget object per record - 0x177A3B4 copies <code>MaxSimultaneousFX</code> to
-  <code>+0x0C</code>, <code>MaxNewFX</code> to <code>+0x10</code>, the exceeded behaviour and the pooling rules (radius, capacity) - and
+  <code>+0x0C</code>, <code>MaxNewFX</code> to <code>+0x10</code>, the exceeded behavior and the pooling rules (radius, capacity) - and
   registers every path in the record's <code>FXList</code> by its <code>StringHash</code>. An effect is therefore assigned to
   its group by the hash of its file path, and an edit to the records after start-up is not seen.</li>
 <li><strong>Distance:</strong> <code>MaxUpdateDistance</code>; creation is refused beyond the cull radius; visibility is
@@ -561,7 +643,7 @@ socket, the bola, the orc snare and the warg chains.</p>
 <li>How a pooled run-time object attaches to its instance, and what kinds of parent the instance
   handles at <code>+0x150</code> / <code>+0x1A8</code> point to.</li>
 <li>Where the per-group counts are checked when an effect is created, and what each budget-exceeded
-  behaviour does.</li>
+  behavior does.</li>
 <li>In what order a child effect's attach name is looked up (the character's pieces, then the parent
   model, would explain the eye-anchored child above); 0x377394, a name lookup over a model with a
   parent link at <code>+0x2D10</code> and a vector of attached objects, is the candidate.</li>
