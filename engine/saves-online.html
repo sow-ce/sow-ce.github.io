@@ -1,7 +1,8 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Saves, the store and the network layer - Shadow of War engine reference</title><meta name="description" content="The save file format and its encryption, the typed section grammar and what each slot section holds, the engine&#x27;s own save switch and the new-game flow, the client side of the old in-game store, and the dormant peer-to-peer network stack with the asynchronous online modes."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Saves, the store and the network layer - Shadow of War engine reference</title><meta name="description" content="The save file format and its encryption, the typed section grammar and what each slot section holds, the engine&#x27;s own save switch and the new-game flow, the player profile, options and command sets, the client side of the old in-game store, online orcs (what the exporter writes and the importer reads, the Garrison, how a fort is published and rated), and the dormant peer-to-peer network stack with the asynchronous online modes."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
+<a href="builds.html" data-p="builds">Game builds: Steam, GOG and Microsoft Store</a>
 <a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
 <a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
 <a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
@@ -23,16 +24,23 @@
 <a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
 <a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="haedirs.html" data-p="haedirs">Haedirs: towers, seeing stones and fast travel</a>
 <a href="outposts.html" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" class="cur" data-p="saves-online">Saves, the store and the network layer</a>
-<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="saves-the-store-and-the-network-layer">Saves, the store and the network layer</h1><p class=\"lede\">The save file format and its encryption, the typed section grammar and what each slot section holds, the engine&#x27;s own save switch and the new-game flow, the client side of the old in-game store, and the dormant peer-to-peer network stack with the asynchronous online modes.</p>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="saves-the-store-and-the-network-layer">Saves, the store and the network layer</h1><p class=\"lede\">The save file format and its encryption, the typed section grammar and what each slot section holds, the engine&#x27;s own save switch and the new-game flow, the player profile, options and command sets, the client side of the old in-game store, online orcs (what the exporter writes and the importer reads, the Garrison, how a fort is published and rated), and the dormant peer-to-peer network stack with the asynchronous online modes.</p>
 <h2 id="the-save-file">The save file</h2>
-<p>A Steam save is <code>Steam\userdata\&lt;account&gt;\356190\remote\&lt;account hex&gt;_&lt;slot&gt;_ShadowOfWar.sav</code>; the
-file-name prefix is the Steam account number in hexadecimal.</p>
+<p>A save file is <code>&lt;name&gt;_ShadowOfWar.sav</code>, where <code>&lt;name&gt;</code> identifies the owner (on Steam, the account number in
+hexadecimal). Beside it the game keeps rotating copies <code>&lt;name&gt;_1_ShadowOfWar.sav</code> to <code>&lt;name&gt;_5_ShadowOfWar.sav</code>: <code>_1</code>
+equals the main file (same size, same time) and each higher number holds an older save. The number is not a slot: the
+three slots live inside the file (below). Where each build keeps the files, and which account value it mixes into the
+key, is described in Game builds: Steam, GOG and Microsoft Store.</p>
 <pre><code>header  'SOM3' | u32 salt | u32 padded length (= file size - 16, a multiple of 16) | u32 real length
 body    AES-256-CBC, PKCS#7 padding
 key     256 bits, derived per file from a constant built into the executable, the header's salt
@@ -495,26 +503,32 @@ stack read in free roam held <code>StateSupported</code> (priority 15) below <co
 <li><code>IsStoreEnabled</code> 0x1B1AE04 = <code>GetBool(current game mode, StoreEnabled)</code>; <code>SinglePlayer</code> ships
   true. The gold predicate <code>CommerceCurrency_Paid</code> 0x1869F48 returns true when the store is off, so
   gold-only content is free by design in that case.</li>
+<li>GARRISON has seven locks, <code>Root_Store.LockedIndicatorPredicates</code> (primaries 1896 to 1902): not connected, Minas
+  Ithil not unlocked, under age, an active quest, the store inaccessible (0x1893780 -&gt; 0x1B22AF0 -&gt; 0x17F5DC4), the
+  game out of date (the build number the service reports above the client's 8874), and not the main game.</li>
 <li>The client commerce object is <code>CUser+0xDB8</code> (vt_0x1F71020), <code>CUser</code> =
   <code>([base+0x26FFA98]+0xE90).users[0]</code>: <code>+0x49</code> initialised, <code>+0x4B</code> / <code>+0x4C</code> / <code>+0x4D</code> definitions,
-  inventory and catalog loading, <code>+0x4E</code> catalog error, <code>+0x5D</code> store requested; wallets at <code>+0x158</code>
-  (paid Gold), <code>+0x160</code> (earned) and <code>+0x168</code> (social); boost state at <code>+0x100</code> (XP multiplier),
-  <code>+0x110</code> (end time) and <code>+0x120</code> / <code>+0x138</code> (Spoils), parsed by 0x17F6998.</li>
-<li>The 2018 update switched the store off on the client: the client never requests the catalog, and
-  the loop that creates shelf nodes was removed (with 9 store-layer action fields and the purchase
-  handlers). Every consumer survived, including the product-node setter 0x194D118 (still used by the
-  Buy Gold layer 0x1930650) and <code>AddNode</code> 0x195B78C. The console command <code>User.Commerce.LoadCatalog</code>
-  (0x17F4AB4) still fetches the catalog.</li>
+  inventory and catalog loading (<code>+0x4E</code> has no writer in the executable), <code>+0x5D</code> store requested; wallets at
+  <code>+0x158</code> (paid Gold), <code>+0x160</code> (earned) and <code>+0x168</code> (social: the Spoils of War); boost state at <code>+0x100</code> (XP
+  multiplier), <code>+0x110</code> (end time) and <code>+0x120</code> / <code>+0x138</code> (Spoils), parsed by 0x17F6998.</li>
+<li><strong>Bring-up.</strong> The commerce tick 0x472D44 waits for the platform user-info request to succeed (<code>+0x60</code>, set only at
+  0x17F79B5 in 0x17F7894); until then it retries forever and <code>+0x49</code> is never set. Then it calls LoadCatalog
+  (0x472E4D). A catalog failure (0x17F5F68) empties the list, and the catalog is not asked for again.</li>
+<li>The 2018 update switched the store off on the client by removing the loop that creates shelf nodes (with 9
+  store-layer action fields and the purchase handlers); the catalog itself is still requested and parsed. Every
+  consumer survived, including the product-node setter 0x194D118 (still used by the Buy Gold layer 0x1930650) and
+  <code>AddNode</code> 0x195B78C. The console command <code>User.Commerce.LoadCatalog</code> (0x17F4AB4) fetches the catalog on demand.</li>
 <li><strong>Opening a chest</strong> runs the 2017 pipeline: an unpack job (0x1FE1EC0) and one follower reward
   (0x1FE1F88) per orc in the reply, building the orcs into <code>Faction_Player</code> with row
   <code>Faction/Rows::player_created</code>. A local follower is built by the same chain: a builder instance
   (0x1C62054, filled by 0xFF2370 from <code>Marketplace/Builders/FactionMember/*</code> type, class, tribe,
   element, rarity and level) -&gt; 0x1B5B7F8(FS, region faction, instance) -&gt; 0x7D52B0(fm, 1) (bit 27 of
   <code>FM+0x508</code>, player follower) -&gt; 0x1B5E254(FS, fm) (hierarchy slot). GARRISON's Followers section is
-  the online garrison: <code>Garrison::Add</code> 0xFCB3A0(<code>[FS+0x50]</code>, fm, notification) serialises the orc for
-  the online service.</li>
-<li>WB's binary format (Hydra) encodes booleans as <code>0x02</code> = true and <code>0x03</code> = false. Its parsed
-  catalog and inventory objects are freed after parsing.</li>
+  the online garrison (see Online orcs).</li>
+<li>WB's binary format (Hydra) encodes booleans as <code>0x02</code> = true and <code>0x03</code> = false. The integer tags <code>11</code>, <code>13</code> and
+  <code>15</code> are unsigned 1, 2 and 4 bytes, and the service always takes the smallest width that fits (over 831 bodies <code>13</code>
+  held nothing below 0x104 and <code>15</code> nothing below 0x10000); <code>16</code> holds negative values, and <code>10</code> appeared twice, on
+  values that read as -25 and -10. Its parsed catalog and inventory objects are freed after parsing.</li>
 <li><strong>GARRISON's Gold counter</strong> sits in the header embedded at <code>[[base+0x26FFB08]+0x50]+0x800</code>
   (vt_0x1F92EC8: <code>+0xE0</code> header type, <code>+0x538</code> seven element pointers, Gold = element 2). The 2018
   switch-off is only that element's callback (<code>element+0x30</code> = 0x1983288), which hides its <code>Value</code> and
@@ -524,6 +538,112 @@ stack read in free roam held <code>StateSupported</code> (priority 15) below <co
   <code>Desc</code> to the item's <code>UIItemData.GlyphReplacement.TokenText</code> (fallback <code>{M}</code>), and
   <code>Interface/GlyphReplacement::PremiumCurrencyIcon</code> = <code>{G}</code> draws <code>kraken\gold.tex</code>.</li>
 </ul>
+<h2 id="online-orcs">Online orcs</h2>
+<p>The online modes trade orcs as documents: the exporter 0x1BC5044(fm, map) writes one orc into a Hydra map, and the
+importer 0x1BC21B4 builds a FactionMember from one. An orc travels as hashes of shipped records, so it can name
+nothing the receiving game lacks: 0 of 428 distinct orcs in captured traffic named a record the shipped database does
+not hold.</p>
+<h3 id="what-an-orc-carries">What an orc carries</h3>
+<p><strong>The exporter writes 71 keys plus <code>SMCStorage.smc_storage</code> (35).</strong> Identity by record hash (<code>faction_record</code>,
+<code>combat_tree_record</code>, <code>character_record</code>, <code>role_record</code>, <code>tribe_record</code>, <code>personality_record</code>, <code>preset_record</code>,
+<code>location_record</code> ...), <code>random_seed</code>, <code>menace_level</code> (the level), <code>name_string_id_hash</code>, every flag-word bit by
+name, <code>trait_picker_list</code>, <code>trait_marker_list</code> and <code>trait_level</code>, and texts for the service (<code>name</code>, <code>title</code>, the
+<code>*_name</code> keys, <code>rarity_string_id</code>, <code>specialization_string_id</code>, <code>status_effect_string_id</code>). <code>Inventory</code> holds
+<code>fmi_equipment_list</code> (per item <code>Item</code>, <code>WeaponData</code>, <code>ArmorData</code>, <code>Affixes</code>, <code>Source</code>, <code>GUID64A</code> / <code>B</code>, <code>iLvl</code> ...),
+<code>smc_flaircolor_list</code> and <code>smc_nonequipment_record_list</code>; <code>smc_storage</code> holds <code>BodyType</code>, <code>smc_bodymodel_record</code> (the
+rig), <code>smc_headModel_record</code>, 16 <code>smc_*_piece_record</code> (appearance cells 0 to 15), 15 colour words (no faction war
+paint, no default) and <code>smc_storage_appearancetags</code>. Not exported: <code>FM+0x180</code> (the birth army, the record the size
+bonus comes from; see Characters, the player and the camera), appearance cells 16 to 22, the design cells and material
+overrides.</p>
+<p><strong>The importer reads 57 keys</strong>, each asked for by name (0x507C38, a case-insensitive compare, first match); its only
+loops run over arrays it fetched by name, so a key it does not know is never read. It does not read <code>name</code>, <code>title</code>,
+any <code>*_name</code>, <code>rarity_string_id</code>, <code>specialization_string_id</code>, <code>status_effect_string_id</code>, <code>trait_base</code>, <code>is_warchief</code>
+or <code>is_total</code>: the receiver takes the name from <code>name_string_id_hash</code> and the title from <code>role_record</code>. Traits come
+back as <code>trait_picker_list</code> re-added through 0x7CD03C and rolled by the game, so a slot forced to another option than
+its picker's roll does not travel. <code>random_seed</code> is stored at <code>FM+0x168</code> (0x1BC243E): a downloaded captain keeps the
+uploader's seed. Callers: 0x1BC04E4 (the online arena opponent and Garrison followers), 0x1BD3BD8 (a Conquest or
+Vendetta fort's <code>member_array</code>) and 0xF58270.</p>
+<p><strong>The import redraws armour from the items.</strong> In 0x1BC21B4 the appearance comes first (<code>SMCStorage</code> -&gt;
+0x1C05970(appearance), at 0x1BC2BAA), then the inventory (<code>Inventory</code> -&gt; 0x1C112F8(<code>FM+0x50</code>), at 0x1BC2BD5), and
+then, unconditionally, 0x61BAD4(<code>FM+0x50</code>, appearance) at 0x1BC2BE5, which puts every armour item's own design back
+over its cell and the items' flair colours over the palette (see Captain appearance). So an armour cell that differs
+from the item that holds it never reaches another player.</p>
+<h3 id="the-garrison">The Garrison</h3>
+<p>GARRISON's Followers section is the player's online garrison. At the end of an online match 0x1B36D7C calls
+0x1B3BA78(match), the match state being <code>[GM+0x6D30]+0x100</code>: <code>+0x18</code> the mode (<code>Invasion/Modes</code>), <code>+0x28</code> the army,
+<code>+0x140</code> the dominated captains' handles (0x10 bytes each), <code>+0x188</code> the imported followers (pushed back by
+<code>PushFromInvasionToOriginal</code> 0x1BC3870). When the mode's <code>SendDominatedEnemiesToGarrison</code> is set (reader 0xF55D10:
+true for ranked Conquest and Vendetta, false for friend Conquest) it takes the army's followers (bit 27, 0xFD04E0) and
+calls <code>AddToGarrison</code> 0xF6B7A0(FS, fm, notification, 0, 0, 0): its fourth argument 1 also pulls the orc out of his
+army (0x1C25FA8), the stack arguments check capacity and set <code>garrison+0x50</code> when full, and the army must be among the
+army contexts.</p>
+<ul>
+<li><code>Garrison::Add</code> 0xFCB3A0 makes no follower, pool or mode test. It refuses an orc whose online id <code>FM+0x3D0</code>
+  (<code>&lt;prefix&gt;_NPC_&lt;n&gt;</code>, exported as <code>npc_profile_guid</code>) is empty or already among the rows. <code>FM+0x476</code> is the service's
+  object id of an orc that came out of the Garrison.</li>
+<li>The garrison <code>[FS+0x50]</code>: <code>+0x00</code> a vector of new entries (empty at rest), <code>+0xF8</code> the rows, 0x90 bytes each
+  (<code>+0x00</code> the id, <code>+0x30</code> the service's object id). The capacity <code>[GM+0x6D48]+0xCC</code> is 400 (the caller checks it,
+  0xF664F0). A new row appears within 20 seconds of an add.</li>
+<li>An entry (vt_0x1FDD1E0, 0x108 bytes, constructor 0x1C12224): <code>+0x40</code> id, <code>+0x70</code> the service's id, <code>+0x98</code> army,
+  <code>+0xA0</code> combat tree, <code>+0xA8</code> base trait, <code>+0xB0</code> rarity, <code>+0xB8</code> role, <code>+0xC0</code> name id, <code>+0xC8</code> menace
+  (<code>FM+0x4B8 + FM+0x470 + 1</code>), <code>+0xD0</code> the Hydra map, <code>+0xD8</code> the notification (a 34-byte buffer, not a C string).
+  The map holds <code>FactionMember</code> (the exporter's document) and <code>Searchable</code> (the index the Followers list loads). The
+  constructor itself starts the upload through 0x1C13508; no later tick is involved.</li>
+<li>Bringing one back, the import 0x1BC04E4 (through 0x1B5B780; the Followers layer 0x187E2D8 builds into
+  <code>Faction_Player</code> and seats through 0x1B5E254) reads the document with 0x1BC21B4: the exported army goes to <code>FM+0x180</code>,
+  the army becomes the destination and the row and seat are cleared. Bit 27 is cleared only for the online arena's
+  opponent (<code>__online_arena_opponent__</code>), so the stored <code>is_player_follower</code> decides whose the orc is.</li>
+</ul>
+<p>One Conquest army mixes owners: a recruit keeps the online id of his first owner (7 prefixes in one army of 22
+captains, 24 or more in one garrison of 109 rows). The <code>InvasionGame</code> pool outlives the online match (23 of 23
+members still there after the return).</p>
+<h3 id="how-a-fort-goes-up">How a fort goes up</h3>
+<p>The invasion manager is <code>[GM+0x6D30]</code>. A fort is published by a queue of regions:</p>
+<ul>
+<li><strong>Marking.</strong> The manager's save-chunk writer (vt_0x1F6E9D8 vf4, 0x6246C0, which calls the save serializers 0x36C94C
+  and 0x36E044) tail-calls 0x624724: when <code>mgr+0x47E</code> (set by the fort-upgrade purchase 0x17DEB8C and by 0x17DF750,
+  <code>Interface/Shared.DefaultFortGroup</code>) or <code>mgr+0x47D</code> is set and <code>mgr+0x47C</code> is clear, it queues the current region
+  (<code>FS+0x1B0</code>) if that region's Overlord has flag bit 27 (or the developer byte 0x2A36438 is set), then clears both
+  bytes. 0x631B64(mgr) is the engine's own "mark the fort": <code>mgr+0x47D</code> = 1 and, only while <code>mgr+0x47C</code> is set (an
+  online match is running), 0x1B3BEE8 unless 0x17BF3E8(<code>mgr+0x100</code>). <code>+0x47D</code> is touched by 0x624724 (read, clear) and 0x631B64
+  (write) only, and 0x631B64 has one caller, 0x630644. So a marked fort goes up at the game's next save; Vendetta and
+  Garrison uploads carry an orc as he is at the moment they are sent.</li>
+<li><strong>The queue</strong> is the vector at <code>mgr+0x570</code>, filled by 0x1B3FCEC (publishable regions only, no duplicates, byte
+  0x267A314 set); 0x1E3E78 hands its head to the publish pump 0x1B3EC50 once the timer at <code>mgr+0x548</code> has elapsed.
+  Besides the mark, a region is queued by a registration reset (below) and by a retry inside the pump while an earlier
+  publish is in flight (<code>mgr+0x1B</code>).</li>
+<li><strong>The registration.</strong> Entering the world, 0x1B417F8 sends the registration id at <code>mgr+0xC0</code> (or none when empty); the
+  service answers with a new id, stored by 0x1B3EAF4. When the reply says a reset was triggered, 0x1B3EAF4 clears
+  <code>mgr+0xE58</code> and queues every region of <code>Invasion/Settings.PublishableConquestRegions</code> (<code>snowMtn</code>, <code>MtnPass</code>,
+  <code>island</code>, <code>volcano</code>, <code>desert</code>).</li>
+<li><strong>The pump's gates</strong>, in order. A refusal returns 1 and the caller removes the head (0x1B36C04), so a refused region
+  is dropped, not retried:
+  1. the region is publishable (0x1B36688);
+  2. 0xCAE850 is true or 0xD0BB40 is false;
+  3. <code>GameModes.CanPublishConquest</code> (0xF55890);
+  4. 0x114E008 is false (the enqueue tests it too);
+  5. <code>Regions/Region.Faction</code> -&gt; <code>Faction::GetFactionPlayerOwned</code> 0x1E484C, which despite its name tests no
+     ownership: it returns the army's row 0 seat 0 when that row is <code>IsOverlord</code> (0x1E4C08);
+  6. that member has flag bit 27 (0x114E020), or the developer byte 0x2A36438 is set;
+  7. 0x16E0C4 returns the seat's member, 0x17A7A0C is false, his tribe (<code>+0x328</code>) and role (<code>+0x318</code>) are set, and the
+     role is not in <code>ExcludedConquestTargetRoles</code> (<code>ConquestRestricted_Roles</code>: <code>Role_Store_Vender</code>, <code>GP_RangerRoleDef</code>).</li>
+</ul>
+<p>Followers elsewhere in an army do not make the fort the player's: only the Overlord's seat counts.
+- <strong>The fort id</strong> is minted once by 0x573C68 as <code>"%s_FORT_%d"</code> into the army context at <code>+0x21E</code>, with the prefix at
+  <code>[rcx+0xA81]</code> and a counter (0x2796674) that restarts each launch; 0x1B2F174 builds <code>"%s_NPC_%d"</code> from the same
+  prefix. A publish replaces the region's fort in place.</p>
+<p><strong>The Defense rating</strong> 0x4F9360(faction) walks the fort's members: an Overlord (0x4FA75C) adds (<code>FM+0x470</code> + 1 +
+<code>FM+0x4B8</code>) x <code>FD_OverlordLevelMultiplier</code> (2); a warchief (0x4F91AC, by row rank) adds that level once, plus
+<code>FD_FortUpgradeGroupContribution</code> (15) when 0x4F6644 passes and 0x4F7B8C does not. A lone level-80 Overlord gives
+exactly the published 160. Two early-outs return stored values (<code>[mgr+0x2D4]</code>, <code>UIManager+0x13C</code>).</p>
+<p><strong>The rating screen</strong> draws the service's ranking reply as sent. Its rollup, read on nine accounts, is the combined
+rating = total assault + total defence, each the sum over <code>island</code> (Núrnen), <code>mtnpass</code> (Cirith Ungol), <code>snowMtn</code>
+(Seregost) and <code>volcano</code> (Gorgoroth), the screen's four rows; <code>desert</code> (Lithlad) is stored but counted in neither, and
+<code>minasIthil</code> reads 0. The best assault rating is the maximum over every region. A region's id on the wire is the P919
+hash of its name (6 of 6).</p>
+<p><strong>The result is reported by the client.</strong> 0x1B377D8 builds the final-score call: <code>Time</code> is the float at
+<code>[[GM+0x6D30]+0x20C]</code>, <code>WarchiefTraitExploits</code>, <code>OverloadTraitExploits</code> and <code>OptionalObjectivesMet</code> are literal zeros
+in the builder, and <code>Failed</code> and <code>Aborted</code> are added only when true.</p>
 <h2 id="the-network-layer">The network layer</h2>
 <p>The engine keeps an older peer-to-peer multiplayer layer. The shipped game builds it and ticks it
 every frame; nothing hosts or joins.</p>
@@ -549,6 +669,14 @@ every frame; nothing hosts or joins.</p>
 <li>Also compiled in: Steam game-server, networking and matchmaking interfaces (lobby keys LobbyName,
   ServerVersion, ReqPassword, BehindNAT, PubIP, PrivIP, LANOnly at 0x11EF670) and a WebSocket client
   for the online service's real-time channel.</li>
+<li><strong>The online service's channels.</strong> The client talks to the service over four channels: a REST API, the real-time
+  WebSocket channel (plain, as the client has no SSL support compiled in for it), telemetry and a file store. The REST
+  timeout is 60 seconds: 0x11F4CC5 calls the setter 0x9FDDF0 with 60,000 ms four times (read back on the live object,
+  vt_0x1E39D18); the constructor's 10 s (0x9FCB70) never reaches a running game. The real-time channel is live during
+  play as a keep-alive: every 30.5 s the server sends one byte 0x0C (12, <code>Ping</code> in the id table at 0x9AC000) and the
+  client answers 0x0A, in a median 31 ms (26 of 26 pairs over 13 minutes of a Conquest). Of the platform's 22 services
+  (named by run-time type information), Lobbies and Clans are near-empty shells; "lobby" appears nowhere in the
+  executable.</li>
 <li>The input thread polls four XInput pads (0x11537D8). The input-driven attack node runner 0x30FD80
   is reached only from the player tick (0x162560 &lt;- 0x43B8F4): AI combat has no virtual controller.</li>
 </ul>
@@ -561,9 +689,8 @@ job 1 <code>ArenaOnlineOther</code> = <code>UseOnlineArenaOpponent</code>, build
 error string. The opponent goes through 0xF548C0, the same orc importer as Vendetta and Conquest
 (0x1B41894), is level-checked by 0xF58EF0 and stored as <code>__online_arena_opponent__</code>. Launching
 (0xF72D30, quest enter 0xEA7700) sends the current region's Overlord, serialised by <strong>0x1BC5044</strong>(fm,
-map), the engine's orc exporter (also used for publishing, Vendetta and Conquest; an exported orc
-carries name, title, trait level, rarity, appearance piece hashes, inventory, combat tree and about
-70 keys in all).</p>
+map), the engine's orc exporter (also used for publishing, Vendetta and Conquest; see Online orcs for
+the 71 keys it writes).</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
 <li>What the second and third copies of the game variables in <code>IVGD</code> are (checkpoints, restore states).</li>
@@ -579,4 +706,12 @@ carries name, title, trait level, rarity, appearance piece hashes, inventory, co
   no file beside the game or the saves.</li>
 <li>Whether the 13 copied slot-2 bindings (all one ActionID, no button) come from the default PC
   <code>CopyBindings</code> record, whose two links are empty.</li>
-</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
+<li>Whether a registration reset is what stops a region's ratings counting until its fort is published again: on one
+  account the rollup read 0 until a fort was republished, and the stored ratings came through every reset unchanged.</li>
+<li>What the fort-publish gates 2 and 4 test (0xCAE850, 0xD0BB40, 0x114E008), what 0x630644 is (the one caller of the
+  fort mark 0x631B64), and what 0x4F6644 and 0x4F7B8C decide in the Defense rating.</li>
+<li>Whether 0xF58270, which adds a mock FactionMember on the stack filled from a stored document, is a route to an orc
+  with no live member.</li>
+<li>Whether a receiving game loads the bundles of a head, hair or body that an orc's document names but no equipped item
+  of his requests (the engine makes a gear load request only for an equipped item).</li>
+</ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
