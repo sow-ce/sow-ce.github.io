@@ -2,6 +2,7 @@
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
+<a href="builds.html" data-p="builds">Game builds: Steam, GOG and Microsoft Store</a>
 <a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
 <a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
 <a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
@@ -23,11 +24,15 @@
 <a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
 <a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="haedirs.html" data-p="haedirs">Haedirs: towers, seeing stones and fast travel</a>
 <a href="outposts.html" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
 <a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="gamedb-schema-records-and-field-bindings">GameDB: schema, records and field bindings</h1><p class=\"lede\">How the game&#x27;s data database is stored and used: the GADB file, the loaded tables of categories, records and field descriptors, the slot rule that places every value, the value types and RecordLinks, name hashing and lookups, and the code side - the type table, the schema slots, the field getters and the compiled copies that decide whether a changed value is seen.</p>
 <h2 id="the-database-file">The database file</h2>
@@ -89,12 +94,17 @@ every effect file (see Visual effects).</p>
 <tr>
 <td>0x20</td>
 <td>u32</td>
-<td>build tag (copied to the loaded database, <code>+0x28</code>)</td>
+<td>build tag (copied to the loaded database, <code>+0x28</code>; 0xD186F247 in the game database)</td>
 </tr>
 <tr>
-<td>0x24 / 0x28</td>
+<td>0x24</td>
 <td>u32</td>
-<td>0 / 44</td>
+<td>in a patch database, the build tag of the base it was made for; 0 in a base database (copied to <code>+0x2C</code>)</td>
+</tr>
+<tr>
+<td>0x28</td>
+<td>u32</td>
+<td>44</td>
 </tr>
 <tr>
 <td>0x2C</td>
@@ -105,7 +115,7 @@ every effect file (see Visual effects).</p>
 </table>
 <p>The <strong>string block</strong> follows. Its offset 0 is the root type name (<code>GameDatabase\0</code>), and every offset
 in the file is measured from there: names, string values, and the binary values the file stores once
-and shares (float pairs, vectors, 64-bit integers). Names are stored whole, never as the tail of a
+and shares (float pairs, vectors, UTF-16 strings). Names are stored whole, never as the tail of a
 longer string: of the 181,736 distinct record-name offsets, 179,567 follow a NUL and the other 2,169
 follow binary values of the block. Then come the field descriptors, 15 bytes each:</p>
 <table>
@@ -234,7 +244,7 @@ binary searches below. The file ends with a u32 count of a (u32, u32) pair table
 database's <code>+0x68</code>); the game database's is 0, and the walk over the value section lands exactly on
 it.</p>
 <p>A file cell is 4 bytes: a word of Bools, a float, an integer, a string-block offset (string, enum
-name, 64-bit integer, float pair, vector) or an encoded RecordLink.</p>
+name, wide string, float pair, vector) or an encoded RecordLink.</p>
 <h2 id="loading">Loading</h2>
 <p>The loader 0x503694 (called from 0x74CF10) reads the 0x2C-byte header, refuses anything but <code>GADB</code>
 version 17 and sizes two allocations from the counts: an arena of
@@ -242,7 +252,7 @@ version 17 and sizes two allocations from the counts: an arena of
 tables (30,491,600 for the game database), and an instance block of <code>cells x 8 + 0x88</code> bytes for the
 values (68,357,496). Descriptors widen from 15 to 16 bytes.</p>
 <p>The record reader 0x4BA1F0 reads each 4-byte cell into an 8-byte cell. For every field of type 4 to
-9 (strings, enums, 64-bit integers, float pairs, vectors; the type test 0x4BA364 also accepts 12 to
+9 (strings, enums, wide strings, float pairs, vectors; the type test 0x4BA364 also accepts 12 to
 16, which the game database does not use) it adds the string block's address to the cells, turning
 offsets into pointers into the block, which stays resident. A second pass, 0x4BAF6C, finishes two
 types:</p>
@@ -253,7 +263,7 @@ types:</p>
   gives null. Index = value &amp; 0xFFFFF: an index below the category's primary count selects that
   primary, a larger one the secondary <code>index - primary count</code>, anything beyond both gives null.</li>
 </ul>
-<p>In the running game the string, 64-bit, float-pair and vector cells equal the block's address plus the
+<p>In the running game the string, wide-string, float-pair and vector cells equal the block's address plus the
 file's offset (721,156 of 721,164 strings, 210 of 210, 166,606 of 166,606 and 50,734 of 50,734).</p>
 <h2 id="the-database-in-memory">The database in memory</h2>
 <p>A static object of class vt_0x1FBD460 at 0x2A68350 (constructed by 0x1B06B6C) owns the game
@@ -285,6 +295,10 @@ header points back to the database at <code>+0x18</code>.</p>
 <td>u32 build tag (file header <code>+0x20</code>)</td>
 </tr>
 <tr>
+<td>+0x2C</td>
+<td>u32 the base build a patch database names (file header <code>+0x24</code>)</td>
+</tr>
+<tr>
 <td>+0x30 / +0x34</td>
 <td>u32 arena size / u32 instance block size</td>
 </tr>
@@ -302,7 +316,7 @@ header points back to the database at <code>+0x18</code>.</p>
 </tr>
 <tr>
 <td>+0x68</td>
-<td>the (u32, u32) pair table (null in the game database)</td>
+<td>the import table of a patch database: (category-name hash, record-name hash) pairs, read from the file's trailer; empty in the shipped databases</td>
 </tr>
 </tbody>
 </table>
@@ -310,14 +324,66 @@ header points back to the database at <code>+0x18</code>.</p>
 <code>_LC</code> twins, also ship a complete <code>database\game\game.gamedb</code> (58.08-58.10 MB against the HotChunk
 copy's 56.76 MB). Their headers name older builds: 2,435 to 2,438 categories against 2,742, and
 different build tags. The running game has 2,742 categories, so it loads the HotChunk copy and the
-older copies are shadowed by the archive search order, not merged. The loaders do merge one kind of
-database: unless the database being loaded is itself named <code>gamedb_patch</code>, they look for a patch
-database (0x1C3FF20 tries the resource system, then a loose file named after the database with
-<code>gamedb_patch</code> appended), keep it only when its build tag (<code>+0x2C</code>) equals the base's, and add its
-record and data sizes to the base allocation so its records load with the base's. The switch byte
-0x266CD70 that gates this is 1 in the shipped executable and nothing writes it. Of the 488,679
-entries in the shipped archives, the only game databases are the nine copies above, and none is a
-patch database.</p>
+older copies are shadowed by the archive search order, not merged. Of the 488,679 entries in the
+shipped archives, the only game databases are the nine copies above, and none is a patch database.</p>
+<h3 id="patch-databases-gamedb-patch">Patch databases (<code>gamedb_patch</code>)</h3>
+<p>The loader can merge a second database into the game database as it loads: a patch,
+<code>database\game\game.gamedb_patch</code>, which overrides records of the same name and appends new ones. No
+patch ships, and the shipped game never looks for one, because the loader asks for a patch only when
+the base database arrives through a stream that can seek.</p>
+<ul>
+<li><strong>Finding the patch.</strong> The GameDB resource class's load (vf3 0x17662B0, classes vt_0x22F34F8 and
+  vt_0x22F5368) first asks the base stream whether it can seek (the stream's slot 3). A stream that
+  cannot is read whole, and nothing else happens. Otherwise it reads the header and the database's
+  own embedded path (header <code>+0x2C</code>) and, unless that path is empty (0x472C84), already ends in
+  <code>gamedb_patch</code> (0x1BEC90 compares the text after the last dot) or the switch byte 0x266CD70 is 0 (it
+  is 1 in the executable and nothing writes it), swaps the extension (0x17AA78), asks the file system
+  for <code>database\game\game.gamedb_patch</code> and loads that through itself. Without the resource system the
+  loose-file route 0x1C3FF20 looks for <code>&lt;name&gt;[_&lt;suffix&gt;].gamedb_patch</code> beside a loose base (the
+  format <code>_%s</code> at 0x1FE1A80).</li>
+<li><strong>Which streams seek.</strong> An archive entry stored as Oodle chunks (every shipped entry; see Archives
+  and file formats) opens as vt_0x1E70F88, whose slot 3 answers no; a raw entry opens as vt_0x1E70F00,
+  which seeks (its vf4 0x11DC2D4 moves the inner file stream to start + position); so do the memory
+  stream vt_0x1E6D228 and the loose-file stream vt_0x1E70EA8. The merge therefore runs when the copy
+  of <code>game.gamedb</code> that wins the search order is a raw entry or a loose file; the patch itself may be
+  chunked, and is then read whole.</li>
+<li><strong>The build tag.</strong> A patch is kept only when its header word at <code>+0x24</code> equals the base's build
+  tag (<code>+0x20</code>): 0x503694 compares the two, and 0x4BAD00 stores a database's two words at <code>+0x28</code> /
+  <code>+0x2C</code>. Shipped databases hold 0 at <code>+0x24</code> (the running game database: <code>+0x28</code> = 0xD186F247,
+  <code>+0x2C</code> = 0), so a patch names the build it was made for, and one that names no build is dropped.</li>
+<li><strong>Room.</strong> For each base category, 0x4BA07C hashes the name (<code>StringHash</code>, seed 0), finds the
+  patch's category of that name (0x115B4D4) and sizes the record array for the base's and the
+  patch's secondaries together (0x28 bytes each). A patch category without a base category of that
+  name is skipped: a patch can grow categories, never add one.</li>
+<li><strong>Records.</strong> 0x4BAB60 takes each patch secondary in turn and binary-searches the base category for
+  its name hash (0x278540). A match is overridden by the patch record (0x17675FC); a miss is appended
+  after the category's last secondary, and the category's byte <code>+0x30</code> is set to 1 (no longer
+  sorted).</li>
+<li><strong>Links.</strong> Three passes (0x1766F08 -&gt; 0x1766E54 -&gt; 0x1766F70 / 0x1766FE4 -&gt; 0x1766BB0) go over every
+  patch record, primaries included, and re-parent it to the base category of its name. A StringEnum
+  string becomes its hash. A type-11 link (<code>category &lt;&lt; 20 | index</code>) is resolved inside the patch and
+  re-typed 10, so a patch carries its own structure instances. A type-10 cell is an index into the
+  patch's import table (<code>db+0x68</code>), whose pairs name a category and a record by hash; it resolves to
+  the base record of that name when there is one, else to the patch's own. The last pass re-points
+  every link to the final record of its name.</li>
+<li><strong>The import table</strong> is the file's trailer: after the last category, a u32 count and that many
+  (u32, u32) pairs, read into <code>db+0x68</code> (0x4B9C52 - 0x4B9D37). Both shipped databases, this game's and
+  Shadow of Mordor's, have a count of 0 and store their type-10 cells directly as
+  <code>category &lt;&lt; 20 | index</code> (8,302 of 8,302 non-null cells sampled here, 7,276 of 7,276 in Mordor's):
+  the by-name form exists for patches only.</li>
+<li><strong>Later tables see the new records.</strong> The start-up material-set cache, one entry per <code>Model</code>
+  record by index, is built afterwards, in the subsystem initialisation (0x1774278 -&gt; 0x1783DD0).</li>
+</ul>
+<p>In a running game, a patch that appended one <code>Model</code> record and one <code>Model/SimpleModelPieces</code> record
+raised those categories from 2,715 to 2,716 and from 1,727 to 1,728 records; each new record's hash was
+the P919 of its name, both categories' <code>+0x30</code> byte read 1, the material-set cache's entry 2,715 held
+the new <code>Model</code>'s address, and the new piece drew on a captain with the shipped meshes and textures
+its links named.</p>
+<p>Records that a save or an online upload refers to are stored by name: the reader 0x1BC159C -&gt;
+0x1879468 -&gt; 0x187985C hashes the stored name and binary-searches one category, and a name it does
+not find reads as null and is kept as such (the look reader 0x1C0546C writes the result straight into
+each appearance cell). A record that only a patch provides therefore loads as an empty value in a game
+started without that patch.</p>
 <p>The descriptor array ends exactly where the database object begins; the category array follows the
 object, and after it come each category's primaries and secondaries, in file order. Two rules place
 everything else, and both hold for the running game:</p>
@@ -803,10 +869,10 @@ rule applies to the file's 4-byte cells) and string values in 721,086 of 721,164
 </tr>
 <tr>
 <td>6</td>
-<td>Int64</td>
-<td>pointer to the 8-byte value in the string block</td>
-<td>offset</td>
-<td>-</td>
+<td>wide string</td>
+<td><code>wchar_t*</code> to UTF-16 text in the string block</td>
+<td>an even offset</td>
+<td>- (the glyph-token accessor 0x17EF684 returns the cell itself, <code>L""</code> at 0x1DAF108 when it is absent)</td>
 </tr>
 <tr>
 <td>7</td>
@@ -873,9 +939,9 @@ rule applies to the file's 4-byte cells) and string values in 721,086 of 721,164
 <td>336,338</td>
 </tr>
 <tr>
-<td>Int64</td>
+<td>wide string</td>
 <td>6</td>
-<td>210</td>
+<td>210, all even offsets to UTF-16 text (three fields; the glyph replacements' <code>TokenText</code>, such as <code>{Alarm}</code>, is one)</td>
 </tr>
 <tr>
 <td>float pair</td>
@@ -1305,8 +1371,9 @@ a GameDB field, and 13,425 call a one-field accessor. Following the value out of
 changing the pair's floats is seen through the copy, while pointing the cell elsewhere is seen only
 after the next copy. When a copy is refreshed depends on what runs the copier:</p>
 <ul>
-<li><strong>Movement values.</strong> 0x187F94C(object, movement record) copies <code>Client/PlayerMovement</code>
-  <code>BaseSpeedMultiplier</code> to <code>+0x550</code>, <code>FallMinHeight</code> to <code>+0x558</code> and <code>PlayerYawInterpolateTime</code>
+<li><strong>Movement values.</strong> 0x187F94C(movement object, movement record) copies <code>Client/PlayerMovement</code>
+  <code>BaseSpeedMultiplier</code> to <code>+0x550</code> of the player's movement object <code>[player+0x2F88]</code> (the character's
+  own <code>+0x550</code> is unrelated and reads 0), <code>FallMinHeight</code> to <code>+0x558</code> and <code>PlayerYawInterpolateTime</code>
   (an integer, converted to float and scaled) to <code>+0x554</code>, and keeps the record at <code>+0x548</code>; given the
   record it already holds, it returns without copying. 0x187F71C passes the record named
   <code>PlayerMovement</code>, found by name in the cached <code>Client/PlayerMovement</code> category. A change to that
@@ -1329,8 +1396,31 @@ after the next copy. When a copy is refreshed depends on what runs the copier:</
   element written past a field's count lands in another field of the same record, or past the
   instance in the next record.</li>
 <li>A Bool shares its word with up to 31 others; a whole-cell write changes all of them.</li>
-<li>A StringEnum cell takes P919 of the enum name; a String, Int64, float-pair or vector cell takes a
-  pointer, and the bytes it points at are shared by every cell with the same value.</li>
+<li>A StringEnum cell takes P919 of the enum name; a String, wide-string, float-pair or vector cell
+  takes a pointer, and the bytes it points at are shared by every cell with the same value. A String
+  list is stored inline, one pointer per element at consecutive cells; the strings are shared, the
+  record instances are not, so pointing one record's cell at other text changes that record alone,
+  while writing the text changes every record that names it. A string pointer need not be 8-aligned:
+  strings in the block start at 4-byte boundaries.</li>
+<li>A record's identity is its category, not its address. The engine's "Bad record index" assert
+  (the string at 0x1F68DB0, used at 535 sites in 432 functions) compares the record's category
+  <code>[rec+0x18]</code> with the expected one at 534 of them; one site (0x10F903E) is a range test. Record
+  lookups by index then go through <code>RecordIndexOf</code> 0x1898E8, plain pointer arithmetic with no check,
+  so a copy of a record made elsewhere in memory passes the assert and yields a meaningless index:
+  at 477 sites the following code range-checks the index and compares keys (the lookup misses and
+  returns 0), at 10 it checks the range only, and at 45 no check follows within 28 instructions.</li>
+<li>A part drawn from a <code>Model</code> record that is not in the start-up material-set cache faults. The cache
+  (0x1B6190C, <code>[GameManager+0x6DD0]+0x18</code>, one 0x20-byte entry per <code>Model</code> record, by record index) is
+  built once; building a part asks it through 0x1BDA60 -&gt; 0x104338 -&gt; 0x1041C4 -&gt; 0x104258, which
+  misses and returns 0 for a record outside the table, and the caller 0x104234 then reads through
+  that null pointer on the main thread.</li>
+<li>Some per-character state is sized from a record once. A character's state-effect manager
+  <code>[char+0x2B78]</code> sizes its effect slots to the count of <code>Character/StateEffects.CharacterFXPredicates</code>
+  when it is built (0x435F38 -&gt; 0x435E6C, "CCharacterStateEffectMgr can only be initialized once."),
+  which happens when the character's identity is set, while its per-frame update 0x16AC90 takes slot
+  i for the list's current i-th entry with no bound. A list made longer under existing characters is
+  read past the end of their slot vector (0x114ED48), or, where the memory there holds 0, a new effect
+  is stored past it (0x16B27B).</li>
 <li>A RecordLink cell accepts any record: neither the getters nor the cell know the declared target, so
   nothing stops a link to a record of the wrong category, and its consumer reads that record with the
   declared type's layout.</li>
@@ -1345,14 +1435,14 @@ after the next copy. When a copy is refreshed depends on what runs the copier:</
 <li>Do loads rebuild record instances from the file? A changed cell can return to the file's value
   after a loading screen, yet changed cells can also survive a region change; whether a load re-reads
   the instance block, and on which path, is not traced.</li>
-<li>How a merged patch database's records combine with the base's when both define the same record
-  (replace, or append under the same name); the merge sizes are traced, the per-record rule is not.</li>
+<li>Whether anything re-sorts a category whose <code>+0x30</code> byte a patch append has set; appended names
+  that hash above the category's largest keep the order either way.</li>
 <li>Which container sets record flag 0x01 (runs sorted by their own hashes): no game-database record
   sets it, and the byte scan that settled flag 0x08 finds 352 tests of some object's byte <code>+0x01</code>
   against 1, which it cannot tell apart from record tests.</li>
-<li>The meaning of the database's <code>+0x58</code> / <code>+0x60</code>, the type entry's <code>+0x38</code> flags, and whether
-  anything checks the build tag at <code>+0x28</code>.</li>
+<li>The meaning of the database's <code>+0x58</code> / <code>+0x60</code> and the type entry's <code>+0x38</code> flags. (The build
+  tag at <code>+0x28</code> is checked only against a patch database's <code>+0x2C</code>, above.)</li>
 <li>What the loader's rebasing test for types 12 to 16 is for. No shipped container uses them: the 314
   GameDB containers in the archives (the game databases and every behaviour graph) use only types
   1-11 and 68, and the 1,310 world parts' property databases only types 1, 2, 3, 4 and 8.</li>
-</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
+</ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
