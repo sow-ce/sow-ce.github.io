@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Nemesis system: factions, captains and the army - Shadow of War engine reference</title><meta name="description" content="The faction system and its pools and 38 armies, each army&#x27;s stage on the Army screen, the FactionMember object, its document keys and what survives a rebuild, a load and an upload, the seat table of every army&#x27;s rows, names and titles, the nemesis flag word and its engine setters, faction events, turns and sim events, cheat death and the event history, the ambush queue, rarity and Training Orders, followers, bodyguards and mercenaries, how story and DLC characters take seats, and unknown captains."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Nemesis system: factions, captains and the army - Shadow of War engine reference</title><meta name="description" content="The faction system with its pools and 38 armies; each army&#x27;s stage on the Army screen; the FactionMember object, its document keys and what survives a rebuild, a load and an upload; the seat table of every army&#x27;s rows; names and titles; the nemesis flag word and its engine setters; faction events, turns and sim events; cheat death and the event history; the ambush queue; rarity and Training Orders; followers, bodyguards and mercenaries; how story and DLC characters take seats; and unknown captains."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" class="cur" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -34,19 +34,19 @@
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
 <a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
-<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="the-nemesis-system-factions-captains-and-the-army">The Nemesis system: factions, captains and the army</h1><p class=\"lede\">The faction system and its pools and 38 armies, each army&#x27;s stage on the Army screen, the FactionMember object, its document keys and what survives a rebuild, a load and an upload, the seat table of every army&#x27;s rows, names and titles, the nemesis flag word and its engine setters, faction events, turns and sim events, cheat death and the event history, the ambush queue, rarity and Training Orders, followers, bodyguards and mercenaries, how story and DLC characters take seats, and unknown captains.</p>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="the-nemesis-system-factions-captains-and-the-army">The Nemesis system: factions, captains and the army</h1><p class=\"lede\">The faction system with its pools and 38 armies; each army&#x27;s stage on the Army screen; the FactionMember object, its document keys and what survives a rebuild, a load and an upload; the seat table of every army&#x27;s rows; names and titles; the nemesis flag word and its engine setters; faction events, turns and sim events; cheat death and the event history; the ambush queue; rarity and Training Orders; followers, bodyguards and mercenaries; how story and DLC characters take seats; and unknown captains.</p>
 <p>Every named orc, olog and story character is a <code>FactionMember</code> owned by the faction system, seated
 in an army's rows, and changed by faction events that the engine applies to it. The hierarchy, the
 promotions, the returns from death and the ambushes are data: rows, events and reward lists in the
 <code>Faction/*</code> categories of the GameDB, driven by a small set of engine functions.</p>
-<p>Traits, classes and personalities are in Captain traits, classes and personalities; story
+<p>Traits, classes and personalities are covered in Captain traits, classes and personalities; story
 characters, betrayal scenes and region ownership in Quests, story and scenes; looks in Captain
 appearance; scars in Captain scars and the return from death; imported Shadow of Mordor captains in The
-Nemesis Forge; the save format in Saves, the store and the network layer.</p>
+Nemesis Forge; and the save format in Saves, the store and the network layer.</p>
 <h2 id="the-faction-system">The faction system</h2>
 <p>The faction system is <code>FS = [GM+0x6C68]</code> (<code>[[base+0x26FFAA8]+0x6C68]</code>; see Engine core). The scene
-tick calls 0x1E2BC4 on it every frame (see Threads and the frame); through 0x1E2A58 that also runs
-the ambush update 0x6DDBA8.</p>
+tick calls 0x1E2BC4 on it every frame (see Threads and the frame), and through 0x1E2A58 that call also
+runs the ambush update 0x6DDBA8.</p>
 <table>
 <thead>
 <tr>
@@ -99,21 +99,36 @@ the ambush update 0x6DDBA8.</p>
 <td>+0x128 / +0x130</td>
 <td><strong>scar use</strong>: 24-byte entries <code>{Combat/Scar/Type record, the record again, f32 current weight, u32 times given}</code>, count 24; the weight is the record's <code>WeightPerUse</code> list at the use count (<code>Curse</code>, given 44 times: 0.0001, the last of 1000, 10, 1, 0.01, 0.0001)</td>
 </tr>
+<tr>
+<td>+0x1B0</td>
+<td>the current region (a <code>Regions/Region</code> record)</td>
+</tr>
+<tr>
+<td>+0x1B8</td>
+<td>the current region's army (a <code>Faction/Definition</code> record)</td>
+</tr>
+<tr>
+<td>+0x1F0</td>
+<td>events queued while another is being processed; +0x208 is the busy flag</td>
+</tr>
+<tr>
+<td>+0x218</td>
+<td>u16 the turn counter (below)</td>
+</tr>
+<tr>
+<td>+0x21C</td>
+<td>the world's running total of resurrections: incremented with the member's <code>FM+0x500</code> at every cheat-death mark, and read when the odds table is chosen (see Cheat death and the return, below)</td>
+</tr>
 </tbody>
 </table>
-<p>Each of these per-record tables opens with <code>{entries, u32 count, u32 hash, the category}</code>.
-| +0x1B0 | the current region (a <code>Regions/Region</code> record) |
-| +0x1B8 | the current region's army (a <code>Faction/Definition</code> record) |
-| +0x1F0 | events queued while another is being processed; +0x208 is the busy flag |
-| +0x218 | u16 the turn counter (below) |
-| +0x21C | the world's running total of resurrections: incremented with the member's <code>FM+0x500</code> at every cheat-death mark, and read when the odds table is chosen (see "Cheat death and the return") |</p>
+<p>Each of the per-record tables above opens with <code>{entries, u32 count, u32 hash, the category}</code>.</p>
 <h3 id="pools">Pools</h3>
 <p>Members live in pools, one per game mode, not per region: the MainGame pool holds every captain of
-every region. A pool entry's first qword is its <code>Faction/Pool</code> record; the pool object starts at
-entry+8 (vt_0x1FD8310) and holds its member vector at <code>+0x18 / +0x20</code>. <code>FM+0x174</code> is the member's
+every region. A pool entry's first qword is its <code>Faction/Pool</code> record. The pool object starts at
+entry+8 (vt_0x1FD8310) and holds its member vector at <code>+0x18 / +0x20</code>; <code>FM+0x174</code> is the member's
 index in that vector (500 of 500 members). The entries follow the <code>Faction/Pool</code> record order (9 of 9:
 Player, QuestReplay, QuestReplay_Ratbag2, InvasionGame, Test, Demo, DLC3, DLC4, MainGame), so MainGame
-is entry 8; entry+0xB0 repeats the record and entry+0xB8 holds its <code>MaxMembersToTrack</code> (9 of 9).</p>
+is entry 8. Entry+0xB0 repeats the record, and entry+0xB8 holds its <code>MaxMembersToTrack</code> (9 of 9).</p>
 <table>
 <thead>
 <tr>
@@ -182,16 +197,16 @@ is entry 8; entry+0xB0 repeats the record and entry+0xB8 holds its <code>MaxMemb
 </table>
 <p>The MainGame record also carries importance coefficients (<code>ImpC_XPLevel</code> 1.5, <code>ImpC_RowRank</code>,
 <code>ImpC_Role</code>, <code>ImpC_ISTotal</code> 1.0). A new member comes from 0x1BD2E20 (reached through 0x1C23C10),
-which builds the object with 0x19ED468. When the pool is full it recycles its least important member,
-and never one with a row (<code>+0x268</code>), a preset (<code>+0x190</code>), a current sim event (<code>+0x4F0</code>), a unique
-builder instance (<code>+0x350</code>) or flag bit 45. A late campaign's MainGame pool sits at its 500 cap; in one such save the
+which builds the object with 0x19ED468. When the pool is full, it recycles its least important member,
+but never one with a row (<code>+0x268</code>), a preset (<code>+0x190</code>), a current sim event (<code>+0x4F0</code>), a unique
+builder instance (<code>+0x350</code>) or flag bit 45. A late campaign's MainGame pool sits at its 500 cap. In one such save, the
 recyclable members were 201 dead former followers and 48 unassigned grunts, and no living follower.</p>
 <h3 id="armies">Armies</h3>
-<p>An army is a <code>Faction/Definition</code> record. 38 ship, and every one has a context in every game mode.
+<p>An army is a <code>Faction/Definition</code> record. The game ships 38, and every one has a context in every game mode.
 The context map at <code>FS+0x98</code> is indexed by the definition's record index: entry+0 is the record and
 the context is entry+8 (vt_0x1FDDF78, 0x290 bytes per entry). 0x18DE04(map, record) returns it and
 asserts "Bad record index" when the record belongs to another category. The faction system's
-initialisation 0xF64CA0 runs at every load (through the save chunk vt_0x1F6F1C8, slots 12 and 13) and
+initialization 0xF64CA0 runs at every load (through the save chunk vt_0x1F6F1C8, slots 12 and 13) and
 builds the army-to-pool table <code>FS+0x80</code> from each army's <code>Pool</code> cell.</p>
 <table>
 <thead>
@@ -284,9 +299,10 @@ builds the army-to-pool table <code>FS+0x80</code> from each army's <code>Pool</
 <p>Each region also names an <code>InvasionFaction</code>, and Gorgoroth a <code>DEMOFaction</code> (<code>Faction_Demovolcano</code>).
 The region-to-army lookup 0x1E4418 first reads <code>Regions/Region.GameModeFactionOverrides</code>
 (<code>_StructuresRegionGameModeFaction</code>, keyed by the current game mode), then <code>Region.Faction</code>. The region
-<code>desert_mercs</code> names no army in its <code>Faction</code> field; its override maps it to the mercenary army in the
-Desolation of Mordor mode, so the lookup returns null for it in any other mode. Because twins share row records, a row name does not identify the live
-army: the live army is the one a seated member's <code>FM+0x178</code> names.</p>
+<code>desert_mercs</code> names no army in its <code>Faction</code> field. Its override maps it to the mercenary army in the
+Desolation of Mordor mode, so the lookup returns null for it in any other mode. Because twins share row
+records, a row name does not identify the live army: the live army is the one a seated member's
+<code>FM+0x178</code> names.</p>
 <p>The definition decides how an army is built and run:</p>
 <table>
 <thead>
@@ -298,7 +314,7 @@ army: the live army is the one a seated member's <code>FM+0x178</code> names.</p
 <tbody>
 <tr>
 <td><code>Pool</code>, <code>RequiredSaveSlot</code></td>
-<td>the pool it draws from; the save slot (<code>Faction/SaveSlot</code>: MainGame, DLC3, DLC4) it belongs to; army initialisation skips the fill of an army whose slot is not the current one</td>
+<td>the pool it draws from; the save slot (<code>Faction/SaveSlot</code>: MainGame, DLC3, DLC4) it belongs to; army initialization skips the fill of an army whose slot is not the current one</td>
 </tr>
 <tr>
 <td><code>Rows</code></td>
@@ -310,11 +326,11 @@ army: the live army is the one a seated member's <code>FM+0x178</code> names.</p
 </tr>
 <tr>
 <td><code>PresetMembers</code>, <code>QuestOnlyPresetMembers</code></td>
-<td>story characters built at army initialisation, and those only quests build</td>
+<td>story characters built at army initialization, and those only quests build</td>
 </tr>
 <tr>
 <td><code>InitFactionOnCreate</code>, <code>FillFactionOnInitialization</code></td>
-<td>whether the army is initialised and filled</td>
+<td>whether the army is initialized and filled</td>
 </tr>
 <tr>
 <td><code>MustHaveOverlordOnLoad</code>, <code>EmergencyOverlordBuilder</code></td>
@@ -357,7 +373,7 @@ army: the live army is the one a seated member's <code>FM+0x178</code> names.</p
 <tbody>
 <tr>
 <td>+0x08 / +0x18 / +0x20</td>
-<td>the army's pool binding, a handle: a list node <code>{next, previous}</code> at <code>+0x08</code>, its owner at <code>+0x18</code> and the pool object the army draws from and registers members in at <code>+0x20</code>, linked into the list headed at <code>pool+8</code> (the faction system's initialisation, 0xF661A3 - 0xF661E5)</td>
+<td>the army's pool binding, a handle: a list node <code>{next, previous}</code> at <code>+0x08</code>, its owner at <code>+0x18</code> and the pool object the army draws from and registers members in at <code>+0x20</code>, linked into the list headed at <code>pool+8</code> (the faction system's initialization, 0xF661A3 - 0xF661E5)</td>
 </tr>
 <tr>
 <td>+0x30</td>
@@ -393,7 +409,7 @@ army: the live army is the one a seated member's <code>FM+0x178</code> names.</p
 </tr>
 <tr>
 <td>+0x21C</td>
-<td>the fill latch: the army fills once per initialisation</td>
+<td>the fill latch: the army fills once per initialization</td>
 </tr>
 </tbody>
 </table>
@@ -406,23 +422,23 @@ interface for the screen itself). The menu world holds one stage object per regi
 section only when it activates: slot 16 (0x1A34E78) reads the <code>Region</code> record (<code>[obj+0x188]</code>), maps it to
 an army (0x1E4418), takes that army's world section and requests it (0x4B420C) into the object's own
 group. The stage owner <code>[base+0x26FFB60]</code> (vt_0x1F97950) holds 38 slots of 0x50 bytes at <code>+0x2B8</code> (count
-<code>+0x2C0</code>), one per army in army-table order, keyed by the <code>Faction/Definition</code> at <code>+0x00</code> (38 of 38);
+<code>+0x2C0</code>), one per army in army-table order, keyed by the <code>Faction/Definition</code> at <code>+0x00</code> (38 of 38).
 <code>StageFor</code> 0x455EDC returns a slot's <code>+0x48</code>, the spawned stage object (vt_0x1FA2FB8, its fort at
 <code>+0x1E8</code>), and <code>+0x28</code>..<code>+0x48</code> is an object handle chained on the region object's <code>+0x2A8</code>. Armies of one
 region share one stage object (21 of 38 slots filled in one campaign). Every slot is empty after a load
 until <code>[owner+0x400]</code> goes to 1, around the first visit to the Army screen.</p>
 <p>A region stage object that activates while its region maps no army requests nothing, so that army has
 no stage at all: its slot stays empty and the region object's <code>+0x2A8</code> points to itself. The Mercenary
-screen opened on such an army never leaves its loading screen; the camp's own object
-(<code>Hier.Map.Region_13_DLC_Mercs</code>) exists in the main campaign but, on a campaign load, activates before
+screen opened on such an army never leaves its loading screen. The camp's own object
+(<code>Hier.Map.Region_13_DLC_Mercs</code>) exists in the main campaign, but on a campaign load it activates before
 <code>desert_mercs</code> maps to an army. Replaying the section request alone does not bring the stage up.</p>
 <p><strong>Fort pieces.</strong> An army's stage fort comes from <code>Faction/World/Faction.FortPicker</code> -&gt; a <code>Fort/Setup</code>
 -&gt; <code>Fort/Piece</code> entries <code>{FactionPredicate, HierarchyMenuPredicate, RequiredPredicateValue, Piece}</code>.
 0x62B600 builds the piece list from all seven entry lists, keeping an entry when 0x62BB18 finds its
-predicate equal to <code>RequiredPredicateValue</code>; shipped data uses that test only on lighting (132 of 132
+predicate equal to <code>RequiredPredicateValue</code>. Shipped data uses that test only on lighting (132 of 132
 entries; Keep 0 of 135, Gate 0 of 726, Streamed 0 of 33). 0x2EC464 then diffs the list (pieces no longer
 listed go, new <code>WorldUIFortPiece</code> objects come) when <code>[fort+0x271]</code> is set (by 0x326168). A normal fort's
-<code>Foundation</code> piece has no section of its own; the Desolation of Mordor camp's <code>Foundation_Desert_Mercs</code>
+<code>Foundation</code> piece has no section of its own, but the Desolation of Mordor camp's <code>Foundation_Desert_Mercs</code>
 brings its own ground (<code>prefabs\ui\mordormap\foundation_desert_mercs.bndl</code>, <code>UI_ZoneMapFortFlair</code>, 91
 assets, 49.6 MB), which is why that camp shows on the map as a square of terrain.</p>
 <h2 id="the-hierarchy-rows-and-seats">The hierarchy: rows and seats</h2>
@@ -620,35 +636,39 @@ Several members share one row record because a row has several seats; each seat 
 member. The save stores the row as its index in the army's <code>Rows</code> and the column as a byte.</p>
 <p><strong>Moving members.</strong></p>
 <ul>
-<li><strong>Seat</strong> 0x61E13C(ctx, fm, row, column, flag): flag 1 = a new member (the creator 0x1C1D378), 0 = a
-  move (the sim outcome 0x40C304). It refuses a move into a warchief row whose side differs from the
-  Overlord's when <code>FM+0x4F8</code> is set (0x1E4C08 / 0x114E020); it vacates first, re-levels the member for
-  the row (0x1C1BDA8 -&gt; SetLevel 0x35188C), checks that the column is below the seat count, unlocked
-  and empty, then writes the pool index into the seat, <code>FM+0x51B</code> and <code>FM+0x268</code> (0x61B614).</li>
-<li><strong>Vacate</strong> 0x61B274(ctx, fm): -1 in every seat holding his index, <code>FM+0x51B</code> = 0xFF, <code>FM+0x268</code> = 0,
-  and the dirty bytes <code>ctx+0x1EE / +0x1F0</code>. 0x61D354(fm, bool) marks a member as moving (<code>FM+0x51F</code>).</li>
-<li><strong>Swap</strong>, the engine's own at 0x40C767 (inside the event-processing code): mark both, vacate B,
-  unlink B's pool node (<code>FM+0x18</code>), seat A into B's seat and B into A's old one (both flag 0), unmark.</li>
+<li><strong>Seat</strong> is 0x61E13C(ctx, fm, row, column, flag), where flag 1 means a new member (the creator
+  0x1C1D378) and 0 a move (the sim outcome 0x40C304). It refuses a move into a warchief row whose side
+  differs from the Overlord's when <code>FM+0x4F8</code> is set (0x1E4C08 / 0x114E020). Before seating, it vacates
+  the member, re-levels him for the row (0x1C1BDA8 -&gt; SetLevel 0x35188C) and checks that the column is
+  below the seat count, unlocked and empty; it then writes the pool index into the seat, <code>FM+0x51B</code> and
+  <code>FM+0x268</code> (0x61B614).</li>
+<li><strong>Vacate</strong> 0x61B274(ctx, fm) writes -1 into every seat holding his index, sets <code>FM+0x51B</code> = 0xFF and
+  <code>FM+0x268</code> = 0, and sets the dirty bytes <code>ctx+0x1EE / +0x1F0</code>. 0x61D354(fm, bool) marks a member as
+  moving (<code>FM+0x51F</code>).</li>
+<li><strong>Swap</strong>, the engine's own at 0x40C767 (inside the event-processing code), marks both members, vacates
+  B, unlinks B's pool node (<code>FM+0x18</code>), seats A into B's seat and B into A's old one (both with flag 0),
+  and unmarks them.</li>
 <li><strong>Transfer</strong> between armies is <code>FactionSystem::TransferMember</code> 0xF6AC90(FS, fm, {army, row,
-  column}): it refuses unless both armies share a pool and refuses a move inside one army; it unlinks
-  the member (0x1C25500), rewrites <code>FM+0x178</code> (and <code>+0x180</code> when empty) and fires the destination's
-  <code>EventSetup.TransferIntoFaction</code> (every base army ships <code>Transform_HireMercToEmpty</code>). Any two MainGame
-  armies share a pool.</li>
+  column}). It refuses unless both armies share a pool, and it refuses a move inside one army. It
+  unlinks the member (0x1C25500), rewrites <code>FM+0x178</code> (and <code>+0x180</code> when empty) and fires the
+  destination's <code>EventSetup.TransferIntoFaction</code> (every base army ships <code>Transform_HireMercToEmpty</code>).
+  Any two MainGame armies share a pool.</li>
 </ul>
 <p><strong>Dead captains keep their seats.</strong> In a late campaign the six regional armies held no empty seat and
 one to three dead captains each. The sim-event seat predicate 0xFDC350 treats an empty seat, or a dead
 member without flag bit 4, as free ("Passed: Dead") and refuses a dead member with bit 4 ("Failure:
 Resurrectable"), then checks the preset, spy (bit 28) and follower (bit 27) states, a blocking
 captor event and a duel. The jobs that take a dead or empty seat (<code>Quest/Jobs/Definition</code>
-<code>DeadOrEmptyPosition</code>, <code>_WC</code>, <code>_Overlord</code>) require <code>MustHaveCanResurrect</code> False; 26 of the 849
-shipped jobs set that field, all to False. A captain who will return therefore keeps his seat.</p>
-<p><strong>Filling.</strong> <code>FillFaction</code> 0x1C1E13C(ctx) is army initialisation's fill. Per row and per column whose
-seat holds -1 and whose lock bit is clear, it creates one new member: from the row's
-<code>InitBuilderRecords</code> by <code>InitBuilderChance</code> (0x1C1E280 -&gt; 0x1C1CFAC), or by the generic build 0x1C1D100
-(allocate 0x1C23C10 -&gt; pool 0x1BD2E20, build 0x1BC0084, register in the pool 0x61B5E8, level
-0x1C1BDA8 -&gt; SetLevel, seat 0x61E13C with flag 1, the definition's intel, follower and mercenary
-flags, henchmen 0x7DEEE0). The builder path calls no SetLevel. The latch <code>ctx+0x21C</code> limits the fill to
-once per initialisation (0x185FE0).</p>
+<code>DeadOrEmptyPosition</code>, <code>_WC</code>, <code>_Overlord</code>) require <code>MustHaveCanResurrect</code> False. Of the 849 shipped
+jobs, 26 set that field, all to False. A captain who will return therefore keeps his seat.</p>
+<p><strong>Filling.</strong> <code>FillFaction</code> 0x1C1E13C(ctx) is army initialization's fill. For each row and each column
+whose seat holds -1 and whose lock bit is clear, it creates one new member, either from the row's
+<code>InitBuilderRecords</code> by <code>InitBuilderChance</code> (0x1C1E280 -&gt; 0x1C1CFAC) or by the generic build 0x1C1D100.
+The generic build allocates the member (0x1C23C10 -&gt; pool 0x1BD2E20), builds him (0x1BC0084), registers
+him in the pool (0x61B5E8), levels him (0x1C1BDA8 -&gt; SetLevel), seats him (0x61E13C with flag 1),
+applies the definition's intel, follower and mercenary flags, and adds henchmen (0x7DEEE0). The builder
+path calls no SetLevel. The latch <code>ctx+0x21C</code> limits the fill to
+once per initialization (0x185FE0).</p>
 <h2 id="the-factionmember">The FactionMember</h2>
 <p>The <code>FactionMember</code> (vt_0x1FD5EA0) is <strong>0x528 bytes</strong>. Both allocation sites ask for 0x528 bytes
 (0x19ED468: <code>mov ecx,0x528</code> -&gt; allocator 0x3DE238 -&gt; constructor 0x1BB4C1C; 0xF99FF0 likewise) and
@@ -658,15 +678,15 @@ member for 0 of 206 row captains), and the traits live in vectors (see Captain t
 allocates that object itself, right after the member (see Captain appearance), so whether it sits at
 <code>FM+0x530</code> depends on the heap's history: in two other running games it did for 55 of the first 60 seated
 captains and for 459 of 484 MainGame members. Fixed offsets past <code>+0x528</code> therefore read whatever
-allocation follows the member; the appearance cells are reached only through <code>[FM+0x2D8]</code>.</p>
-<p><strong>Valid member test:</strong> <code>[FM+0x178]</code> is a GameDB record (526 of 526 members pass, 0 of 53 other
-pointers do). <code>FM+0x174</code> is not a validity flag: the MainGame and DLC pools both hold a member at
+allocation follows the member. The appearance cells are reached only through <code>[FM+0x2D8]</code>.</p>
+<p><strong>Valid member test.</strong> A member is valid when <code>[FM+0x178]</code> is a GameDB record (526 of 526 members pass,
+0 of 53 other pointers do). <code>FM+0x174</code> is not a validity flag: the MainGame and DLC pools both hold a member at
 index 0.</p>
 <p><strong>Member keys.</strong> The engine refers to a member by the pair <code>{faction record = FM+0x178, u32 pool index
 = FM+0x174}</code>, not by pointer: faction events, ambush requests and the boss link all store keys.</p>
 <h3 id="fields">Fields</h3>
 <p>The key names are those of the member document that the exporter 0x1BC5044 writes and the importer
-0x1BC21B4 reads; the importer's callers are an online arena opponent (0x1BC04E4), a fort's member array
+0x1BC21B4 reads. The importer's callers are an online arena opponent (0x1BC04E4), a fort's member array
 (0x1BD3BD8) and the demo orc (0xF58270). The local save writes each member through 0x594788 and reads
 him back through 0x1BC0F2C, field by field without names. Flags go through the flag setter
 0x1156740(fm, bit, value).</p>
@@ -696,7 +716,7 @@ him back through 0x1BC0F2C, field by field without names. Flags go through the f
 <td>+0x50</td>
 <td>object</td>
 <td><code>Inventory</code></td>
-<td>the inventory: 10 weapon-slot and 15 armour-slot item instances, the colour list at <code>+0x118</code> and the look-record list at <code>+0x130</code> (see Captain appearance and Items)</td>
+<td>the inventory: 10 weapon-slot and 15 armor-slot item instances, the color list at <code>+0x118</code> and the look-record list at <code>+0x130</code> (see Captain appearance and Items)</td>
 </tr>
 <tr>
 <td>+0x150</td>
@@ -732,7 +752,7 @@ him back through 0x1BC0F2C, field by field without names. Flags go through the f
 <td>+0x180</td>
 <td>record</td>
 <td></td>
-<td><code>InitialFaction</code> (the key of the capitalised document, below): the army he was born into, the record the size formula 0x7F8488 reads <code>ScaleAdditiveModifier</code> from, so a moved captain keeps his army's size bonus. It equals <code>+0x178</code> on 521 of 528 members and differs on the 7 moved ones; <code>TransferMember</code> writes it only when it is empty, and the importer copies <code>faction_record</code> into it. Not exported online</td>
+<td><code>InitialFaction</code> (the key of the capitalized document, below): the army he was born into, the record the size formula 0x7F8488 reads <code>ScaleAdditiveModifier</code> from, so a moved captain keeps his army's size bonus. It equals <code>+0x178</code> on 521 of 528 members and differs on the 7 moved ones; <code>TransferMember</code> writes it only when it is empty, and the importer copies <code>faction_record</code> into it. Not exported online</td>
 </tr>
 <tr>
 <td>+0x188</td>
@@ -810,7 +830,7 @@ him back through 0x1BC0F2C, field by field without names. Flags go through the f
 <td>+0x298</td>
 <td>key</td>
 <td></td>
-<td>16 bytes {an army record, u32 pool index}: the KILLER's member key, opening the last-death block; the constructor sets the index to -1. In one world, 207 of 207 captains killed by the player held -1; of 62 killed by orcs, 23 resolved to a living member of that army (mostly of the killing character type) and 39 to no current member (the killer since removed)</td>
+<td>16 bytes {an army record, u32 pool index}: the member key of his killer, opening the last-death block; the constructor sets the index to -1. In one world, 207 of 207 captains killed by the player held -1; of 62 killed by orcs, 23 resolved to a living member of that army (mostly of the killing character type) and 39 to no current member (the killer since removed)</td>
 </tr>
 <tr>
 <td>+0x2A8</td>
@@ -1045,7 +1065,7 @@ him back through 0x1BC0F2C, field by field without names. Flags go through the f
 <p><strong>The document form.</strong> Besides the binary save, a member is written and read as a key-named document
 tree: the writer 0x1BC45A8 (its callers include the console commands <code>FactionMember.Save</code> and
 <code>FactionMember.Save.Pos</code> and presentation code) and the reader 0x1BC159C (used by the member factory
-0xF99FF0 and presentation code). The "document key" names in the table come from this pair; it also
+0xF99FF0 and presentation code). The "document key" names in the table come from this pair, which also
 names <code>+0x278</code> <code>CharacterModel</code>, <code>+0x2D8</code> <code>SMCStorage</code>, <code>+0x500</code> <code>ResurrectionCount</code>, <code>+0x520</code>
 <code>InitializationType</code> and <code>+0x180</code> <code>InitialFaction</code> (also read by a third reader, 0x1BC20B0). The
 last-death block is written by 0x1BC4FCC and read by 0x1BC1F50 with
@@ -1054,7 +1074,7 @@ last-death block is written by 0x1BC4FCC and read by 0x1BC1F50 with
 <p><strong>Records in the binary save</strong> are stored by name hash: 0x594788 writes a record cell through 0x36E044,
 which takes <code>[record+4]</code> when <code>[record+1] &amp; 2</code> (<code>[record+4]</code> is the P919 hash of the name on 8 of 8
 faction records), and 0x1BC0F2C finds the record again by a binary search of its category (0x17A9528).
-After the seed a member's entry holds the hashes of <code>FM+0x178</code> and <code>FM+0x180</code> (528 of 528 members; the 7
+After the seed, a member's entry holds the hashes of <code>FM+0x178</code> and <code>FM+0x180</code> (528 of 528 members; the 7
 moved captains carry two different hashes). A record that is not the shipped one but keeps its header
 therefore saves as the shipped record, and a load puts the shipped record back. The role cells are
 saved the same way (0x594788 and 0x7C5158 -&gt; 0x36E044).</p>
@@ -1067,11 +1087,12 @@ clears the buffer. A builder-built orc gets his name id from the name table of h
 Easterling), so <code>+0x498</code> is a derived copy and the id is what the save keeps.</p>
 <p><strong>The title</strong> is read by 0x4721A8(fm): the role at <code>[[FM+0x2E0]+0x10]</code> when he has a mock member,
 else <code>FM+0x318</code>, then the role's <code>Title</code>, a string key whose text is found by hashing its content
-(0x471F2C), so the key itself can live anywhere. 79 of 560 members carried a mock member, 3 of them with
+(0x471F2C), so the key itself can live anywhere. Of 560 members, 79 carried a mock member, 3 of them with
 a role other than <code>FM+0x318</code>. The army summary caches the title's hash at <code>+0x114</code> (the refill
 0x169168). Each of the 914 roles has 29 fields and its own instance. Of the 21 functions that name the
-role category none reads a member's role, and the one by-record role table (<code>FS+0xB0</code>) has two callers,
-neither passing a member's role; scripts find members by role through <code>Quest.GetFactionMemberOnRoleList</code>.</p>
+role category, none reads a member's role, and the one by-record role table (<code>FS+0xB0</code>) has two
+callers, neither passing a member's role. Scripts find members by role through
+<code>Quest.GetFactionMemberOnRoleList</code>.</p>
 <h3 id="levels">Levels</h3>
 <p><code>FM+0x4B8</code> is stored 0-based; the game shows it plus one, and caps the shown level at 85. SetLevel
 0x35188C ends in 0x353C44, which sets flag bits 30 and 31 when the level reaches two thresholds read
@@ -1082,8 +1103,8 @@ re-levels a member for the row (0x1C1BDA8); a story character without a row star
 <ul>
 <li><strong>A rebuild.</strong> The console command <code>Faction.RebuildSMC</code> 0x1C5BDA8 rebuilds every member of the current
   region's army through <code>RebuildDirect</code> 0x1BC3AA8, which empties his items and gives them again from his
-  identity (personality, role, tribe, class kit, army outfit; see Captain appearance). Whatever lived only
-  in his appearance cells or in items his identity does not give (a scar from <code>AddScar</code>, a reward's
+  identity (personality, role, tribe, class kit, army outfit; see Captain appearance). Anything that lived
+  only in his appearance cells or in items his identity does not give (a scar from <code>AddScar</code>, a reward's
   items) is gone afterwards. The engine's own builds run the same steps only when a member is created.</li>
 <li><strong>A load.</strong> The binary save keeps his records by name hash, his items by record hash (<code>Item</code>,
   <code>WeaponData</code>, <code>ArmorData</code> and the give source when below 11), his appearance slots 0-15 and palette, and
@@ -1094,7 +1115,8 @@ re-levels a member for the row (0x1C1BDA8); a story character without a row star
   lists and the inventory, plus texts for the server (<code>name</code>, <code>title</code>, rarity and status strings). The
   importer 0x1BC21B4 reads 57 of them: the receiving game takes the name from <code>name_string_id_hash</code> and
   the title from <code>role_record</code>, re-adds the trait pickers through 0x7CD03C and rolls them itself (a slot
-  holding another option than its picker's roll does not travel), and always re-dresses him from his items.
+  holding an option other than its picker's roll does not travel), and always re-dresses him from his
+  items.
   <code>FM+0x180</code>, appearance slots 16-22, the design cells and the material overrides are not exported.</li>
 </ul>
 <h2 id="finding-every-captain">Finding every captain</h2>
@@ -1112,24 +1134,24 @@ his pool.</p>
 <h2 id="the-nemesis-flag-word">The nemesis flag word</h2>
 <p><code>FM+0x508</code> is a u64 of flags. The getter 0x114B55C is a bare <code>bt [fm+0x508], bit</code>; 0x114DFE8 tests
 bit 2 (dead). The loader's keys name most bits, and the FactionMember document writer 0x1BC45A8
-(which writes <code>Identity</code>, <code>Flags</code>, <code>XPLevel</code> ... <code>Inventory</code>) names more: it writes each boolean key
-from one getter call, <code>IsResurrected</code> bit 0, <code>IsDead</code> 2, <code>KilledByPlayer</code> 3, <code>CanResurrect</code> 4,
+(whose keys run from <code>Identity</code>, <code>Flags</code> and <code>XPLevel</code> to <code>Inventory</code>) names more. It writes each
+boolean key from one getter call: <code>IsResurrected</code> bit 0, <code>IsDead</code> 2, <code>KilledByPlayer</code> 3, <code>CanResurrect</code> 4,
 <code>PresentedToPlayer</code> 5, <code>IdentityPresented</code> 7, <code>HasEverSpawned</code> 9, <code>IgnorePlayerLevelRestriction</code> 10,
 <code>HasVow</code> 12, <code>SeveredHead</code> 17, <code>IsMockDead</code> 21, <code>CanInterrogateAbout</code> 22, <code>RevengeTarget</code> 24,
 <code>WasEverPreset</code> 25, <code>Builder_CanNotSave</code> 32, <code>Builder_DisableSimEvents</code> 33, <code>DisableTraitChanges</code> 38,
 <code>DisableRelationships</code> 39, <code>CanNotDropLoot</code> 40, <code>CanNotChangeXPLevel</code> 41, <code>CanNotApplyContract</code> 42 and
-<code>CalcXPLevelOnAssignToRow</code> 44, while <code>PlayerFollower</code>, <code>Spy</code> and <code>Prisoner</code> come from functions
+<code>CalcXPLevelOnAssignToRow</code> 44. <code>PlayerFollower</code>, <code>Spy</code> and <code>Prisoner</code> come from functions
 (0x114E020, 0x1149E50, 0x1BBCAEC) rather than a single bit.</p>
 <p>Three bits have no saved key. Bit 37 marks a temporary member: 0x1BBF928 sets it when the builder's
 byte <code>+0x180</code> is set, and 0x1BC04E4 sets it on an online arena opponent (<code>__online_arena_opponent__</code>,
 which also clears the follower bit). A quest's <code>Cleanup_OnEnter</code> (0x7652BC) then calls 0x1B5E0B4,
 which checks the bit, confirms the member still sits at its pool index, nulls that slot and destroys
 the member. Bit 35 is set in one place, 0x61CED0, which assigns a member to a sim event: it copies bit 0
-of the intel mask <code>FM+0x510</code> at that moment. In one campaign all 102 members with bit 35 held that
+of the intel mask <code>FM+0x510</code> at that moment. In one campaign, all 102 members with bit 35 held that
 mask bit, none of the 75 members without it had bit 35, and 350 members held the mask bit without
-it. Bit 16 is set by the un-death 0x630644 just before it clears the dead bit, and that function never
-clears it, but only 1 of the 86 members with a return on record (<code>FM+0x500</code> above 0) carried it, so
-it does not mark a returned member. Use <code>FM+0x500</code> for that.</p>
+it. Bit 16 is set by the un-death 0x630644 immediately before it clears the dead bit, and that function never
+clears it. Yet only 1 of the 86 members with a return on record (<code>FM+0x500</code> above 0) carried it, so it
+does not mark a returned member; the return count <code>FM+0x500</code> does.</p>
 <table>
 <thead>
 <tr>
@@ -1295,31 +1317,31 @@ it does not mark a returned member. Use <code>FM+0x500</code> for that.</p>
 0x1156740 with the bit number next to each key): 9 <code>HasEverSpawned</code> (also set by 0x356370), 10
 <code>IgnorePlayerLevelRestriction</code>, 32 <code>Builder_CanNotSave</code>, 33 <code>Builder_DisableSimEvents</code>, 36 <code>Prisoner</code>,
 38 <code>DisableTraitChanges</code>, 39 <code>DisableRelationships</code>, 40 <code>CanNotDropLoot</code>, 41 <code>CanNotChangeXPLevel</code>, 42
-<code>CanNotApplyContract</code> and 44 <code>CalcXPLevelOnAssignToRow</code>. <code>FM+0x50C</code> is no separate field: it is the
+<code>CanNotApplyContract</code> and 44 <code>CalcXPLevelOnAssignToRow</code>. <code>FM+0x50C</code> is not a separate field: it is the
 word's upper half (the constructor stores <code>+0x508</code> as one qword; 40 of 40 seated captains agree).</p>
 <p>The engine's setters do more than the bit, so a direct write to the word skips their side effects:</p>
 <ul>
 <li><strong>SetDead</strong> 0x626E38(fm, dead) sets bit 2 and, when <code>FM+0x398</code> names a campaign variable, sets that
   variable (0x59A1D8): a story character's death unlocks the next scene this way. Its un-death branch
   (0x627197) clears bits 2, 12 and 17 but not 21.</li>
-<li><strong>The follower setter</strong> 0x7D52B0(fm, bool) changes the member; the character's
+<li><strong>The follower setter</strong> 0x7D52B0(fm, bool) changes the member. The character's
   <code>CCharacter::SetIsPlayerFollower</code> 0x102F0C(char, bool) also sets the character's follower byte
   (<code>+0x23B8</code>) and its combat stats before calling it. When the member's row sets
   <code>Faction/Rows.TriggerQuestEvalOnSetPlayerFollower</code> (as <code>snowMtn_Row_Captain_0</code> does), the setter asks
   the quest system <code>[GM+0x6C60]</code> to re-evaluate (0x1B562F0, a jump to 0x7AF25C) and adds the army's
-  sim-event picker (<code>Faction::AddFactionSimEventPicker</code> 0x1B5E5D8, its only caller); the seat move
+  sim-event picker (<code>Faction::AddFactionSimEventPicker</code> 0x1B5E5D8, its only caller). The seat move
   0x61E13C is the only other caller of 0x1B562F0. Region ownership is the Overlord's bit 27 (see
   Quests, story and scenes).</li>
 <li><strong>The intel setter</strong> 0x353EC4(fm, level, fireEvent, force) refuses a level that is not higher unless
-  forced, clamps to the setup's <code>DataStages</code>, writes <code>FM+0x51A</code>, rebuilds the mask <code>FM+0x510</code>
-  (0x62136C), notifies the player (0x7BE290, which reaches the global script agent <code>[GM+0x6CF0]</code>, so
+  forced, clamps to the setup's <code>DataStages</code>, writes <code>FM+0x51A</code> and rebuilds the mask <code>FM+0x510</code>
+  (0x62136C). It notifies the player (0x7BE290, which reaches the global script agent <code>[GM+0x6CF0]</code>, so
   it belongs on the main thread), updates trait visibility on a body, fires the army's
   <code>DataLevelChangeEvent</code> when asked, and re-resolves his traits (UpdateTraits reason 6).</li>
 <li>Bit 32's clear 0x18E218 is a bare <code>btr</code> with no event.</li>
 </ul>
-<p>The pool serializer 0x59460C writes every member unless 0x595890(fm) (= not bit 32) refuses him;
+<p>The pool serializer 0x59460C writes every member unless 0x595890(fm) (= not bit 32) refuses him, and
 0x595CA0 is the only other reader of bit 32. Members held by the online garrison carry it. Bit 32 is the
-engine's <code>Builder_CanNotSave</code> (its string at 0x1BC19B4); it is set directly by the builder build
+engine's <code>Builder_CanNotSave</code> (its string at 0x1BC19B4). It is set directly by the builder build
 0x1BBF928, the document reader 0x1BC159C and the wrapper 0x1BC6004.</p>
 <h2 id="faction-events">Faction events</h2>
 <p>Everything that happens to a member is a <code>Faction/Events/Events</code> record (2,039 ship, each with the
@@ -1334,7 +1356,7 @@ same 77 fields) applied by the engine:</p>
 <li>0x40C13C -&gt; 0x62E670, the dispatcher, picks and records the event's replay (the Army-screen
    flashback: 0x7421A0 -&gt; 0x741284, <code>[SIMEVENT|REPLAY]</code>), then the apply 0x630644 changes the member.</li>
 </ol>
-<p>What the shipped events do (fields set, counted over the 2,039 records):</p>
+<p>The shipped events set these fields (counted over the 2,039 records):</p>
 <table>
 <thead>
 <tr>
@@ -1458,7 +1480,7 @@ applies each with <code>ApplyReward</code> 0x3511F4(fm, reward, other, 1) -&gt; 
 trait slot (see Captain traits). Called directly, <code>ApplyReward</code> skips eligibility.</p>
 <h3 id="the-switchboard">The switchboard</h3>
 <p>Which event a game situation fires is per army: <code>Faction/Definition.EventSetup</code> names a
-<code>Faction/Events/Setup</code> record (seven ship: one per region and <code>Faction_Player_Setup</code>). In Nurnen's:</p>
+<code>Faction/Events/Setup</code> record (seven ship: one per region and <code>Faction_Player_Setup</code>). In Nurnen's setup:</p>
 <table>
 <thead>
 <tr>
@@ -1539,12 +1561,12 @@ through the seat function with flag 0 (from the sim-event outcome 0x40C304) and 
 <p>The missions on the Army screen (power struggles, hunts, executions, fort assaults) are <strong>sim
 events</strong>, and they advance in turns, not in real time.</p>
 <ul>
-<li><strong>AdvanceTurn</strong> 0x1B5EE88(FS, unused, u8 flushPending) increments the turn <code>FS+0x218</code>, on a flush runs
-  0x1C1C4E4 on every army (draining <code>ctx+0x140</code>), then runs 0xFDEC20(ctx, save slot), turn processing
-  and generation (<code>FactionSimEventGenerate</code> 0x597A9C), for every army that passes 0x1B5B058. That test
-  refuses an army with <code>AdvanceTODCurrentFaction</code> unless it is the current region's army (<code>FS+0x1B8</code>),
-  and otherwise requires the army's <code>AdvanceTODStoryActive</code> to match a state read through
-  <code>[GM+0x6D30]</code> (0x114E008); the campaign armies ship with the first False and the second True.
+<li><strong>AdvanceTurn</strong> 0x1B5EE88(FS, unused, u8 flushPending) increments the turn <code>FS+0x218</code> and, on a
+  flush, runs 0x1C1C4E4 on every army (draining <code>ctx+0x140</code>). It then runs 0xFDEC20(ctx, save slot),
+  turn processing and generation (<code>FactionSimEventGenerate</code> 0x597A9C), for every army that passes
+  0x1B5B058. That test refuses an army with <code>AdvanceTODCurrentFaction</code> unless it is the current region's
+  army (<code>FS+0x1B8</code>), and otherwise requires the army's <code>AdvanceTODStoryActive</code> to match a state read
+  through <code>[GM+0x6D30]</code> (0x114E008). The campaign armies ship with the first False and the second True.
   AdvanceTurn's callers are the quest post-active state 0x19F8C34, the world reset 0x1789F0C (the
   player's death), the single-hierarchy view 0x434CF0 (no flush) and 0x1B5ED08. The world clock stops
   while the Army screen is open.</li>
@@ -1554,14 +1576,14 @@ events</strong>, and they advance in turns, not in real time.</p>
   0x1B3B90 in 0x5926EC; a failure drops the type and retries) and 0x5935DC creates the event. A type's
   weight is <code>Weights[min(active events of that type in the army, count - 1)]</code>, or its
   <code>WeightOverride</code>'s entries when set (difficulty-scaled through <code>SimEventGeneration_*</code> constants);
-  weight 0 is the cap. <code>PowerStruggle_Act2</code> lists 13 sim events (Chase, Duel, Execution2,
-  GraugHeist, the raids, the trials ...) with <code>Weights</code> 10, 7, 4, 0 and the global-variable predicate
-  <code>Act2</code>. Candidate lists are capped at 64 (0x597E44); members with a current event (<code>FM+0x4F0</code>),
-  dead members without bit 4, and members with bit 21 are skipped; one event per member.</li>
-<li><strong>The event object</strong> (vt_0x1DBC8A8): <code>+0x40</code> the army, <code>+0x48</code> the <code>Faction/Events/SimEvent</code> (431
-  ship), <code>+0x50 / +0x58</code> its quest (a <code>Quest/Quests</code> record such as <code>VO_Chase_02</code>), <code>+0x60</code> the
-  generation type, <code>+0x94</code> a serial number and <code>+0x98</code> the turn it expires (created turn plus the
-  type's lifespan). An army's events are at <code>ctx+0x90 / +0x98</code>.</li>
+  weight 0 is the cap. <code>PowerStruggle_Act2</code> lists 13 sim events (among them Chase, Duel, Execution2,
+  GraugHeist, the raids and the trials) with <code>Weights</code> 10, 7, 4, 0 and the global-variable predicate
+  <code>Act2</code>. Candidate lists are capped at 64 (0x597E44). Members with a current event (<code>FM+0x4F0</code>), dead
+  members without bit 4 and members with bit 21 are skipped, and each member gets one event at most.</li>
+<li><strong>The event object</strong> (vt_0x1DBC8A8) holds the army at <code>+0x40</code>, the <code>Faction/Events/SimEvent</code> at
+  <code>+0x48</code> (431 ship), its quest at <code>+0x50 / +0x58</code> (a <code>Quest/Quests</code> record such as <code>VO_Chase_02</code>), the
+  generation type at <code>+0x60</code>, a serial number at <code>+0x94</code> and the turn it expires at <code>+0x98</code> (created
+  turn plus the type's lifespan). An army's events are at <code>ctx+0x90 / +0x98</code>.</li>
 </ul>
 <h3 id="the-cooldown-table">The cooldown table</h3>
 <p>Each member can hold a cooldown table <code>[FM+0x258]</code>: a 0x18-byte object <code>{entries, u32 count,
@@ -1574,32 +1596,33 @@ creates the table when the save flags one (0x1BC0F2C) but never sizes it, and re
 into a temporary (0x1BC0EC4). After a load, every member that had a cooldown is refused power
 struggles and hunts permanently: in a late-campaign pool of 500, no table was sized and 60 living
 seated captains carried an empty one. An emulated generation pass on Minas Ithil's army, with every
-captain free and no events, refused 204 of 221 attempts; every power-struggle and hunt candidate
-(340 of 340) failed at this gate, the rest at their campaign gates.</p>
+captain free and no events, refused 204 of 221 generation attempts. Within those attempts, every
+power-struggle and hunt candidate check (340 of 340) failed at this gate; the other refused attempts failed at
+their campaign gates.</p>
 <h2 id="cheat-death-and-the-return">Cheat death and the return</h2>
 <p>Death and return run through the kill path and events:</p>
 <ol>
 <li><strong>Mark.</strong> The kill path 0x6DB95C (0x1BB9F84 for event kills) stores the death's <code>Faction/Resurrection</code>
    record at <code>FM+0x2C0</code> and, when the row has <code>ResurrectionEnabled</code>, rolls the odds (0x6DBD4C: presets
-   refused, row, predicate, odds table). On success the evaluator 0x1BC5D44 adds the scar types his
-   sever effects bring to the list at <code>FM+0x358</code>, picks a fitting scar
-   (0x1B5AA00(FS, <code>[FM+0x370]</code>, cause, <code>[FM+0x500]</code>); none = "No Available Scars", nothing changes),
-   increments <code>FS+0x21C</code> and <code>FM+0x500</code>, sets bit 4, stores the scar at <code>FM+0x348</code> (unless it equals
-   <code>FM+0x370</code>) and fires the record's <code>DeathEvent</code> through 0x40C0AC. How the scar is chosen is in Captain
-   scars and the return from death. Without <code>ResurrectionEnabled</code> the kill path resets the mock member
-   (0x6DBCFC).</li>
+   refused, row, predicate, odds table). On success, the evaluator 0x1BC5D44 adds the scar types his
+   sever effects bring to the list at <code>FM+0x358</code> and picks a fitting scar
+   (0x1B5AA00(FS, <code>[FM+0x370]</code>, cause, <code>[FM+0x500]</code>); with none, the result is "No Available Scars" and
+   nothing changes). It then increments <code>FS+0x21C</code> and <code>FM+0x500</code>, sets bit 4, stores the scar at
+   <code>FM+0x348</code> (unless it equals <code>FM+0x370</code>) and fires the record's <code>DeathEvent</code> through 0x40C0AC.
+   Captain scars and the return from death describes how the scar is chosen. Without
+   <code>ResurrectionEnabled</code>, the kill path resets the mock member (0x6DBCFC).</li>
 <li><strong>Queue.</strong> The death event (<code>WillResurrect_&lt;death&gt;</code>, 23 of them, <code>KeepPriority</code> 30) carries reward
    lists that queue the ambush: <code>CheatDeath_Ambush</code> for an enemy, <code>CheatDeath_Betrayal</code> or
    <code>CheatDeath_FollowerStillLoyal</code> for a follower. <code>CheatDeath_Ambush</code> retries forever (<code>RetryMax</code> -1,
-   <code>RetryDelay</code> 0.25 minutes), never for an Overlord, and fires only in its own region; one such request
+   <code>RetryDelay</code> 0.25 minutes), never for an Overlord, and fires only in its own region. One such request
    reached 1,121 retries. The return is not a job: no shipped job requires <code>MustHaveCanResurrect</code> True.</li>
-<li><strong>Complete.</strong> Only the apply 0x630644 un-deaths: when the member has bit 4 and the event has
-   <code>Resurrect</code>, or the event has <code>PlayerResurrect</code>, it clears bits 4 and 6, sets 0 and 16, clears 2
-   and 17, then runs 0xE7DF70(fm). <code>Resurrected_Presented</code> (the ambush's success event) adds
+<li><strong>Complete.</strong> Only the apply 0x630644 performs the un-death. When the member has bit 4 and the event
+   has <code>Resurrect</code>, or the event has <code>PlayerResurrect</code>, it clears bits 4 and 6, sets 0 and 16, clears 2
+   and 17, and then runs 0xE7DF70(fm). <code>Resurrected_Presented</code> (the ambush's success event) adds
    <code>SetMockMemberDead</code> False, <code>ClearCopyFactionMemberData</code>, <code>PickNewSimEvent</code>, one level plus a
    player-based level change, and <code>EjectIfWarchief</code> / <code>EjectIfOverlord</code>.</li>
 </ol>
-<p>Other readers of bit 4: the seat predicate 0xFDC350, the cancel pass 0xF9BA70 (from 0xF665F0 and
+<p>Bit 4 has other readers: the seat predicate 0xFDC350, the cancel pass 0xF9BA70 (from 0xF665F0 and
 0xFA0D30: a dead member with bit 4 that fails 0xFF3D30 loses bits 4, 0 and 16), the sever abort
 0x6DE30C ("Aborting Resurrection, Faction member was severed after death", only while the corpse is
 in the world), SetDead, the writer 0x1BC5044 and the FactionMember document writer 0x1BC45A8 (whose keys include
@@ -1609,8 +1632,8 @@ in the world), SetDead, the writer 0x1BC5044 and the FactionMember document writ
 over 14 <code>Faction/Resurrection/Chance</code> records), a <code>ScarType</code>, a <code>SecondScarChance</code> and
 <code>SecondScarType</code>, a <code>DeathEvent</code> and loot tags. The odds roll (0x6DC65C, called from 0x6DBD4C) walks
 the table's <code>ChanceRecords</code> and keeps a <code>Faction/Resurrection/Chance</code> record only when the world total
-<code>FS+0x21C</code> lies within its <code>MinTotalResurrected</code> .. <code>MaxTotalResurrected</code> and the member's own count
-<code>FM+0x500</code> within <code>MinThisGuyResurrected</code> .. <code>MaxThisGuyResurrected</code> (0x6DC784; a negative bound is
+<code>FS+0x21C</code> lies within its <code>MinTotalResurrected</code> to <code>MaxTotalResurrected</code> and the member's own count
+<code>FM+0x500</code> within <code>MinThisGuyResurrected</code> to <code>MaxThisGuyResurrected</code> (0x6DC784; a negative bound is
 no bound). The shipped records use the world total as a campaign stage and the member's count as a
 repeat counter:</p>
 <table>
@@ -1662,22 +1685,23 @@ repeat counter:</p>
 <p>From the fifth return of a campaign on, the world total is above every upper bound (it read 375 in
 one late campaign), so only the records without one stay eligible: the <code>3rdFew</code> pair,
 <code>_2ndFew_OlogHeadRemoved</code>, <code>Resurrection_BodyCleave</code> and the same-member records.
-<code>Resurrection_Torment</code>: table Base, scar <code>Curse</code>, a
-second scar (<code>Sack_Head</code> or <code>Metal_Head</code>) at 0.5, event <code>WillResurrect_Torment</code>. <code>Resurrection_HeadRemoved</code>
-has no odds table and no death event: a decapitated orc never returns (the olog has its own table).</p>
+<code>Resurrection_Torment</code> has the table Base, the scar <code>Curse</code>, a second scar (<code>Sack_Head</code> or
+<code>Metal_Head</code>) at 0.5 and the event <code>WillResurrect_Torment</code>. <code>Resurrection_HeadRemoved</code> has no odds
+table and no death event: a decapitated orc never returns (the olog has its own table).</p>
 <p><strong>The mock member.</strong> <code>FM+0x2E0</code> is a 0x20-byte copy <code>{appearance, inventory, role, flag}</code> that the Army
 screen draws instead of the real member while it exists (0x75D2FC / 0x75D314 read it), and whose role
 the title read takes first (79 of 560 members carried one). Rewards with
 <code>CopyAndHideFactionMemberData</code> build it (22 of 1,239 rewards: role transforms, pinnacle scars), as does
-an event's <code>SetMockMemberDead</code> True; <code>ClearCopyFactionMemberData</code>, <code>SetMockMemberDead</code> False and the
+an event's <code>SetMockMemberDead</code> True. <code>ClearCopyFactionMemberData</code>, <code>SetMockMemberDead</code> False and the
 kill path without resurrection drop it. Bit 21 says the mock member is dead. Every death in a
-resurrection row keeps the copy whether or not the member will return; among living members only one
-returned but not yet presented carries it, together with bit 21 (<code>SimResurrected</code> sets <code>Resurrect</code>
-without touching the mock member). In one late save the 11 seated dead members all had bit 21 and 9
-of them a copy; of 197 seated living members, one (returned, not yet presented) had a copy and bit 21.</p>
+resurrection row keeps the copy, whether or not the member will return. Among living members, only a
+member who has returned but is not yet presented carries it, together with bit 21 (<code>SimResurrected</code>
+sets <code>Resurrect</code> without touching the mock member). In one late save, all 11 seated dead members had
+bit 21 and 9 of them a copy; of 197 seated living members, one (returned, not yet presented) had a copy
+and bit 21.</p>
 <p><strong>Raising the dead.</strong> <code>Resurrected_PlayerAbility_RaiseDead</code>, the only event with <code>PlayerResurrect</code>,
-un-deaths any member, scars him <code>Resurrected_PlayerAbility_RaiseDead</code>, adds a level, aborts his
-ambushes and rolls <code>PlayerSkill_Resurrected_Captain</code>: one of four rewards giving tribe
+performs the un-death on any member, scars him <code>Resurrected_PlayerAbility_RaiseDead</code>, adds a level,
+aborts his ambushes and rolls <code>PlayerSkill_Resurrected_Captain</code>: one of four rewards giving the tribe
 <code>TribeDef_Undead</code>, the undead items, personality <code>Damaged901_Undead_pss_Moaner</code>, deranged markers, a
 permanent fire vulnerability, poison immunity and Unbreakable, after removing every fire and poison
 trait. It does not touch the follower bit.</p>
@@ -1685,12 +1709,12 @@ trait. It does not touch the follower bit.</p>
 <p><code>FM+0x300 / +0x308</code> is the member's history: 16-byte entries <code>{Faction/Events/Events record, u16 the
 turn}</code>, in order (488 of 488). 0x631648 trims it whenever it exceeds 32 entries through 0x1BC3EB8, which
 erases the entry with the lowest <code>KeepPriority</code>, the oldest on a tie; the save writes 32 slots
-(0x594788). <code>KeepPriority</code> is read only by that eviction. Shipped priorities: the <code>WillResurrect_*</code>
-death events and <code>Resurrected_Presented</code> 30, <code>ActiveKilledByPlayer</code> 10, <code>ActiveKillPlayer_grunt</code> 100,
-and 50 for frequent events such as
-<code>ActiveInitialPlayerThreat</code>, <code>ActiveKillNamedAI</code>, <code>FleeRunStart</code> and every fear or hate trigger, so a
-full history drops its deaths before them: 196 of 515 histories were at the cap, and 18 of 86 members
-who had cheated death had lost the record of it, all 18 at the cap. A spawned character's audio object
+(0x594788). <code>KeepPriority</code> is read only by that eviction. The shipped priorities are 30 for the
+<code>WillResurrect_*</code> death events and <code>Resurrected_Presented</code>, 10 for <code>ActiveKilledByPlayer</code>, 100 for
+<code>ActiveKillPlayer_grunt</code>, and 50 for frequent events such as <code>ActiveInitialPlayerThreat</code>,
+<code>ActiveKillNamedAI</code>, <code>FleeRunStart</code> and every fear or hate trigger. A full history therefore drops its
+deaths before those events: 196 of 515 histories were at the cap, and 18 of 86 members who had cheated
+death had lost the record of it, all 18 at the cap. A spawned character's audio object
 receives a copy of the list (see Audio and video).</p>
 <h2 id="ambushes">Ambushes</h2>
 <p>The ambush manager is <code>[FS+0x30]</code>. <code>TriggerAmbush</code> 0x6DDCB8(manager, definition, forced member)
@@ -1725,35 +1749,35 @@ only queues a 0x40-byte request in the vector at <code>+0x338</code>:</p>
 </tr>
 </tbody>
 </table>
-<p>A second request for a queued definition is refused unless its forced member is dead (0x114DFE8);
+<p>A second request for a queued definition is refused unless its forced member is dead (0x114DFE8), and
 one for the active definition is refused. The update 0x6DDBA8 runs only while no ambush is active
-(<code>[manager]</code> holds the active one) and evaluates each due request with 0x6DD92C: a forced member
-already in the world is discarded; the gates are the global enable <code>[base+0x267D598]</code>, <code>manager+0x368</code>
+(<code>[manager]</code> holds the active one) and evaluates each due request with 0x6DD92C. A forced member
+already in the world is discarded. The gates are the global enable <code>[base+0x267D598]</code>, <code>manager+0x368</code>
 (the running quest allows ambushes), <code>+0x369</code> (the player is not in a <code>FactionAmbushDisableBrush</code>)
-and the post-quest timer <code>+0x36C</code>; a request whose army is not the current region's is retried (see
-Quests, story and scenes). Then 0x1C5E358: the chance (0x1C5F0E8: <code>AmbushChance</code>, the global-variable
-predicate, the player's excluded attacks, tags and buffs, minimum followers, the Overlord-follower
-predicate), the ambusher 0x1C5D458 (the forced one unless he is spawned or fails the job, else a job
-pick 0x1B5AC8C; 16 definitions with <code>NeverPickAmbusherWithJob</code> or no job can only fire with a provided
-ambusher), validation 0x1C5F070 (not spawned, rank not in <code>ExcludedRowRanks</code>) and the result 0x1C5D624.
-A failed pass re-queues the request after <code>RetryDelay</code> minutes. A rowless member's rank is null, so
-an empty <code>ExcludedRowRanks</code> refuses every rowless ambusher. The active ambush object
-(vt_0x1FFACB0) keeps <code>+0x38</code> the ambusher, <code>+0x90</code> the definition, <code>+0xA5</code> completed and <code>+0xA6</code> done;
-its slot 2 0x1C7E1FC only sets <code>+0xA6</code>, after which the manager's tick drops the request and deletes
-the object.</p>
+and the post-quest timer <code>+0x36C</code>, and a request whose army is not the current region's is retried
+(see Quests, story and scenes). 0x1C5E358 then runs the chance (0x1C5F0E8: <code>AmbushChance</code>, the
+global-variable predicate, the player's excluded attacks, tags and buffs, minimum followers, the
+Overlord-follower predicate), the ambusher pick 0x1C5D458 (the forced one unless he is spawned or fails
+the job, else a job pick 0x1B5AC8C; 16 definitions with <code>NeverPickAmbusherWithJob</code> or no job can only
+fire with a provided ambusher), the validation 0x1C5F070 (not spawned, rank not in <code>ExcludedRowRanks</code>)
+and the result 0x1C5D624. A failed pass re-queues the request after <code>RetryDelay</code> minutes. A rowless
+member's rank is null, so an empty <code>ExcludedRowRanks</code> refuses every rowless ambusher. The active ambush
+object (vt_0x1FFACB0) keeps the ambusher at <code>+0x38</code>, the definition at <code>+0x90</code>, the completed flag at
+<code>+0xA5</code> and the done flag at <code>+0xA6</code>. Its slot 2, 0x1C7E1FC, only sets <code>+0xA6</code>, after which the
+manager's tick drops the request and deletes the object.</p>
 <h2 id="rarity-and-training-orders">Rarity and Training Orders</h2>
 <p><code>FM+0x390</code> is a <code>Faction/Traits/MarkerRarity</code> record: <code>OrcRarity_Common</code>, <code>OrcRarity_Epic</code>,
 <code>OrcRarity_Legendary</code> and a test record <code>OrcRariry_Unique</code> (display name <code>test_string</code>). Each gives the hierarchy's
 selection effect (<code>Interface/ElementFXList/Rarity_*</code>), a priority (0, 1, 2) and a tint (Epic
 0xFFED5132, Legendary 0xFF4509C4). Rarity is also a trait: <code>Picker_OrcRarity_*</code> -&gt; the
 <code>OrcRarity_*</code> trait -&gt; the item <code>Buff_OrcRarity_*</code>. A Legendary carries two epic traits (<code>ET_*</code>) and
-an <code>ET_CanRemove_*</code> marker, an Epic one.</p>
+an <code>ET_CanRemove_*</code> marker; an Epic carries one.</p>
 <p>A Training Order is an event. <code>Contract_LegendaryTraining</code> adds one level and rolls the reward lists
 <code>Contract_LegendaryTraining_CommonOrc</code>, <code>_EpicOrc</code>, <code>Default_EpicTraits_PickRemovable</code> and
-<code>_MarkerSwap</code>; the events <code>Upgrade_OrcRarity_ToEpic</code> and <code>_ToLegendary</code> are the other upgrades. The marker swap
+<code>_MarkerSwap</code>. The events <code>Upgrade_OrcRarity_ToEpic</code> and <code>_ToLegendary</code> are the other upgrades. The marker swap
 <code>LT_MarkerSwap</code> is eligible only for a member who already has an epic trait (<code>IncludedTraitPicker
 PickerListRaw_AllEpicTraits</code>), so applying it directly through <code>ApplyReward</code> makes a Legendary with no
-epic traits; rolling the lists through 0x350500 gives the traits first. Entering an Overlord row
+epic traits. Rolling the lists through 0x350500 gives the traits first. Entering an Overlord row
 applies the same kind of upgrade: its <code>RewardListOnEnterRow</code> rolls
 <code>OverlordSetup_LegendaryUpgrade_CommonOrc</code> (twice), <code>_EpicOrc</code>, <code>Default_EpicTraits_PickRemovable</code>,
 <code>Contract_LegendaryTraining_MarkerSwap</code> and <code>Overlord_ElementalVent_Resistances</code>.</p>
@@ -1773,16 +1797,17 @@ applies the same kind of upgrade: its <code>RewardListOnEnterRow</code> rolls
   <code>Captain</code> (<code>MinLevel</code> 5) and <code>EmergencyOverlord</code> (<code>MinLevel</code> 30 +/- 5, enters through
   <code>Builder_EnterHierarchy</code>) are the base ones; families such as <code>FD_InvCap_*</code>, <code>DLC5_Y&lt;n&gt;_&lt;region&gt;_C&lt;n&gt;_*</code>,
   <code>SW_Y*</code> and <code>Gauntlet_*</code> serve other game modes. A build request is prepared by 0x1C63920, which
-  stores the builder at request <code>+0x168</code>, its <code>UniqueBuilderInstance</code> at <code>+0x140</code> and its flags; the
-  builder build 0x1BBF928 then copies the builder to <code>FM+0x3A0</code> and the instance to <code>FM+0x350</code>, sets
-  <code>+0x520</code> = 2, and writes the seed, a name from the class map, a
-  personality (0x1BDA7AC), forces the intel level to 0 (0x353EC4 with <code>force</code>), assigns a tribe, the
-  follower and level-cap flags, then levels him and resolves his traits.</li>
+  stores the builder at request <code>+0x168</code>, its <code>UniqueBuilderInstance</code> at <code>+0x140</code> and its flags. The
+  builder build 0x1BBF928 then copies the builder to <code>FM+0x3A0</code> and the instance to <code>FM+0x350</code> and sets
+  <code>+0x520</code> = 2. It writes the seed, a name from the class map and a personality (0x1BDA7AC), forces the
+  intel level to 0 (0x353EC4 with <code>force</code>), assigns a tribe and the follower and level-cap flags, and
+  then levels him and resolves his traits.</li>
 </ul>
 <h2 id="followers-bodyguards-and-mercenaries">Followers, bodyguards and mercenaries</h2>
 <ul>
-<li><strong>Followers.</strong> Bit 27; set and cleared by events (<code>SetPlayerFollower</code>, <code>ToggleIsPlayerFollower</code>)
-  and by the follower setter 0x7D52B0, which <code>CreateEmergencyPlayerFollower</code> uses. A betrayal clears it.</li>
+<li><strong>Followers</strong> are marked by bit 27, which events (<code>SetPlayerFollower</code>, <code>ToggleIsPlayerFollower</code>) and
+  the follower setter 0x7D52B0 (used by <code>CreateEmergencyPlayerFollower</code>) set and clear. A betrayal
+  clears it.</li>
 <li><strong>Bodyguards.</strong> Only the Captain rank has <code>CanBePlayerBodyguard</code>. Bit 29 marks the player's
   bodyguard (the event <code>BecomeBodyguard</code> is the one with <code>ChangePlayerBodyguard</code>), and bits 48-50 give
   the summon slot read by 0x1010790 together with the army's <code>PlayerBodyguardSummonDataSlot0-2</code>.
@@ -1791,9 +1816,9 @@ applies the same kind of upgrade: its <code>RewardListOnEnterRow</code> rolls
 <li><strong>Spies and prisoners</strong> are event flags (<code>SetIsSpy</code>, bit 28; <code>SetIsPrisoner</code>).</li>
 <li><strong>Mercenaries.</strong> A hire is a transfer, not a new member. The mercenary screen's action 0xDBC910 takes
   the member from <code>Faction_desert_mercs_DLC4</code>, prices him (0xFA3AF0: the row's <code>HireCost</code> through the
-  army's <code>HireCostVariable</code> / <code>HireCostOption</code>, scalar 1.0 without discount skills), pays (0x189353C)
+  army's <code>HireCostVariable</code> / <code>HireCostOption</code>, scalar 1.0 without discount skills) and pays (0x189353C)
   in the currency item of the player's skill setup (<code>PC_Mirian</code> for Talion, <code>DLC4_PLBar_Coin</code> for
-  Baranor), then calls <code>TransferMember</code> 0xF6AC90. The afford check 0x18AAD4E and the payment 0xDBD0DF
+  Baranor). It then calls <code>TransferMember</code> 0xF6AC90. The afford check 0x18AAD4E and the payment 0xDBD0DF
   read that setup at <code>[[[base+0x26FFA98]+0x888]+0x2348]+0x738</code> and count the currency from the
   inventory records at <code>[obj+0x740 .. +0x748]</code> (<code>+0x00</code> item, <code>+0x20</code> count). A zero price passes the
   spend check 0x1BCEC24. The mercenary army fills its members as followers and mercenaries (bits 27 and
@@ -1801,35 +1826,36 @@ applies the same kind of upgrade: its <code>RewardListOnEnterRow</code> rolls
   base campaign never fills it.</li>
 </ul>
 <h2 id="story-and-dlc-characters-in-the-hierarchy">Story and DLC characters in the hierarchy</h2>
-<p>A story character is a <code>Faction/PresetMembers</code> record (203; 67 belong to the DLCs). The saves of the
-base campaign hold the DLC cast too: the mercenary army, the ten Blade of Galadriel twin armies and
-their presets (the Nazgul sisters <code>DLC3_Nazgul_Twin_1</code>, eight <code>DLC3ToMain_*</code> specialists,
-<code>DLC_FakeDarkTalion</code>, <code>DLC4_Desert_Overlord</code>). The base game's Nazgul are presets as well (six
-<code>GP_Nazgul_*</code>). The build sequence is in Quests, story and scenes; the seating law is the creator's:</p>
+<p>A story character is a <code>Faction/PresetMembers</code> record (203 records, 67 of them belonging to the DLCs).
+The saves of the base campaign hold the DLC cast too: the mercenary army, the ten Blade of Galadriel
+twin armies and their presets (the Nazgul sisters <code>DLC3_Nazgul_Twin_1</code>, eight <code>DLC3ToMain_*</code>
+specialists, <code>DLC_FakeDarkTalion</code>, <code>DLC4_Desert_Overlord</code>). The base game's Nazgul are presets as well
+(six <code>GP_Nazgul_*</code>). The build sequence is described in Quests, story and scenes; the seating rule is
+the creator's:</p>
 <p><strong>The creator seats any preset by its <code>FactionRow</code>.</strong> 0x1C1D378(ctx, preset) allocates (0x1C23C10),
 builds (0x1BC06C0: <code>+0x190</code> = the preset, <code>+0x3A0</code> = 0, <code>+0x520</code> = 3, flag 25) and registers the member
-(0x61B5E8). With no row he is rowless at <code>NoRowXPLevel - 1</code> (0x1C21448). With a row he is levelled for
-it (0x1C1BDA8), the column is the preset's <code>FactionColumn</code> (0x1C206AC); if that seat is taken (0x4F9014)
-or the column is negative, the row (0x61AC00) gives a free column (0x1C1BEB4), and the seat call
-0x61E13C(flag 1) runs <strong>only when a free column exists</strong>: in a full row the character is built but
-unseated. Then each preset event is fired through 0x40C0AC. Its callers are army initialisation
-0xFDAC54 (the definition's <code>PresetMembers</code>), the henchmen builder 0x1BB7898 (<code>PresetHenchmen</code>) and the
-quest path 0x62666C. Seated this way, a preset takes the row's level and his own tribe (a Blade of
-Galadriel preset in a Seregost warchief row: level 84, <code>TribeDef_NazgulTwins</code>).</p>
+(0x61B5E8). With no row, he is rowless at <code>NoRowXPLevel - 1</code> (0x1C21448). With a row, he is leveled for
+it (0x1C1BDA8) and the column is the preset's <code>FactionColumn</code> (0x1C206AC). If that seat is taken
+(0x4F9014) or the column is negative, the row (0x61AC00) gives a free column (0x1C1BEB4), and the seat
+call 0x61E13C(flag 1) runs <strong>only when a free column exists</strong>: in a full row the character is built but
+unseated. Each preset event is then fired through 0x40C0AC. The creator's callers are army
+initialization 0xFDAC54 (the definition's <code>PresetMembers</code>), the henchmen builder 0x1BB7898
+(<code>PresetHenchmen</code>) and the quest path 0x62666C. Seated this way, a preset takes the row's level and his
+own tribe (a Blade of Galadriel preset in a Seregost warchief row: level 84, <code>TribeDef_NazgulTwins</code>).</p>
 <p><code>DLC_FakeDarkTalion</code> (<code>AI_Talion</code>, <code>IsDarkTalion</code>, <code>LockedXPLevel</code> 60) has the build event
-<code>Debug_RecruitFollower</code>, which makes him a follower: seated as an Overlord he hands the region to the
+<code>Debug_RecruitFollower</code>, which makes him a follower: seated as an Overlord, he hands the region to the
 player. An occupied Overlord seat is emptied synchronously by an event with <code>EjectIfOverlord</code> through
 0x1B5B610; the engine re-places the ejected Overlord in a captain row shortly afterwards.</p>
 <h2 id="unknown-captains-and-intel">Unknown captains and intel</h2>
 <p><code>FM+0x51A</code> is the intel level and <code>FM+0x510</code> the intel mask that 0x62136C rebuilds from it with the
 army's <code>InterrogationSetup</code> (<code>Default</code>, three <code>DataStages</code>): level 0 gives 0x2, level 1 0x9B, level 2
 0xFB. The setter clamps to <code>DataStages - 1</code> (0x1163F58), and 37 of the 38 armies have three stages
-(<code>Faction_None</code> has no setup, and the setter returns), so the engine's top level is 2. Every store to
-the byte is the constructor (0), the setter (clamped), the member copy 0x1BB95CC or the loaders
-(0x1BC11F6, 0x1BC2479), which restore a saved value unclamped and then rebuild the mask, which stops at
-the last stage (0xFB): a level of 3 (65 of 549 members in one campaign, all seated, all above their
-army's top) comes from outside the engine and lives on in the save. Mask bit 0 means the name is known;
-<code>UnlockName</code> 0x621208 sets it. A level-0 start is ordinary: the builder build, 0x1BC00C8, 0x1BC02AC, the
+(<code>Faction_None</code> has no setup, and the setter returns), so the engine's top level is 2. The byte is
+stored only by the constructor (0), the setter (clamped), the member copy 0x1BB95CC and the loaders
+(0x1BC11F6, 0x1BC2479). The loaders restore a saved value unclamped and then rebuild the mask, which
+stops at the last stage (0xFB). A level of 3 (65 of 549 members in one campaign, all seated, all above
+their army's top) therefore comes from outside the engine and lives on in the save. Mask bit 0 means
+the name is known; <code>UnlockName</code> 0x621208 sets it. A level-0 start is ordinary: the builder build, 0x1BC00C8, 0x1BC02AC, the
 preset build (twice) and <code>System::HierarchyResetPreSetMemberData</code> 0x1C2373C force it, and the war
 simulation (0xFCD340, 0xFD0660) forces it whenever its level is lower. <code>Faction_island</code> and
 <code>Faction_MtnPass</code> start their members at level 0 (<code>InitialMemberIntelLevel</code> 0, combat tree shown
@@ -1838,52 +1864,52 @@ simulation (0xFCD340, 0xFD0660) forces it whenever its level is lower. <code>Fac
 0x627F40) draws the decapitation model when the summary has bits 17 and 21 (0x2EB258 -&gt; 0x2EB14C), else
 the world character record's <code>DefaultModel</code> when 0x170744(summary, flag) is false, else his own model
 (summary <code>+0x138</code>). 0x170744 is true when his member has killed the player (<code>FM+0x4C4</code> not 0, so such a
-captain is always shown); otherwise, with the flag set, when 0x16FDE0 passes (<code>is_menu_presented</code>: the
-member not found or flag bit 7, else the summary's copy at <code>+0x188</code> bit 7); otherwise when the summary's
-copy of the intel mask (<code>+0x190</code> bit 0, written only by the refill 0x169168) says the name is known.
+captain is always shown). Otherwise, with the flag set, it is true when 0x16FDE0 passes
+(<code>is_menu_presented</code>: the member not found or flag bit 7, else the summary's copy at <code>+0x188</code> bit 7).
+Otherwise it is true when the summary's copy of the intel mask (<code>+0x190</code> bit 0, written only by the
+refill 0x169168) says the name is known.
 The redraw 0x19C395C, the holder path 0x1A2957C, the combat tree 0x170698, the names 0x17EE550 and the
 replay pass 0x1BFCCC8 pass flag 0; 0x627B74, 0x627E4C and 0x1A1FF24 pass 1. The <code>Faction/World/Character</code>
 records <code>FactionMember</code>, <code>FactionMember_ModelCam</code>, <code>FactionMember_GarrisonMember</code> and <code>GraveyardVendor</code>
 name <code>Character/Models/HierarchyUnknown</code>, <code>FactionMember_Portrait</code> names <code>PortraitUnknown</code>, and
 <code>KilledByDecapitation</code> is <code>Head_Stick</code>. Because the chooser reads copies, a change to the member alone
 shows nothing on an open Army screen until the summaries are refilled.</p>
-<p><strong>The engine's reveal</strong> is 0x19F6C80: <code>UnlockName</code> 0x621208(fm, 0) (the name stage: mask 0x2 -&gt; 0x9B, and
-the quest hooks on the name bit), 0x1BC6030(fm) (bit 7 through the flag setter), then the intel setter
-0x353EC4(fm, 0xFF, 0, 0) (0xFF clamps to the top level: 0x9B -&gt; 0xFB). 0x17DE6AC makes the first two
+<p><strong>The engine's reveal</strong> is 0x19F6C80. It calls <code>UnlockName</code> 0x621208(fm, 0) (the name stage: mask 0x2
+-&gt; 0x9B, and the quest hooks on the name bit), then 0x1BC6030(fm) (bit 7 through the flag setter), then
+the intel setter 0x353EC4(fm, 0xFF, 0, 0) (0xFF clamps to the top level: 0x9B -&gt; 0xFB). 0x17DE6AC makes the first two
 calls with the event flag set. The setter also notifies the player (0x7BE290), re-resolves the traits
 (UpdateTraits reason 6) and, for a body in the world, updates trait visibility (0x355700).</p>
 <p>The hierarchy treats bit 21 (mock dead) as eliminated: the henchmen link effects 0x18316FC / 0x183191C
 skip such a member, and the replay layout picker 0x6276F8 picks "Dead".</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>What <code>FM+0x4F8</code> means. The seat function tests it; it held 1 on 2 of 555 members in one campaign,
-  both in the InvasionGame pool, and 0 on 527 of 527 in another.</li>
-<li>Why flag bit 16, which the un-death sets, is missing from most returned members.</li>
-<li>What reads flag bit 35. It has no resolved getter call, and 60 of the getter's 125 calls pass the bit
+<li>What does <code>FM+0x4F8</code> mean? The seat function tests it; it held 1 on 2 of 555 members in one
+  campaign, both in the InvasionGame pool, and 0 on 527 of 527 in another.</li>
+<li>Why is flag bit 16, which the un-death sets, missing from most returned members?</li>
+<li>What reads flag bit 35? It has no resolved getter call, and 60 of the getter's 125 calls pass the bit
   indirectly.</li>
-<li>Whether the role counter at <code>FS+0xB0</code> is the number of times the role was given (it would then
-  lower the role's weight by <code>WeightReductionPerUse</code> per use, as the scar table does by its use
-  count); the code that reads it is not traced.</li>
-<li>Whether the pool's <code>ImpC_*</code> coefficients are the importance score used when a full pool recycles a
-  member.</li>
-<li>Whether the world's resurrection total <code>FS+0x21C</code> is saved with the game, and under which key
-  (the faction manager's document keys include <code>Resurrected</code>).</li>
-<li>When exactly the cancel pass 0xF9BA70 runs relative to a save and a load. Its caller 0xFA0D30 is
-  reached from two places: the faction manager's part of the game document (0x1B5D254, keys
+<li>Is the role counter at <code>FS+0xB0</code> the number of times the role was given? It would then lower the
+  role's weight by <code>WeightReductionPerUse</code> per use, as the scar table does by its use count; the code
+  that reads it is not traced.</li>
+<li>Are the pool's <code>ImpC_*</code> coefficients the importance score used when a full pool recycles a member?</li>
+<li>Is the world's resurrection total <code>FS+0x21C</code> saved with the game, and under which key? The faction
+  manager's document keys include <code>Resurrected</code>.</li>
+<li>When exactly does the cancel pass 0xF9BA70 run relative to a save and a load? Its caller 0xFA0D30 is
+  reached from two places. One is the faction manager's part of the game document (0x1B5D254, keys
   <code>TimeStamp</code>, <code>Resurrected</code>, <code>FactionPool</code>, <code>FactionRecord</code>, <code>FactionRole</code>, <code>AmbushMgr</code>,
   <code>GauntletMgr</code>, <code>MonumentMgr</code>), which the document routine 0x1C5B4C4 runs together with the quest
-  manager, the game variables and the inventory, and the online-fortress setup's finalisation
+  manager, the game variables and the inventory. The other is the online-fortress setup's finalization
   (0x1B40CAC -&gt; 0x1B5D368, stage <code>SETUP_FINALIZE_VALIDATE_DATA_INTEGRITY</code>). The direction of the
-  document routine (write, read or both) is not traced; the second caller 0xF665F0 has no direct
+  document routine (write, read or both) is not traced, and the second caller 0xF665F0 has no direct
   caller.</li>
-<li>Whether a queued ambush request's retry count survives a save and reload.</li>
-<li>Which loading screens rebuild the army contexts and members: values changed in the mercenary army's
+<li>Does a queued ambush request's retry count survive a save and reload?</li>
+<li>Which loading screens rebuild the army contexts and members? Values changed in the mercenary army's
   context and records survived two region changes.</li>
-<li>Whether a head, hair or body carried only in the appearance cells (slots 0-2 and the face record) draws
-  on another player's game: the document carries the cells, but the receiving game makes no gear load
+<li>Does a head, hair or body carried only in the appearance cells (slots 0-2 and the face record) draw
+  on another player's game? The document carries the cells, but the receiving game makes no gear load
   request for a cell, only for an item.</li>
-<li>What exactly the quest system's re-evaluation 0x7AF25C does after a seat move or a follower change, and
-  under which conditions inside 0x61E13C it is reached.</li>
-<li>Whether the quest branch reached on a name change (0x4A87C8 / 0x19F80C8, from the name bit's hooks) can
-  start a mission tied to the captain when the engine's reveal 0x19F6C80 runs.</li>
+<li>What exactly does the quest system's re-evaluation 0x7AF25C do after a seat move or a follower change,
+  and under which conditions inside 0x61E13C is it reached?</li>
+<li>Can the quest branch reached on a name change (0x4A87C8 / 0x19F80C8, from the name bit's hooks) start
+  a mission tied to the captain when the engine's reveal 0x19F6C80 runs?</li>
 </ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
