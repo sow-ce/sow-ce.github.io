@@ -1,7 +1,8 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Resource streaming, bundles and the file system - Shadow of War engine reference</title><meta name="description" content="How a path becomes loaded data: the file system&#x27;s mount vector, the resource table, the open / load / parse stages and their request object, bundles and their reference contract, and the creature-bundle manager that decides which creature models exist in a region."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Resource streaming, bundles and the file system - Shadow of War engine reference</title><meta name="description" content="How a path becomes loaded data: the file system&#x27;s mount vector and who mounts what, the resource table, the open / load / parse stages and their request object, bundles, their reference contract and the set algebra that decides where each resource&#x27;s bytes come from, the engine&#x27;s own hot reload, and the creature-bundle manager that decides which creature models exist in a region."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
+<a href="builds.html" data-p="builds">Game builds: Steam, GOG and Microsoft Store</a>
 <a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
 <a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
 <a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
@@ -23,13 +24,17 @@
 <a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
 <a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="haedirs.html" data-p="haedirs">Haedirs: towers, seeing stones and fast travel</a>
 <a href="outposts.html" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
-<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="resource-streaming-bundles-and-the-file-system">Resource streaming, bundles and the file system</h1><p class=\"lede\">How a path becomes loaded data: the file system&#x27;s mount vector, the resource table, the open / load / parse stages and their request object, bundles and their reference contract, and the creature-bundle manager that decides which creature models exist in a region.</p>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="resource-streaming-bundles-and-the-file-system">Resource streaming, bundles and the file system</h1><p class=\"lede\">How a path becomes loaded data: the file system&#x27;s mount vector and who mounts what, the resource table, the open / load / parse stages and their request object, bundles, their reference contract and the set algebra that decides where each resource&#x27;s bytes come from, the engine&#x27;s own hot reload, and the creature-bundle manager that decides which creature models exist in a region.</p>
 <h2 id="the-file-system">The file system</h2>
 <p>Every asset path is resolved through one priority vector on the file system object, a static at
 0x2A54600 (a function-local static returned by 0x3DDD34). Entry 0 is consulted first.</p>
@@ -68,9 +73,28 @@
 with <code>GetFileAttributesW(directory + path)</code>; a hit stops the archive search, and the loader opens the
 loose file itself (0x529BF8 -&gt; <code>GetLooseFilePath</code> 0x52A2F8). The retail game already mounts its
 <code>Game\</code> folder as the last entry; that is how the cinematic <code>.vib</code> movies ship as loose files.</p>
-<p><code>Mount(fs, Source** out, path, unused, index)</code> is 0xC28560, the function behind the <code>-arch</code> command
-line option and the run-time DLC mounter. There is no unmount method. A mount affects the next load
-of a path only; an asset already resident keeps its data until it is streamed again.</p>
+<p><code>Mount(fs, Source** out, path, unused, index)</code> is 0xC28560. A folder becomes a directory source; a
+file that exists (0x52A42C) becomes an archive tree, opened by 0x11AE014, which keeps the path as given
+at <code>archive+0x50</code>; a path that names nothing is skipped without a message. An archive's first file,
+<code>archivepatchloosefiles.txt</code>, is its path index: Mount merges it into the hash -&gt; path table at
+<code>fs+0x80</code> (lookup 0x3DDAD8, merge 0x1182428) and recomputes the scan bound. An index past the end of
+the vector mounts at the top (0xC28818). There is no unmount method.</p>
+<p>Mount has three callers. The file-system setup 0x119717C (from the shell initialisation 0x117CF30)
+first mounts every <code>-arch &lt;path&gt;</code> command-line argument at index 0, before it reads the config list;
+then it mounts the config list's lines through 0x1197418 -&gt; 0x11972C8, each in front of the nearest
+earlier line's archive (index from 0xC34960), so the first line, <code>..\Game</code>, ends last and every later
+line stacks above the one before: the list's "file search order is from the bottom up". At run time
+the file system's "mount at the top" method (vt_0x22BF9C8 vf2, the object at <code>[base+0x26FF048]</code>) is
+called by 0x1848A50 for the archives the online service downloads into the player's profile folder.
+In one running game the vector held 89 entries (capacity 96): 74 archives from the config list (the
+14 lines naming missing files skipped), the six downloaded packs at the top, and <code>..\Game\</code> last.</p>
+<p>A mount affects the next load of a path only: a resource the game already holds, or keeps cached
+without references, is handed back as it is (see Reloading below), and a fast travel does not re-read
+it. Every open walks the vector from the top (the resource open stage 0x3DD648 -&gt; 0x3DD8FC -&gt;
+0x3DD9F8): an archive answers from memory through its folder table's binary search (0x3DDAB8); a
+directory source first checks its extension filter (0x3DDC18, a list of hashes of the text after the
+last dot, empty unless set, and Mount leaves it empty) and then tries a real file open (0x3DDCBC builds
+the path, 0xC3C1B0 opens it).</p>
 <h2 id="hashing-names">Hashing names</h2>
 <p>Paths and names are hashed with <code>StringHash</code> 0x423E70: <code>h = h * 919 + LUT[c]</code> over the bytes, with
 the 256-byte table at 0x1DB50D0 (it folds case, so the hash is case-insensitive). The same hash names
@@ -100,6 +124,14 @@ node is <code>resource + 0x10</code> (<code>+0x08</code> next, <code>+0x10</code
 <td>reference count</td>
 </tr>
 <tr>
+<td>+0x34</td>
+<td>u16 claim count: how many loaded bundle contents name the resource</td>
+</tr>
+<tr>
+<td>+0x36</td>
+<td>u16 flags: bit 0 a load finished; 0x10 a standalone request is pending; 0x08 a reload; 0x20 a re-request with stream detail</td>
+</tr>
+<tr>
 <td>+0x38</td>
 <td>u32 byte size (the engine's own accounting)</td>
 </tr>
@@ -107,8 +139,13 @@ node is <code>resource + 0x10</code> (<code>+0x08</code> next, <code>+0x10</code
 <td>+0x52</td>
 <td>type (27 bundle, 48 effect <code>.fxp</code>, 20 material <code>.mat</code>, ...)</td>
 </tr>
+<tr>
+<td>+0x60</td>
+<td>busy while a load is in progress</td>
+</tr>
 </tbody>
 </table>
+<p>0x17DE40 is the engine's "loaded" test.</p>
 <p>A resource whose count reaches zero is not freed: 0x1BEAAC unlinks it from an unused list (<code>+0x10</code>)
 and keeps it for reuse. "Released" therefore does not mean "gone"; residency is decided by the data
 pointer.</p>
@@ -318,6 +355,38 @@ whose manifest has no data (ten such rows exist in a normal game).</p>
 <p>Loading a region's layer bundle does not place it in the world: its resources become resident, but
 world contexts and placed objects are unchanged. In a loaded region the registry holds about 544
 bundles, and every character bundle the region uses is already resident.</p>
+<h3 id="how-a-bundle-s-content-becomes-resources">How a bundle's content becomes resources</h3>
+<p><strong>Manifests are sorted lists.</strong> Every shipped manifest lists its entries sorted by the P919 hash of
+the path as an unsigned number, then by the path compared case-insensitively: 806 of 806 loaded
+manifests, 62,270 entries, the stored hash equal to the path's P919 on every one. The parsed manifest
+is reached as bundle <code>+0x20</code> (the manifest resource) -&gt; <code>+0x08</code> -&gt; <code>[+0]</code> -&gt; <code>+0x10</code>, a block whose
+<code>+0x0C</code> is the bundle path's hash, <code>+0x18 / +0x20</code> the entry list <code>{u32 hash, pad, char* path}</code> and
+<code>+0x28 / +0x30</code> the size list.</p>
+<p><strong>The content loader is set algebra over sorted lists.</strong> 0x3DBE50 -&gt; 0x3DC04C runs
+<code>std::set_intersection</code> (0x3E0218) and <code>std::set_difference</code> (0x3DC388, 0x3DC3E0) over the
+container's sections, the manifest and the load stage's path table, with the comparator 0x11B5AD4
+(hash, then <code>_stricmp</code>). The content's first vector (<code>content+0x00 / +0x08</code>, resources made by
+0x3E0628) is B = (sections and manifest) minus the path table: what the container itself supplies. The
+second (<code>content+0x20 / +0x28</code>, 0x3E03B8) is A = the manifest minus B: entries that come from
+elsewhere. 398 of 877 loaded bundles hold such entries, shipped ones among them, so the second vector
+is not a "still loading" list. A path in the path table is therefore never taken from the container:
+a file at that path in any mounted archive replaces the bundle's copy.</p>
+<p><strong>The first claim decides.</strong> Each A entry goes through 0x3E00FC, which adds a reference and a claim
+(<code>+0x34</code>) and, on the first claim only, sets flag 0x10 and requests the resource as a file of its own
+(0x2D40A4). Container bytes reach resources through 0x11B5D14, one forward pass over the <code>.embb</code>
+sections in file order against the first vector (<code>_stricmp</code> on the resource path, progress in
+<code>content+0x18</code>); 0x1CD4A3C loads a section only when the claim count goes from 0 to 1 (or its type is
+in a force mask), clearing flag bit 0, raising <code>+0x60</code> and calling the type's loader. Every later
+claimant is skipped, so whichever bundle claims a resource first decides its data for as long as
+anyone holds it. A manifest out of order breaks the set operations: entries fall into A, each is
+requested as a file, and those that are not files of their own load empty and stay empty until every
+claim on them is dropped.</p>
+<p><strong>Shader trees are loose files that bundles list.</strong> A shader tree (<code>.fxo</code>, tag <code>SRHR</code>) ships as a
+loose archive entry, and 1,433 of 183,631 shipped manifests list at least one (9,381 rows), the
+bundle's container usually carrying a copy as a section as well. Being a file of its own, a tree falls
+into A and is requested standalone; the container's copy is skipped. A material only registers the
+trees it names: unless a loaded bundle lists a tree (or it is loaded at start-up), the tree stays
+registered with no data and the material draws nothing.</p>
 <p><strong>Gear needs two bundles.</strong> An armour piece's geometry lives in <code>&lt;piece&gt;_g.bndl</code> (<code>.mesh</code>, <code>.skel</code>,
 <code>.anix</code>) and its material and textures in a set-wide <code>&lt;set&gt;_&lt;slot&gt;_m.bndl</code> named by the design
 record (<code>Inventory/ArmorData</code> field <code>DynamicBundle</code>). The engine loads both through a gear load
@@ -372,6 +441,53 @@ the database body reader 0x4B9B50 read 4 bytes past the end of the file (0x4B9C6
 asynchronous stream (vt_0x1E71010) that read does not return, and every later load waits behind it
 until the game restarts. A missing file, by contrast, is harmless. The effect database's categories
 are sorted by the hash of their path (371 of 371), and the loader binary-searches them (0x115B4D4).</p>
+<h2 id="reloading">Reloading</h2>
+<p><strong>The engine's hot reload.</strong> <code>ResourceMgr::Reload</code> 0x119F4BC(owner, path), slot 7 of the I/O owner
+vt_0x22C0FF8 (owner = <code>[base+0x2A86750] - 0x30</code>), reloads one resource while the game runs. Its filter
+0x119EB60 refuses <code>.gamedb</code>, and <code>.anix</code> / <code>.objres</code> according to two engine switch bytes (0x262B50A,
+0x262B509); the lookup 0x17AE1C refuses a resource with no references; 0x1188A00 clears every
+registered bundle's loaded counters; and <code>CResource::Reload</code> 0x3E0AE0 takes the lock, sets flag 8 and
+queues the resource through 0x2D40A4. Nothing in the executable calls it. Its siblings are slot 6
+(0x5D5A000 -&gt; 0xC2A880, reload by path prefix) and slot 8 (0x119F528 -&gt; 0x119DA54 -&gt; 0x11B5F74, reload
+by resource-type mask, bundle by bundle, asking each bundle's content again).</p>
+<p><strong>The per-frame processor</strong> 0x2D3E10 (its queue served by 0x2D35E8) acts on a queued resource by its
+state:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>claim count <code>+0x34</code> is 0</td>
+<td>releases the data and does not ask again: a reload of an unclaimed resource is an unload</td>
+</tr>
+<tr>
+<td>flag 0x20</td>
+<td>releases, asks again with the stream detail at <code>+0x40</code></td>
+</tr>
+<tr>
+<td>flag 0x08</td>
+<td>releases, asks again by path with no stream detail: the reload</td>
+</tr>
+<tr>
+<td>flag 0x10 and no data</td>
+<td>asks by path (a bundle's A entry)</td>
+</tr>
+<tr>
+<td>always, at the end</td>
+<td>clears 0x08, 0x10 and 0x20 (<code>and 0xFFC7</code> at 0x2D4001)</td>
+</tr>
+</tbody>
+</table>
+<p>The parser thread runs the type's parse (0x3DD3C4; for a texture the texture type's vf4 0x5018A4
+creates the Direct3D texture), and the finish 0x3E0BD4 must run on the render thread ("Finalize can
+only be called on the Render Thread!", 0x4C2610). Reloading a 5.6 MB texture this way took about
+14 ms from empty to whole, with a new data object and a new <code>ID3D11Texture2D</code> and the references and
+flags unchanged. A changed file mounted under the texture's path reached the screen on the reload,
+with no travel.</p>
 <h2 id="creature-bundles">Creature bundles</h2>
 <p><code>CharacterBundleMgr</code> (<code>CharacterBundleMgr.cpp</code>) is <code>MainScene+0x868</code> (<code>[base+0x26FFAB0]+0x868</code>). It
 decides which creature models are in memory.</p>
@@ -385,7 +501,7 @@ decides which creature models are in memory.</p>
 <tbody>
 <tr>
 <td>+0x00 / +0x08</td>
-<td>entries and their count (146 = the <code>Server/NPCBundle</code> records); an entry is 0x30 bytes: <code>+0x00</code> the NPCBundle record, <code>+0x08/+0x10</code> a vector of <code>CResourceBundle*</code> (the same objects as the registry's), <code>+0x28</code> loaded</td>
+<td>entries and their count (146 = the <code>Server/NPCBundle</code> records); an entry is 0x30 bytes: <code>+0x00</code> the NPCBundle record, <code>+0x08/+0x10</code> a vector of <code>CResourceBundle*</code> (the same objects as the registry's: an entry holds references to its bundles), <code>+0x28</code> requested</td>
 </tr>
 <tr>
 <td>+0x18 / +0x20 / +0x28</td>
@@ -401,7 +517,7 @@ decides which creature models are in memory.</p>
 </tr>
 <tr>
 <td>+0x50 / +0x68 / +0x80</td>
-<td>the world set, the override set, an extra set (<code>Playerskin_DarkTalion</code>)</td>
+<td>the world set, the override set, the player's build set (<code>Playerskin_DarkTalion</code> at rest)</td>
 </tr>
 <tr>
 <td>+0x98 / +0xA0</td>
@@ -417,10 +533,27 @@ decides which creature models are in memory.</p>
 </tr>
 </tbody>
 </table>
-<p>The update 0x4B4FFC runs when the dirty byte is set: wanted = the first override list (or the
-default list) plus the always and extra sets; world set = the provider's list. The reconcile 0xE9F360
-requests what is new (<code>RequestBundleLoad</code> 0x4B6204), queues what dropped out for unloading, then
-drains the queue, firing loaded / unloaded events through the global script agent (<code>GM+0x6CF0</code>).</p>
+<p><code>IsBundleLoaded</code> 0x1665B4 asks 0x166630(entry + 8), which answers 0 while the requested byte is
+clear, else the first bundle whose state (vf5) is neither 3 nor 4, else 3; the entry counts as loaded
+when the answer is 3 or 4, so a bundle that failed (4) counts as loaded and one still streaming (1 or
+2) does not.</p>
+<p>The update 0x4B4FFC runs when the dirty byte is set. The world set is the provider's list; the
+override set is the first override list (or the default list) with the records of the always, world
+and build sets removed (0xE9F280 swap-removes them), so no record is owned twice. The reconcile
+0xE9F360 requests what is new and queues what dropped out for unloading, then the update drains the
+queue, firing loaded / unloaded events through the global script agent (<code>GM+0x6CF0</code>). A request is a
+flag per entry, not a count: <code>RequestBundleLoad</code> 0x4B6204 turns a queued unload of the record back into
+a load, else starts the entry loading (0x4B6300) and queues <code>{record, 0}</code>, or fires the loaded event at
+once; <code>RequestBundleUnload</code> 0x19EB87C turns a queued load into an unload, else queues <code>{record, 1}</code>. The
+drain unloads an entry by dropping every bundle handle it holds (0x2EE10C, clearing the requested
+byte) and polls a load (0x4B52A8) until it is loaded. One unload therefore takes the entry's bundles
+whoever asked for them; only a separate handle on the <code>.bndl</code> outlives it.</p>
+<p>The build set is kept by the player's model change (vf136 0x19BF404): the old model's
+<code>Character/Models.Bundle</code> is taken out of the set and unloaded and the new one requested and put in,
+one in and one out at every change; the player's build gate reads the set (0x19EAD34).
+<code>RequestBundleLoad</code> has four callers: the spawn gate 0x16652C, the reconcile, the player's model change
+and the wrapper 0x19EB83C. 0x19EAC44 (called once, from 0x178701C) is the teardown: every entry
+unloaded, the four sets and the queue cleared.</p>
 <p>A list's length is its field descriptor's element count (read by 0xE9EA30): every
 <code>Server/NPCBundle/Lists</code> record has two fields (the bundle array, hash 0x7AB8B862, and an empty
 second array). <code>World_Island_Day</code> holds six bundles (Goblin, Spider, Warg_Base, Fellbeast,
@@ -462,4 +595,9 @@ only when content is packed; no run-time code reads it.</p>
 <li>Why the global path table's second field is 0 while the per-bundle name arrays carry 1.</li>
 <li>Which other code submits I/O requests: only two callers of the submit function exist, so the
   resource system may queue some loads elsewhere.</li>
-</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
+<li>Whether an archive mounted after a world has loaded reaches a bundle that loads later: the load
+  stage's copy of the path table follows the file system's generation counter (<code>fs+0xC0</code>), but no
+  such load has been traced.</li>
+<li>Whether the reload works for resource types other than textures; only a texture has been reloaded
+  and seen.</li>
+</ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
