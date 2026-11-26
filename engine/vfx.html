@@ -16,6 +16,7 @@
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
 <a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
+<a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
 <a href="characters.html" data-p="characters">Characters, the player and the camera</a>
 <a href="ai.html" data-p="ai">AI: planning, perception, spawning and group combat</a>
@@ -105,6 +106,9 @@ vt_0x1DAA9D0): Sound, CameraShake, Create, CreateRay, Lightning, Tracer, DebrisS
 Volumetric, SceneRender, ImpactDecal, Wind, VegetationDisp, PolyString and PolyCurve. Key objects
 derive from vt_0x1DB46A8 (sprites vt_0x1DCB558, GPU nodes vt_0x1DB46C8); KeyData objects from
 vt_0x1DAB2F0 (12 slots; vf6, vf7, vf8 and vf10 are the per-type overrides).</p>
+<p><code>GPUCloth</code> is a <code>Model</code> node with twelve simulation properties of its own; it loads <code>&lt;model&gt;.GPUCloth.cres</code>
+and hands its model to the engine's GPU cloth solver (KeyData vt_0x200A4A0, 0x80 bytes). Its key layout, the
+cloth file and the solver are in Cloth.</p>
 <p>Classes confirmed by exact counts (node-type count in the live instances' resources = count of the
 class's vtable inside their KeyData blocks, two snapshots):</p>
 <table>
