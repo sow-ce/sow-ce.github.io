@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -175,7 +175,7 @@ the slots do not.</p>
 <td><code>[base+0x26FEF80]</code></td>
 <td>a second pointer to the default heap</td>
 <td>456 / 430</td>
-<td>written by the lazy initialisation inlined into 69 allocation functions</td>
+<td>written by the lazy initialization inlined into 69 allocation functions</td>
 </tr>
 <tr>
 <td><code>[base+0x26FFC28]</code></td>
@@ -211,7 +211,7 @@ the slots do not.</p>
 <td>u32 at 0x26FFB48</td>
 <td>the serial counter of timed UI events</td>
 <td>1 / 1</td>
-<td>0x32E4DC initialises a timed UI event on the UI clock (used by the HUD's event queues, <code>CUIHUDEvent&lt;...&gt;::AddEvent</code>) and gives it the next number, stored at <code>+0x10</code></td>
+<td>0x32E4DC initializes a timed UI event on the UI clock (used by the HUD's event queues, <code>CUIHUDEvent&lt;...&gt;::AddEvent</code>) and gives it the next number, stored at <code>+0x10</code></td>
 </tr>
 </tbody>
 </table>
@@ -421,7 +421,7 @@ capacity, +0x14 u8 owned}</code> of <code>CPlayerObj</code> (vt_0x1F96818). The 
 <tr>
 <th>Counter</th>
 <th>Where</th>
-<th>Behaviour</th>
+<th>Behavior</th>
 </tr>
 </thead>
 <tbody>
@@ -442,28 +442,124 @@ capacity, +0x14 u8 owned}</code> of <code>CPlayerObj</code> (vt_0x1F96818). The 
 </tr>
 </tbody>
 </table>
-<p><strong>The clocks.</strong> The engine keeps a family of scaled clocks, each a holder object with its own vtable
-(vt_0x22F2E90 to vt_0x22F2F10) whose <code>+0x08</code> is the clock state (vt_0x22C2570): <code>+0x08</code> the number
-of objects that use the clock as their time source, <code>+0x10</code> the current
-step in milliseconds (u32) and <code>+0x14</code> the same step in seconds (f32), <code>+0x18</code> the time in u32
-milliseconds and <code>+0x20</code> in f64 seconds, <code>+0x28 / +0x2C</code> the rate's numerator and denominator,
-<code>+0x30</code> the scale, <code>+0x34</code> the effective rate of the last step (f32), <code>+0x38</code> the smallest and
-<code>+0x3C</code> the largest step in milliseconds, <code>+0x40</code> a stop byte, <code>+0x44</code> extra milliseconds added to
-the next step once, and from <code>+0x60</code> a list of listeners. The update (vf2 0x59A2F50) computes the
-step as rate x the real elapsed time plus the pending extra (which it then clears), forces it to 0
-and skips the clamp while the stop byte is set or the rate's denominator exceeds 0xFFFF, otherwise
-clamps it to <code>[+0x38, +0x3C]</code>, and passes it to every listener's vf2. Six clocks clamp to 1-100 ms,
-so a long hitch advances them by at most 100 ms; the unscaled and real-time clocks have no upper
-bound (<code>+0x3C</code> = 0xFFFFFFFF). With the game paused, the seven pausable clocks read stop byte 1 and
-step 0, while the real-time clock read stop byte 0, steps of 3-4 ms and a rate of 1.0. The slots
-are the world <code>[base+0x2702598]</code>, the player <code>[base+0x2702548]</code>, the
-combat companion <code>[base+0x2702570]</code>, the world UI <code>[base+0x2702558]</code>, presentations
-<code>[base+0x2702578]</code>, an unscaled clock <code>[base+0x2702550]</code>, the UI <code>[base+0x2702588]</code> and a
-<strong>real-time clock</strong> <code>[base+0x2702590]</code>. Three more clocks fill the gaps in that run, 11 slots in all
-from 0x2702548 to 0x2702598: <code>[base+0x2702560]</code>, which one ClientFX manager outside the client shell
-runs on, <code>[base+0x2702568]</code> and <code>[base+0x2702580]</code>. Every clock but the real-time one stops while the
-game is paused: with the game paused, the real-time clock advanced 1,015 ms in one second and the other
-seven not at all. Slow motion scales the first five as channels (see Quests, story and scenes).</p>
+<p><strong>The clocks.</strong> The engine keeps a family of scaled clocks. Each is a holder object with its own
+vtable (vt_0x22F2E90 to vt_0x22F2F10), and the holder's <code>+0x08</code> is the clock state (vt_0x22C2570):</p>
+<table>
+<thead>
+<tr>
+<th>State offset</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>+0x08</code></td>
+<td>the number of objects that use the clock as their time source</td>
+</tr>
+<tr>
+<td><code>+0x10</code>, <code>+0x14</code></td>
+<td>the current step, in milliseconds (u32) and in seconds (f32)</td>
+</tr>
+<tr>
+<td><code>+0x18</code>, <code>+0x20</code></td>
+<td>the time, in milliseconds (u32) and in seconds (f64)</td>
+</tr>
+<tr>
+<td><code>+0x28 / +0x2C</code></td>
+<td>the rate's numerator and denominator</td>
+</tr>
+<tr>
+<td><code>+0x30</code></td>
+<td>the scale</td>
+</tr>
+<tr>
+<td><code>+0x34</code></td>
+<td>the effective rate of the last step (f32)</td>
+</tr>
+<tr>
+<td><code>+0x38</code>, <code>+0x3C</code></td>
+<td>the smallest and the largest step, in milliseconds</td>
+</tr>
+<tr>
+<td><code>+0x40</code></td>
+<td>a stop byte</td>
+</tr>
+<tr>
+<td><code>+0x44</code></td>
+<td>extra milliseconds, added once to the next step</td>
+</tr>
+<tr>
+<td>from <code>+0x60</code></td>
+<td>a list of listeners</td>
+</tr>
+</tbody>
+</table>
+<p>The update (vf2 0x59A2F50) computes the step as the rate times the real elapsed time, plus the
+pending extra, which it then clears. While the stop byte is set or the rate's denominator exceeds
+0xFFFF, it forces the step to 0 and skips the clamp; otherwise it clamps the step to
+<code>[+0x38, +0x3C]</code>. It then passes the step to every listener's vf2. Six clocks clamp to 1-100 ms, so
+a long hitch advances them by at most 100 ms; the unscaled and real-time clocks have no upper bound
+(<code>+0x3C</code> = 0xFFFFFFFF).</p>
+<p>The clock slots form a run of 11 from 0x2702548 to 0x2702598. Eight have a known role, and three
+more fill the gaps between them:</p>
+<table>
+<thead>
+<tr>
+<th>Clock</th>
+<th>Slot</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>world</td>
+<td><code>[base+0x2702598]</code></td>
+</tr>
+<tr>
+<td>player</td>
+<td><code>[base+0x2702548]</code></td>
+</tr>
+<tr>
+<td>combat companion</td>
+<td><code>[base+0x2702570]</code></td>
+</tr>
+<tr>
+<td>world UI</td>
+<td><code>[base+0x2702558]</code></td>
+</tr>
+<tr>
+<td>presentations</td>
+<td><code>[base+0x2702578]</code></td>
+</tr>
+<tr>
+<td>an unscaled clock</td>
+<td><code>[base+0x2702550]</code></td>
+</tr>
+<tr>
+<td>UI</td>
+<td><code>[base+0x2702588]</code></td>
+</tr>
+<tr>
+<td>a <strong>real-time clock</strong></td>
+<td><code>[base+0x2702590]</code></td>
+</tr>
+<tr>
+<td>unnamed; one ClientFX manager outside the client shell runs on it</td>
+<td><code>[base+0x2702560]</code></td>
+</tr>
+<tr>
+<td>unnamed</td>
+<td><code>[base+0x2702568]</code></td>
+</tr>
+<tr>
+<td>unnamed</td>
+<td><code>[base+0x2702580]</code></td>
+</tr>
+</tbody>
+</table>
+<p>Every clock but the real-time one stops while the game is paused. In a paused game the seven
+pausable clocks read stop byte 1 and step 0 and did not advance at all, while the real-time clock
+read stop byte 0, steps of 3-4 ms and a rate of 1.0, and advanced 1,015 ms in one second. Slow
+motion scales the first five clocks in the table as channels (see Quests, story and scenes).</p>
 <p>The count at <code>+0x08</code> is a reference count that includes the clock's own holder: the presentations clock
 reads 1, and its only reference is the holder's <code>+0x08</code>. On each of the 11 live clock states the heap
 holds exactly two more pointers to the state than <code>+0x08</code> says, and those two are the state's own
@@ -488,7 +584,7 @@ its own due time.</p>
 <li><strong>A load starting</strong> shows as a new pointer at <code>[CGameClientShell]+0xE50</code>.</li>
 <li><strong>Pause.</strong> The simulation pauses while the game window is unfocused: the world time stops and
   the per-object time steps are 0, while the renderer keeps drawing at full rate.</li>
-<li><strong>Loads rebuild state.</strong> Some loading screens deserialise GameDB instance data and faction
+<li><strong>Loads rebuild state.</strong> Some loading screens deserialize GameDB instance data and faction
   members again, and a region change resets bundles and animation state, so values written into
   those objects before a load do not survive it.</li>
 </ul>
