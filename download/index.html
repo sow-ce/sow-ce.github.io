@@ -352,6 +352,75 @@ a.notice:hover{border-color:var(--accent);color:var(--text)}
 .ed-btn[disabled]{opacity:.55;cursor:wait}
 @media (max-width:520px){.ed-row{grid-template-columns:1fr}}
 
+/* HARVEST: the Thanksgiving theme (2026-11-26, user: "apply a thanksgiving theme to celebrate"). Inert unless <html>
+   has the class "harvest", which the season-js script right after this stylesheet sets in Thanksgiving week only
+   (never write the style element's closing tag in this sheet, even in a comment: it ends the sheet). The same layout
+   in a warm palette, a greeting at the top of the hero and a few leaves falling behind it. The download page shares
+   this stylesheet and the script (gh_publish.py build_download), so it takes the palette too. To take the theme out:
+   this block, the season-js script and the two HARVEST blocks in the hero. */
+.hv-greet,.hv-leaves{display:none}
+.hv-sprite{position:absolute;width:0;height:0;overflow:hidden}
+html.harvest{
+  --bg:#110e0c; --bg-deep:#0b0908; --panel:#17120f; --panel-2:#1f1914; --edge:#2d251e; --edge-hi:#3d3229;
+  --text:#f1ebe2; --dim:#b5aa9c; --faint:#928779;
+  --accent:#ec8f45; --accent-hi:#f7c27c; --accent-deep:#9c5129; --primary:#a6442a; --primary-hi:#bf522f;
+  --mithril:#f3e6cf;
+}
+.harvest a:hover{color:#ffdca6}
+.harvest .top{background:rgba(17,14,12,.9)}
+.harvest #mark-blade stop:nth-child(1){stop-color:#fff0d4}
+.harvest #mark-blade stop:nth-child(2){stop-color:#ec8f45}
+.harvest #mark-blade stop:nth-child(3){stop-color:#9c4a26}
+.harvest #mark-blade-dark stop:nth-child(1){stop-color:#ffdfa8}
+.harvest #mark-blade-dark stop:nth-child(2){stop-color:#c4652f}
+.harvest #mark-blade-dark stop:nth-child(3){stop-color:#6a3118}
+.harvest .mark-script{stroke:#f2a85a}
+.harvest .perks{background:linear-gradient(90deg,rgba(236,143,69,.03),rgba(236,143,69,.10) 50%,rgba(236,143,69,.03)),var(--bg-deep);box-shadow:inset 0 1px 0 rgba(236,143,69,.24)}
+.harvest .perks .perk-list li{border-color:rgba(236,143,69,.45);background:rgba(236,143,69,.09);box-shadow:0 0 14px rgba(236,143,69,.10)}
+.harvest .svx-node rect{stroke:rgba(236,143,69,.62);filter:drop-shadow(0 0 10px rgba(236,143,69,.2))}
+.harvest .svx-hub-bg{fill:#120d0a;filter:drop-shadow(0 0 16px rgba(236,143,69,.3))}
+.harvest .svx-hub-in{stroke:rgba(236,143,69,.45)}
+.harvest .svx-rail{stroke:rgba(247,194,124,.82)}
+.harvest #svx-halo stop{stop-color:#ec8f45}
+.harvest #svx-pill stop:first-child{stop-color:#2a1f17}
+.harvest #svx-pill stop:last-child{stop-color:#15100c}
+.harvest .hero{background:radial-gradient(ellipse 90% 55% at 50% 100%,rgba(236,143,69,.10),transparent 70%)}
+.harvest .hero-ring::before{background:radial-gradient(closest-side,rgba(236,143,69,0) 52%,rgba(236,143,69,.26) 74%,rgba(236,143,69,0) 100%)}
+.harvest .hero-ring circle[stroke="#66bff2"]{stroke:#ec8f45}
+.harvest .hero::after{background:radial-gradient(circle calc(var(--ring)*.5) at 50% 50%,rgba(17,14,12,.86) 46%,rgba(17,14,12,.4) 62%,rgba(17,14,12,0) 80%)}
+@media (max-width:720px){.harvest .hero::after{background:radial-gradient(circle calc(var(--ring)*.5) at 50% 50%,rgba(17,14,12,.84) 62%,rgba(17,14,12,.6) 84%,rgba(17,14,12,.35) 100%)}}
+.harvest .notice,.harvest .owner-hint,.harvest .next-points li{background:rgba(17,14,12,.7)}
+.harvest .next{background:radial-gradient(ellipse 70% 60% at 50% 0%,rgba(236,143,69,.11),transparent 72%),var(--bg-deep);box-shadow:inset 0 1px 0 rgba(236,143,69,.24)}
+.harvest .next-n{background:rgba(236,143,69,.10)}
+.harvest .rail-item[aria-pressed="true"]{background:rgba(236,143,69,.12)}
+.harvest .feat-tools input:focus{box-shadow:0 0 0 3px rgba(236,143,69,.2)}
+.harvest .final{background:radial-gradient(ellipse 70% 120% at 50% 0%,rgba(236,143,69,.11),transparent 62%),var(--bg)}
+.harvest .btn-head:hover{background:rgba(236,143,69,.07)}
+/* the greeting: a centred title between two rules, a leaf at each end */
+/* Full width: a shrink-to-fit box would count each rule at its 20px minimum and squeeze the title onto two lines.
+   The rules shrink six times faster than the title, so the title only wraps once they are at their minimum. */
+.harvest .hv-greet{display:block;width:100%;margin-bottom:22px}
+.hv-title{display:flex;align-items:center;justify-content:center;gap:clamp(10px,1.4vw,16px);font:700 clamp(1.8rem,3.6vw,2.8rem)/1.1 var(--f-display);color:var(--mithril);text-shadow:0 0 18px rgba(8,6,5,.95),0 2px 6px rgba(8,6,5,.9),0 0 40px rgba(8,6,5,.8)}
+.hv-title em{font-style:italic;font-weight:600;color:var(--accent-hi)}
+.hv-title > span:not(.hv-rule){flex:0 1 auto;min-width:0;text-wrap:balance}
+.hv-rule{flex:0 6 96px;min-width:20px;height:1px;background:linear-gradient(90deg,transparent,rgba(247,194,124,.7))}
+.hv-rule:last-child{background:linear-gradient(90deg,rgba(247,194,124,.7),transparent)}
+.hv-mark{flex:none;width:.66em;height:.66em;color:var(--accent);transform:rotate(-24deg)}
+.hv-mark.hv-flip{transform:scaleX(-1) rotate(-24deg)}
+.hv-line{margin:12px auto 0;max-width:34em;color:var(--dim);font-size:clamp(15px,1.4vw,17px);text-wrap:balance;text-shadow:0 1px 12px rgba(10,8,6,.95)}
+@media (max-width:520px){.hv-rule{display:none}}
+/* the leaves: each falls straight (the <i>) and sways and tumbles on the way (its svg), behind the hero's vignette,
+   so they show at the sides and fade behind the text. The fall is longer than the hero (with the greeting, measured
+   2026-11-26: 948px at 1920x1080, the tallest 1,049 at 320px wide), so none restarts in view. */
+.harvest .hv-leaves{display:block;position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;--fall:max(1200px,calc(100vh + 200px));--k:1.3}
+.hv-leaf{position:absolute;left:var(--x);top:-56px;width:calc(var(--s) * var(--k));height:calc(var(--s) * var(--k));color:var(--c);opacity:var(--o,.85);animation:hv-fall var(--t) linear var(--d) infinite;will-change:transform}
+.hv-leaf svg{display:block;width:100%;height:100%;animation:hv-sway var(--sw) ease-in-out var(--d) infinite alternate}
+@keyframes hv-fall{from{transform:translate3d(0,0,0)}to{transform:translate3d(var(--dx),var(--fall),0)}}
+@keyframes hv-sway{from{transform:translateX(-14px) rotate(-32deg) rotateX(8deg)}to{transform:translateX(14px) rotate(30deg) rotateX(58deg)}}
+@media (max-width:720px){.harvest .hv-leaves{--k:1.1}.hv-leaf:nth-of-type(n+9){display:none}}
+@media (prefers-reduced-motion:reduce){.hv-leaf{top:var(--y)}.hv-leaf svg{transform:rotate(var(--r,0deg))}}
+/* /HARVEST */
+
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   *,*::before,*::after{animation:none!important;transition:none!important}
@@ -383,7 +452,24 @@ a.notice:hover{border-color:var(--accent);color:var(--text)}
 .dl-status{margin-top:10px;color:var(--dim);font-size:15px}
 .dl-file{margin-top:18px;font:500 13.5px/1.6 var(--f-mono);color:var(--dim);overflow-wrap:anywhere}
 .dl-next{margin-top:12px;color:var(--dim)}
-</style></head><body>
+</style>
+<script id="season-js">
+/* The Thanksgiving theme (HARVEST in the stylesheet) turns itself on in Thanksgiving week by the visitor's own clock:
+   the US date, the fourth Thursday of November, from the Monday before it to the Sunday after. ?harvest=1 shows it on
+   any day, ?harvest=0 hides it. It runs before the page draws, so the blue look never flashes first. */
+(function () {
+  try {
+    var q = /[?&]harvest=([01])/.exec(location.search), now = new Date(), y = now.getFullYear();
+    var thu = 22 + (11 - new Date(y, 10, 1).getDay()) % 7;
+    var on = q ? q[1] === "1" : now >= new Date(y, 10, thu - 3) && now < new Date(y, 10, thu + 4);
+    if (!on) { return; }
+    document.documentElement.classList.add("harvest");
+    var tc = document.querySelector('meta[name="theme-color"]');
+    if (tc) { tc.setAttribute("content", "#ec8f45"); }
+  } catch (e) { /* no theme */ }
+})();
+</script>
+</head><body>
 <a class="skip" href="#accept">Skip to the checklist</a>
 <header class="top">
   <div class="wrap">
