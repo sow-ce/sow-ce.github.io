@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -40,7 +40,7 @@
 (56,759,100 bytes; see Archives and file formats). The running game's database is this copy: its
 2,742 categories, 278,865 named (secondary) records and 415,767 inline (primary) records match the
 file one for one, with the same names in the same order. The same container, GADB version 17, also
-carries the behaviour graphs (<code>.bvr</code>, root type <code>BlendDB</code>; see Animation) and the database inside
+carries the behavior graphs (<code>.bvr</code>, root type <code>BlendDB</code>; see Animation) and the database inside
 every effect file (see Visual effects).</p>
 <table>
 <thead>
@@ -130,7 +130,7 @@ follow binary values of the block. Then come the field descriptors, 15 bytes eac
 <tr>
 <td>+0x00</td>
 <td>u32</td>
-<td>P919 hash of the field name (see Names and hashing)</td>
+<td>P919 hash of the field name (see Names and hashing below)</td>
 </tr>
 <tr>
 <td>+0x04</td>
@@ -334,19 +334,19 @@ the base database arrives through a stream that can seek.</p>
 <ul>
 <li><strong>Finding the patch.</strong> The GameDB resource class's load (vf3 0x17662B0, classes vt_0x22F34F8 and
   vt_0x22F5368) first asks the base stream whether it can seek (the stream's slot 3). A stream that
-  cannot is read whole, and nothing else happens. Otherwise it reads the header and the database's
-  own embedded path (header <code>+0x2C</code>) and, unless that path is empty (0x472C84), already ends in
-  <code>gamedb_patch</code> (0x1BEC90 compares the text after the last dot) or the switch byte 0x266CD70 is 0 (it
-  is 1 in the executable and nothing writes it), swaps the extension (0x17AA78), asks the file system
-  for <code>database\game\game.gamedb_patch</code> and loads that through itself. Without the resource system the
-  loose-file route 0x1C3FF20 looks for <code>&lt;name&gt;[_&lt;suffix&gt;].gamedb_patch</code> beside a loose base (the
-  format <code>_%s</code> at 0x1FE1A80).</li>
-<li><strong>Which streams seek.</strong> An archive entry stored as Oodle chunks (every shipped entry; see Archives
-  and file formats) opens as vt_0x1E70F88, whose slot 3 answers no; a raw entry opens as vt_0x1E70F00,
-  which seeks (its vf4 0x11DC2D4 moves the inner file stream to start + position); so do the memory
-  stream vt_0x1E6D228 and the loose-file stream vt_0x1E70EA8. The merge therefore runs when the copy
-  of <code>game.gamedb</code> that wins the search order is a raw entry or a loose file; the patch itself may be
-  chunked, and is then read whole.</li>
+  cannot seek is read whole, and nothing else happens. Otherwise the loader reads the header and the
+  database's own embedded path (header <code>+0x2C</code>). It stops there when that path is empty (0x472C84),
+  when it already ends in <code>gamedb_patch</code> (0x1BEC90 compares the text after the last dot) or when the
+  switch byte 0x266CD70 is 0 (it is 1 in the executable, and nothing writes it). Otherwise it swaps the
+  extension (0x17AA78), asks the file system for <code>database\game\game.gamedb_patch</code> and loads that
+  through itself. Without the resource system, the loose-file route 0x1C3FF20 looks for
+  <code>&lt;name&gt;[_&lt;suffix&gt;].gamedb_patch</code> beside a loose base (the format <code>_%s</code> at 0x1FE1A80).</li>
+<li><strong>Which streams seek.</strong> An archive entry stored as Oodle chunks, as every shipped entry is (see
+  Archives and file formats), opens as vt_0x1E70F88, whose slot 3 answers no. A raw entry opens as
+  vt_0x1E70F00, which seeks: its vf4 0x11DC2D4 moves the inner file stream to start + position. The
+  memory stream vt_0x1E6D228 and the loose-file stream vt_0x1E70EA8 seek as well. The merge therefore
+  runs when the copy of <code>game.gamedb</code> that wins the search order is a raw entry or a loose file; the
+  patch itself may be chunked, in which case it is read whole.</li>
 <li><strong>The build tag.</strong> A patch is kept only when its header word at <code>+0x24</code> equals the base's build
   tag (<code>+0x20</code>): 0x503694 compares the two, and 0x4BAD00 stores a database's two words at <code>+0x28</code> /
   <code>+0x2C</code>. Shipped databases hold 0 at <code>+0x24</code> (the running game database: <code>+0x28</code> = 0xD186F247,
@@ -372,16 +372,16 @@ the base database arrives through a stream that can seek.</p>
   <code>category &lt;&lt; 20 | index</code> (8,302 of 8,302 non-null cells sampled here, 7,276 of 7,276 in Mordor's):
   the by-name form exists for patches only.</li>
 <li><strong>Later tables see the new records.</strong> The start-up material-set cache, one entry per <code>Model</code>
-  record by index, is built afterwards, in the subsystem initialisation (0x1774278 -&gt; 0x1783DD0).</li>
+  record by index, is built afterwards, in the subsystem initialization (0x1774278 -&gt; 0x1783DD0).</li>
 </ul>
 <p>In a running game, a patch that appended one <code>Model</code> record and one <code>Model/SimpleModelPieces</code> record
-raised those categories from 2,715 to 2,716 and from 1,727 to 1,728 records; each new record's hash was
-the P919 of its name, both categories' <code>+0x30</code> byte read 1, the material-set cache's entry 2,715 held
-the new <code>Model</code>'s address, and the new piece drew on a captain with the shipped meshes and textures
-its links named.</p>
-<p>Records that a save or an online upload refers to are stored by name: the reader 0x1BC159C -&gt;
-0x1879468 -&gt; 0x187985C hashes the stored name and binary-searches one category, and a name it does
-not find reads as null and is kept as such (the look reader 0x1C0546C writes the result straight into
+raised those categories from 2,715 to 2,716 and from 1,727 to 1,728 records. Each new record's hash
+was the P919 of its name, both categories' <code>+0x30</code> byte read 1, and the material-set cache's entry
+2,715 held the new <code>Model</code>'s address. The new piece drew on a captain with the shipped meshes and
+textures its links named.</p>
+<p>Records that a save or an online upload refers to are stored by name. The reader 0x1BC159C -&gt;
+0x1879468 -&gt; 0x187985C hashes the stored name and binary-searches one category; a name it does not
+find reads as null and is kept as such (the look reader 0x1C0546C writes the result straight into
 each appearance cell). A record that only a patch provides therefore loads as an empty value in a game
 started without that patch.</p>
 <p>The descriptor array ends exactly where the database object begins; the category array follows the
@@ -533,14 +533,15 @@ the pointers in its cells have a zero high dword (166,606 of 166,606 float-pair 
 </tbody>
 </table>
 <p>The <code>_Structures*</code> categories hold the inline structure arrays: every primary lives in one of 736 of
-them, and no other category has primaries. 777 of the 799 also carry exactly one secondary, a
+them, and no other category has primaries. Of the 799, 777 also carry exactly one secondary, a
 placeholder named <code>DEFAULT_RECORD_NAME&lt;Type&gt;</code>; 22 carry none. Over the whole file 921 categories carry
 such a placeholder, always as their record 0 (921 of 921).</p>
 <p><strong>The category cache.</strong> At start-up 0x1B09BBC (vt_0x1FBD460 vf3) fills the static slots
-0x26FFCE8..0x2701FD8, and 0x1BFDC4C 34 more past them, 1,260 slots in all: for each category name,
-<code>StringHash(name)</code> -&gt; FindCategory -&gt; <code>mov [slot], rax</code> (its first two stores go to 0x27019B8
-<code>AnimCurve</code> and 0x27019C0 <code>AnimatedExtras</code>; 0x2701BC8 holds <code>Client/PlayerMovement</code>). 1,027 slots
-are read by other code, so a function that reads slot X works with category X. The most read are
+0x26FFCE8..0x2701FD8, and 0x1BFDC4C fills 34 more past them: 1,260 slots in all. For each category
+name the code runs <code>StringHash(name)</code> -&gt; FindCategory -&gt; <code>mov [slot], rax</code>. Its first two stores go
+to 0x27019B8 (<code>AnimCurve</code>) and 0x27019C0 (<code>AnimatedExtras</code>), and 0x2701BC8 holds
+<code>Client/PlayerMovement</code>. Other code reads 1,027 of
+the slots, so a function that reads slot X works with category X. The most read are
 <code>Interface/Shared</code> (80 functions), <code>Interface/ElementSetup</code> 53, <code>Faction/Definition</code> 51,
 <code>Inventory/Items</code> 41, <code>Quest/Quests</code> 39 and <code>Quest/Objectives</code> 32.
 Script record types and native record arguments go through these slots (see Scripting).</p>
@@ -967,7 +968,7 @@ empty and 73,591 of the other 76,765 name a file (<code>.bndl</code> 29,795, <co
 <p><strong>A StringEnum holds a hash, not a pointer.</strong> All 336,338 cells have a zero high dword, and 336,337
 equal P919 of the name the file stores. The hash folds case, so <code>HIGH</code> and <code>High</code> are one value. Read
 as an address, such a hash can land inside the database's own memory, which lies below 4 GB.</p>
-<p><strong>The executable names its enums.</strong> Initialised data from 0x2A42590 to 0x2A60340 holds 16-byte entries
+<p><strong>The executable names its enums.</strong> Initialized data from 0x2A42590 to 0x2A60340 holds 16-byte entries
 <code>{char* name, u32 P919(name), u32 value}</code>: 3,654 of them in 330 runs of two or more (a whole-image scan
 that accepts an entry only when its hash is P919 of the string it points at). Most runs start at 0
 (314) and count up (266); an empty entry usually separates two enums, but not always (one run of 156
@@ -994,7 +995,7 @@ the cell holds the target's header address.</p>
 1,316,316 pointers to secondaries and 415,767 to primaries, and none point anywhere else. Every link
 to a primary targets a <code>_Structures*</code> category and every link to a secondary targets another
 category, so once both file types read 10, the target category tells which side a link addresses.
-1,732,055 of the 1,732,083 non-null cells hold exactly the record the file's link names.</p>
+Of the 1,732,083 non-null cells, 1,732,055 hold exactly the record the file's link names.</p>
 <p><strong>Links carry no type.</strong> GetLinkCellFast 0x30E7B4 returns the cell as it is; GetLinkCellByName
 0x68BB08 checks only that the field is a RecordLink (<code>type &amp; 0x3F == 10</code>) and that the element
 exists. Which category a field should point into is recorded only in its registration (a
@@ -1005,7 +1006,7 @@ layout.</p>
 <p>A record with flag 0x10 is not addressed by the slot rule: its instance is a native structure laid
 out by its type's slots (SlotOffset 0x251C24, size step 0x251CAC), the by-name getters divert to the
 reflected path (GetLinkCellByName -&gt; ReadLinkReflected 0x16CE2E8 -&gt; ReadReflectedField 0x5DA158) and
-MakeFieldRef hands such records to 0x60B5FC. Every record of the loaded behaviour graphs carries 0x1A
+MakeFieldRef hands such records to 0x60B5FC. Every record of the loaded behavior graphs carries 0x1A
 (see Animation); no record of the game database sets the bit.</p>
 <h2 id="names-and-hashing">Names and hashing</h2>
 <p><code>StringHash</code> 0x423E70 is the engine's name hash, written P919 in this reference:</p>
@@ -1199,7 +1200,7 @@ slot size build the ClientFX node properties and the BlendDB node types: the thr
 system. Read in a running game, the schema objects hold 26,935 slots of 2,951 types, every name equal
 to the hash stored beside it, 2,463 of them group markers; two launches gave identical slots and the
 same cached index in all 22,630 slots cached in both. For every cached slot, the descriptor at that
-index in a record of the slot's category carries the slot's hash (14,558 of 14,558; the neighbouring
+index in a record of the slot's category carries the slot's hash (14,558 of 14,558; the neighboring
 slot's hash, as a control, 0 of 14,310).</p>
 <p>The six <code>AI.Template</code> slots in a running game:</p>
 <table>
@@ -1371,11 +1372,12 @@ a GameDB field, and 13,425 call a one-field accessor. Following the value out of
 changing the pair's floats is seen through the copy, while pointing the cell elsewhere is seen only
 after the next copy. When a copy is refreshed depends on what runs the copier:</p>
 <ul>
-<li><strong>Movement values.</strong> 0x187F94C(movement object, movement record) copies <code>Client/PlayerMovement</code>
-  <code>BaseSpeedMultiplier</code> to <code>+0x550</code> of the player's movement object <code>[player+0x2F88]</code> (the character's
-  own <code>+0x550</code> is unrelated and reads 0), <code>FallMinHeight</code> to <code>+0x558</code> and <code>PlayerYawInterpolateTime</code>
-  (an integer, converted to float and scaled) to <code>+0x554</code>, and keeps the record at <code>+0x548</code>; given the
-  record it already holds, it returns without copying. 0x187F71C passes the record named
+<li><strong>Movement values.</strong> 0x187F94C(movement object, movement record) copies three
+  <code>Client/PlayerMovement</code> fields into the player's movement object <code>[player+0x2F88]</code>:
+  <code>BaseSpeedMultiplier</code> to <code>+0x550</code> (the character's own <code>+0x550</code> is unrelated and reads 0),
+  <code>FallMinHeight</code> to <code>+0x558</code>, and <code>PlayerYawInterpolateTime</code> (an integer, converted to float and
+  scaled) to <code>+0x554</code>. It keeps the record at <code>+0x548</code>; given the record it already holds, it
+  returns without copying. 0x187F71C passes the record named
   <code>PlayerMovement</code>, found by name in the cached <code>Client/PlayerMovement</code> category. A change to that
   record's cells is therefore not seen by this consumer until a different movement record is applied
   and the original is applied again.</li>
@@ -1402,25 +1404,26 @@ after the next copy. When a copy is refreshed depends on what runs the copier:</
   record instances are not, so pointing one record's cell at other text changes that record alone,
   while writing the text changes every record that names it. A string pointer need not be 8-aligned:
   strings in the block start at 4-byte boundaries.</li>
-<li>A record's identity is its category, not its address. The engine's "Bad record index" assert
-  (the string at 0x1F68DB0, used at 535 sites in 432 functions) compares the record's category
-  <code>[rec+0x18]</code> with the expected one at 534 of them; one site (0x10F903E) is a range test. Record
-  lookups by index then go through <code>RecordIndexOf</code> 0x1898E8, plain pointer arithmetic with no check,
-  so a copy of a record made elsewhere in memory passes the assert and yields a meaningless index:
-  at 477 sites the following code range-checks the index and compares keys (the lookup misses and
-  returns 0), at 10 it checks the range only, and at 45 no check follows within 28 instructions.</li>
+<li>A record's identity is its category, not its address. The engine's "Bad record index" assert (the
+  string at 0x1F68DB0, used at 535 sites in 432 functions) compares the record's category
+  <code>[rec+0x18]</code> with the expected one at 534 of those sites; the remaining site (0x10F903E) is a range
+  test. Lookups by index then go through <code>RecordIndexOf</code> 0x1898E8, which is plain pointer arithmetic
+  with no check. A copy of a record made elsewhere in memory therefore passes the assert and yields a
+  meaningless index. At 477 sites the code that follows checks the index's range and compares keys,
+  so the lookup misses and returns 0; at 10 it checks the range only; at 45 no check follows within 28
+  instructions.</li>
 <li>A part drawn from a <code>Model</code> record that is not in the start-up material-set cache faults. The cache
   (0x1B6190C, <code>[GameManager+0x6DD0]+0x18</code>, one 0x20-byte entry per <code>Model</code> record, by record index) is
-  built once; building a part asks it through 0x1BDA60 -&gt; 0x104338 -&gt; 0x1041C4 -&gt; 0x104258, which
-  misses and returns 0 for a record outside the table, and the caller 0x104234 then reads through
-  that null pointer on the main thread.</li>
-<li>Some per-character state is sized from a record once. A character's state-effect manager
+  built once. Building a part queries it through 0x1BDA60 -&gt; 0x104338 -&gt; 0x1041C4 -&gt; 0x104258, which
+  misses and returns 0 for a record outside the table; the caller 0x104234 then reads through that null
+  pointer on the main thread.</li>
+<li>Some per-character state is sized from a record only once. A character's state-effect manager
   <code>[char+0x2B78]</code> sizes its effect slots to the count of <code>Character/StateEffects.CharacterFXPredicates</code>
   when it is built (0x435F38 -&gt; 0x435E6C, "CCharacterStateEffectMgr can only be initialized once."),
-  which happens when the character's identity is set, while its per-frame update 0x16AC90 takes slot
-  i for the list's current i-th entry with no bound. A list made longer under existing characters is
-  read past the end of their slot vector (0x114ED48), or, where the memory there holds 0, a new effect
-  is stored past it (0x16B27B).</li>
+  which happens when the character's identity is set. Its per-frame update 0x16AC90, however, takes
+  slot i for the list's current i-th entry, with no bound. If the list is made longer while such
+  characters exist, the update reads past the end of their slot vector (0x114ED48), or, where the
+  memory there holds 0, stores a new effect past it (0x16B27B).</li>
 <li>A RecordLink cell accepts any record: neither the getters nor the cell know the declared target, so
   nothing stops a link to a record of the wrong category, and its consumer reads that record with the
   declared type's layout.</li>
@@ -1443,6 +1446,6 @@ after the next copy. When a copy is refreshed depends on what runs the copier:</
 <li>The meaning of the database's <code>+0x58</code> / <code>+0x60</code> and the type entry's <code>+0x38</code> flags. (The build
   tag at <code>+0x28</code> is checked only against a patch database's <code>+0x2C</code>, above.)</li>
 <li>What the loader's rebasing test for types 12 to 16 is for. No shipped container uses them: the 314
-  GameDB containers in the archives (the game databases and every behaviour graph) use only types
+  GameDB containers in the archives (the game databases and every behavior graph) use only types
   1-11 and 68, and the 1,310 world parts' property databases only types 1, 2, 3, 4 and 8.</li>
 </ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
