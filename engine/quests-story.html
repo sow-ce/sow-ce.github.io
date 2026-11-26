@@ -1,7 +1,8 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Quests, story and scenes - Shadow of War engine reference</title><meta name="description" content="The campaign state store, the quest table and the quest object&#x27;s state machine, how story characters are built, betrayals and region ownership, army transforms, and the presentation system that plays scripted scenes: relays, events, sequences, actors, cameras, the scene clock and slow motion."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Quests, story and scenes - Shadow of War engine reference</title><meta name="description" content="The campaign state store, the quest table and the quest object&#x27;s state machine, how story characters are built and what their presets give, Suladân, betrayals, region ownership on its two planes and the conquest of a fortress, army transforms, and the presentation system that plays scripted scenes: relays, events, sequences, actors, cameras, the scene clock, slow motion and the screen fader&#x27;s locks."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
+<a href="builds.html" data-p="builds">Game builds: Steam, GOG and Microsoft Store</a>
 <a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
 <a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
 <a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
@@ -23,13 +24,17 @@
 <a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
 <a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" class="cur" data-p="quests-story">Quests, story and scenes</a>
+<a href="haedirs.html" data-p="haedirs">Haedirs: towers, seeing stones and fast travel</a>
 <a href="outposts.html" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
-<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="quests-story-and-scenes">Quests, story and scenes</h1><p class=\"lede\">The campaign state store, the quest table and the quest object&#x27;s state machine, how story characters are built, betrayals and region ownership, army transforms, and the presentation system that plays scripted scenes: relays, events, sequences, actors, cameras, the scene clock and slow motion.</p>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="quests-story-and-scenes">Quests, story and scenes</h1><p class=\"lede\">The campaign state store, the quest table and the quest object&#x27;s state machine, how story characters are built and what their presets give, Suladân, betrayals, region ownership on its two planes and the conquest of a fortress, army transforms, and the presentation system that plays scripted scenes: relays, events, sequences, actors, cameras, the scene clock, slow motion and the screen fader&#x27;s locks.</p>
 <h2 id="campaign-state">Campaign state</h2>
 <p>Campaign progress is data, held in two tables owned by the GameManager (<code>GM = [base+0x26FFAA8]</code>).</p>
 <p><strong>Game variables.</strong> <code>GameData/Variables</code> holds 573 records (<code>VariableType</code> 1 int, 2 bool, 0 float:
@@ -50,10 +55,16 @@ bool test (0x1DFF70) passes when the value equals <code>RequiredValue</code>; an
 OR fails. 330 of the 573 variables are read by no GameDB record (scripts may still read them).</p>
 <p><strong>Quests.</strong> The quest system is <code>[GM+0x6C60]</code>. Its table at <code>+0x18</code>: entries of 0x40 bytes,
 count at <code>+0x08</code>, category at <code>+0x10</code>; an entry is <code>+0x00</code> the <code>Quest/Quests</code> record, <code>+0x28</code> the
-placed quest object (null when its region is not loaded) and the byte <code>+0x34</code> the completion counter
-(<code>GetIsComplete</code> 0x19F4064 -&gt; 0x1B55008: counter &gt;= <code>NumCompletesForPreReq</code>, which is 1 for every
-quest). 2,256 quests exist. <code>GetIsActive</code> 0x171A20 tests the object's state for 17. The running
-quests are listed at <code>+0x3D8</code> of the quest system.</p>
+placed quest object (null when its region is not loaded) and the byte <code>+0x34</code> the completion counter.
+The completion core 0x1B55008 compares that counter with <code>NumCompletesForPreReq</code> (1 for every quest);
+a quest with no table entry counts as complete. The script method <code>GetIsComplete</code> (0x19F4064) takes a
+placed quest object, not a record: it reads <code>[arg+0x258]</code>, the record of the quest object that
+<code>Quest.Create(scriptId, ...)</code> gives a layer script, and passes that on. Called with a <code>DBQuest.&lt;name&gt;</code>
+record it answers false for every quest: <code>Intro_Tower</code>, <code>IntroPart30</code>, <code>FinalePart40</code> and <code>Go01</code> all
+read false on a StoryState-300 save whose table held 463 complete quests, each with counter 1. 2,256
+quests exist. <code>GetIsActive</code> 0x171A20 tests the object's state for 17. The running quests are listed at
+<code>+0x3D8</code> of the quest system. The towers' story gate and the seeing-stone store are in Haedirs: towers,
+seeing stones and fast travel.</p>
 <p>Quest availability (0x1E00C4) rejects at the first failing gate, in this order: completed /
 incomplete quest lists (<code>Quest/QuestLists</code> with <code>RequireAllMatch</code>), failed last attempt, active /
 inactive quests, any quest active, triggerable quests, preset member unlocked, day only, the
@@ -151,6 +162,18 @@ ambush). After his story ambush the character becomes a captain of the current r
 role, rarity) and <code>FM+0x190</code> is cleared. A built copy is saved.</p>
 <p>A queued ambush fires only in its own region: the request's <code>+0x18</code> must equal the current
 region's faction <code>[FS+0x1B8]</code> (0x6DD92C, "The faction has changed"); otherwise it is retried.</p>
+<p>A preset (<code>Faction/PresetMembers</code>) carries, besides the fields in the table below, the character's
+standing in the systems around him: <code>CanBeNemesis</code>, <code>CanSetAsTarget</code>, <code>CanEverBeHenchmen</code>,
+<code>CanEverChangeLocation</code>, <code>CanPlayerAssignToSimEvent</code>, <code>CanPlayerSelectAsOverlord</code>, <code>CanSlotInAssaultGroup</code>,
+<code>CanVow</code>, <code>DisableSimEvents</code> (with <code>DisableSimEventExceptions</code>), <code>DisableOrderEvents</code>, <code>LockedXPLevel</code>,
+<code>NoRowXPLevel</code>, <code>FactionRow</code> / <code>FactionColumn</code> / <code>DisplayFactionRow</code>, <code>PresetHenchmen</code> / <code>UsePresetHenchmen</code>,
+<code>Morale</code>, <code>IsGoldenPath</code>, <code>IsDarkTalion</code>, <code>SeedHigh</code> / <code>SeedLow</code> / <code>UseSeedValues</code>, <code>UnlockName</code>,
+<code>UnlockTraits</code>, <code>Events</code>, <code>InvolvedQuests</code> and nav-marker overrides. The script natives around presets are
+<code>NPC::IsPresetFactionMember</code> (0x19B6B78), <code>System::HierarchyResetPreSetMemberData</code> (0x1C2373C),
+<code>HierarchyUnlockPreSetMemberData</code> and its tutorial twin (0x1B5CEC0), <code>SetCanInterrogateAboutPresetFactionMember</code>
+(0x1B5C314), <code>CCharacter::SetLinkToPresetMember</code> and <code>Faction::CreateFactionMemberBuilder</code> (0x1B5B824). The UI
+predicates <code>Interface/Predicates/FactionMemberPreset::PresetMember_Bruz</code> and <code>_Ranger</code> name the preset, not
+the role.</p>
 <h3 id="what-a-preset-gives">What a preset gives</h3>
 <p>In one late campaign, twelve built copies of seven story characters (found by their name string id at
 <code>FM+0x170</code>) agree with their presets field by field:</p>
@@ -222,6 +245,37 @@ story character's role, and every record that names those lists, shows three pat
   <code>PS_Subject</code>, Bruz's role category) and <code>PC_ShamedCaptain_ContextAmbJob</code> (<code>RoleCategory_Shamed_Unashamed_Daz</code>).
   The selection reads the member's role, so any member that holds the role passes that test.</li>
 </ul>
+<p>Zog and Forthog have no job (only their presets, a dialogue marker predicate and the savior's class maps name
+them), and the class models of these characters (<code>GP_Bruz</code>, <code>SQ_Zog</code>, <code>GP_Ranger</code>, <code>Orc_Forthog</code>, the Shadows of
+the Past models) are named only by their presets and AI templates. Forthog Orc-Slayer (<code>Forthog_OrcSlayer</code>, role
+<code>Role_OrcSlayer</code> with a lute) is the game's tribute to Michael Forgey (1973-2016), its own text says; a second
+preset, <code>Savior_ForthogOrcSlayer</code>, shares his role list.</p>
+<h3 id="sulad-n-a-quest-only-nazg-l">Suladân, a quest-only Nazgûl</h3>
+<p><code>Faction/PresetMembers::GP_Nazgul_Suladan</code> is a base-game character the player never keeps: model
+<code>Nazgul_ArPharazon</code> and tree <code>AI_Nazgul_ArPharazon</code> (Ar-Pharazôn was the working name; 114 records carry it),
+role list <code>GP_RoleCategory_WitchKing</code>, morale <code>Immune</code>, <code>LockedXPLevel</code> 10, <code>IsGoldenPath</code>; false
+<code>CanBeNemesis</code>, <code>CanSetAsTarget</code>, <code>CanEverBeHenchmen</code>, <code>CanEverChangeLocation</code>, <code>CanPlayerAssignToSimEvent</code> and
+<code>CanPlayerSelectAsOverlord</code>; true <code>CanVow</code> and <code>CanSlotInAssaultGroup</code>; <code>DisableSimEvents</code> with the one exception
+<code>Promote_Suladan_WC</code>. He is a <code>QuestOnlyPresetMembers</code> entry of Minas Ithil's army and its quest-replay twin.</p>
+<ul>
+<li><strong>His name.</strong> The five presets <code>GP_Nazgul_00</code>, <code>_01</code>, <code>_Hammerhand</code>, <code>_Isildur</code> and <code>_Suladan</code> share the name key
+  <code>GP_Nazgul</code> ("Ringwraith", 5 of 203 presets) and the title <code>Name_Nazgul_Generic</code> ("Nazgûl"); their real names exist
+  only as Appendix keys, the <code>Name</code> of <code>Inventory/UIItemData::UI_Denizens_*</code> (<code>App_Name_Suladan</code> "Suladân",
+  <code>App_Name_Isildur</code>, <code>App_Name_Helm</code> "Helm Hammerhand"), while the Witch-king's own preset takes
+  <code>App_Name_WitchKing</code> as its name. Every copy of the five is named "Ringwraith".</li>
+<li><strong>The fight</strong> is <code>Blade15</code> ("The Tower of Sorcery", layer <code>minasithil/blade15</code>): the script spawns him, gives
+  <code>GP_B15_Nazgul</code> and <code>No_SaviorKill_IT</code> and registers <code>AI_ArPharazon_CurseAOE</code>; a counter-stun kill plays
+  <code>Blade15_Suladan_Domination</code>, whose event finishes with no action, no command set and no script keys, then the
+  script removes him and the quest ends. Nothing in it makes him a follower, and his area attack is meant to kill
+  followers (the script plays <code>BL015_030_Sul_KillsFollowers</code> when the player's dominated orcs die to it).</li>
+<li><strong>The job that picks him</strong>, <code>Quest/Jobs/Definition::GP_Suladan</code> (<code>RequiredPresetFactionMember</code> his preset,
+  <code>CanBePresetFactionMember</code> and <code>MustBeAlive</code> true, builder chance 1.0, alias <code>PS_Subject</code>, no follower filter),
+  runs twice on the story's path: Minas Ithil's <code>NazgulTime</code> adds the picker <code>Nazgul_Promote_Suladan</code> -&gt; the sim event
+  <code>Promote_Suladan_WC</code> (<code>SubjectAlwaysWins</code>): he becomes a Minas Morgul warchief; <code>StartShadowWar</code> adds
+  <code>EjectWarchief</code> for <code>GP_Isildur</code> and <code>GP_Suladan</code>, which the finale fires right after <code>StoryState</code> is set to 300.
+  So any second living member built from his preset can be taken by either step until then. In a save at StoryState
+  300 the game's own copy is a "Ringwraith" at level 10, in Minas Ithil, with no row, not a follower.</li>
+</ul>
 <h2 id="betrayal-and-region-ownership">Betrayal and region ownership</h2>
 <p>The shipped data never lets the player's Overlord betray: all 18 betrayal ambush definitions list
 Overlord in <code>ExcludedRowRanks</code> (91 of 100 ambush definitions do), the betrayal job
@@ -230,11 +284,40 @@ Overlord in <code>ExcludedRowRanks</code> (91 of 100 ambush definitions do), the
 Overlord-specific betrayal voice exists; a forced betrayal plays the Overlord's own personality line.
 <code>AI_BecomeHighestLevelFollower_Betrayal</code> takes a provided ambusher (<code>NeverPickAmbusherWithJob</code>),
 and <code>TriggerAmbush</code> is 0x6DDCB8.</p>
-<p><strong>Region ownership is the Overlord's follower bit.</strong> <code>Faction:GetFactionPlayerOwned</code> (stub 0x7A2800)
-calls 0x1E484C(FS, faction), which finds the region's Overlord and returns bit 27 of his <code>FM+0x508</code>,
-nothing else. An Overlord who betrays therefore takes the fortress with him. The fort-defence script
-(<code>OwnerNamedOnSpawn</code>) converts any named defender, the Overlord included, to the attackers on a
-<code>FA_FollowerBetraysPlayer</code> event.</p>
+<p><strong>Region ownership has two planes.</strong></p>
+<ul>
+<li><strong>The faction.</strong> <code>Faction:GetFactionPlayerOwned</code> (stub 0x7A2800) asks 0x1E484C(FS, faction), which
+  returns the region's Overlord, and its wrappers (0x7D18BC, 0x1E47AC) test bit 27 of his <code>FM+0x508</code>,
+  nothing else. An Overlord who betrays therefore takes the fortress with him, and a region can be held
+  while its captains stay enemies (Minas Ithil was held with 21 enemy captains in one save). The
+  fort-defence script (<code>OwnerNamedOnSpawn</code>) converts any named defender, the Overlord included, to the
+  attackers on a <code>FA_FollowerBetraysPlayer</code> event.</li>
+<li><strong>The ground.</strong> <code>Faction:GetAreaPlayerOwned</code> (0x696FF0) reads a table of 180 areas from
+  0x6221F0(FS, <code>[FS+0x1B8]</code>): the object's <code>+0x78</code> holds <code>{area record, u8 owned at +8}</code> entries of 0x10
+  bytes, its count u32 at <code>+0x80</code> (the same object for all six regional armies). It answers false while
+  the online flag <code>[GM+0x6D30]+0x47C</code> is set. The world scripts ask by area: fortress gates and map
+  canvases (<code>FortControl</code>), stoplights, tower scenarios and the grunts' side rule (see AI).</li>
+</ul>
+<p><strong>What moves the area table.</strong> <code>Faction::ApplyAreaOwnershipTransform</code> 0xF624E0(FS, record) from scripts,
+and natively the sim-event result step 0x62258C (the result's <code>AreaOwnershipTransform</code> field; its callers
+include the event dispatcher 0x62E670 and <code>Quest::SetSimEventResultType</code> 0x19FA100).
+<code>Faction/AreaOwnershipTransform</code> has 20 records, 10 <code>To_Player</code> / <code>To_Sauron</code> pairs (the 5 fortresses and the
+5 Lithlad outposts; none for Minas Ithil); an entry is <code>{owner enum: 1 player, 2 Sauron; area}</code>, for example
+Núrnen's pair over <code>IS_FortFront</code> and <code>IS_FortRear</code>. <code>SetAreaPlayerOwned</code> writes one byte through 0x1B5ECA8;
+<code>SetAllCurrentWorldAreasPlayerOwned(bool)</code> writes every area brush of the current world (0x1A03E88). Both
+planes are saved: an Overlord's bit and the areas set in one world survived a world reload and a restart.
+Outside fortresses and outposts the only area write in the shipped scripts is one mission's <code>Vale_Fort</code>.</p>
+<p><strong>The real conquest.</strong> The siege quest's completion (<code>FA_QuestComplete</code>) applies the fortress's transform,
+gives the <code>&lt;Region&gt;_FortOwned</code> item, sets <code>GameData.&lt;Region&gt;Fort</code>, adds one to <code>PlayerOwnedForts</code>, sets
+<code>LastFortConquered</code> and removes the bought war upgrades (<code>RemoveFortUpgradeList(FortConqueredReset)</code>).
+<code>Quest::SetFortAssaultComplete</code> 0x19F9B8C -&gt; 0x1B5BB68 -&gt; 0x1C1E828(context, on) fires <code>OverlordEjectedEvent</code>,
+vacates his seat (0x61B274), clears the sim events, flips all spies, ejects the warchiefs (0x1C23B90,
+<code>WarchiefEjectedEvent</code>), creates an emergency player follower and sets <code>ctx+0x214</code>; it needs a running
+fortress quest (<code>Quest/Types.IsFortAssault</code>). <code>SetAllAreasPlayerOwner</code> is false on all five <code>SC_FA_*</code> quests,
+so a conquest takes the fortress's areas only. Losing a fortress is the mirror: <code>_to_Sauron</code> and
+<code>DisableFortFastTravel</code> (the item off, the bool false). <code>GameData.&lt;Region&gt;Fort</code> changes the fortress at once
+(the fort's <code>FortStatusInit</code> subscribes to its change event and runs <code>FortOwnerIsPlayer</code>), while the area flag
+is what placed prefabs read when they initialise.</p>
 <h2 id="army-transforms">Army transforms</h2>
 <p><code>Faction/Transforms</code> holds four records (AddOlogs, AddBerserkers, AddDefenders, AddSpearmen). The
 game applies them once, when the Shelob mission in Cirith Ungol completes (<code>mtnpass/shelob1</code>
@@ -319,6 +402,55 @@ drop as the execution starts. Element camera definitions, durations and slow mot
 the presentation starts (0x5D0AB4).</p>
 <p>A presentation can take the camera and hold the player (<code>CommandSet PresentationDisablePlayer</code>);
 0x17A13AC stops the player's scene component.</p>
+<h3 id="the-screen-fader-and-its-locks">The screen fader and its locks</h3>
+<p>The screen fader is <code>[[CGameClientShell+0xE38]+0x160]</code> (CGameClientShell <code>[base+0x26FFA98]</code>). A lock
+0x6589E4(fader, reason) sets bit <code>reason</code> of <code>+0xD0</code> (reasons under 11) or of <code>+0xD4</code>; its wrappers are 0x6589D8
+(by owner) and 0x6588E8 (with fade parameters). An unlock is 0x657974(owner <code>[CGameClientShell+0xE38]</code>, reason) -&gt;
+0x657980, wrapper 0x658A44. The screen fades back in only when no lock is held, so a black screen that never ends
+is a lock that was never released; the fader's state byte <code>+0x08</code> says what the screen does (2 fading out, 3 out,
+1 fading in, 0 clear).</p>
+<table>
+<thead>
+<tr>
+<th>Reason</th>
+<th>Taken by</th>
+<th>Released by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td>presentation elements with a fade-out (0x5D3170 in the element player 0x5D20C4); a script <code>ScreenFade</code> out (0x1D86F28)</td>
+<td>a presentation's fade-in (0x5D310D); a script <code>ScreenFade</code> in (0x1D86FB2): the only two</td>
+</tr>
+<tr>
+<td>4</td>
+<td>quest fades (0x5769A8, 0x19F723C)</td>
+<td>0x57407C</td>
+</tr>
+<tr>
+<td>5</td>
+<td>(lock site not read) its flag is byte <code>+0x188</code> of the manager at <code>[base+0x2A86880]</code></td>
+<td>that manager's tick 0x4C6050, once 0x1DCC20(<code>[GM+0x6D98]</code>) answers true</td>
+</tr>
+<tr>
+<td>6</td>
+<td>(lock site not read) byte <code>+0x189</code> of the same manager: the scripted player-model setup (record <code>+0x180</code> = <code>_StructuresQuest.PlayerModelSetup</code>)</td>
+<td>0x4C5EFC: it waits for the fade to be fully out, applies the model (0x19BB3CC), and unlocks only once the player's build flag <code>[player+0x2D40]</code> is down, <code>[player+0x19A8]</code> is set and every gear request is ready (0x7B86B8)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>the player's queued teleport (0x658828)</td>
+<td>the teleport queue's finisher 0x658650</td>
+</tr>
+</tbody>
+</table>
+<p>Reason 2 is held at every arrival in a region (its sites are not read), reason 4 was held for 12 s at a mission
+start until the player's build flag fell, and reason 3 for 1 to 2 s while the player scenes <code>EnterZone_Player_EVT</code>
+and <code>Resurrect_Player_EVT</code> ran; bit 11 of <code>+0xD4</code> flicks on for about a second many times a minute in ordinary
+play. A lock bit alone therefore does not mean a dark screen: the state byte beside it does. A mission start that
+takes lock 3 and whose fade-up scene never plays leaves the screen black over an Active mission (see Outposts,
+strongholds and fortress upgrades, "The assault missions").</p>
 <h3 id="execution-variants">Execution variants</h3>
 <p>Which animation a sync kill plays is a variant table: <code>AnimationData.AnimOverridePicker</code> /
 <code>AnimOverrides</code> -&gt; <code>Combat/AttackAnimOverride</code> -&gt; an entry chosen by the attacker's weapon class
@@ -540,4 +672,10 @@ character.</p>
 <li>Where the traits beyond a preset's list come from when the preset sets <code>EnableTraitChanges</code>: two built
   copies of Zog at the preset's level 20 carry 36 traits on 15 listed pickers (a third, at level 42, 37), Baz
   34 on 2. The build adding them would match Zog's count at his starting level; later events are not ruled out.</li>
-</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
+<li>Which code reads the <code>Interface/Predicates/FactionMemberPreset</code> predicates (<code>PresetMember_Bruz</code>,
+  <code>PresetMember_Ranger</code>), and so whether a member that holds only the unique's role matches them.</li>
+<li>What set Núrnen's fortress areas when its Overlord became a follower without a transform being applied: the
+  best candidate is the sim-event result step 0x62258C; reading the area table before and after a world load
+  around a plain follower change would settle it.</li>
+<li>Where the screen fader's reasons 2, 5 and 6 are locked, and which owner flicks bit 11 of <code>+0xD4</code>.</li>
+</ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
