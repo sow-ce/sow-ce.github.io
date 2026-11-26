@@ -1,7 +1,8 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Captain appearance: bodies, armour, colour and scars - Shadow of War engine reference</title><meta name="description" content="How a captain&#x27;s look is chosen, stored and drawn: the appearance object, the seed that rolls body, size, head and colours, armour designs and the items that carry them, the army&#x27;s level-based outfits and title looks, painted skins, scars, limbs and shoulder pads, tint layers, eyes and decals on screen, how grunts are dressed, and when a changed look reaches the world and the Army screen."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Captain appearance: bodies, armour, colour and scars - Shadow of War engine reference</title><meta name="description" content="How a captain&#x27;s look is chosen, stored and drawn: the appearance object and its 23 piece slots, the seed that rolls body, size, head and colours, armour designs and the items that carry them and re-dress him, title looks and title bodies, body paints, how a piece binds to another skeleton, tint layers and the colour items behind them, masks, eyes, glow and decals, weapons, grunts, and when a changed look reaches the world and the Army screen."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
+<a href="builds.html" data-p="builds">Game builds: Steam, GOG and Microsoft Store</a>
 <a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
 <a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
 <a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
@@ -23,16 +24,21 @@
 <a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
 <a href="captain-appearance.html" class="cur" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="haedirs.html" data-p="haedirs">Haedirs: towers, seeing stones and fast travel</a>
 <a href="outposts.html" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
-<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="captain-appearance-bodies-armour-colour-and-scars">Captain appearance: bodies, armour, colour and scars</h1><p class=\"lede\">How a captain&#x27;s look is chosen, stored and drawn: the appearance object, the seed that rolls body, size, head and colours, armour designs and the items that carry them, the army&#x27;s level-based outfits and title looks, painted skins, scars, limbs and shoulder pads, tint layers, eyes and decals on screen, how grunts are dressed, and when a changed look reaches the world and the Army screen.</p>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="captain-appearance-bodies-armour-colour-and-scars">Captain appearance: bodies, armour, colour and scars</h1><p class=\"lede\">How a captain&#x27;s look is chosen, stored and drawn: the appearance object and its 23 piece slots, the seed that rolls body, size, head and colours, armour designs and the items that carry them and re-dress him, title looks and title bodies, body paints, how a piece binds to another skeleton, tint layers and the colour items behind them, masks, eyes, glow and decals, weapons, grunts, and when a changed look reaches the world and the Army screen.</p>
 <p>A captain's look is a small appearance object built from his seed and his class, then dressed by the
 items his class kit, army, tribe, title, personality and scars give him. The same object feeds the
-Army screen's copies and, through the character's visual, the body in the world.</p>
+Army screen's copies and, through the character's visual, the body in the world; the items, not the
+object, are what the engine keeps and re-applies.</p>
 <h2 id="the-appearance-object">The appearance object</h2>
 <p>The appearance object is a separate allocation at <code>[FM+0x2D8]</code> (save key <code>SMCStorage</code>; see The
 Nemesis system). It is built by the SimpleModel builder 0x4C5194, written piece by piece by
@@ -79,7 +85,7 @@ Nemesis system). It is built by the SimpleModel builder 0x4C5194, written piece 
 <tr>
 <td>+0x170</td>
 <td>record</td>
-<td>the head record (<code>Model/SimpleModelHeads</code>, 335 records)</td>
+<td>the head record (<code>Model/SimpleModelHeads</code>, 335 records): the face</td>
 </tr>
 <tr>
 <td>+0x178</td>
@@ -404,6 +410,10 @@ does not follow virtual calls.</p>
 through the ArmorSlot map (0x61BBC4, 0x4C61BC; never 2, 5, 6, 14 or 18-22), 0x619C1C for
 <code>Inventory/Flair/BodyModelReplace</code> (3 records; <code>BodySlot</code> 0 is slot 1, 1 is slot 0), 0x1C049D4, which
 empties slots 7-13, the Firebird import 0x1C04F20 (0, 1, 2, 7), 0x79B700 (0, 1, 2) and 0x103CB8 (1).</p>
+<p><code>SetPieceSlot(appearance, slot, piece, design, visual)</code> returns early when the slot already holds
+that piece; otherwise it removes the old piece's appearance tags (0x4C64EC), adds the new piece's
+(0x4C647C), writes the design into its cell, and, when a visual is passed, swaps the piece on that
+visual as well (0x4C6C8C, 0x4C7274).</p>
 <h3 id="the-slots-the-game-barely-uses">The slots the game barely uses</h3>
 <ul>
 <li><strong>Slot 5, <code>BodyFlairModel</code>,</strong> comes from the <code>BodyFlair</code> of a <code>Model/SimpleModel</code> entry. 4 of the 207
@@ -413,9 +423,9 @@ empties slots 7-13, the Firebird import 0x1C04F20 (0, 1, 2, 7), 0x79B700 (0, 1, 
   <code>SMC_HeadScarModel</code> and <code>SMC_ScarSetup</code> together and filled them from <code>Model/Scar/Setup</code> (45 records),
   <code>Model/Scar/Scars</code> (122, such as <code>Orc_Head06_Burn</code> and <code>Orc_Slim_Head04_Eyepatch</code>) and
   <code>Model/Scar/Types</code> (<code>Wraith</code>, <code>Burn</code>, <code>Pin_Cusion</code>, <code>Sack_Head</code>, <code>Eyepatch</code>, <code>Melee</code>). No <code>Model/Scar</code>
-  category ships here: scars are items under <code>Combat/Scar</code> (see Scars below). The slots
-  stayed in the array, the model load and every stored form, but no run-time route fills them, so only
-  a stored value could. The slot enum still lists <code>BodyScar</code> and skips 14.</li>
+  category ships here: scars are items under <code>Combat/Scar</code> (see Captain scars and the return from death).
+  The slots stayed in the array, the model load and every stored form, but no run-time route fills them,
+  so only a stored value could. The slot enum still lists <code>BodyScar</code> and skips 14.</li>
 <li><strong>Slots 16 and 17, <code>Accessory3</code> and <code>Accessory4</code>,</strong> are the third and fourth accessory slots, which
   Mordor's table does not have. The engine groups them with slots 3 and 4: 0x1BEA070 removes all four
   pieces from the model and 0x1BEA544 restores them from the appearance, on the player's animation
@@ -457,10 +467,16 @@ save and reload.</p>
   written by 0x1C06810, read by 0x1C05970.</li>
 <li><strong>The property form</strong>, the names in the table above: written by 0x1C06444, read by 0x1C0546C.</li>
 </ul>
-<p><code>SetPieceSlot(appearance, slot, piece, design, visual)</code> returns early when the slot already holds
-that piece; otherwise it removes the old piece's appearance tags (0x4C64EC), adds the new piece's
-(0x4C647C), writes the design into its cell, and, when a visual is passed, swaps the piece on that
-visual as well.</p>
+<p>The member document the exporter 0x1BC5044 writes for online publishing carries the appearance in the
+document form under <code>SMCStorage.smc_storage</code> (35 keys): <code>BodyType</code>, <code>smc_bodymodel_record</code> (the base
+model), <code>smc_headModel_record</code> (the face), the 16 <code>smc_*_piece_record</code> of slots 0-15, colour words for
+palette slots 0-14 and <code>smc_storage_appearancetags</code>. Its <code>Inventory</code> part lists each item by record
+hash (<code>fmi_equipment_list</code>: <code>Item</code>, <code>WeaponData</code>, <code>ArmorData</code>, <code>Affixes</code>, <code>Source</code> ...), the colour list
+(<code>smc_flaircolor_list</code>) and the look-record list (<code>smc_nonequipment_record_list</code>). Not exported: slots
+16-22, the design cells, the material overrides, palette slots 15 and 16 and <code>FM+0x180</code>. The importer
+0x1BC21B4 reads <code>SMCStorage</code> into the appearance (0x1C05970), then the inventory (0x1C112F8), then always
+re-dresses him from the items (0x61BAD4, below), so an armour cell that differs from the item under it
+never reaches another player's game.</p>
 <h2 id="building-a-look">Building a look</h2>
 <h3 id="the-build-sequence">The build sequence</h3>
 <p>Every member build runs the same sequence:</p>
@@ -498,8 +514,8 @@ advances it. A class whose body table draws a different number of times therefor
 face, hair and colours that follow.</p>
 <p>Item builds start again from the seed: the give path passes <code>FM+0x168</code> to the item build, which draws
 from a local copy, so a member draws the same design from the same builder at every build. Colour
-items (<code>FlairColors</code>) are rolled from the seed the same way. The army outfit's choice of slots is the
-exception: it draws from the engine's global generator (0x1B3C6C).</p>
+items (<code>FlairColors</code>) are rolled from the seed the same way, one stable colour per member. The army
+outfit's choice of slots is the exception: it draws from the engine's global generator (0x1B3C6C).</p>
 <p>The weighted pick used throughout is the reservoir 0x1B3B90: a weight of zero or less never draws;
 otherwise <code>s = Lcg(s)</code>, <code>r = Unit(s) * (acc + w)</code>, the entry wins when <code>w &gt; r</code>, and <code>acc += w</code>.</p>
 <h3 id="body-type">Body type</h3>
@@ -552,13 +568,22 @@ size fraction; an entry with no matching range or no <code>Body.Model</code> is 
 <p><code>OlogHai_Infantry</code> has one entry (body type 5). A Defender is Buff for about 14% of seeds
 (0.6 x 0.3 / 1.3); a Spearman or an Archer is mostly Slim. The bodies are <code>Orc_Buff_Body001</code>,
 <code>Orc_Slim_Body001</code> and <code>Orc_Stk_Body001V2</code>. Changing a member's class therefore re-rolls his body at
-the next build, and a non-orc class gives a non-orc body and head.</p>
+the next build, and a non-orc class gives a non-orc body and head. The roll reproduces the built body
+type of 144 of 144 living captains.</p>
+<p>Whether a class is an orc's or an olog's is in its record, not its name: <code>AISimulationConfig</code> is
+<code>OlogHai</code> on every olog class whatever it is called (<code>DLC_Thrall</code>, <code>DLC_Architect</code>, <code>GP_Bruz</code>,
+<code>CommanderOlog</code>, <code>MachineDestroyerOlog</code> ...; all 281 <code>Character/Models</code> records read), while an
+<code>OrcInfantry</code> or <code>OrcArcher</code> config alone does not make an orc: Gondorians, Easterlings, Serka,
+Zhoja, Torvin, Celebrimbor and the Family carry one too. <code>ModelRecord</code> is empty on 8 of the 9 <code>DLC_*</code>
+classes.</p>
 <h3 id="size">Size</h3>
 <p>The in-world size uses the same fraction. 0x7F8488(fm) takes the army he was born into (<code>FM+0x180</code>, InitialFaction, else <code>FM+0x178</code>),
 the seed and the class, and 0x4E541C returns</p>
 <pre><code>size = min + (max - min) * Unit(Lcg(seed)) + army.ScaleAdditiveModifier
 </code></pre>
-<p>with <code>(min, max)</code> the class's <code>Character/Models.AIScaleRange</code> (<code>Faction_MtnPass</code> adds 0.1). 0x4E3CF0
+<p>with <code>(min, max)</code> the class's <code>Character/Models.AIScaleRange</code> and the bonus read from the captain's
+birth army, <code>FM+0x180</code> (<code>ScaleAdditiveModifier</code> is 0.1 on all 7 army records read; see Characters, the
+player and the camera). 0x4E3CF0
 stores it into the character's scale component (<code>char+0x2738</code>, at <code>+0x10</code> and <code>+0x6C</code>) only when it
 differs by more than 0.01. Because body and size share the fraction, an Infantry captain is Slim at
 the small end of his class's size range, Buff in the middle and Stocky at the large end.</p>
@@ -572,11 +597,32 @@ orc class lists the same heads per body: 24 Buff, 24 Slim and 23 Stocky, in two 
 <p><strong>Unique heads</strong> are the 18 designs of armour slot 11. Given by a title or a scar, such a design
 replaces the head piece; the head record (the face) and the hair stay. <code>Smp_Empty_Set_NoHair</code> differs
 from <code>Smp_Empty_Set</code> only by the tag <code>Tag_I_ARE_BALD</code>, which hides the hair.</p>
+<p><strong>Where a head ships.</strong> A head's skeleton, mesh and animation file ship in the bundle of its face
+record: <code>Model/SimpleModelHeads.DynamicBundle</code> -&gt; a <code>DynamicResource/BundleDefinition</code> (group <code>NPCHead</code>,
+type <code>Cha_Head_C</code>), for example <code>bundles\modelcharacters\orcs\heads\head03\head03_c06\orc_stk_head03_c06.bndl</code>.
+Its materials ship in the head family's shared <code>_g</code> bundle (<code>orcs\heads\head01</code> to <code>head03</code>,
+<code>olog\heads\head01</code> and <code>head02</code> hold one each; a tribe-head folder such as <code>npc\heads\head_metal</code> holds
+one per body). The head piece itself links either that shared geometry (114 pieces link
+<code>Orc_Buff_Head01_G</code> = <code>orc_head01_g.bndl</code>, which is loaded in every region) or nothing (56). Of the 335
+face records, 306 name their own-named piece and 168 carry a bundle; 7 pieces are named by more than one
+face (the <code>I1035_Orc*</code> cinematic faces share the stock face's bundle). Head02 is linked the same way as
+head01, but its materials ride <code>orc_head02_g</code>, which is loaded only while one of the game's own head02
+captains keeps it. The engine streams a head when its own build picks it: in one army 18 of 18
+natively dressed seated captains held their face bundle.</p>
+<p><strong>A head's material set</strong> has 12 cells (<code>Model.MaterialSets</code> -&gt; <code>_StructuresMaterialSet.SolidMaterial</code>):
+0 the wrinkle material, 1 the base, 2 the distance material, 3 / 4 gore caps, 5 / 6 the eyes
+(<code>eye_orc.mat</code>), 7 beard, 8 beard decal, 9 piercings, 10 / 11 ear burn. Up close (LOD0) a head draws
+cell 0, the wrinkle material on <code>head_cin</code>; the next LOD draws the base cell (<code>head_lod1</code>), and further
+out the distance cell (<code>head_lod1</code>) (census of 99 orc and 7 olog head materials). Bodies draw
+<code>body_lod0</code> / <code>body_lod1</code> on scar materials and <code>body_noscar</code> on plain ones. Eyes draw with cells 5 / 6
+on 42 of 42 Head02 meshes, and beards and beard decals with 7 / 8 at every LOD on 532 of 532 meshes
+outside the Head03 family. Head01, head02 and head03 all bind head01's tint mask <code>orc_head01_m.tex</code>.</p>
 <h3 id="the-colour-roll">The colour roll</h3>
-<p>0x2E9A2C rolls palette entries from the SimpleModel's colour setups (<code>Model/SimpleModelColorSetup</code>,
-465 records, entries <code>_StructuresSimpleModelColorEntry</code> {<code>SelectionWeight</code>, <code>Hue</code> in degrees
-+- <code>HueDeltaRange</code>, <code>Saturation</code> / <code>Value</code> minimum and maximum 0-255, <code>AppearanceTag</code>}). The chosen
-entry's tag is added to the appearance:</p>
+<p>0x2E9A2C(appearance, SimpleModel, generator; 361 instructions) rolls palette entries 0-14 from the
+SimpleModel's colour setups (<code>Model/SimpleModelColorSetup</code>, 465 records, entries
+<code>_StructuresSimpleModelColorEntry</code> {<code>SelectionWeight</code>, <code>Hue</code> in degrees +- <code>HueDeltaRange</code>,
+<code>Saturation</code> / <code>Value</code> minimum and maximum 0-255, <code>AppearanceTag</code>}), reading each setup live and
+storing through 0x2EBB4C. The chosen entry's tag is added to the appearance:</p>
 <table>
 <thead>
 <tr>
@@ -644,12 +690,19 @@ fleshtone (32) or bluish (187) at weight 1, with charcoal (<code>Tag_DarkSkin</c
 and three more at 0.01; eyes <code>Eye_Color</code> red 3 (<code>Tag_RedEyes</code>), yellow 2 (<code>Tag_YellowEyes</code>), blue 1,
 green 1; hair brown, grey, black 1, white 0.01. <code>TattooChance</code> is 0 on every class and <code>PaintChance</code> 0
 on every class but the Berserker (0.5). Infantry, Defender and Archer share every setup; the
-Berserker has its own paint and tattoo, and the Spearman no clothing tint.</p>
+Berserker has its own paint and tattoo, and the Spearman no clothing tint. The beasts' SimpleModels
+(<code>Warg_*</code>, <code>Troll_*</code>, <code>Fellbeast</code>) have every tint link empty (with <code>PaintChance</code> 1.0), so their
+palettes stay unset.</p>
 <h2 id="armour">Armour</h2>
 <h3 id="designs-and-pieces">Designs and pieces</h3>
 <p>A design's <code>ModelPicker</code> is a list of <code>_StructuresInventoryArmorModelPicker</code> {<code>SimpleModelPiece</code>,
 <code>RequiredBodyType</code>}. 0x61BC24(design, body type) returns the first entry whose <code>RequiredBodyType</code> is
-the member's body type or 0 (any body). A design with no piece for that body type empties the slot.</p>
+the member's body type or 0 (any body). A design with no piece for that body type empties the slot.
+Which armour fits a captain is decided by the body type at <code>+0x00</code>, not by the body piece's name: of 162
+living captains, 870 of 870 armour pieces in slots 7-12 whose name carries a body family carried his
+<code>+0x00</code> family, including 10 Stocky and Olog captains drawn in the any-body <code>Orc_Buff_Machine_Body</code>.
+847 of the 926 armour-named pieces are put on some body by a shipped design; the rest are Easterling
+sets and DLC character accessories.</p>
 <p>Sets are named design families <code>AD_&lt;Set&gt;_&lt;Slot&gt;</code>, many with <code>Bling</code> variants (21 <code>*Bling*</code> designs).
 A <code>Bling</code> piece is the same model as its plain twin with a different mesh-part table (see Shoulder
 pads). The nine tribe sets cover all four bodies, except that Regal has no Olog legs.</p>
@@ -676,7 +729,7 @@ enemy colour overrides.</p>
 </tr>
 <tr>
 <td>+0x50 + 8 x slot</td>
-<td>item instances of the 15 armour slots (by <code>ArmorSlot</code>)</td>
+<td>item instances of the 15 armour slots (by <code>ArmorSlot</code>; accessor 0xFCA450 asserts slot &lt; 15)</td>
 </tr>
 <tr>
 <td>+0xC8 / +0xD0</td>
@@ -688,22 +741,27 @@ enemy colour overrides.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>The give path</strong> 0x355474(inv, fm, item, source, appearance):</p>
+<p><strong>The give path</strong> 0x355474(inv, fm, item, source, appearance), 181 instructions:</p>
 <ol>
-<li>refuses the item when the member's combat tree's <code>CharacterType</code> fails the item's
+<li>refuses the item (returns false) when the member's combat tree's <code>CharacterType</code> fails the item's
    <code>RequiredCharacterType</code> / <code>ExcludedCharacterType</code>;</li>
 <li>for each <code>FlairColors</code> entry (<code>Inventory/Flair/Color</code> {<code>ColorType</code> &lt; 17, <code>ColorRecord</code>}) gets or
-   creates the colour-list entry of that slot (0x1C10E54) and, if the source may replace the
-   entry's (rule below), rolls it from the seed (0x1C11A74);</li>
+   creates the colour-list entry of that slot (0x1C10E54) and rolls it in 0x1C11A74: the replace rule
+   below, a weighted entry pick and an HSV roll seeded by <code>FM+0x168</code>;</li>
 <li>an item with an <code>ItemBuilder</code> becomes an instance: the build 0x649790 draws one <code>WeaponData</code> look
    and then one <code>ArmorData</code> design uniformly, sets <code>+0x48</code> the design and <code>+0x30</code> its <code>ArmorSlot</code> (15
    when none), and the source goes to <code>+0x100</code>; 0x61B868 then places it in its slot and adds its
-   item's <code>AppearanceTags</code>;</li>
-<li>an item without a builder is filed in the look-record list (once) when it has a <code>BodyModelChange</code>
-   or <code>PassiveMaterialOverrides</code>;</li>
-<li>every <code>PairedItems</code> entry is given the same way.</li>
+   item's <code>AppearanceTags</code>. The give returns whether the equip succeeded and stops there;</li>
+<li>an item without a builder is filed in the look-record list (once, 0x1162D40, de-duplicated by
+   0x7D9234) when it has a <code>BodyModelChange</code> or any <code>PassiveMaterialOverrides</code>;</li>
+<li>only such a builderless item then gives each of its <code>PairedItems</code> the same way, recursively, with
+   the same source; its own return value is whether it was filed, whatever its pairs did.</li>
 </ol>
-<p><code>PassiveFXSequencePicker</code> is not read on this path.</p>
+<p><code>PassiveFXSequencePicker</code> is not read on this path. Its 13 callers include the army outfit 0x61BE74,
+<code>AddScar</code>, the role setter 0x1BC6698, the tribe change 0x1BC6718, the reward paths 0x351AF8 and
+0x34FEB4, the build's item givers 0x1C10AB0 / 0x1C10F3C / 0x1C11B08 and itself (the pairs), and each
+give reads the item's <code>FlairColors</code> rows and <code>ColorRecord</code> links live: there is no compiled copy on the
+path.</p>
 <p><strong>Which item wins a slot.</strong> 0x61C238(new source, old source, new item, old item) decides whether an
 item may replace the one in a slot (and a colour entry another):</p>
 <table>
@@ -737,12 +795,71 @@ item may replace the one in a slot (and a colour entry another):</p>
 </tbody>
 </table>
 <p>A new source of 11 never replaces, nor does the same item. The sources the build uses are 2 class
-kit, 3 army outfit, 4 personality, 5 role, 6 tribe and 10 scar. <code>FactionMemberItemReplaceValue</code> is 0
-on 5,003 of 5,618 items; the rest use 1 - 100 (10 on 247, 5 on 137, 2 on 87, 20 on 44) and one 9001.</p>
-<p><strong>Applying.</strong> 0x61BAD4(inv, appearance) writes each armour-slot instance through 0x61BBC4 (piece for
-the body type, then <code>SetPieceSlot</code> with no visual), applies each <code>BodyModelChange</code>
+kit, 3 army outfit, 4 personality, 5 role, 6 tribe and 10 scar; a trait's items come at 8 (0x355400,
+see Captain traits) and a reward's <code>ItemsToGive</code> at 9.
+<code>FactionMemberItemReplaceValue</code> is 0 on 5,003 of 5,618 items; the rest use 1 - 100 (10 on 247, 5 on
+137, 2 on 87, 20 on 44) and one 9001.</p>
+<p><strong>What the save keeps of an item.</strong> The item reader 0x1BF320C reads three record hashes into <code>+0x38</code>
+<code>Item</code>, <code>+0x40</code> <code>WeaponData</code> and <code>+0x48</code> <code>ArmorData</code> and derives <code>+0x30</code>; 0x1C10FE0 then stores the
+source byte <code>+0x100</code> only when it is below 11. So 10 is the strongest source that survives a reload (an
+11 comes back as 0 and yields to anything).</p>
+<h3 id="the-re-dress">The re-dress</h3>
+<p>0x61BAD4(inv, appearance) writes every armour-slot instance (<code>FM+0xA0</code> to <code>+0x118</code>) through 0x61BBC4:
+the design's piece for his body type (0x61BC24 / 0x61BC84) goes into piece slot 0x36B700(<code>inst+0x30</code>)
+with <code>SetPieceSlot</code> and no visual. Then it applies each <code>BodyModelChange</code>
 (<code>Inventory/Flair/BodyModelReplace</code>, 3 records: a model picker by body type and a <code>BodySlot</code>, 0x619C1C)
-from the slot items and the look-record list, and copies each colour-list entry into the palette.</p>
+from the slot items and the look-record list, and copies each colour-list entry (<code>{+0x04 slot &lt; 17,
++0x08 ARGB}</code>) into the palette. An armour slot with no item is skipped, so a piece written into the
+appearance under an empty slot stays; a piece written over a slot that holds an item is replaced by the
+item's design at the next re-dress.</p>
+<p>It runs far more often than a build (11 call sites and 2 tail calls):</p>
+<table>
+<thead>
+<tr>
+<th>When</th>
+<th>Caller</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>despawn of the member's body</td>
+<td>the NPC class's <code>vt_0x1FB3640::vf17</code> (0x4A1764; it also runs <code>DespawnWhileFleeingEvent</code>) -&gt; 0x355150(fm, character) when <code>[FM+0x48]</code> is empty or that character</td>
+</tr>
+<tr>
+<td>a reward gives items</td>
+<td>0x351AF8 (from <code>ApplyReward</code> 0x3511F4), after <code>ItemsToGive</code> when 0x34FEB4 gave one (source 9)</td>
+</tr>
+<tr>
+<td>a title change</td>
+<td>the role setter 0x1BC6698 (tail call)</td>
+</tr>
+<tr>
+<td>a scar given or removed</td>
+<td><code>AddScar</code> 0x7BB8C4, <code>RemoveScar</code> 0x1BC409C</td>
+</tr>
+<tr>
+<td>domination</td>
+<td>0x7D52B0</td>
+</tr>
+<tr>
+<td>a level or row change</td>
+<td>the army outfit 0x61BA74 (tail call), from <code>SetLevel</code> 0x35188C and the row placement 0x61B614</td>
+</tr>
+<tr>
+<td>a member build or document load</td>
+<td>0x1BBF928, 0x1BC02AC, 0x1BC06C0, 0x1BC159C, 0x1BF659C</td>
+</tr>
+<tr>
+<td>every online import</td>
+<td>0x1BC21B4, right after it reads <code>SMCStorage</code></td>
+</tr>
+</tbody>
+</table>
+<p>The local save load 0x1BC0F2C reads the item table (0x1C1115C) and does not call it, so a reloaded
+captain shows his saved cells until the first of the events above. An armour look therefore lasts only
+when it lives in the item of its slot (<code>inst+0x48</code> a design that puts the piece on his body, a source
+that holds the slot); a pick written into the appearance cells alone comes off at the next despawn,
+reward, scar, domination, level or row change, and is never seen online.</p>
 <h3 id="the-faction-base-layer">The faction base layer</h3>
 <p>Each orc class kit's named lists give a base suit at source 2, the lowest priority: an enemy gets
 <code>Sauron_Chest</code>, <code>Sauron_Pants</code>, <code>Sauron_Shoulders</code>, <code>Sauron_Arms</code> and <code>IT_Faction_Enemy_Tint</code>; a
@@ -892,9 +1009,67 @@ live in the look-record list.</p>
 </ul>
 <p>A title change through the role setter 0x1BC6698 dresses at once: 0x1BC63F8 writes <code>FM+0x318</code> (the
 old role to <code>+0x320</code>), forces the role's personality when it has one, applies its <code>ScarType</code> through
-<code>AddScar</code> and fires its role event; 0x1BC6698 then gives each of the role's items at source 5 and
-re-applies the look (0x61BAD4). A plain write of <code>FM+0x318</code> gives no items until the next build.</p>
-<h3 id="body-model-painted-skin-and-body-look">Body model, painted skin and body look</h3>
+<code>AddScar</code>, its <code>SimEventTagModList</code> and its role event (<code>FactionEventOnSetRole</code>); 0x1BC6698 then gives
+each of the role's items at source 5 and re-applies the look (0x61BAD4). A plain write of <code>FM+0x318</code>
+gives no items until the next build, but it is not inert: every reader of the role takes it from that
+cell live.</p>
+<table>
+<thead>
+<tr>
+<th>When</th>
+<th>Reader</th>
+<th>What it takes from the role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a spawn, without a build</td>
+<td>0x4F0938 -&gt; 0x355AD8 -&gt; the item handler 0x1C0E0C</td>
+<td>the slotless <code>Item</code>s: material overrides, appearance tags, material-set variants</td>
+</tr>
+<tr>
+<td>every build</td>
+<td>0x1C10AB0</td>
+<td>every <code>Item</code>, the <code>ScarType</code></td>
+</tr>
+<tr>
+<td>a row change</td>
+<td>0x61B614 -&gt; 0x61BA74 -&gt; 0x61BE74</td>
+<td><code>ArmorSetOverride</code></td>
+</tr>
+<tr>
+<td>the Army stage</td>
+<td>0x410BC4 -&gt; 0x355894, the role from the summary's <code>+0x140</code></td>
+<td>the slotless <code>Item</code>s</td>
+</tr>
+</tbody>
+</table>
+<p>The title text is a separate read (see The Nemesis system, "Names").</p>
+<h3 id="title-bodies-and-whole-outfits">Title bodies and whole outfits</h3>
+<p><strong>The Machine's armour is its body.</strong> <code>Role_Machine</code> gives 9 items: <code>Machine_Body</code>, <code>Machine_Head</code>,
+<code>Machine_BodyLOD</code> and an <code>IT_empty_*</code> item in each of the six armour slots. The rib cage, the riveted
+shoulder plates and the arm and leg plating are submeshes of <code>Orc_Buff_Machine_Body</code> (piece slot 0),
+which draws the skin material plus four gear materials (<code>bodies\body_machine\orc_machine_body</code>,
+<code>_shoulders</code>, <code>_legs_arms</code>, <code>_pants</code>, on <code>gear_lod0</code> / <code>gear_alphatest_lod0</code>) from <code>machine_body_m</code>.
+<code>Machine_Body</code> has no <code>UIItemData</code>, so the game names no armour for it, only the title.</p>
+<p><strong>Title bodies.</strong> The armour-slot-10 designs name 14 bodies; besides the standard and scar bodies they
+are <code>Orc_Buff_Machine_Body</code>, <code>Orc_Buff/Slim/Stk_Infested_Body</code>, <code>Orc_Buff_Tower_Body</code>,
+<code>Orc_Buff_Flint_Body</code>, <code>Orc_Buff_Tinder_Body</code>, <code>Olog_Buff_Glutton_Body</code> and <code>Olog_Buff_Dragonborn_Body</code>.
+The Slim and Stocky Machine bodies ship as pieces with their own geometry bundles that no design names.
+The elemental orcs' distance bodies <code>Orc_Buff_Machine/Flint/Tinder_BodyLOD</code> are armour-slot-8 designs.
+A body that comes from an item (<code>Machine_Body</code> -&gt; <code>AD_Machine_Body</code>, armour slot 10) is written back at
+every re-dress and travels with the save and online.</p>
+<p><strong>Whole outfits.</strong> 20 orc pieces that a design puts whole into a single cell carry no slot word in their
+names: <code>*_Sauron_FullSet</code>, <code>*_Sauron_faction</code>, <code>*_Talion_FullSet</code>, <code>*_Talion_faction</code> (Buff, Slim,
+Stocky), <code>Orc_Buff_Sauron_Gondor1</code>, <code>*_Black_Grunt</code> and <code>*_Industrial_Grunt</code> (all armour slot 4, the
+pants cell), and <code>Orc_Slim_Bone_Full</code> (armour slot 2). The tribe <code>*_FULLSET</code> meshes and the story
+characters' one-piece models (<code>Orc_Zog</code>, <code>CommanderOlog</code>, <code>Olog_Thrall</code>, the Acolytes ...) are not
+armour: no design and no SimpleModel names them.</p>
+<p><strong>Names that disagree with the slot.</strong> In 42 orc and olog (piece, design) pairs the piece's name says
+one slot and its design another: <code>Underclothes</code>, <code>NazgulArm</code>, the claws and the Blight arms are named
+chest, pants or arms but their designs are armour slot 7 (accessory); <code>Orc_Buff_Defender_Shoulders</code>
+and <code>Orc_Buff_Backpack</code> are chest designs.</p>
+<h3 id="body-model-body-paint-and-body-look">Body model, body paint and body look</h3>
 <p>Three different things change "the body":</p>
 <ul>
 <li><strong>The body model</strong> is the mesh in piece slot 0 and its LOD in slot 13. The base model (<code>+0x20</code>)
@@ -902,109 +1077,361 @@ re-applies the look (0x61BAD4). A plain write of <code>FM+0x318</code> gives no 
   the nine of armour slot 10 (<code>AD_Body_Scar</code>, <code>AD_Machine_Body</code>, <code>AD_Glutton_Body</code>,
   <code>AD_Infested_Body</code>, <code>AD_Tinder_Body</code>, <code>AD_Flint_Body</code>, <code>AD_Dragonborn_Body</code>,
   <code>AD_BodyModel_Forced_Buff</code> ...).</li>
-<li><strong>A painted skin</strong> is a texture on the same mesh: a builderless item <code>&lt;Name&gt;_BodyPaint</code> whose
-  <code>MaterialSetVariants</code> swap the body piece's material set. <code>Model/SimpleModelMaterialSetVariant</code>
-  (58 records) holds six body families (Digger, BlackBlade, Gravewalker, Unashamed, Rogue, Slave),
-  each a variant for Buff and Slim (excluding <code>Tag_Olog</code> and <code>Tag_Stk</code>), a <code>_Stk</code> one and a <code>_LOD</code>
-  one; Slave has no Stocky variant. <code>Orc_Body_Digger</code> exists only as a variant, never as a mesh.
-  <code>Digger_BodyPaint</code> also carries <code>BodyTintWhitePaint_Slave</code>, <code>Orc_Warpaint_LightBrown</code> and excludes
-  Ologs; <code>&lt;Name&gt;_HeadPaint</code> repaints only the generic heads.</li>
+<li><strong>A body paint</strong> is a tint mask on the same mesh: a builderless item <code>&lt;Name&gt;_BodyPaint</code> whose
+  <code>MaterialSetVariants</code> swap the body piece's material for one that binds the stock
+  <code>orc_body001_d / _n / _s</code> textures and only a different <code>tTintMaskMap</code>
+  (<code>body001\uniquetints\orc_body001_m_&lt;paint&gt;.tex</code>, 2048 x 1024). The paint's pattern is the mask's B
+  channel, the war-paint layer of the body tint <code>Skin_Cloth_Warpaint_Tattoo</code>, and the item switches
+  that layer on (a <code>PassiveMaterialOverride</code> setting <code>k_fBTintAmount</code> 1.0 and a B specular tint, such as
+  <code>BodyTintWhitePaint_Slave</code>) and colours it (<code>FlairColors</code>: Digger <code>Orc_Warpaint_LightBrown</code>, Black
+  Blade <code>Orc_Warpaint_Black</code>, Slave <code>Warpaint_White</code>, Gravewalker and Unashamed <code>Warpaint_White</code> plus
+  <code>Orc_Skin_Dark</code>). <code>Model/SimpleModelMaterialSetVariant</code> (58 records) holds six families (Digger,
+  BlackBlade, Gravewalker, Unashamed, Rogue, Slave), each a variant for Buff and Slim (excluding
+  <code>Tag_Olog</code> and <code>Tag_Stk</code>), a <code>_Stk</code> one and a <code>_LOD</code> one; Slave has no Stocky variant.
+  <code>Orc_Body_Digger</code> exists only as a variant, never as a mesh. <code>Digger_BodyPaint</code> excludes Ologs;
+  <code>&lt;Name&gt;_HeadPaint</code> repaints only the generic heads (<code>Orc_Head_01G_*</code> / <code>_02G_*</code>). The painted
+  materials are scar twins (<code>body_lod0</code> / <code>body_lod1</code> with the scar arrays), so decals draw on them.</li>
 <li><strong>A body look</strong> such as the curse veins is decals on the body's scar material (below).</li>
 </ul>
-<h2 id="scars-limbs-and-shoulder-pads">Scars, limbs and shoulder pads</h2>
-<h3 id="scars">Scars</h3>
-<p><code>AddScar</code> 0x7BB8C4(fm, <code>Combat/Scar/Type</code>):</p>
-<ol>
-<li>returns when <code>FM+0x370</code> already holds the type;</li>
-<li>refuses when the member is in the world and holds any of the type's <code>ExcludedItems</code>, or when
-   0xFCB040 finds one in his inventory;</li>
-<li>takes the setup from his combat tree's <code>ScarSetup</code> (<code>Combat/Scar/Setup</code>: Orc 22 types, Olog 18;
-   24 types in all) and gives one random entry of the type's scar items (0x7BBABC) and its helmet
-   item (0x7BBAF4), both at source 10;</li>
-<li>if either was given, writes <code>FM+0x370</code>, re-applies the look (0x61BAD4) and counts the use on the
-   faction system (0x7BBA44).</li>
-</ol>
-<p><code>RemoveScar</code> 0x1BC409C removes one random item of the type's list, so it can miss on a type with
-several. The build gives only the role's <code>ScarType</code>; nothing in it reads <code>FM+0x370</code>, and its item clear
-removes the earlier scar items, so a rebuild drops a scar given by <code>AddScar</code>. The scars a death or a
-return brings are in The Nemesis system.</p>
-<p>By their items: Poison, Branded_Slave and Mauled (and the Olog Poison) bare the head (an
-<code>AD_empty_head*</code> item in armour slot 0); Metal_Head and Sack_Head replace the head (armour slot 11)
-and MetalJaw_Helmet uses slot 9; ExposedBrain, DaggerHead and AxeHead are helmets; burns, cuts, eye
-wounds, Facepeele and Shamed are decals only; claws use the accessory slot and the curse the body.</p>
-<h3 id="limbs">Limbs</h3>
-<p>Six designs replace a limb: <code>AD_L_Arm_Claw</code>, <code>AD_BigClawL_Accessory</code>, <code>AD_R_Leg_Claw</code>,
-<code>AD_NazgulArm</code>, <code>AD_Blight_Arms</code> (accessory slot) and <code>AD_Zog_Legs</code> (legs). The orc's own limb is
-hidden by the item's <code>PassiveMaterialOverrides</code>, not by the piece: an <code>Inventory/MaterialOverride</code>
-names a model piece (0 body, 8 shoulders, 10 arms, 12 legs, 13 body LOD) and a <code>SeverMask</code> (1 left
-lower leg, 2 right lower leg, 4 lower body, 8 left forearm, 16 left upper arm, 32 right forearm, 64
-right upper arm). The claw and peg-leg items hide only the body skin; the game ships armour hides that
-no item uses (<code>orc_Hide_Armor_Arml_L</code>, piece 10 mask 8; <code>orc_Hide_Armor_Legl_R</code>, piece 12 mask 2).
-Two overrides on the same piece and key do not combine (the last bound wins).</p>
-<p><code>NazgulArm</code> (orcs only) puts <code>Orc_&lt;body&gt;_NazgulArm</code> in the accessory slot: a pale veined arm with its
-own 512 x 512 atlas and armour tint layers, and three hides (<code>orc_Hide_Body_Armu_R</code> mask 96,
-<code>orc_Hide_Armor_Arml_R</code> 32, <code>orc_Hide_Armor_Armu_R</code>) that cut the orc's own right arm away. It comes
-from <code>Role_Accursed</code>, <code>Role_Hand</code> and <code>Role_StormBringer</code>.</p>
-<h3 id="shoulder-pads-and-appearance-tags">Shoulder pads and appearance tags</h3>
+<p>Material-set variants stack: the item handler 0x1C0E0C -&gt; 0x730C70 keeps a reference-counted list at
+<code>visual+0xD0</code> (the same record again raises its entry's count at <code>+0x54</code>; every entry is re-applied
+through 0x730DBC; removal 0x1BEA358 from 0x10C290), so one item's variant does not remove another's.</p>
+<p>The body masks, decoded at 512 x 256 (texels with B above 0.5 = war paint, A above 0.03 = the fourth
+layer, Tattoo):</p>
+<table>
+<thead>
+<tr>
+<th>Mask</th>
+<th>B &gt; 0.5</th>
+<th>A &gt; 0.03</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>stock <code>orc_body001_m</code></td>
+<td>9.8%</td>
+<td>8.5% (a knotwork tattoo)</td>
+</tr>
+<tr>
+<td><code>orc_body001_m_digger</code></td>
+<td>2.9%</td>
+<td>21.2% (a full-body vein network)</td>
+</tr>
+<tr>
+<td><code>_blackblade</code> / <code>_slave</code> / <code>_unashamed</code></td>
+<td>53.0% / 23.1% / 24.1%</td>
+<td>100% (layer unused, filled white)</td>
+</tr>
+<tr>
+<td><code>_gravewalker</code> / <code>_rogue</code></td>
+<td>18.6% / 20.2%</td>
+<td>0%</td>
+</tr>
+<tr>
+<td><code>olog_body001_tint_m</code> (BC1)</td>
+<td>-</td>
+<td>100%</td>
+</tr>
+</tbody>
+</table>
+<p>The Tattoo layer is on only when a SimpleModel tattoo roll sets <code>k_fATintAmount</code>, and every captain
+class ships <code>TattooChance</code> 0. The game's own Digger (<code>Character/Models</code> <code>DLC_Digger</code> -&gt;
+<code>Model/SimpleModel</code> <code>Orc_Digger</code>: <code>Orc_Buff_Body001</code>, <code>Orc_Buff_Head01_G</code>, skin <code>Orc_Skin_Albino</code>, eyes
+<code>Eyes_Red</code>, tattoo <code>Orc_Skin_DarkPurple</code> at <code>TattooChance</code> 1.0) is the one that lights it: his veins are
+the alpha of <code>orc_body001_m_digger</code>, and his face's are the blue of
+<code>heads\head01\uniquetints\orc_head01_digger_m.tex</code>. On an olog the tattoo mask is solid, so that layer
+covers the whole body.</p>
+<h2 id="pieces-on-other-skeletons">Pieces on other skeletons</h2>
+<h3 id="the-piece-to-rig-table">The piece-to-rig table</h3>
+<p>A worn piece's vertices name bones by the piece skeleton's own numbers. The engine turns them into the
+wearer's through one table per (rig, piece): the binding object <code>[part+0x80]</code> (vt 0x1DC7220, 0x2F0
+bytes, constructor 0x702870, find-or-create 0x1CC280, key at <code>+0x10</code> = hash(rig) | hash(piece) &lt;&lt; 32),
+whose u16 vector sits at <code>+0x38 / +0x40</code>. Every wearer on that rig shares it; one piece on two rigs has
+two objects with the same high half of the key (12 models, 50 parts).</p>
+<p>Each part's render object (<code>[part+0x48]</code>, vt 0x1FFE3E8) holds a copy that the draw reads directly: u16
+at <code>+0x148</code>, u8 at <code>+0x150</code>, count <code>+0x158</code>, inside a member struct at <code>+0x10</code> (vt 0x1DAB810,
+constructor 0x1BE460, which is why its own code addresses them as <code>+0x138 / +0x140 / +0x148</code>). The setter
+0x1BFBB8 frees the old copy, keeps the u16 table and derives the u8 one from its low bytes; vf60
+0x4C11A4(render, u16*, count) copies a caller's table and queues 0x1BFBB8 on the render ring 0x272E8D8
+(the same ring and commit, 0x251E00, as vf47, the material setter). Its callers are the part's
+resource-arrived callback (0x66C714 -&gt; 0x1BD968) and <code>vt_0x1FE1A18::vf1</code> 0x1BE1C0, both passing the
+binding's vector. An empty vector means no table at all (0x6D5CE4).</p>
+<p>The table comes from walking the piece's bone tree: a bone takes the wearer's number for the same name
+only when it and every ancestor exist on the wearer, and otherwise keeps its raw number. That rule
+reproduces the engine's tables on 128 of 128 entries (a by-name rule matches 57, identity 122). The table
+is not in the <code>.mesh</code> file. Talion's skeleton runs <code>Null &gt; pNull &gt; Pelvis</code> and no other rig has <code>pNull</code>,
+so on any other rig every bone below it keeps its raw number: the arms bend wrong, and raw numbers past
+the wearer's bone count (32 of a Talion suit's on a 96-bone rig) index past his palette. A piece that
+finds no bone of its own on the rig, such as Talion's hair, comes out as identity and gets no table.
+Havok cloth reads the wearer's bones through the same table (see Cloth).</p>
+<h3 id="the-skeleton-object">The skeleton object</h3>
+<p>The piece's skeleton is <code>[[part+0x70]+0x10]</code>, the wearer's <code>[[[part+8]+0x1D8]+0x10]</code> (see Animation):</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x38</td>
+<td>nodes, 0x40 bytes each: byte 0 the parent (0xFF = root), byte 1 its own index, byte 3 the child count</td>
+</tr>
+<tr>
+<td>+0x40</td>
+<td>bone count</td>
+</tr>
+<tr>
+<td>+0x58 / +0x60</td>
+<td><code>{u32 hash, u32 index}</code> pairs sorted by hash (P919 of the name; <code>pNull</code> = 0xB8AD19F7)</td>
+</tr>
+<tr>
+<td>+0x70</td>
+<td>name pointers in number order</td>
+</tr>
+</tbody>
+</table>
+<p>Nodes are in level order: a parent comes before its children (3,047 of 3,047). Pairs whose index is at
+or past the bone count exist and are not bones (435 of 3,482); a complete skeleton has exactly one
+in-range pair per bone (27 of 27).</p>
+<h3 id="bind-poses-and-fit">Bind poses and fit</h3>
+<p>The humanoid piece skeletons share one bind pose: Talion's suits sit within 0.2 cm (median) of
+<code>orc_base.skel</code> over 82 shared bones with limb rotations of 0.00 degrees (only the shoulder-pad helpers
+differ, <code>R_SPadX</code> by 12 degrees); <code>orc_base.skel</code> has 100 bones, <code>player_base.skel</code> 128. The three orc
+body skeletons (Buff, Slim, Stocky) are one bind pose with every bone in the same place: only girth
+differs between body types. An orc piece skeleton is the whole orc rig, 76 bones in the body's runtime
+order. So a piece whose table maps it follows the wearer; what is left is surface volume. A Talion suit
+rides 2.1% of its vertices on bones the orc rig lacks (<code>Scabbard_Joined</code>, <code>Belt_1/2</code>, loincloth) and has
+no hand weights; the p90 radius around the shared bind segments is 10.8 / 11.9 cm on a Slim / Buff orc's
+upper arm against 8.6 - 8.7 cm for the suits, and 18.3 / 22.1 cm on the torso against 26.6 - 27.0 cm.</p>
+<p>Over 77 non-orc torso pieces: the player's suits (Talion's and Celebrimbor's) fit 32 of 32 (no weight
+on missing bones, chest within 1.9 cm); Eltariel's armours 0 of 19 (1.6 - 6.1% of the weight on bones an
+orc lacks, <code>R_ShoulderX</code> / <code>L_ShoulderX</code> among them, and the chest 4.4 - 8.6 cm inside a Buff orc);
+Gondorian 9 of 10; Easterling, Serka, Baranor and Sauron fit. Talion's suits are one mesh part
+(<code>player_rhovaniont2_armor.mesh</code>: group 0 chest, shoulder plates, forearm guards, legs and boots, 17,118
+vertices; 1 / 2 shoulder straps and collar with a cloth proxy; 3 a 4-vertex placeholder; 4 baldric and
+belt), so their <code>MeshIndexPairs</code> cannot split them, and their vertex alpha is 255 everywhere, so no
+sever mask takes their arms off. 24 of 32 readable suits carry no second UV stream at all. A mask is
+never a separate piece: it is part of a cloak model. Scabbards put all their weight on <code>scabbard_back</code> /
+<code>dagger_sheath_back</code>, bones an orc lacks.</p>
+<p>Easterling armour pieces use the orc rig's bone names (the heavy chest 71 of 74 bones; only the
+collar bones are missing). Easterling armour is split like orc gear, but its chest pieces are strap
+and plate pieces worn over the body, whose mesh carries the torso clothing.</p>
+<h3 id="pieces-built-for-another-rig">Pieces built for another rig</h3>
+<ul>
+<li>The orc Druid legs (<code>orc_buff/slim/stk_druid_legs.mesh</code>) share one geometry with
+  <code>olog_buff_druid_legs.mesh</code> (same vertex counts, bounds within 0.1 cm), re-exported against the plain
+  orc bind: 183 x 72 x 81 cm against <code>Orc_Buff_Black_Legs</code> 74 x 52 x 45, so they skin from an orc's bones
+  at Olog size. The orc Druid pants are the Olog pants with only the waistband lowered (up to 19 cm), the
+  hem left at the Olog's height, below an Olog's knee and at an orc's ankles. Their material sets are the
+  Olog's. Over 510 orc pieces with an Olog twin by name, these are the only ones on Olog geometry; the
+  other way round, <code>Olog_Buff_Apron_Chest</code>, the FaceCape chest and <code>Olog_Buff_Master_Helmet_Head01</code> carry
+  orc-sized geometry.</li>
+<li>22 Olog-only piece meshes have no orc twin by name: the Thrall set (helmet, shoulders, chest, pants),
+  the Architect (helmet, chest, arms, head), The Beast (chest, arms), the Amputator, MetalBandage and
+  Tailor helmets, the Skirt pants, the Shackles and Stitch accessories, and heads and bodies.
+  <code>AD_Thrall_Helmet / _Shoulders / _Chest / _Pants</code> list only an Olog piece; every Thrall piece draws six
+  material cells (the Mystic or Mystic-helmet material, <code>thrall_spider</code> and <code>thrall_webs</code> or
+  <code>orc_spiders_accessory</code>, each as a LOD0 / distance pair).</li>
+<li>Where the game ships both, its own Olog-to-orc helmet fit is consistent: 28 helmet designs per body
+  type carry both pieces, scaled about 0.48 - 0.52 across, 0.50 below and 0.61 above the <code>Head</code> joint,
+  0.45 behind and 0.66 in front.</li>
+<li><code>Orc_Buff_Tower_Body</code> draws its four back blades in the same submeshes as its spiked harness, beside
+  the <code>Orc_Buff_Body001</code> skin, the far body and two gore caps (16 submeshes, 34 LOD rows; material set of
+  7 solids: <code>orc_body001</code> and its distance twin, two gore caps, <code>orc_atlas</code>, <code>orc_tower</code> and its distance
+  twin). Its skeleton (74 bones) binds the 20 bones the blades ride within 0.033 cm of the Buff body.</li>
+</ul>
+<h3 id="level-of-detail-and-material-cells">Level of detail and material cells</h3>
+<p>Each mesh part's row in the piece skeleton is <code>{u8, u8, f32 distance, u32, i32 -1}</code>; on every piece
+read (7) the u32 is the index, in the Model's <code>SolidMaterial</code> list, of the material the part draws at
+that distance. Shipped orc armour uses cell 0 for LOD0 and cell 1 beyond (main parts
+<code>[0, 1, 1, 1, 1, 0]</code> over 0 / 500 / 800 / 1200 / 2000 / 7500 cm), and the mesh's LOD table sends both of
+the first two distances to the LOD0 submesh. LOD0 vertices are 64 bytes and carry
+a second UV set drawn by <code>gear_lod0</code> (every vertex shader of <code>gear_lod0.fxo</code> (3) and
+<code>gear_alphatest_lod0.fxo</code> (15) takes <code>TEXCOORD1</code>; <code>gear_lod1.fxo</code> (7) does not); distance vertices are
+60 bytes. <code>Orc_Buff_FaceCape_Chest</code> and the Druid legs (all four LODs 60-byte) and pants keep cell 0 at
+LOD0 with no second UV set, so they vanish in close-up. A skeleton can list more LOD rows than its mesh
+has parts (the Thrall shoulders 28 for 14; some Head03 heads 54 for 24).</p>
+<h2 id="shoulder-pads-and-appearance-tags">Shoulder pads and appearance tags</h2>
 <p>A shoulder piece's <code>MeshIndexPairs</code> (<code>_StructuresSimpleModelMeshIndexPair</code> {<code>MinIndex</code>, <code>MaxIndex</code>,
 <code>RequiredAppearanceTag[]</code>, <code>ExcludedAppearanceTag[]</code>}, 4,447 in the database) are ranges of the
 model's mesh parts. 0x1B37F0 keeps the pairs whose required tags are all present in the appearance
-and whose excluded tags are absent, and picks one uniformly from a copy of the visual's seed. The
-tags are <code>Tag_ShoulderBoth</code>, <code>Left_Shoulder</code> and <code>Right_Shoulder</code>, given by items (<code>Both_Shoulders</code>,
+and whose excluded tags are absent, and picks one uniformly from a copy of the visual's seed
+(<code>+0x98</code>). 0x1BD724 packs the chosen (min, max) at piece <code>+0x56</code> (a min of 1 becomes 0) and the material
+object's vf38 0x1BD764 queues it on the render ring 0x272E8D8, whose side keeps it at
+<code>(material+0x10)+0xB8</code>. The part a vertex belongs to is <code>round(uv1.x x 10)</code> on orc gear (exact on the
+Slaughter parts 1-5 at all four LODs, 26 of 29 Buff shoulder pieces); the mesh's arenas are LODs, not
+parts.</p>
+<p>The tags are <code>Tag_ShoulderBoth</code>, <code>Left_Shoulder</code> and <code>Right_Shoulder</code>, given by items (<code>Both_Shoulders</code>,
 the <code>Only_*</code> items, some chests and scars). A <code>Bling</code> piece maps 2-2 to 1-2, 3-3 to 3-4 and 2-3 to 1-4
 (parts 1 and 4 are the plates). 80 of 132 orc and Olog shoulder pieces have no both-sides layout.</p>
-<p>Tags are added by <code>SetPieceSlot</code>, by item equip (0x61B868, an item's <code>AppearanceTags</code>), by the class
-kit at the start of a build and by colour entries, and removed per piece on a swap; 0x2EA18C adds a
-count, 0x6E90F4 subtracts and removes an entry at zero. A build adds the kit's and the colours' tags
-again without clearing, so counts grow with each build. The vector is saved
-(<code>smc_storage_appearancetags</code>). Tags also select weapon models: <code>_StructuresInventoryItemModel.OverrideModels</code>
-(0x3FF344, picked by 0x1BFB1FC when the wearer holds every required tag).</p>
+<p>Tags are added by <code>SetPieceSlot</code>, by item equip (0x61B868 and 0x6E9174, an item's <code>AppearanceTags</code>), by
+the class kit at the start of a build (0x6FEA04) and by colour entries, and removed per piece on a swap;
+0x2EA18C adds a count, 0x6E90F4 subtracts and removes an entry at zero. A build adds the kit's and the
+colours' tags again without clearing, so counts grow with each build. The vector is saved
+(<code>smc_storage_appearancetags</code>, P919 hashes; the save loader 0x1C67944). Tags also select weapon models:
+<code>_StructuresInventoryItemModel.OverrideModels</code> (0x3FF344, picked by 0x1BFB1FC when the wearer holds
+every required tag).</p>
+<h2 id="scars">Scars</h2>
+<p>A scar is items, not a model slot: <code>AddScar</code> 0x7BB8C4 gives one random variant of a <code>Combat/Scar/Type</code>
+and its helmet item at source 10 and re-dresses him. A variant's parts are decals on the head or the body
+(scar materials only), hides, and armour items that bare or replace the head, empty the chest or arms or
+swap the body for its scar twin. The full system, which parts arrive and which never do, and how a
+return from death picks its scar are in Captain scars and the return from death.</p>
 <h2 id="colour-on-screen">Colour on screen</h2>
 <h3 id="tint-layers">Tint layers</h3>
 <p>A piece's <code>Tint</code> is a <code>Model/SimpleModelTint</code> (76 records) that maps the tint mask's R, G, B and A
 channels to palette slots; index 16 means unused. The records are named after the slots they read
 (74 of 75 named records agree; for example <code>Skin_Eye_Warpaint_Hair</code> = 0, 1, 4, 2 and
-<code>Metal_Leather_FactionCloth_Trim</code> = 5, 6, 12, 9).</p>
+<code>Metal_Leather_FactionCloth_Trim</code> = 5, 6, 12, 9; <code>Skin_Eye_Warpaint_Metal</code> reads Hair on A). Only skin
+layouts map a channel to Tattoo: 5 of the 76 (the orc body, the Machine bodies, two Easterling and the
+Gondorian heads; 14 pieces in all).</p>
 <p>The writer 0x36B430 walks the visual's 23 pieces: for each piece with a <code>Tint</code> it finds or creates
-the tint entry (0x4C3634) and, per channel below 16, 0x2EAF10 -&gt; 0x2EAFF4 writes the layer: when the
-palette entry's alpha is 0xFF, amount 1.0 and colour (R, G, B) / 255 (<code>SetParamVector</code>, handle slot
-7); otherwise amount 0.0 and no colour record. On the head (slot 1) the tattoo layer is gated by
-<code>SimpleModel.TattooApplyToHead</code> and war paint by <code>PaintApplyToHead</code> (true on 182 of 185
-SimpleModels). A second writer (0x36B5D8 -&gt; 0x4C3F58 -&gt; 0x78CD3C) applies a design's follower or
-enemy colour overrides, rolled in HSV, in an entry keyed by that design.</p>
+the tint entry (0x4C3634) and, per channel below 16 (0x2EAD20), 0x2EAF10 -&gt; 0x2EAFF4 writes the layer:
+when the palette entry's alpha is 0xFF, amount 1.0 and colour (R, G, B) / 255 (<code>SetParamVector</code>,
+handle slot 7); otherwise amount 0.0 and no colour record. The head gate 0x2EAF10 (59 instructions)
+gates palette entries 3 and 4 only: on the head (slot 1) the tattoo layer by <code>SimpleModel.TattooApplyToHead</code>
+and war paint by <code>PaintApplyToHead</code> (true on 182 of 185 SimpleModels). <code>SimpleModelPieces.Tint</code> is read
+live by 0x36B430, 0x36B5D8 and 0x4C4974 and the layout's channels by 0x2EAD20; nothing copies them.</p>
+<p>The second writer (0x36B5D8 -&gt; 0x4C3F58 -&gt; 0x78CD3C) applies a design's <code>PlayerFollowerColorOverrides</code>
+or <code>SauronFollowerColorOverrides</code> (list fields of <code>Inventory/ArmorData</code>), rolled in HSV, in an entry
+keyed by that design, which wins over the palette entry. Most of the 855 designs carrying such lists
+name human and elf colours (<code>Ranger_*</code>, <code>Gondor_*</code>, <code>Eltariel_*</code>, <code>Haradrim_*</code>); the caragor armour
+designs <code>AD_Warg_Armor_Chest</code> and <code>AD_Warg_Rare_Armor_Chest</code> name orc colours, and this writer is what
+paints caragor armour (5 of 5 armoured caragors: layer A <code>AA4425</code> on enemies, <code>5A8FAA</code> on allies,
+entry 4 of the lists, <code>Orc_Warpaint_Red</code> / <code>_Blue</code>). An orc ally's colours do not come from here but
+from his tint items (below).</p>
 <p>The tint owner <code>[visual+0xC0]</code> holds the character's SimpleModel at <code>+0x08</code> and a vector of 0x18-byte
 entries at <code>+0x18 / +0x20</code>: <code>{SimpleModelTint, design (0 = base), handle}</code>; an entry whose design is
-the slot's design wins over the base entry. Pieces that share a <code>SimpleModelTint</code> share one store.
-The handle class and its setters are in Rendering; the store (0x28 bytes) holds its records
+the slot's design wins over the base entry. Pieces that share a <code>SimpleModelTint</code> share one store, and
+a piece binds one store for all its materials: the Machine body's skin and its four plating materials
+read the same <code>Skin_FactionWarpaint_Metal_Tattoo</code> store. The handle class and its setters are in
+Rendering; the store (0x28 bytes, constructor 0x4C38B8) holds its records
 <code>{u32 type &lt;&lt; 28 | hash, u32 size, data}</code> at <code>+0x00 / +0x08</code> (type 2 float3 <code>k_c?TintColor</code>, type 5
 float <code>k_f?TintAmount</code>), a reference count at <code>+0x1C</code> and <strong>a change stamp at <code>+0x20</code></strong>.</p>
 <p><strong>The render cache.</strong> A piece's render node rebuilds its parameters only when one of its stores'
 stamps is newer than its last build. Values written into a store in place change nothing on screen
 until the stamp moves ahead of the counter the render thread keeps in its thread-local block (about
 7,900 increments per second).</p>
-<p>The shader blends <code>c = lerp(c, diffuse x tint, mask x amount)</code> per channel in linear space, always
-from the original diffuse. Pieces with a blank tint mask (<code>flatblack_alpha.tex</code>, for example the
-metal-bandage helmet) cannot be tinted. The gear shader also lerps each mask layer's specular sample
+<p><strong>The blend.</strong> Each layer, in order R, G, B, A, moves the running colour toward the tinted diffuse:
+<code>c = c + mask x amount x (tint x diffuse - c)</code>, always from the original diffuse (the three body pixel
+shaders that blend, read whole). Neither the factor nor the albedo is clamped from below (of the
+skeletal variant's 11 saturates, 8 clamp decal coordinates and 3 a wet / blood factor), so an amount
+above 1.0 extrapolates and the 8-bit target stores an undershoot as 0. The store holds the palette byte
+/ 255, but on screen a tint behaves as an sRGB-encoded colour: a paint colour chosen to equal its plate
+as a linear factor (<code>6F5D4A</code>) drew strokes at 0.40 / 0.34 / 0.30 of the plate (14,172 pixels measured),
+near what decoding the byte as sRGB first predicts and far from the 1.0 a linear factor would give, and
+paint colours encoded as sRGB (<code>B0A393</code>, <code>BBBFBA</code>) blend into their plates. The gear shader also lerps each mask layer's specular sample
 toward <code>k_v?SpecularTint</code> (reflectance, specular occlusion, roughness) by mask x <code>k_f?TintAmount</code> x
 <code>k_fSpecularTintToggle</code> x <code>k_f?SpecularTintAmount</code>; gear materials declare the vectors (0.6667, 1,
 0.5) with amounts 0, and no captain's tint store carries them.</p>
+<h3 id="where-the-colours-come-from">Where the colours come from</h3>
+<p>The class roll fills palette entries 0-14; entry 15, faction war paint, only ever comes from items, and
+most of an orc's armour colours do too. A <code>FlairColors</code> row (<code>Inventory/Flair/Color</code> {<code>ColorType</code> =
+palette slot, <code>ColorRecord</code> -&gt; <code>Model/SimpleModelColorSetup</code>}) is rolled at the give (above), so one
+repointed <code>ColorRecord</code> reaches every orc the engine dresses or re-dresses after it.</p>
+<ul>
+<li><strong>Grunts</strong> hold <code>IT_Faction_&lt;Enemy|Friendly&gt;_TintItem</code>; <strong>captains</strong> <code>IT_&lt;Tribe&gt;_Tribe_Tint</code> or
+  <code>IT_&lt;Tribe&gt;_Tribe_Follower_Tint</code> (Blackguard, Dark, Feral, Industrial, Marauder, Mystic, Slaughter,
+  Terror, Warmonger, plus <code>IT_Bruz_*</code>).</li>
+<li><strong>Allies:</strong> <code>Orc_Faction_Cloth_Blue</code> (slot 12, <code>Clothing_Color_01_Blue</code> <code>5E89A5</code>),
+  <code>Orc_Faction_Paint_Blue</code> (15, <code>5A8FAA</code>), <code>Orc_Cloth_Friendly</code> (7, <code>Orc_Talion_Faction_Clothing</code>
+  <code>5B87A5</code>), <code>Orc_Metal_Friendly</code> and <code>Orc_Trim_Metal_Friendly</code> (5 / 9, <code>C2CCBE</code>), <code>Orc_Leather_Friendly</code>
+  (6). <strong>Enemies:</strong> the <code>_Red</code> / <code>_Enemy</code> twins (<code>Orc_Sauron_Faction_Clothing</code> with red, black, green and
+  purple entries; <code>Orc_Metal_Enemy</code> <code>A09590</code>).</li>
+<li><strong>About 16 records colour every orc's armour:</strong> metal <code>Orc_Metal_Enemy</code> / <code>_Friendly</code> / <code>_Copper</code>
+  (Industrial) / <code>_Silver</code> (Mystic), trim <code>Orc_Trim_Metal_Enemy</code> / <code>_Friendly</code> / <code>Orc_Trim_Gold</code>
+  (Marauder), leather <code>Orc_Leather_Enemy</code> / <code>_Friendly</code> / <code>_Black</code> / <code>_Brown</code> (Feral) / <code>_YellowBrown</code>
+  (Slaughter) and <code>Orc_FactionLeather_GreyFur_Range</code> (Warmonger, slot 11), cloth <code>Orc_Cloth_Enemy</code> /
+  <code>_Friendly</code> / <code>_Black</code>, side cloth <code>Orc_Faction_Cloth_Red</code> / <code>_Blue</code>. The enemy grunts' leather setup
+  <code>Orc_Faction_Leather_Enemy</code> has no entries, so every enemy grunt's leather ships untinted.</li>
+<li><strong>Beasts:</strong> their SimpleModels have every tint link empty and no item colours them, so a caragor's
+  palette slot 4 stays unset: armour whose design carries colour overrides (<code>AD_Warg_Armor_Chest</code>,
+  above) is painted by the second writer, and any other shows the white base of its strokes. Graug and
+  drake pieces have no tint mapping at all (their paint is in their textures).</li>
+</ul>
+<p><strong>War paint on armour is a tint layer over a light neutral base.</strong> Under the paint channel the diffuse
+reads saturation 0.03 - 0.06 and 1.5 - 2.7 times the luminance of the texels around it (13 materials
+decoded), so an unset entry (amount 0) shows white marks. The paint channel per set: A carries faction
+paint on Beast, Industrial, Scavenger, Warmonger and the Sauron / Talion chests, B on Commander,
+Destroyer, Marksman, Thrall, Tank and Feather; A carries war paint (slot 4) on the
+<code>Metal_Leather_Cloth_Warpaint</code> title pieces and the caragor armour. Faction cloth (12) covers a large
+share of Black (B 23%) and Mystic (B 26%). The grunt outfit has no faction-cloth layer; its plate paint
+is baked into <code>faction_armor_d.tex</code>. A stroke also lives in the specular map (<code>faction_armor_s.tex</code>
+reads R 0.72 / G 0.61 / B 0.68 in a stroke's core against 0.92 / 0.92 / 0.43 just outside; R 170 / 255 is
+a dielectric), so a painted texel on a metal plate is matte and shows its full albedo.</p>
+<h3 id="masks-what-a-layer-can-reach">Masks: what a layer can reach</h3>
+<p>A layer reaches only where its mask channel is set.</p>
+<ul>
+<li><strong>Blank masks.</strong> Of 431 character materials on the four gear shader trees, 114 bind a blank mask
+  (<code>flatblack_alpha.tex</code> 103, all four channels 0; <code>flatblack.tex</code> 11, R = G = B = 0 and A = 1): the
+  big claw, the peg leg and the underclothes carry a tint store the palette writes and still draw
+  untinted. 18 Models draw <code>metalplates.mat</code> / <code>metalplateslods.mat</code> (the four Metal Heads, the
+  MetalJaw, MetalBandage and MetalCap helmets of the three orc bodies, the three olog helmets, the Shovel
+  and Snare weapons), both on <code>flatblack_alpha</code> with every amount declared 0. The Metal Head (a scar's
+  head, <code>AD_Metal_Head</code>, armour slot 11) is one material object of head01's face materials (cells 0-2),
+  gore caps (3-4), eyes (5-6) and plates (7-8), so one store reaches face and plates alike. Monolith's
+  own metal head, <code>Orc_*_Machine_Head</code> (<code>Skin_Eye_Metal_FactionWarpaint</code>), puts its metal on B
+  (<code>orc_machine_helmet_m</code>: B on 93.1% of texels). Each plate Model owns its material set (2,995 of 2,995
+  set primaries have their own instance). Every engine store bind uses index 0 (351 of 351 pairs on 119
+  pieces).</li>
+<li><strong>Plating with no alpha.</strong> The Machine plating masks are BC1 (alpha 1) or BC3 with alpha 1.0 on
+  262,144 of 262,144 texels, so a Tattoo layer at amount 1.0 on the Machine body's store covers the
+  whole plating after Metal. The Machine body's tint is <code>Skin_FactionWarpaint_Metal_Tattoo</code> (metal on B
+  over 82.8% of the body plating, 91.0% of the shoulders and 86.1% of the pants; arms and legs 50.4%
+  metal and 49.6% skin), the Machine head's <code>Skin_Eye_Metal_FactionWarpaint</code> (helmet mask 100% B);
+  the Tower body uses <code>Skin_Metal_Leather_Metal</code>, the Dragonborn <code>Skin_Metal_Leather</code>, and Flint, Tinder,
+  Infested and Glutton the standard <code>Skin_Cloth_Warpaint_Tattoo</code>.</li>
+<li><strong>Skin keeps its sores.</strong> Inside the skin zone of <code>orc_body001_m</code> (R above 0.05, G below 0.3) R is
+  0.86 at the median and 0.55 / 0.67 / 0.72 at the 1st / 5th / 10th percentile (the Machine body's mask
+  0.58 / 0.71 / 0.74). The low-R texels are the scabs, blisters and folds, which keep part of their own
+  colour under any skin tint (a black skin at amount 1.0 keeps 15.5% of the texture on average). G is
+  the cloth zone (loincloth and wraps, 14.4% of the standard mask, 15.0% of the Machine's); on the
+  Machine body G is faction war paint, which reads amount 0.0, so its wraps show the raw texture.</li>
+<li><strong>Accessories.</strong> 42 orc and olog accessories form 22 families, 10 of them with no <code>Tint</code>.
+  <code>Orc_Buff_Spiders_Accessory</code> has none, so no store; its material (<code>orc_spiders_accessory.mat</code>,
+  <code>gear_alphatest_lod0</code>) masks with <code>flatblack.tex</code>, so only the A layer could reach it. Its strands
+  are an effect (<code>thespider_spidersbody01.fxp</code>, three <code>PolyString</code> nodes on Head and the forearms whose
+  colour is the effect key's shared <code>StringColor</code>).</li>
+</ul>
 <h3 id="eyes-and-glow">Eyes and glow</h3>
 <p>A captain's eyes are solid material slots 5 and 6 of his head piece's material object, one material
 per eye (see Characters for the slots): <code>eye_orc</code>, <code>_black</code>, <code>_bright</code>, <code>_serpent</code>, <code>_undead</code>,
 <code>_cataracts</code>, <code>_cut</code>, <code>_metal</code> and <code>_crossed</code>, <code>eye_cursed</code> and <code>olog_eyes</code>, all resident in a loaded
-world; <code>eye_orc_spider</code> ships only in a DLC bundle. The eye shader tints the iris by the G layer (the
-eye palette entry) and writes an emissive value
+world; <code>eye_orc_spider</code> ships only in a DLC bundle, and its own tint mask is blank (its red is its
+diffuse). No eye mesh ships. The eye shader tints the iris by the G layer (the eye palette entry) and
+writes an emissive value
 <code>saturate((mask . k_vEmissiveTintChannelMask - range.x) / (range.y - range.x)) x k_fEmissiveScale</code>:
 orc heads ship range (0, 2) and scale 0.05 (0.35 bright, 0 cataracts), so a fully masked pixel glows
-at half the scale; Olog heads have no eye glow. The head writes an emissive lookup row
-(<code>k_nEmissiveLUTIndex</code>, orc heads 7; the brand texture writes <code>k_nBrandLUTIndex</code>); the
-<code>EyeGlowLUT_*</code> records name rows Fire 0, Wraith 1, Poison 2, Nazgul 4, Cursed 5.</p>
+at half the scale; Olog heads have no eye glow.</p>
+<p>The emissive class and row go into the G-buffer material alpha as <code>(32 + row) / 255</code>: eyeballs always
+row 7 (39 / 255, the generic diffuse row, which glows in the eye's own tint), ordinary pixels 0 or 1. The
+rows index <code>materials\0dev\engine\emissive_lut.texa</code> (16 x 256, R11G11B10 float), whose header names
+them: 0 blackbody, 1 wraith, 2 balefire, 3 lit interior, 4 nazgul, 5 cursed, 6 zone map, 7 generic
+diffuse, 8 lava flow, 9 balrog ice, 10 / 11 blackbody, 12 blackbody test, 13 fire decal, 14 fire, 15
+balefire. Each ramps over the strength: near black below about 0.4, nazgul (0, 1.06, 0.28) at 0.75,
+wraith (0.18, 1.06, 1.59), and rows 12-15 reach values in the hundreds. The head writes its row from
+<code>k_nEmissiveLUTIndex</code> (orc heads ship 7); the <code>EyeGlowLUT_*</code> records set rows Fire 0, Wraith 1, Poison
+2, Nazgul 4 and Cursed 5. Integer material parameters are stored as floats (<code>EyeGlowLUT_Nazgul</code> puts
+<code>k_nEmissiveLUTIndex</code> in its store as type 5, 4.0); of 378 override records only the five
+<code>EyeGlowLUT_*</code> set a row.</p>
+<p><strong>The brand.</strong> After its eight colour decals <code>head_cin</code> reads one more slice of the scar array: layer
+<code>k_fBrandIndex</code>, position <code>k_vBrandPosition</code>, <code>k_fBrandRotationCosSin</code>, <code>k_vBrandScale</code>, strength =
+the slice's alpha x <code>k_fBrandBrightness</code>, written as the emissive strength with row
+<code>k_nBrandLUTIndex</code> (the eyes' encoding). The Olog head01 / head02 materials ship it at brightness 0,
+layer 15, (0.33, 0.35), scale 0.909, rotation -5, row 1 (wraith). The title look "Brand of the Dark
+Lord" turns on <code>HasBrand</code>, <code>DarkTalionBrand</code> and <code>EyeGlowLUT_Nazgul</code>. The body shaders write no
+emissive: their G-buffer alpha is a subsurface class (<code>k_vSubSurfaceID</code>), and the body materials'
+<code>k_vEmissiveTintChannelMask</code> is (0, 0, 0, 0) and is read by none of the three body pixel shaders.</p>
 <p>A title's eye look is an item (58 items, given by 64 titles): <code>MaterialSetVariants</code> swap only the
 eyeball (19 variants, all on the head), <code>PassiveMaterialOverrides</code> paint the rest, and <code>FlairColors</code>
 set skin and eye colours. An undead captain's glowing eyes are not the eye material but the
 <code>I_Am_Undead</code> item's <code>PassiveFXSequencePicker</code> (<code>UndeadFX</code> -&gt; <code>necro_undead_ambient</code> effects with
 "Left Eye Star" / "Right Eye Star" particles on the eye bones), started by the item handler 0x1C0E0C
--&gt; 0x79BFF4; see Visual effects.</p>
+-&gt; 0x79BFF4; see Visual effects. The fire helmet is the same kind of look: <code>Fire_Helmet</code> names
+<code>FireHat</code> -&gt; <code>firehat.fxp</code> on <code>Head</code>, whose flame nodes take their colour from a slice of the emissive
+table (<code>k_fFireLUT</code>). 21 of 5,618 items carry an effect picker.</p>
 <h3 id="material-overrides-and-decals">Material overrides and decals</h3>
 <p><code>AddMaterialOverride</code> 0x57AF70(visual, record, n) and <code>RemoveMaterialOverride</code> 0x57D530(visual, record,
 n) put an <code>Inventory/MaterialOverride</code> (378 records) on a drawn character. Add does nothing unless the
@@ -1012,17 +1439,23 @@ visual's byte <code>+0xB2</code> is set and it has a skeleton (<code>+0x90</code
 entries <code>{+0x00 decal slot, +0x08 record, +0x10 count, +0x18 handle, +0x20 vector}</code>; the same record
 again only raises the count, and a remove at zero unbinds and frees the entry. A new entry's
 parameters come from the record (<code>_StructuresInventoryMaterialParam</code>: a parameter picker such as
-<code>ScarLayer</code>, <code>ScarPosition</code>, <code>ScarRotation</code>, <code>ScarScale</code> with 16 names each, or a plain name), placed
-in the lowest decal slot that no entry of the same piece group sharing that picker uses, and bound at
-index 0 of the piece's
-material after the tint store, so the last store carrying a key wins. The head and body shaders read
-decal slots 0-7.</p>
+<code>ScarLayer</code>, <code>ScarPosition</code>, <code>ScarRotation</code>, <code>ScarScale</code> with 16 names each, or a plain name; values by
+<code>ParamValueType</code>, 0 float, 1 a float-pool pair, 4 int), placed in the lowest decal slot that no entry
+of the same piece group sharing that picker uses, and bound at index 0 of the piece's material behind
+the stores already there. When two stores bound to one material carry the same key, the first in the
+material's list wins: with the engine's amount ahead of a second store's, the second store changed
+nothing; with the order reversed it took effect. So two overrides on the same piece and key do not
+combine. The head and body shaders read decal slots 0-7; an entry filed past slot 7 is not drawn.</p>
 <p><strong>Body decals need the scar material.</strong> Normal bodies draw <code>orc_body001(v2).mat</code> / <code>olog_body001.mat</code>
 (<code>body_noscar.fxo</code>, no decal slots). The scar twins (<code>orc_body_scar</code>, <code>orc_body_stk_scar</code>,
 <code>olog_body_scar</code> and their LODs, <code>body_lod0/1.fxo</code>) use the same textures and meshes plus eight decal
 slots. A decal store holds <code>k_fScarLayerN</code>, <code>k_fScarRotationN</code>, <code>k_fScarTintN</code> (floats) and
 <code>k_vScarPositionN</code>, <code>k_vScarScaleN</code>, <code>k_fScarRotationNCosSin</code> (type 11, float2); a decal of scale s
-covers a UV square of side 1 / (4s).</p>
+covers a UV square of side 1 / (4s), with no tiling. The decal reads the scar array's colour, normal
+and specular slices; <code>k_fScarTintN</code> blends its colour toward the same decal tinted by the body's layers
+(0 = the raw decal, 1 = tinted like the skin under it): <code>decal = raw + ScarTint x (raw x layers - raw)</code>,
+unclamped, so a value above 1 extrapolates. Decals 1-7 composite over one another (<code>total += (1 - total)
+x a</code>) and are normalized by that total before the tint; decal 0 is not.</p>
 <p>The orc body atlas (shared by Slim, Buff and Stocky; engine texture coordinates):</p>
 <table>
 <thead>
@@ -1060,30 +1493,102 @@ covers a UV square of side 1 / (4s).</p>
 </tr>
 </tbody>
 </table>
-<p>Left and right islands do not overlap. <code>orc_Cursed</code> (the curse) pairs <code>Body_Scar_BodyReplacement</code>,
-sets skin <code>Orc_Skin_White</code>, the curse face and black eyes, and four <code>olog_curse_body</code> vein decals on
-the torso. <code>Orc_Skin_White</code> and <code>Orc_Skin_Undead</code> are HSV saturation 0, value 255: a white tint that
-shows the pale diffuse itself.</p>
+<p>Left and right islands do not overlap. The olog body, from the game's own records: <code>olog_curse_body_01</code>
+to <code>_08</code> default to a chest and belly ring (u 0.42 - 0.57, v 0.36 - 0.47) and the left arm (v 0.30, u
+0.68 / 0.80 / 0.875 for upper arm, forearm, wrist); the regional records place <code>LTrapezius</code> at (0.685,
+0.215), <code>LShoulder</code> (0.64, 0.28), <code>LLowerArm</code> (0.80, 0.25), <code>CLowerBack</code> (0.50, 0.10) and the abdomen at
+(0.46 - 0.55, 0.45 - 0.525). The olog head, from its 70 wound records: eye sockets at v 0.31 (u 0.38 /
+0.61), the mouth at v 0.47, chin and jaw 0.5 - 0.7, ears at u 0.12 / 0.88 (v 0.38), the eyeball islands v
+0.75 - 0.9 and the teeth 0.9 - 1.0; records store the engine's v unflipped.</p>
+<p><code>orc_Cursed</code> (the curse) pairs <code>Body_Scar_BodyReplacement</code>, sets skin <code>Orc_Skin_White</code>, the curse face
+(layer 1, <code>ScarTint</code> 1) and black eyes, and four <code>olog_curse_body</code> vein decals (layer 0) on the torso.
+<code>Orc_Skin_White</code> and <code>Orc_Skin_Undead</code> are HSV saturation 0, value 255: a white tint that shows the
+pale diffuse itself. The vein layer is slice 0 of the 40-slice scar array (16,121 of 262,144 pixels
+covered, purple-grey with specular alpha 1.0), and the shipped curse body decals use <code>ScarTint</code> 0. The
+undead skin records (<code>orc_undead_body</code> / <code>_head</code>, <code>LightbleedRange</code> and <code>SubSurfaceID</code>) write only
+<code>k_fScarRotationNCosSin</code> through <code>AddMaterialOverride</code> and take a decal slot; their other keys are
+dropped.</p>
+<h3 id="weapons-and-shields">Weapons and shields</h3>
+<p>Weapons use the armour shaders (<code>nemesis\gear_lod0/1.fxo</code>, <code>gear_alphatest_lod0/1.fxo</code>) with the same
+tint parameters, so a palette colour lands on a weapon wherever its mask is set, and almost nowhere is.
+An <code>Inventory/EquippedWeaponData.Model</code> names an item model {<code>ActiveNode</code> / <code>InactiveNode</code>, <code>Models</code> (-&gt;
+<code>ModelRecord</code>, a <code>Wep_*</code> Model, <code>MinMeshIndex</code> / <code>MaxMeshIndex</code>), <code>MaterialOverrides</code>, <code>Tint</code>,
+<code>ApplySummonedByTribeMaterialOverride</code>}; the engine makes a tint store only where <code>Tint</code> is set, on 20 of
+1,903 item models (16 shields, such as Regal <code>Metal_Leather_Trim</code> and RangerKiller
+<code>Cloth_Leather_FactionWarpaint</code>, the throwing spear and the war banner). Of 77 orc weapon and shield
+materials, 64 bind <code>flatblack_alpha.tex</code> (every layer masked off) and 9 their own mask (Regal and
+RangerKiller shields, both throwing spears, the quiver, three war banners); over all weapon materials 68
+of 306 are masked.</p>
+<ul>
+<li><strong>Parts are the mesh's own material ids.</strong> <code>uv1.x</code> in tenths, one id per vertex (53 of 87 orc weapon
+  meshes; 11 hold real coordinates there, 23 have no second UV set). The vertex shader passes it on and
+  the pixel shader picks the detail layer <code>round(id - 1)</code> from
+  <code>characters\modelcharacters\global\detail\detail_array_01_*.texa</code>, whose header names the slices: 1
+  leather, 2 metal, 3 cloth, 4 bone, 5 skin, 6 cloth 2, 7 chain, 8 noise. <code>gear_lod1</code> and
+  <code>gear_alphatest_lod1</code> do not pass the second UV set. The same channel is the armour pieces' mesh-part
+  number (Shoulder pads above).</li>
+<li><strong>Metal is the specular map's R:</strong> 170 / 255 on every dielectric, toward 255 on metal (63 of 77
+  materials have both; 6 are all metal). A metal texel's albedo tints only its reflections, so a coloured
+  polished blade reads dark with coloured glints. <code>k_bSpecGAlphaTest</code> (3 of the 11 alpha-tested weapons,
+  the war banners) cuts the alpha by the specular G after the tints. The blood decal's position is seeded
+  from the R and G tint colours (<code>frac(sum(R) x 8)</code>, <code>frac(sum(G) x 6)</code>), and <code>k_fBloodValue</code> (shipped 0),
+  <code>k_fBloodAlpha</code> and <code>k_cBloodColor</code> drive it in <code>gear_lod0</code> modes 0 and 2 (meshtype5 does not read them).</li>
+<li><strong>A weapon's drawn model:</strong> the holder <code>[component+0x38 + slot x 0x28]</code> of the visual component
+  (<code>[char+0x2348]</code>, on an Army copy <code>[stage+0x768]</code>, vt 0x1FD63F0; holder vt 0x1DB1F68, or 0x1DCA710 for a
+  shield carrier's slot 0) -&gt; <code>+0x148 / +0x150</code> its elements (vt 0x1DB4F58, an object reference: <code>+0x08</code>
+  next, <code>+0x10</code> previous, <code>+0x18</code> self, <code>+0x20</code> target) -&gt; <code>+0x20</code> the built object (vt 0x1F782C0) -&gt;
+  <code>+0x120</code> the model (vt 0x1DB4948, empty while not drawn): <code>+0xE0</code> the wielder, <code>+0x120</code> the material
+  object, <code>+0x170</code> the mesh path (54 of 55 models on 27 Army copies, 16 of 16 world characters). A
+  material object holds one material per LOD (<code>orc_metalshield.mat</code>, <code>orc_metalshieldlods.mat</code>), and an
+  item can pick a variant (<code>orc_metalshieldv4.mat</code>). A weapon's render node watches the character's own
+  store, which carries only <code>k_fDissolve</code> (handle at <code>[skel+0x238]</code> in the world).</li>
+<li><strong>Two-model looks.</strong> A look whose <code>Models</code> list holds two item models draws both: <code>Orc_1HS_EliteSwordX2</code>
+  = <code>RightHand</code> / <code>Ber_R_sheath</code> and <code>LeftHand</code> / <code>Ber_L_sheath</code>, both drawing <code>Wep_Orc_1HS_EliteSword</code>
+  with no mirror or offset (18 of 18 two-model looks in hand holders had both built). Every Defender look
+  is a two-model shield look (41 of 41 <code>Orc_</code>, <code>Gondorian_</code> and <code>Easterling_</code> shield looks): model 0 his
+  weapon (<code>RightHand</code> / <code>Socket_Sheath_Def01</code>), model 1 the shield (<code>Shield_L_Attach</code> /
+  <code>Socket_Sheath_Def02</code>); in the world his item builds the shield holder, whose vf35 0x6E517C calls the
+  hand holder's 0x3FCF70 (destroy and build every model) and then reads <code>Items.ShieldWeaponData</code>. Over
+  1,748 looks and 1,909 item models the active sockets are <code>RightHand</code> 1,053, <code>LeftHand</code> 673,
+  <code>Shield_L_Attach</code> 85, <code>RightDagger</code> 16 (then creature and test sockets), and the rest sockets
+  <code>Sheath_Socket</code> 383, <code>Dagger_Sheath_Socket</code> 380, <code>Socket_Sheath_Def01</code> / <code>Def02</code> 79 each, <code>L_sheath</code>
+  51, <code>Ber_R</code> / <code>Ber_L_sheath</code> 11 each; no right-hand shield socket exists. <code>LeftHand</code> rides <code>L_Weapon</code>,
+  which a Defender's clips never move (200 cm from his <code>L_Hand</code> on his stage pose); his clips carry
+  <code>Shield_L</code>.</li>
+<li><strong>The drawn mesh is the model chain, not the name.</strong> <code>EquippedWeaponData.Model</code> -&gt;
+  <code>_StructuresInventoryItemModel.Models</code> -&gt; <code>_StructuresInventoryModel.ModelRecord</code> -&gt; a <code>Model</code> record:
+  over 1,763 looks (40 with no model), <code>BlackHand_Sword</code>, <code>Sauron_Mace</code>, <code>BlackHand_Bow</code>, <code>BlackHand_2</code>
+  and <code>BlackCaptain01_Belroth</code> draw the broom prop <code>Wep_Orc_Misc_Broom</code>, and <code>Raptor_Body</code> draws a whole
+  caragor. The boss weapons (<code>Sauron_1HB_FlangedMace</code>, <code>Sauron_1HS_ElvenSwordT3</code>, <code>Nazgul_1HS_BlackBlade</code>
+  ...) have an empty <code>InactiveNode</code>: they never sheathe. 1,742 looks reference 1,852 item models, 10 of
+  them shared; 1,111 share one descriptor run (21 fields).</li>
+</ul>
 <h2 id="grunts">Grunts</h2>
 <p>Grunts are not faction members and get no member build; the dresser 0x4F12E0(visual component, is
-follower) dresses them from the class kit (<code>[Combat/Tree].InventorySetup</code>, read at every call). It skips the
-player (the combat object's <code>+0x50</code>); for an unnamed character an enemy gets
-<code>Grunt_SauronFollowerItems</code> and loses <code>Grunt_PlayerFollowerItems</code> (0x4F163C), a follower the
+follower) dresses them from the class kit (<code>[Combat/Tree].InventorySetup</code>, read at every call; accessor
+0x4F171C). It skips the player (the combat object <code>[component+0x440]</code>, vt 0x1F995E0, whose <code>+0x50</code> is set
+on the player only); for an unnamed character (0x4F16F0: the owner's <code>+0x2710</code> pool index is -1) an
+enemy gets <code>Grunt_SauronFollowerItems</code> and loses <code>Grunt_PlayerFollowerItems</code> (0x4F163C), a follower the
 reverse, so domination re-dresses a grunt. A named character gets the <code>Named_*</code> lists minus every
 item with a builder. Its callers include inventory initialisation 0x4F0938 and the follower setter
 0x102F0C.</p>
 <p>The shipped grunt armour is one item: <code>Sauron_Armor</code> (<code>Talion_Armor</code> for followers) -&gt;
 <code>AD_Sauron_Armor</code> (armour slot 4) -&gt; <code>Orc_&lt;body&gt;_Sauron_faction</code>, the strap-and-loincloth outfit, or
-<code>Olog_Buff_Skirt_Grunt</code>. The give path 0x1C01E0 -&gt; 0x1C1224 -&gt; 0x11565A4 -&gt; 0x649790 draws one design
-per item build exactly as for a captain, and the equip requests the bundles of what it draws.</p>
+<code>Olog_Buff_Skirt_Grunt</code>; the tough kits give <code>Sauron_Armor_FullSet</code> (the same skirt on an Olog), and
+the <code>Orc_Prisoner</code> kit is bare. The give path 0x1C01E0 -&gt; 0x1C1224 -&gt; 0x11565A4 -&gt; 0x649790 draws one design
+per item build exactly as for a captain, and the equip requests the bundles of what it draws: 128 of
+129 distinct rolled pieces were resident. A piece with no <code>ArmorDataDynamicBundle</code> (the
+<code>AD_Industrial_Helmet(Bling)</code> pieces, which reuse another model) has nothing to request.</p>
 <h2 id="when-a-changed-look-shows">When a changed look shows</h2>
 <p><strong>Residency.</strong> A piece draws only when its geometry and material bundles are resident; both are
-requested by the gear load request of an equipped item (see Resource streaming). A piece no design
-lists has no material bundle to request: <code>AD_Machine_Body</code> lists only <code>Orc_Buff_Machine_Body</code> (body
-type 0), so the Slim and Stocky Machine bodies, which have their own geometry bundles, have materials
-(<code>machine_body_m.bndl</code>) that nothing requests. Easterling pieces' designs list body type 12 only and
-name no material bundle; their shared <code>easterling_outfit.mat</code> rides in <code>easterlings_base</code>,
-<code>easterling_buff_heavy_arms_g</code> and <code>flair\grunt\desert_grunt_m</code>.</p>
+requested by the gear load request of an equipped item (0x61B868 asks the gear budget manager through
+0x4B4C7C; see Resource streaming). A piece no design lists has no material bundle to request:
+<code>AD_Machine_Body</code> lists only <code>Orc_Buff_Machine_Body</code> (body type 0), so the Slim and Stocky Machine
+bodies, which have their own geometry bundles, have materials (<code>machine_body_m.bndl</code>) that nothing
+requests. Easterling pieces' designs list body type 12 only and name no material bundle; their shared
+<code>easterling_outfit.mat</code> rides in <code>easterlings_base</code>, <code>easterling_buff_heavy_arms_g</code> and
+<code>flair\grunt\desert_grunt_m</code>. A head is the same: its face record's bundle and its family's <code>_g</code> bundle
+must both be in (Head, hair and helmet).</p>
 <p><strong>The appearance object and the body.</strong> 0x61BAD4 and the build write only the appearance object
 (<code>SetPieceSlot</code> with no visual). A drawn body changes through <code>SetPieceSlot</code> with its visual and
 through the equip path's load request.</p>
@@ -1106,35 +1611,63 @@ summary container), not from the member (see User interface for the stage object
 the trait and marker lists, copies the appearance into <code>[summary+0x40]</code> with 0x2EBA60 and the
 inventory into <code>[summary+0x30]</code>. Both copies come from the mock member when <code>FM+0x2E0</code> is set (0x75D2FC
 / 0x75D314), so such a captain shows the older look (see The Nemesis system).</p>
-<p>The per-captain redraw is 0x19C395C(world UI <code>[base+0x26FFB60]</code>, &amp;key): the army's stage holder
-(0x455EDC), the summary (0x1B5C0F8), the stage character (0x1A28FAC) and its rebuild
-<code>UI_CWorldUICharacter</code> 0x627F40(object, summary, 0, 0). It is what the game calls after a Training
-Order (0x1C51630). It draws from the summary as it is, so a summary that was not refilled redraws the
-old look; the open screen also keeps its own summary copies per army (0x16FC1C).</p>
-<h2 id="pieces-across-species-and-shipped-quirks">Pieces across species and shipped quirks</h2>
+<p>The per-captain redraw is 0x19C395C(world UI <code>[base+0x26FFB60]</code>, &amp;key): the army's stage (0x455EDC;
+armies of one region share one stage object), the summary (0x1B5C0F8), the stage character (0x1A28FAC)
+and its rebuild <code>UI_CWorldUICharacter</code> 0x627F40(object, summary, 0, 0). It is what the game calls after
+a Training Order (0x1C51630). It draws from the summary as it is, so a summary that was not refilled
+redraws the old look; the open screen also keeps its own summary copies per army (0x16FC1C). The screen
+builds a new character copy, with new tint handles from the palette, each time a captain is shown (one
+captain: three copies in a row, then one about every 40 seconds while he stayed in view), and a tribe or
+armour change rebuilds the copy too, so a value written into one copy's material does not last.</p>
+<h2 id="shipped-quirks">Shipped quirks</h2>
 <ul>
-<li>Easterling armour pieces use the orc rig's bone names (the heavy chest 71 of 74 bones; only the
-  collar bones are missing). Every humanoid piece skeleton carries the same bind pose (Talion's suits
-  against <code>orc_base.skel</code>: median 0.2 cm over 82 shared bones, limb rotations 0.00 degrees), so a
-  piece follows any humanoid rig; misfits are surface volume, not bones.</li>
+<li><strong>Head03 is cut content.</strong> The head03 family (30 pieces and 30 face records carry the name: 29
+  <code>*_Head03_C##</code> heads over the three orc bodies and <code>Orc_Buff_Head03_G</code>) is never rolled (0 of 557 captains, against 206
+  head01 and 293 head02) and its family bundle <code>orc_head03_g.bndl</code> (12,404,972 bytes: the six head03
+  materials, its textures, beard and piercing materials) is linked by no record. Its diffuse
+  <code>orc_head03_d.tex</code> is a flat orange placeholder with a black "3" in all three copies the engine reads
+  (the bundle's BC1 section, the high-mip <code>.tex0</code> and the HD <code>.texuhd</code> tier; a texture's header names
+  its sibling tier); the sculpts, normal and specular maps and materials are finished, on the shared
+  head UV template. 16 of its meshes (every Stocky one, three Slim, three Buff and the family mesh) are
+  skinned on a 139-bone face skeleton whose five extra leaf bones under <code>Head</code> (<code>L_Ear</code>, <code>R_Ear</code>,
+  <code>NoseUp</code>, <code>MouthUp</code>, <code>MouthLo</code>) no live face skeleton has (they hold 134, the order of head02's); three
+  heads draw their eyes with the wrinkle skin material (cell 0), several LODs carry garbage rows or are
+  skinned to the wrong bones, and three Buff heads ship their head sculpt as a part named <code>Beard_mash2</code>. Head03 carries no <code>MeshIndexPairs</code> and no stubble, piercing or ear
+  burn parts.</li>
+<li><strong>Head geometry formats.</strong> Head LOD0 / LOD1 index buffers are tessellation patches (<code>head_lod0</code> is a
+  tessellation shader). A head part's palette is a stack of strictly ascending runs of at most 64 bone
+  indices, and vertex lanes use slots 0-63 of the first run.</li>
 <li><code>Model.Scale</code> is not a piece property: its only copier 0x56E870 fills the creation parameters of
   objects spawned from a <code>Model</code> record.</li>
-<li>Every vertex shader of <code>gear_lod0.fxo</code> (3) and <code>gear_alphatest_lod0.fxo</code> (15) takes <code>TEXCOORD1</code>;
-  <code>gear_lod1.fxo</code> (7) does not. <code>Orc_Buff_FaceCape_Chest</code> and the Druid legs and pants have no second
-  UV set in their LOD0 mesh while using a LOD0 material, so they vanish in close-up.</li>
 <li>69 armour pieces belong to items no shipped record references (Druid pants and legs, Underclothes,
   Leather shoulders, the Buff Defender set, Easterling heavy and plate pieces ...); 15 cut pieces ship
-  no mesh in any archive (the Buff Defender set, two Celebrimbor rings, a cinematic hair ...). A record count does not see world scripts: <code>Sauron_Gondor1</code> and
-  <code>Vines_Accessory</code> are given by mission scripts.</li>
+  no mesh in any archive (the Buff Defender set, two Celebrimbor rings, a cinematic hair ...). A record
+  count does not see world scripts: <code>Sauron_Gondor1</code> and <code>Vines_Accessory</code> are given by mission scripts.</li>
 </ul>
 <h2 id="open-questions">Open questions</h2>
 <ul>
 <li>How a spawned body picks up a rebuilt appearance object, and whether the engine supports a body
   type change on a loaded character; a live comparison of <code>[FM+0x2D8]</code> with the visual's <code>+0xB8</code>
   before and after a level-up would settle the first.</li>
+<li>Where a tint colour is decoded from sRGB to linear: the store holds byte / 255, the screen behaves as
+  if the byte were sRGB. A frame capture of one known colour through the gear shader would settle it.</li>
+<li>Does the engine read a skeleton's LOD row u32 as the material cell? The shipped pattern fits it on 7
+  pieces; a capture of a part's bound material at two distances would settle it.</li>
+<li>Does an override that carries a key the tint store also carries (<code>k_fEmissiveScale</code> of an eye-glow
+  record) win, as it appears to, against the first-store rule measured on armour? Reading the head
+  material's store list order with both bound would settle it.</li>
+<li>How the draw compares a vertex's part number (<code>round(uv1.x x 10)</code>) with the range <code>MeshIndexPairs</code>
+  stores at <code>(material+0x10)+0xB8</code>: the compare on the render side is not read.</li>
+<li>A material parameter the shader does not read (<code>k_vEmissiveTintChannelMask</code> on the body,
+  <code>k_fBrandRotation</code>) never reached the constant buffer when added to a store; whether the engine
+  updates only the parameters a shader declares is not traced.</li>
 <li>How <code>Rogue_BodyTattoo</code> (no material override, so the give path files nothing) applies the Rogue
   body, and which items carry the <code>_LOD</code> painted variants.</li>
 <li>How the body-animation marker items (<code>Personality_UniqueBodyAnim_*_IT</code>, no payload) reach the
   animation, and how the <code>ChildItemPicker</code> tint items (<code>IT_Faction_Enemy_Tint</code>) are resolved, since
   the give path reads neither.</li>
-</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
+<li>Cloaks made for Talion's skeleton hang some cloth from bones turned 150-178 degrees from any bone a
+  man has (the Rhovanion cloaks: 15 such anchors each; 43 of 53 cloaks on his skeleton have none). The
+  cause is presumed to be Havok's skin operators keeping Talion's inverse binds; a posed capture of one
+  such cloak on another rig would settle it.</li>
+</ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
