@@ -2,6 +2,7 @@
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
+<a href="builds.html" data-p="builds">Game builds: Steam, GOG and Microsoft Store</a>
 <a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
 <a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
 <a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
@@ -23,16 +24,21 @@
 <a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
 <a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="haedirs.html" data-p="haedirs">Haedirs: towers, seeing stones and fast travel</a>
 <a href="outposts.html" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
 <a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="archives-and-file-formats">Archives and file formats</h1><p class=\"lede\">How to open the shipped data: the LTAR archive family and its byte layout, name resolution and its traps, Oodle chunking, the archive config list and how the engine decides which copy of a file wins, the BNDL / EMBB bundle pair, textures and their tiers, meshes, skeletons and string tables, with the coverage measured on every shipped file.</p>
 <p>The game ships its data as 76 <code>.arch06</code> archives in the install root plus a small loose <code>Game\</code>
 folder; every asset path the engine opens is resolved through those archives in a fixed search
-order. This chapter gives the archive layout, compression, the search order and the rules that pick
+order. These are the Steam build's files; the GOG build ships 71 of them and the Microsoft Store
+package 66, with the config list in <code>UWP64\</code> (see Game builds). This chapter gives the archive layout, compression, the search order and the rules that pick
 one copy of a file, then the container and payload formats inside, each checked against the shipped
 files.</p>
 <h2 id="the-shipped-files">The shipped files</h2>
@@ -312,9 +318,18 @@ the folder records (0x11AE154), then copies the archive's own path to <code>arch
 </tr>
 </tbody>
 </table>
-<p>The two bytes trail every record, the last one included. Opening an entry (0x11AE510): when the
-byte at +0x1D is 0 the entry is read as a plain byte range (0x11DC110); otherwise +0x1C selects the
-reader, 1 the chunked stream (0x11DC4B8) and 0 a whole-file read into fresh memory (0x11DCC64).</p>
+<p>The two bytes trail every record, the last one included. Opening an entry (0x3DDAB8 -&gt; 0x11AE510):
+when the byte at +0x1D is 0 the entry is read as a plain byte range (0x11DC110); otherwise +0x1C
+selects the reader, 1 the chunked stream (0x11DC4B8) and 0 a streaming source with its own 512 KB
+buffer (0x11DCC64, <code>VirtualAlloc</code> of 0x80000 bytes, "Failed to allocate memory for source
+resource"). Underneath, 0xC37B50 reads from memory when the whole archive is resident
+(<code>archive+0x30</code>) and otherwise opens the archive file again by its path (<code>archive+0x50</code>, through
+0xC3C1B0: <code>CreateFileW</code> for reading, read sharing only, overlapped; stream class vt_0x1E70EA8).</p>
+<p>The two entry streams differ in one property that callers test: the plain byte range
+(vt_0x1E70F00) can seek, the chunked stream (vt_0x1E70F88) cannot, since its slot 3 answers no and
+its seek only sets an error flag. A shipped entry is always chunked (kind 1, flag 9 on every record),
+so a loader that needs to seek, such as the GameDB loader looking for a patch database, does so only
+for a plain entry or a loose file (see GameDB).</p>
 <p><strong>Folder record (16 bytes):</strong> <code>{u32 name, u32 first child, u32 next sibling, u32 file count}</code>, with
 0xFFFFFFFF for "none". The name is the folder's full path (<code>database\string\enus</code>), the root folder
 (record 0) has an empty name, and the reader turns the two links into pointers to 0x30-byte folder
@@ -911,6 +926,11 @@ The loader 0x5030EC accepts <code>TEXR</code> version 8 and <code>SLVT</code> ve
 <td>the described texture (2D; a volume has u8 5, width, height, depth, mips, format)</td>
 </tr>
 <tr>
+<td>name end + 17, + 20</td>
+<td>u8 x 2</td>
+<td>the tier bytes (below), always equal</td>
+</tr>
+<tr>
 <td>name end + 19</td>
 <td>u8</td>
 <td>sRGB flag</td>
@@ -1005,6 +1025,16 @@ of 21,928); a <code>.tex</code> names its <code>.tex0</code> (2,697) or itself (
 container members, no higher tier in any container or manifest); the higher tiers are loose entries
 streamed after base data (see Resource streaming). For the Ranger's starting sword the diffuse ships at
 512 x 1024 (<code>.tex</code>, 11 levels), 1024 x 2048 (<code>.tex0</code>, 3 levels) and 2048 x 4096 (<code>.texuhd</code>, 1 level).</p>
+<p><strong>Which tiers the engine asks for</strong> is written in the base file. Its two tier bytes after the name
+agree in all 17,821 shipped 2D container textures: 0 = this file holds the whole chain (6,795), 1 =
+one level less, plus a <code>.tex0</code> (3,008), 2 = one level less, plus a <code>.tex0</code> and a <code>.texuhd</code> (8,018). The
+loader asks for a tier by the base file's own path with the extension swapped (0x3E0BD4), never by the
+name field; with tier bytes of 2 and no level skipped it asks for the <code>.texuhd</code>, otherwise for the
+<code>.tex0</code>. Levels are skipped by <code>max(0, 2 - TextureQuality + (tiered ? 1 : 0) - bias)</code> (0x5019F4; the
+quality setting at <code>[base+0x2A374A4]</code>). The bytes at 0x08, 0x09 and 0x0B are a second copy of the described size (equal to the one after the name
+in 17,820 of 17,821 files), and they are what the texture object keeps (<code>+0x60</code>, written by 0x6A10C0;
+the object is created by 0x6A0C30). The GOG and Microsoft Store builds ship without the <code>uhdmip</code>
+archives, so they lack most <code>.texuhd</code> files (see Game builds).</p>
 <p><strong>Texture arrays</strong> (<code>TEXA</code> v1, 1,946 files: <code>.texa</code>, <code>.texa0</code>, <code>.texauhd</code>) carry a header, their own
 path and the source path of each slice, then a DX10 DDS whose array size is the slice count, slices
 stored one after another with full mip chains. In a measured area of Cirith Ungol they textured about
@@ -1125,7 +1155,8 @@ in one skinned mesh, vertex alpha 16 on the left and 64 on the right), legs 1,99
 <pre><code>0x00  'SKEL'
 0x04  u32 x 16: [0] version 17, [1] header size 64, [2] string blob size, [3] string count
       (= [6] + [7]), [4] bone count, [5] bone bytes (= 37 x [4]), [6] .anix library count,
-      [7] mesh-part count, [8] socket count, [9] bone count again
+      [7] mesh-part count, [8] socket count, [9] bone count again, [15] extra animation
+      track count
 0x44  bounds: f32 radius, f32 min[3], f32 max[3]
 0x60  mesh parts, each u32 LOD count + 14-byte LOD entries
       0xDCDCFF00, string blob (offset 0 = empty string)
@@ -1146,16 +1177,26 @@ cloth (see Cloth). All 973 loose skeletons satisfy the header identities and car
 73,958 bones all hold unit quaternions. The largest has 241 bones; the orc base rig
 (<code>orcs\base\orc_base.skel</code>) has 100, the player's 128, a Gondorian's 95 and the olog's 89. Vertex
 palettes and the live pose arrays index bones in the skeleton's name-table order, not in the
-depth-first record order.</p>
+depth-first record order. Binds are in model space, in centimetres, Y up.</p>
+<p>Header word 15 counts extra animation tracks: each a name, a P919 type and default bytes, stored
+after the bone records, and the masks then carry a value for every bone and every extra track. 8 of
+the 4,589 distinct shipped skeletons have them (the head parameter rig with 235, a camera rig with 40,
+shields and a crossbow). Read this way, all 4,589 distinct skeletons, bundled and loose, are accounted
+for byte for byte.</p>
 <h2 id="string-tables-skdb-v9-strdb">String tables (<code>SKDB</code> v9, <code>.strdb</code>)</h2>
-<pre><code>0x00  'SKDB' | u32 9 | u32 header size 0x1C | u32 key count | u32 0 | u32 text units | u32 0
+<pre><code>0x00  'SKDB' | u32 9 | u32 header size 0x1C | u32 key count | u32 narrow-row count (0)
+      | u32 text units | u32 narrow-text size (0)
 0x1C  key count x {u32 key hash, u32 text offset}, strictly ascending by hash
 then  UTF-16LE text, NUL-terminated strings, exactly `text units` code units to the end of the file
 </code></pre>
 <p>140 of 140 shipped tables follow this (version, header size, strictly ascending keys, offsets in range,
-text ending at the file's end). Each language folder ships <code>string.strdb</code> and <code>string_uwp.strdb</code>; the
-English table has 68,547 keys. A key is <code>StringHash</code> of the key name and an offset counts UTF-16 units:
-<code>UI_1Sword_Starting_N</code> (0xDCDB4713) reads "Urfael". Several keys can share one string.</p>
+text ending at the file's end). There is one table per file and no per-language section: each language
+folder ships its own <code>string.strdb</code> and <code>string_uwp.strdb</code>. The English table has 68,547 keys. A key
+is <code>StringHash</code> of the key name and an offset counts UTF-16 units: <code>UI_1Sword_Starting_N</code> (0xDCDB4713)
+reads "Urfael". Several keys can share one string. The engine looks a key up with a lower-bound search
+over the rows (0x472104 -&gt; 0x472134); its loaded table (vf1 0x1D23114) keeps the row count at <code>+0x0C</code>,
+the rows at <code>+0x10</code>, the narrow rows at <code>+0x18</code> and the UTF-16 text at <code>+0x30</code>. Shadow of Mordor's
+string tables use the same format (10 languages of 32,643 keys).</p>
 <h2 id="coverage-on-the-shipped-files">Coverage on the shipped files</h2>
 <table>
 <thead>
@@ -1250,4 +1291,4 @@ English table has 68,547 keys. A key is <code>StringHash</code> of the key name 
   fourth story DLC's cinematic render bundles <code>cin_render_d4can_*</code> and <code>cin_render_d4fin_*</code>) exist in
   no other archive, its <code>_LC</code> twin included, so if those cinematics load, the engine reaches the
   files without this search.</li>
-</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
+</ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
