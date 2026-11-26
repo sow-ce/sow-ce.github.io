@@ -1,7 +1,8 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Combat: attacks, targeting, predicates and resources - Shadow of War engine reference</title><meta name="description" content="How combat is decided and executed: combat objects, the compiled attack cache and its 105 predicate evaluators, targeting and the three copies of a lock range, the player&#x27;s input tree, ranged shots, cooldowns, Might and ammunition, the fight circle that decides who attacks, combat actions and states, area attacks and the player&#x27;s execution companions."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Combat: attacks, targeting, predicates and resources - Shadow of War engine reference</title><meta name="description" content="How combat is decided and executed: combat objects, the compiled attack cache and its 105 predicate evaluators, targeting and the three copies of a lock range, the player&#x27;s input tree and aerial moves, ranged shots, cooldowns, Might and ammunition, health and damage (the apply path, the pushed health bar, the evaluator&#x27;s floor, the hit dispatcher and its friendly-fire gate, damage formulas and their cache), weapon elements, procs and slow motion, weapon-buff effects, capture points, the fight circle that decides who attacks, combat actions and states, area attacks, the player&#x27;s execution companions, struggles and hit categories."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
+<a href="builds.html" data-p="builds">Game builds: Steam, GOG and Microsoft Store</a>
 <a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
 <a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
 <a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
@@ -23,13 +24,17 @@
 <a href="combat.html" class="cur" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
 <a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="haedirs.html" data-p="haedirs">Haedirs: towers, seeing stones and fast travel</a>
 <a href="outposts.html" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
-<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="combat-attacks-targeting-predicates-and-resources">Combat: attacks, targeting, predicates and resources</h1><p class=\"lede\">How combat is decided and executed: combat objects, the compiled attack cache and its 105 predicate evaluators, targeting and the three copies of a lock range, the player&#x27;s input tree, ranged shots, cooldowns, Might and ammunition, the fight circle that decides who attacks, combat actions and states, area attacks and the player&#x27;s execution companions.</p>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="combat-attacks-targeting-predicates-and-resources">Combat: attacks, targeting, predicates and resources</h1><p class=\"lede\">How combat is decided and executed: combat objects, the compiled attack cache and its 105 predicate evaluators, targeting and the three copies of a lock range, the player&#x27;s input tree and aerial moves, ranged shots, cooldowns, Might and ammunition, health and damage (the apply path, the pushed health bar, the evaluator&#x27;s floor, the hit dispatcher and its friendly-fire gate, damage formulas and their cache), weapon elements, procs and slow motion, weapon-buff effects, capture points, the fight circle that decides who attacks, combat actions and states, area attacks, the player&#x27;s execution companions, struggles and hit categories.</p>
 <h2 id="combat-objects">Combat objects</h2>
 <p>Every combatant has a <strong>combat object</strong> (vt_0x1F995E0) at <code>CCharacter+0x26A8</code> (mirrored at
 <code>+0x2978</code>):</p>
@@ -42,8 +47,16 @@
 </thead>
 <tbody>
 <tr>
-<td>+0x28 / +0x38 / +0x48</td>
+<td>+0x28 / +0x48</td>
 <td>the owner character (AI characters have vt_0x1FB3640)</td>
+</tr>
+<tr>
+<td>+0x38</td>
+<td>the AI slot: the owner on an NPC, 0 on the player</td>
+</tr>
+<tr>
+<td>+0x40</td>
+<td>the player slot: the player on his own combat object</td>
 </tr>
 <tr>
 <td>+0x50</td>
@@ -51,7 +64,7 @@
 </tr>
 <tr>
 <td>+0x58</td>
-<td>the AI class record (for example <code>AI_Easterling_Defender</code>)</td>
+<td>the combat tree (<code>Combat/Tree</code>, for example <code>AI_Easterling_Defender</code>), set by 0x4EECA4</td>
 </tr>
 <tr>
 <td>+0x60</td>
@@ -59,7 +72,7 @@
 </tr>
 <tr>
 <td>+0x68</td>
-<td>race / model</td>
+<td>the FX lookup key (<code>Client/FXLookup/Key</code>), copied from the tree's <code>FXLookupKey</code> by 0x4EECA4 (see Characters, the player and the camera)</td>
 </tr>
 <tr>
 <td>+0xA8</td>
@@ -82,12 +95,40 @@
 <td>the Might meter / the Wrath meter</td>
 </tr>
 <tr>
+<td>+0x3A0</td>
+<td>the health listener</td>
+</tr>
+<tr>
+<td>+0x3F8</td>
+<td>a pointer to the last-damage record (vt_0x1DAA9C0; empty until a hit)</td>
+</tr>
+<tr>
+<td>+0x428 / +0x42C / +0x430</td>
+<td>maximum health, health, and their ratio</td>
+</tr>
+<tr>
+<td>+0x480</td>
+<td>the tree's <code>PreferredWeaponSlot</code></td>
+</tr>
+<tr>
 <td>+0x4A0</td>
 <td>dead: <code>CCharacter.IsDead</code> (0x190F1C) tests this byte</td>
 </tr>
 <tr>
 <td>+0x5A0</td>
 <td>the cooldown table</td>
+</tr>
+<tr>
+<td>+0x5F8</td>
+<td>the computed maximum-health stat (value at <code>+0x50</code>)</td>
+</tr>
+<tr>
+<td>+0x68A</td>
+<td>the tree's <code>CanGainThreatAgainst</code></td>
+</tr>
+<tr>
+<td>+0x691</td>
+<td>a per-attack "this blow kills this target" state (below)</td>
 </tr>
 </tbody>
 </table>
@@ -735,6 +776,14 @@ Any synchronised kill therefore closes the distance itself. <code>AttackData.Tel
 start, otherwise only a clip event (such as <code>PL_WraithAOE</code>) fires it. The Shadow Strike kills already
 sever the head (<code>SeverActionTarget</code> Head, <code>SeverTargetOnKill</code>). A swapped animation changes what
 plays; the attack record keeps what it applies (its categories and actions).</p>
+<p><strong>Aerial combat is ordinary data.</strong> The fell beast's death-from-above moves are combat nodes and pools like any
+other (<code>AI_FellBeast_DFA_Shallow_*</code>, <code>_Steep_*</code> and <code>_Troll_*</code>, each with <code>Into</code>, <code>Attack</code> and <code>Out</code>), the player's
+gliding is a set of input predicates (<code>Combat/Predicates/Input::DLC4_Gliding_Start</code>, <code>_Exit</code>, <code>_DFA</code>, <code>_Ranged</code> ...)
+and behaviour-state lists (<code>PC_Gliding</code>, <code>DLC4_Gliding</code>, <code>DLC4_GlidingRanged</code>, <code>Aerial_Ranged</code>,
+<code>AerialRanged_Active</code>), and aerial archery's animations are the player graph's <code>PL_AerialRanged_*</code> nodes. The aerial
+bow mode <code>PC_Ranged_Sniper_Aerial</code> is chosen only while the player's behaviour states include falling, jumping,
+wall-jumping or gliding (see Characters, the player and the camera, for the ground predicate every ground shot
+carries).</p>
 <h2 id="ranged-attacks">Ranged attacks</h2>
 <p>The attack's target comes from 0x76A890(component, attack) in two lanes: when the attack's selector
 equals FreeAim's <code>+0x88</code> (the draw mode's <code>TargetOverride</code>), FreeAim's ray-cast targeter <code>[fa+0xB0]</code>
@@ -783,6 +832,240 @@ when the byte <code>[base+0x2A34D6C]</code> is set or the unlimited-ammo buff is
 infinite-ammunition switch, written nowhere in the shipped code. Arrows are spent by
 <code>Combat/ResourceGain</code> records with a negative additive value (<code>SniperShot_Spend</code>,
 <code>NormalShot_Spend</code>, <code>ShadowStrike_ToNav_Spend</code> -1, <code>ShadowStep_Spend</code> -2, <code>AllAmmo_Spend</code> -50).</p>
+<h2 id="health-and-damage">Health and damage</h2>
+<p><strong>The damage info</strong> passed with a hit: <code>+0x20</code> the attacker's combat object (0 when there is none), <code>+0x28</code> the
+damage, <code>+0x30</code> the attack or source. <code>ApplyDamageInternal</code> 0x2E4BE8(combat, info) reads <code>[[info+0x20]+0x40]</code> (the
+attacker's player slot) before <code>Faction::TriggerAmbush</code> (0x2E4E3A) and compares it with the target's mount (0x2E4C41).</p>
+<p><strong><code>ApplyDamageInternal</code></strong>, read whole (163 instructions): a dead target returns at once; a mounted target can pass the
+damage to the mount's combat object; <code>ActionsOnAttackHit_Target</code> 0xF10D50 runs; 0x2E4E80 copies the info into the
+last-damage record. Then:</p>
+<ul>
+<li>A damage of at most 1e-4 in size (<code>[0x202E860]</code>) takes the zero branch: the owner's vf83 and 0x2E54BC, and nothing
+  else (no state interrupt, no HUD push, no player branch).</li>
+<li>For the player only, 0x778E88(<code>[GM+0x6D18]</code>, health + damage, damage, source) records it in a 10-slot ring of recent
+  damage at <code>+0x938</code>.</li>
+<li>Health = min(health - damage, maximum). At 0 or below the kill 0x4A022C runs, health is set to 0 and <code>+0x4A0</code> to 1,
+  all in this one call on the main thread, with no can-die gate, so no later frame can undo it; otherwise 0x2E54BC.</li>
+<li>The ratio is stored, the listener called, then 0x1E51B0(combat, health, source, attacker), then the AI (0x441228) or
+  player (0xF364A0) reaction.</li>
+<li>A second kill test follows for a living character whose byte <code>char+0x23BD</code> is set (0x11548B0).</li>
+</ul>
+<p><strong>The health bar is pushed; nothing polls health.</strong> 0x1E51B0 updates the stat variables through 0x1E52D4 (the records
+at <code>[[GM+0x6CD8]+0x8360]</code> health and <code>+0x8368</code> the ratio), the health-triggered states 0x1E5F14
+(<code>Combat/States/Auto.HealthRemainRange</code>, <code>Definitions.InterruptOnHit</code>), then 0x1E6018(char, health). On the player
+(<code>char+0x2700</code>) that keeps the last health and a running delta at <code>[GM+0x6D18]+0xBE4</code> / <code>+0xBEC</code> and calls
+0x188F098(health, maximum): <code>hud = [[UIManager]+0x30]+0x48</code>, 0x4AACDC(hud, hud+0x318, health, maximum), and the
+<code>LowHealth</code> byte <code>hud+0x1370</code> follows ratio &lt;= 0.25 (<code>[0x202E9BC]</code>); the element's target value is at <code>+0x1F4</code> and its
+maximum at <code>+0x200</code>, and the change animates after <code>Interface/ElementSetup.HUDResourceAnimationDelay</code> (150 ms). It checks
+<code>[UIManager+0x30]</code> but not the object under it. NPCs get a health nav marker instead. A write of the health value
+alone therefore leaves the bar where it was: read live once, health 722 of 722 stood beside a ratio of 0.5523 and a bar
+at 398.8 of 722.</p>
+<p><strong>The engine's setters.</strong> <code>AddHealth</code> 0x37FEE0(combat, delta) refuses a dead target, clamps health + delta to [0,
+maximum], stores the ratio, calls the listener and pushes (0x1E51B0(combat, health, 0, 0)); its callers include
+<code>CCharacter::Heal</code> 0x19B6584, the Health cheat 0x65ADCC (delta = maximum), <code>SetResource</code> 0x19D9C7C and <code>AddResource</code>
+0x19D24F8. The maximum refresh 0x37EFCC(combat) stores a new maximum when the stat is dirty or differs from
+<code>[[combat+0x5F8]+0x50]</code>, clamps health down to it and pushes, so a raw write of the maximum is undone wherever it runs.
+Regeneration 0x44D1CC runs at most every 100 ms, not while dead or while the current state's <code>AllowHealthRegen</code> is
+false, and reads the stored ratio.</p>
+<p><strong>The damage evaluator</strong> 0x3643E8 (794 instructions) applies a floor, <code>TargetMinHealth</code>, the highest of: the
+formula's <code>TargetMinHealthFinal</code> plus 0x6C74D8 (an auto state's <code>ClampHealth</code>); <code>Player.MinHealth</code>, the float at
+0x2A418D8, for the player only; <code>PlayerFollower.MinHealth</code> (0x2A418DC) for followers, else 0x2A418E0 for other NPCs; the
+defence record's <code>_StructuresCombatStatValue.MinHealth</code>; and the character's own floor <code>char+0x2500</code> (set by
+<code>CCharacter::SetMinHealthPct</code> 0x19B7294 as pct x maximum). The three globals sit in writable data, have one reader each
+and no writer, and read 0.0. Then, in health points: a floor above the current health makes the damage 0; a hit that
+would cross it is cut to health - floor (0x364F49). With <code>dl</code> = 1 the evaluator returns the target's whole health as
+damage (0x3644BD); 0x2E3B6C, 0x6A4194 and 0x115401C pass 0; 0x6A4194 with <code>r8b</code> = 1 is a lethal-hit prediction
+(health - damage &lt;= 0), which the floor also answers. After the floor the evaluator applies the bonus-damage (critical)
+scalar <code>FormulaBonusDamageScalarOverride</code>, the victim's current defence record (<code>[ctx+0x58]</code>,
+<code>_StructuresCombatStatValue.DamageAmount</code> -&gt; <code>_StructuresCombatModifier</code> multiply / add) and two global multipliers.
+<code>PlayerCanTakeDamageFromAllies</code> governs the player as the victim of his allies.</p>
+<p>Developer bytes in the same path, written by no shipped code: <code>[0x2674820]</code> = 1 (0 makes the player take 0),
+<code>[0x2A34D67]</code> (the player's hits forced to 1,000,000, and also any attacker-less hit on a victim whose <code>+0x2700</code> is 0)
+and <code>[0x2A34D68]</code> (non-player attackers do 0, the hit continues).</p>
+<p><strong>The hit dispatcher</strong> 0x2EE394 (16 call sites in 15 functions, 638 instructions) handles a hit before any damage:</p>
+<ul>
+<li>The invulnerability test (<code>[[GM+0x6CA8]+0x30]</code>, 0x115441C: the target or its rider is the player) sits at the top and
+  leaves with 0, so the whole hit is discarded: no attack data, <code>CanTakeDamage</code>, evaluator, hit state (0x2EFD44,
+  0x2E3AAC), hit counter (0x2DC668), <code>ApplyBuffListOnHit</code>, hit effect (0xEAEDD0), damage over time or threat.</li>
+<li><strong>The friendly-fire gate</strong> at 0x2EE58B: 0x2EF0E4(attacker side, target <code>char+0x23E0</code>) false drops the hit whole. It
+  is false only when 0x18BC88 returns 1. The attacker side is the attack's <code>_StructuresCombatAttackData.AlignmentOverride</code>
+  (<code>...Branded</code> when 0x1156B94 says the attacker is branded) when set, else a copy of the attacker's own side.</li>
+<li>After the evaluator, 0x2EE6F3 overwrites the damage with 1,000,000 (<code>[0x202E470]</code>) when its eighth argument is set or
+  <code>[0x2A34D67]</code> is on with a player attacker. Of the 16 sites, 7 pass a literal 0, 8 a cleared register and 1 forwards;
+  the one that can pass 1 is the melee hit test 0x2C658C (<code>ApplyDamageRange</code>, "Hit - Distance ... Angle"), with
+  <code>r10b</code> = 1 when the attacker's <code>+0x691</code> is set and its <code>+0xA8</code> is the target (0x2C6A53). 0x19D9C24 (one caller,
+  0x2C3D68) sets <code>+0x691</code> only while <code>+0xA8</code> and the current attack match its arguments, and <code>StopAttack</code> 0x2EA790 clears
+  it: a transient per-attack state of synchronised kills.</li>
+<li>The hit effect 0xEAEDD0 -&gt; 0x1CDE00 keeps the damage in the hit event (<code>+0x38</code>; <code>+0x00</code> position, <code>+0x0C</code> normal) and
+  tests only its sign: above 0 fires <code>[[GM+0x6CD8]+0x8320 / +0x8328]</code>, below 0 <code>+0x8330 / +0x8338</code>, and 0 fires
+  nothing.</li>
+</ul>
+<p><strong>Sides at the gate.</strong> A character's effective side is the 0x58-byte stack at <code>char+0x23E0</code> (see AI, "Sides"): <code>+0x30</code>
+its <code>Character/Alignments</code> record (0 = none, and the gate lets the hit through) and from <code>+0x38</code> seven u32 slot ids,
+record indices in <code>Character/Alignments</code>; an id of N or more is skipped, not a terminator (0x18BCAD; Talion reads
+0xFFFFFFFF six times, then 7). 0x18BC88(table, row, column) returns the first non-zero cell of the relation matrix over
+the two sides' id pairs (the row's ids outer), 2 when all are 0, and 0 when either side has no record: <strong>1 friendly, 2
+neutral, 3 hostile</strong>. The matrix ships 1,802 zero cells, 278 friendly, 201 neutral and 423 hostile, and it is not
+symmetric. Live, 48 of 48 followers read Talion as 2 and Talion reads them as 1, and 7 of 7 enemies are 3 both ways:
+followers' hits never land on Talion, and Talion's land on followers. The sides that call Talion a friend: as followers
+<code>PlayerFollower</code>, <code>PlayerFollower_Beast</code>, <code>BuddyFollower</code>, <code>BuddyFollower_Beast</code>, <code>WraithInfight</code>, <code>Branded</code>,
+<code>WraithInfight_Beast</code> (Talion -&gt; them 2), and <code>Aligned_AllFriendly</code>, <code>GP_PlayerBuddyAI</code>, <code>Despawn_BuddyDismiss</code> (1).
+The table object has 33 code readers, 15 of them through 0x18BC88.</p>
+<p><strong>The attacker-less hit</strong> 0xEADE70(victim, ...) has no side test: <code>CanTakeDamage</code> (0xEAE22F), the evaluator, the force
+at 0xEAE431 (victim <code>+0x2700</code> = 0), apply 0x42B290 and the kill 0x4A022C. Six callers: the damage-over-time tick 0x2E7BA4
+(whose source <code>[dot+0x48]</code> is null or the victim), the area tick 0x2E6BFC, the melee routine 0x2C642C (when the
+attacker's combat object is not resolved by 0x1A6CCE0), the projectile handler 0xFC15A0, 0xF43270 and 0x1BF8B30.
+<code>CCharacter::Die</code> calls <code>ApplyDamageInternal</code> directly with 100,000, past every floor.</p>
+<p><strong>Damage formulas.</strong> <code>Combat/Stat/Formula/Damage</code> (353 records; 101 are the player's) is a node list; each node
+(<code>_StructuresCombatFormulaDamageNode</code>) has an optional <code>VariablePredicate</code> / <code>DamagePredicate</code>, an <code>Operation</code>
+(<code>Combat/Stat/Formula/FloatOperation</code>) and <code>ReturnImmediateIfPassPredicates</code>, and is evaluated per hit by 0x3643E8 with
+both sides' stat sheets (<code>VariableSource</code> 0 the formula's own side, 1 the other, 0x2783D4). An operation (0x362C34)
+sums its ADD entries minus its SUB entries into A, and its MUL entries (they add up, 1.0 when there are none), divided
+by the summed DIV entries unless those are about 0, into M; <code>OperationType</code> 0 gives (value + A) x M, 1 gives value x M +
+A. The largest shipped float constant is 9999 (<code>MultiplyBy9999</code>). <strong>Nested formulas are cached per character, without an
+attacker:</strong> an entry with <code>FormulaSource</code> 1 calls 0x363DB0(the other side's sheet, formula, 0), which returns
+<code>[entry+0x14]</code> from <code>sheet+0x48</code> (0x40-byte entries by record index, count <code>sheet+0x50</code>) and recomputes through
+0x362688 only when the entry's dirty bytes (<code>+0x08</code>, <code>+0x09</code>) are set; a missing entry gives 0.0. So a record edit
+reads back and changes nothing until its entry is recomputed. Of the player's 101 formulas, 2 clamp their output, 88
+reach five shared defender sub-formulas (<code>Equip_BonusDef_Beasts</code> / <code>Undead</code> / <code>Uruks_DefScalar</code>,
+<code>Gem_GreenRing_DefScalar</code>, <code>Prestige_MountDefScalar</code>), the most shared per-hit victim predicates reach 32
+(<code>IsTarget_Monster</code>, <code>IsCursedTarget</code>, <code>IsEnraged_Target</code>, <code>IsPoisoned_Target</code>), and the most shared operations are
+<code>Oper_DmgAll_ZERO</code> (68) and <code>Oper_DmgAll_InstaKill</code> (24). Characters carry a bool stat <code>IsPlayerFollower</code>.</p>
+<h2 id="weapon-elements-procs-and-slow-motion">Weapon elements, procs and slow motion</h2>
+<p><strong>A captain's weapon element lives on the attack; the item only unlocks it.</strong> The trait <code>Curse_Weapon</code> gives the
+items <code>CursedWeapon</code>, <code>Item_HasAnElementalWeaponFromTrait</code> and <code>Item_HasACurseTrait</code>; the hit is the category
+<code>ApplyStatusEffect_Curse_WeaponKindRequired</code> (<code>PredicateHasItem CursedWeapon</code>, <code>ApplyBuffListOnHit
+Curse_NoBonusKind_Weapon</code>), which the attacks themselves list. Of the 16,976 attacks, 1,234 carry the curse
+category, 1,328 fire, 1,370 poison and 1,225 all three; the freeze categories sit only on the player's attacks
+(<code>PC_ApplyStatusEffect_Freeze_WeaponKindRequired</code> 509, <code>_Dagger</code> 170).</p>
+<p><strong>An orc weapon's glow is a lookup on the weapon, keyed by a tag on the buff.</strong> Buff apply walks
+<code>ClientFXAttachItemSlot</code> twice: <code>EquipmentFXType</code> -&gt; 0x4F4834(vc, slot, type) (0x453658) and <code>EquipmentFXSequence</code> -&gt;
+0x1BCE998(vc, slot, sequence) (0x4536C9). <code>Inventory/EquippedWeaponData</code> holds <code>EquipmentFX</code> / <code>EquipmentFXActive</code> lists
+of <code>{FXType, FXSequence}</code> pairs (914 pairs, all on orc weapons: 0 of 1,397 player weapon records has one, so on the
+player's weapons a tag draws nothing). Four tags exist: Poison 304, Cursed 301, Flaming 155, Bleeding 154. Bleeding is
+a cut element: <code>Combat/Buffs::SavageWeapon</code> has no holder, and <code>Weapon_Bloody</code> is named only by 150 pairs. The
+player's blade looks come from the charged-weapon table (<code>Combat/FX/ChargeWeaponFX</code>: <code>PC_WeaponBuff_Fire</code> / <code>_Freeze</code>
+/ <code>_Poison</code> / <code>_Curse</code>, <code>PC_FireSword01</code>, <code>CurseSword</code>, <code>BL_ChargedSword</code>) and the buffs' FX contexts.</p>
+<p><strong>Frozen is an animation rate:</strong> <code>PC_Freeze_FreezingWeapon</code> is <code>StateFlags Quick_Stunned</code> for 7-10 s with
+<code>Combat/States/AnimRateController::Frozen</code> taking the rate to 0.0 over 0.5-0.9 s. Nothing freezes the player.</p>
+<p><strong>Procs run on a captain's own buff.</strong> 225 <code>Combat/Buffs/Procs/Definitions</code> (151 with player predicates);
+<code>Buff_Trait_Lifesteal.Procs</code> -&gt; <code>ProcDef_AI_Lifesteal</code> (<code>MustBeDispatchSource</code> 1) heals the captain on a hit. Proc
+predicates are <code>Quest/AutoObjectives</code> of type 15 (<code>AI_HitPlayer</code> = SourceAttackHit + target type <code>Player_Character</code> +
+<code>SourceAttackCanIncrementHitCounter</code>). A proc's predicate can test the victim's stats (<code>StatPredicateTarget</code> -&gt;
+<code>Combat/Stat/Formula/VariablePredicate</code>), and procs carry <code>TargetAppliedState</code>. 27 shipped <code>*_Clear</code> buffs share a
+<code>Group</code> with the buff they clear: a group is a replace rule (0x36A35C refreshes the same buff and removes another of its
+group first).</p>
+<p><strong>A buff's flags on its holder</strong> (apply 0x452ED8, remove 0x451EF0): <code>NativePredicates</code> strings through
+0x375044(<code>[char+0x28]+0x120</code>, name, true); <code>BoolStatVar</code> through 0x1E4874(<code>[combat+0x318]</code>, variable, true), the entry
+found by 0x1E4948 in the stat table's <code>+0x90</code> {entries, u32 count, category} (0x18 bytes each, <code>{record, u8 value at
++0x08}</code>, indexed by record index; "Bad record index" when the category differs); <code>ClientFXSequence</code> on any holder,
+<code>ClientFXSequencePlayer</code> on the player only. A buff with <code>LimitRawMoveMag</code> of 0 or more stores it through the NPC
+planner <code>[char+0x2CE8]</code>, which on the player is a self-pointing container head, so on the player the store lands inside
+his own object, with no fault.</p>
+<p><strong>Slow motion.</strong> Every slow-motion wrapper tail-jumps to the request 0x5D08B8(<code>[base+0x2A86888]</code>, slot, record or 0,
+flag), and the lowest slot runs: 4 0x5BB5E0, 5 0x19CFF60, 6 scripts (<code>System::SlowMoStart</code> 0x626C98), 7 0x19CFD60, 8
+0x19CFDE0, 9 0x19CFEE0, 10 the player's weapon modes 0x7A35D8, 11 presentation elements 0x5D09E0, 12 0x4359DC, 13 the buff
+clear 0x19CFCEC, 14 an attack's <code>AISlowMo</code> 0x7BEB48, 15 0x6EEFC4, 16 0x19CFE60; so a weapon mode outranks a presentation.
+A scale is <code>(1, N)</code>, N times slower, a shared float-pool pair. A buff's <code>SlowMo</code> field only stops a slow motion (its
+accessor 0x451E14 has one caller, the remove path, which clears slot 13); a buff starts one through <code>ForcedWeaponMode</code>
+(holder <code>[char+0x560]</code>, 0x19D9B94) -&gt; the mode's <code>SlowMo</code> -&gt; a <code>SlowMo</code> record in slot 10 (<code>PC_Buff_GameChanger</code>,
+<code>DLC4_SlowMo_OnBrutalStealth</code>; 7 buffs set the field), and it ends with the buff (read on 3 of 3 such buffs, in the
+same 50 ms sample). 9 of 332 slow-motion records leave the world alone and slow only the player: <code>DLC4_GC_1_SM</code> 2x for
+10 s, <code>PlayerDeath_SM</code> 4x, <code>Predeath_Savior_Ranged_Paused_SM</code> 5x, <code>Kill_Sync_Obituary_Far_SM</code> 10x,
+<code>Predeath_LoseMinigame_SM</code> 11x, <code>Predeath_Savior_Entrance_SM</code> 30x, <code>Predeath_Savior_Ranged_SM</code> and <code>_Release_SM</code> 50x.
+Under <code>DLC4_GC_1_SM</code> the clocks read <code>world 1.000 player 0.500</code>: the player's own motion follows his clock (see
+Characters, the player and the camera, for why his movement record's speed multiplier does not).</p>
+<p><strong>The player's element buffs</strong> (<code>Flame_Weapon</code>, <code>Frost_Weapon</code>, <code>Poison_Weapon</code>, <code>Curse_Weapon</code>, melee slot):
+<code>Flame_Weapon</code> lasts 10 s and is a chance bonus <code>{C_PC_ApplyFire, +1.0}</code>; <code>Frost_Weapon</code> the same on
+<code>C_PC_ApplyFreeze</code>, with no FX type or context; <code>Curse_Weapon</code> adds the material state <code>_Curse</code>.</p>
+<h2 id="weapon-buff-effects">Weapon-buff effects</h2>
+<p>The engine's <code>[COMBAT|WEAPONBUFFFX]</code> system draws a buff's effect on an equipped weapon, driven by buff apply and
+remove through <code>ClientFXAttachItemSlot</code> -&gt; <code>Combat/Predicates/InventorySlot.Slot</code>.</p>
+<ul>
+<li><strong>The store</strong> <code>[vc+0x4A8]</code> is a 0xA0-byte block made on first use (0x4F4964): <code>EquipmentFXType[10]</code> then
+  <code>ClientFXSequence[10]</code>, by equip slot (0 sword, 1 dagger, 2 bow); every accessor asserts slot &lt; 10. Set type
+  0x4F4834(vc, slot, type) stores it (0x115F614) and re-dresses (0x4F49C0); clear type 0x1BC9CB0 clears only while the
+  slot still holds that type. Set sequence 0x1BCE998 stores it in the block and at <code>holder+0x1A8</code> and redraws nothing;
+  0x1BC9C40 clears it. The getters (0x4F48E4, 0x4F4904) have one caller, the holder build 0x40014C. A slot's holder is
+  <code>[vc+0x38 + slot*0x28]</code>: each equip entry is a 0x28-byte reference at <code>vc+0x18 + slot*0x28</code> (vt_0x1DB7630; <code>+0x20</code> the
+  target, the holder, 0 for an empty slot).</li>
+<li><strong>The re-dress</strong> 0x4F49C0(holder, type) caches the type at <code>holder+0x1B0</code> and returns at once when it is unchanged or
+  the parts vector <code>holder+0x148</code> is empty. Otherwise each part <code>[[holder+0x148][i]]+0x20</code> gets <code>holder+0x1A8</code> when set,
+  else the weapon look's own pair for the type: 0x3FE1FC(look, type, part) takes the first <code>EquipmentFXActive</code> pair whose
+  <code>FXType</code> matches and its <code>FXSequence[part]</code> only while part &lt; count, else 0 (0x3FE04C the same on <code>EquipmentFX</code>). So a
+  one-hand orc look's pairs hold one sequence (part 0), a shipped two-weapon look holds each twice
+  (<code>Orc_1HB_MeatBoneClubX2</code>: <code>Weapon_Fire</code>, <code>Weapon_Fire</code>), and a Defender's shield (part 1) never takes his spear's
+  effect. A set sequence overrides the look's pairs, and a type change is what makes it show. The generic orc
+  sequences: base Bleeding -&gt; <code>Weapon_Bloody</code>, Cursed -&gt; <code>Weapon_Cursed</code>, Poison -&gt; <code>Weapon_Poison</code>; active Cursed -&gt;
+  <code>Weapon_Cursed_Active</code>, Flaming -&gt; <code>Weapon_Fire</code> (Flaming lives in the active list only), Poison -&gt;
+  <code>Weapon_Poison_Active</code>.</li>
+<li><strong>The parts own their players.</strong> 0x3FE0F0(fx, sequence) stores <code>fx+0x1C8</code> and, when the part has renderables
+  (<code>fx+0x120</code>), makes a player at <code>fx+0x188</code> if there is none, binds it to <code>fx+0x58</code> and starts the sequence
+  (<code>EnterFXUseTarget</code>); sequence 0 stops it (0x771BDC). 0x3FE2A0 is the same for <code>fx+0x1D0</code> and the player <code>fx+0x190</code>,
+  then 0x3FE488 runs each active player only while <code>[fx+0x1E5]</code> is set and <code>[fx+0x1E4]</code> is not (0x7B24B4).</li>
+<li><strong>The active window belongs to the animations.</strong> <code>[fx+0x1E5]</code> is written for every part of all 10 holders at once by
+  0x1BCEAE8(vc, bool) -&gt; 0x1BDF444(holder, bool), whose one caller is the model-string dispatcher 0x4CDE54
+  (<code>[COMBAT|MODELSTRING]</code>): the clip event <code>ENABLEWEAPONFX</code> (hash 0x630F8E71) sets it and <code>DISABLEWEAPONFX</code>
+  (0x715E0EB6) clears it.</li>
+<li><strong>Re-equip order.</strong> The holder build 0x40014C re-dresses the new holder before it copies the sequence to <code>+0x1A8</code>, so
+  a re-worn item shows nothing until the next type change.</li>
+<li>Of the 11 buffs with weapon effects only <code>FX_GondorWeapon_*</code> set a sequence, and they name no slot. Of 1,727
+  <code>Client/ClientFXSequence</code> records 74 are named for weapons, swords or blades; <code>PC_WeaponBuff_Fire</code> and
+  <code>StormbringerWeaponFX</code> are played by nothing (0 holders, against 172 for <code>Weapon_Fire</code>), and their files ship in no
+  container.</li>
+</ul>
+<h2 id="capture-points">Capture points</h2>
+<p>How a fort or outpost point fills, from the code and the shipped records.</p>
+<ul>
+<li><strong>The tick</strong> 0x6546E8 -&gt; 0xF324F0 -&gt; 0x362304(manager, node, dt), once per node. The manager holds 256 character slots
+  (0x28 bytes: <code>+0x00</code> character, <code>+0x10</code> node, <code>+0x18</code> rate, <code>+0x1C</code> side, <code>+0x1D</code> present, <code>+0x1F</code> advancing), a node
+  list at <code>+0x2838 .. +0x2840</code>, the player's node at <code>+0x2850</code> and his rate at <code>+0x2858</code>; <code>+0x285E</code> set skips the tick.
+  Rates are summed per side into two pairs, presence and advance. The player counts for presence inside the shape at
+  <code>[node+0x240]</code> and for advance inside the one at <code>[node+0x270]</code>, into which <code>CaptureRadius</code> is copied (0x4A62C4).</li>
+<li><strong>The node</strong> (<code>BattleNodeCapture</code>, vt_0x1FB9E90): <code>+0x580</code> the <code>AI/BattleNodeCapture</code> record, <code>+0x590</code> the full
+  amount, <code>+0x594</code> the current amount, <code>+0x598</code> a cap (used when 0 or more), <code>+0x5AC</code> the holder (0 defence, 1 offence, 2
+  neutral), <code>+0x5AD</code> status, <code>+0x5BC</code> active. <code>SetCaptured</code> 0x7B16A8 copies <code>MaximumAmount</code> into <code>+0x594</code>, <code>ResetCapture</code>
+  0x1ACE498 copies <code>InitialAmount</code>.</li>
+<li><strong><code>CaptureRatio</code> is no speed.</strong> 0x361B6C reads it every tick (default 1.5, <code>[0x202E8F4]</code>), and 0x362068 uses it only to
+  decide who holds the point: from holder 0, presence[1] &gt; ratio x presence[0] flips it to 1; holder 1 stays while
+  presence[0] &lt;= ratio x presence[1]; from 2 the larger side takes it.</li>
+<li><strong>Speed</strong> is 0x361FC8: holder 1 moves (advance[1] - advance[0]) x dt when <code>OffenseCanAdvance</code> is set and that is
+  positive; holder 0 moves (advance[0] - advance[1]) x -1 x dt when <code>DefenseCanAdvance</code> is set; holder 2 does not move.
+  Defenders inside the radius therefore subtract from the attackers' rate. 0x76B588 adds a rise and snaps at <code>+0x590</code>
+  (returning 4, else 3); 0x361A34 applies a fall and stops at 0 (returning 0, else 1).</li>
+<li><strong>The rate</strong> 0x3625C0(combat, side) takes the tree's <code>AssaultCaptureRateOffense</code> or <code>...Defense</code> and evaluates it
+  through the cached 0x363DB0 (above). Of 281 trees, 24 use the player's pair, 41 <code>Assault_Capture_Off_Rate</code> /
+  <code>Def_Rate</code>, 1 <code>DLC3_Assault_Capture_Off_Rate_Talion</code>. <code>Assault_Player_Capture_Rate</code> is 7, times 1.3 under
+  <code>DLC4_OutpostReward_FasterCapture</code> and times 2.0 under <code>DLC4_CaptureFaster</code>, unclamped; <code>Defense_Player_Capture_Rate</code>
+  adds 9999.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Record</th>
+<th><code>MaximumAmount</code></th>
+<th><code>CaptureRadius</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Capture_PlayerInvading</code></td>
+<td>300</td>
+<td>800</td>
+</tr>
+<tr>
+<td><code>Capture_PlayerDefending</code></td>
+<td>400</td>
+<td>800</td>
+</tr>
+<tr>
+<td><code>DLC4_OutpostAssault</code></td>
+<td>400</td>
+<td>1125</td>
+</tr>
+</tbody>
+</table>
+<p>All three have <code>InitialAmount</code> 0, <code>CaptureRatio</code> 1.0, <code>OffenseCanAdvance</code> true and <code>DefenseCanAdvance</code> false.</p>
 <h2 id="the-fight-circle">The fight circle</h2>
 <p>The fight circle decides which NPCs attack a target, how many at once and when.</p>
 <p><strong>Data</strong> (27 categories under <code>Combat/FightCircle/*</code> and <code>_StructuresCombatCircle*</code>):</p>
@@ -1266,7 +1549,20 @@ everywhere. Six fields are set on no record - <code>PredicateEnergyLevel</code>,
 at least four of them (accessors 0x2DDFAC, 0x666C58, 0x2DEC50, 0x2CAB30): supported, never used.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>What the combat state machine's <code>+0x60</code> holds next to the current state at <code>+0x58</code>.</li>
+<li>Whether the player's buffs time out on his own clock (a 5 s buff lasted 9.6 - 9.7 s under a slow motion that halved
+  his clock).</li>
+<li>Whether <code>holder+0x1E5</code> marks a sheathed weapon: the charge player 0x44F5A8 picks <code>FXSequenceSheathed</code> when
+  0x1154918 reads it set, and it is a different object from the parts' <code>+0x1E5</code>; and which clips send
+  <code>ENABLEWEAPONFX</code> / <code>DISABLEWEAPONFX</code>.</li>
+<li>What the other direct callers of <code>ApplyDamageInternal</code> do (0x19B39E4, 0x643058, 0x2E0520, 0x15B444, 0x106D04,
+  0x42B290), how fall damage is applied, and what the regeneration bands at <code>+0x120</code> / <code>+0x180</code> are.</li>
+<li>
+<p>What sets a cached formula entry's dirty bytes (<code>+0x08</code> / <code>+0x09</code>), whether a capture node's <code>+0x590</code> always equals
+  <code>MaximumAmount</code>, and whether the engine sets the <code>IsPlayerFollower</code> stat on live followers.</p>
+</li>
+<li>
+<p>What the combat state machine's <code>+0x60</code> holds next to the current state at <code>+0x58</code>.</p>
+</li>
 <li>What the fight circle's <code>+0x188</code> / <code>+0x190</code> pointers hold.</li>
 <li>How the Last Chance press is judged: the ring's input listener (vt_0x1F76BE0 slot 1 -&gt; 0x1846974) and
   where <code>LastChanceRingForgivenessBuffer</code> (read by 0x18434A8) enters the comparison.</li>
@@ -1276,4 +1572,4 @@ at least four of them (accessors 0x2DDFAC, 0x666C58, 0x2DEC50, 0x2CAB30): suppor
   the combat-state path.</li>
 <li>What 0x6A3BE4 contributes on a Fail: it plays the current attack's presentation event on the player's
   presentation component.</li>
-</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
+</ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
