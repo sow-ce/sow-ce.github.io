@@ -1,7 +1,8 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Comparison with Shadow of Mordor - Shadow of War engine reference</title><meta name="description" content="How Shadow of Mordor (2014) differs from Shadow of War at the file and engine level: the executable, the archive format and its compression, container and asset format versions, the GameDB, the orc skeletons, materials and textures, the Army screen&#x27;s arena, and the Mordor-to-War nemesis importer that ships inside Shadow of War."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Comparison with Shadow of Mordor - Shadow of War engine reference</title><meta name="description" content="How Shadow of Mordor (2014) differs from Shadow of War at the file and engine level: the executable, the archive format and its compression, container and asset format versions, the GameDB, the orc skeletons and animation files, the clip event language both share, Mordor&#x27;s captain record, which of Mordor&#x27;s orc meshes War kept, the Army screen&#x27;s arena, and the Mordor-to-War nemesis importer that ships inside Shadow of War."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
+<a href="builds.html" data-p="builds">Game builds: Steam, GOG and Microsoft Store</a>
 <a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
 <a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
 <a href="threads-frame.html" data-p="threads-frame">Threads and the frame</a>
@@ -23,13 +24,17 @@
 <a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
 <a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="haedirs.html" data-p="haedirs">Haedirs: towers, seeing stones and fast travel</a>
 <a href="outposts.html" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
-<a href="shadow-of-mordor.html" class="cur" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="comparison-with-shadow-of-mordor">Comparison with Shadow of Mordor</h1><p class=\"lede\">How Shadow of Mordor (2014) differs from Shadow of War at the file and engine level: the executable, the archive format and its compression, container and asset format versions, the GameDB, the orc skeletons, materials and textures, the Army screen&#x27;s arena, and the Mordor-to-War nemesis importer that ships inside Shadow of War.</p>
+<a href="shadow-of-mordor.html" class="cur" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="comparison-with-shadow-of-mordor">Comparison with Shadow of Mordor</h1><p class=\"lede\">How Shadow of Mordor (2014) differs from Shadow of War at the file and engine level: the executable, the archive format and its compression, container and asset format versions, the GameDB, the orc skeletons and animation files, the clip event language both share, Mordor&#x27;s captain record, which of Mordor&#x27;s orc meshes War kept, the Army screen&#x27;s arena, and the Mordor-to-War nemesis importer that ships inside Shadow of War.</p>
 <p>Shadow of Mordor (2014) is the predecessor engine generation. Its internal project name is
 <strong>Firebird</strong>; Shadow of War's is <strong>Kraken</strong>. The two games share their archive family, container
 idea, GameDB format and much of their orc rig, but nearly every asset format moved on by several
@@ -61,8 +66,9 @@ versions, so no Mordor asset loads in War unchanged.</p>
 </tr>
 </tbody>
 </table>
-<p>Because Mordor's executable is relocatable, its addresses move with ASLR every run; War's static
-addresses never move.</p>
+<p>Because Mordor's executable is relocatable, its addresses move with ASLR every run; the Steam build of
+War, which the War column describes, never moves (War's GOG and Microsoft Store executables are
+relocatable too; see Game builds).</p>
 <h2 id="archives">Archives</h2>
 <p>Both games use LTAR archives. Mordor's are version 3 (<code>.arch05</code>), War's version 4 (<code>.arch06</code>, see
 Archives and file formats). The Mordor install has <strong>66 archives, 45.4 GB</strong>.</p>
@@ -103,7 +109,12 @@ Asset formats are older versions that War's loaders reject:</p>
 <tr>
 <td>skeleton (<code>SKEL</code>)</td>
 <td>8 (War's loader rejects it)</td>
-<td></td>
+<td>17</td>
+</tr>
+<tr>
+<td>animation (<code>ANIX</code>)</td>
+<td>42</td>
+<td>44</td>
 </tr>
 <tr>
 <td>texture (<code>TEXR</code>)</td>
@@ -114,6 +125,11 @@ Asset formats are older versions that War's loaders reject:</p>
 <td>material instance (<code>LTMI</code>)</td>
 <td>4</td>
 <td>7-8</td>
+</tr>
+<tr>
+<td>string table (<code>SKDB</code>)</td>
+<td>9 (10 languages, 32,643 keys each)</td>
+<td>9</td>
 </tr>
 </tbody>
 </table>
@@ -166,9 +182,325 @@ paint, not new assets.</p>
 </tbody>
 </table>
 <p>The 72 shared bones sit at the same bind positions (median difference 0.07 cm, at most 0.94 cm for
-the core bones), but 36 of them differ in bind rotation (the forearm twist by 81 degrees). The face
-rigs share no joint names. Of Mordor's orc pieces, those that use only bones <code>orc_base</code> also has:
-armour 35 of 40, flair 116 of 131, bodies 15 of 15, heads 44 of 111.</p>
+the core bones). Their bind rotations fall into three groups. 36 bind alike, within 2 degrees: the
+spine, legs, head and upper arms. 34 are re-posed: the hands and fingers hold another pose in the same
+bone frames, so a finger's child joint sits where Mordor's does in its own bone's frame to 0.01 degrees
+on 31 of 32 finger segments, and the weapon bone's local rotation agrees to 0.008 degrees (its grip
+1.6 cm nearer the wrist). 2 are re-framed: the forearm twist bones, turned 81.46 degrees about their
+own long axis with the joint unmoved. The face rigs share no joint names. Of Mordor's orc pieces, those
+that use only bones <code>orc_base</code> also has: armour 35 of 40, flair 116 of 131, bodies 15 of 15, heads 44
+of 111.</p>
+<p>A Mordor version-8 skeleton has the same 37-byte bone records as War's version 17, but each record
+carries its own name offset; its part rows are 11 bytes (War's 14), its bounds a 24-byte box at 0x44
+with no radius, and its strings are padded to 4 bytes (486 of 486 distinct skeletons read this way).
+The two games share one space: a Mordor orc piece holds its <code>Head</code> at (0.0, 72.76, 0.66) and War's
+<code>orc_base</code> at (0.0, 72.76, 0.67). Mordor stores its binds in model space as quaternions (x, y, z, w): converted to
+local rotations they equal the file's own <code>bind</code> clip on 111 of 111 bones (median 0.005 degrees), and
+every Mordor animation file carries such a <code>bind</code> clip, the rest pose as its clips see it. Mordor's
+humanoids name their bones as the orc rig does, so a file's rig is told by its <code>bind</code> clip's bone
+lengths, not by its names. War's own orc clips never track the ten twist helpers (<code>L/R_ArmuX</code>,
+<code>_Bicep</code>, <code>_Forearm</code>, <code>_Wrist</code>, <code>_Thigh</code>: 0 of 4,463 clips in 351 files): the engine places them.</p>
+<h2 id="animations">Animations</h2>
+<p>Mordor's animation files are ANIX version 42 (War: 44). Mordor's loader (0xE44F80 in
+<code>ShadowOfMordor.exe</code>) reads a 0x1C-byte header (magic, 42, file size, the block chunk's offset and size,
+the animation chunk's offset and size) and then both chunks. The animation chunk holds a directory
+offset (<code>+0x00</code>), the clip count (<code>+0x04</code>), the node count (<code>+0x0C</code>), the channel count (<code>+0x10</code>), the
+string table offset (<code>+0x14</code>) and the node hashes (<code>+0x18</code>), then the channel hashes (position
+0x00CE66FC, rotation 0x27436396, events 0x210C8F5A, the same as War's): a node by channel grid where
+version 44 has a run-length track table. A clip record is version 44's without the u32 pair at
+<code>+0x74</code> / <code>+0x78</code>: its codecs start at <code>+0x74</code>, then one 3-byte entry per track <code>{u8 channel, u8 node,
+u8 group}</code>, aligned to 4, then the blockset table of 16-byte <code>{offset, size, t0, t1}</code> entries; version
+44 has a byte group array and a u16 remap array instead.</p>
+<p>The 6,656 files (22,390 clip records) use only codecs War also has: SV01 (6,655 files), SQ03 (6,655),
+AQ03 (5,392), UATR (482), STRI (436) and AV01 (237), with USBT, USFT and USCO in a few records. Every
+track entry is in range, and each codec sits on its own kind of channel in 2,076,293 of 2,076,294
+entries. Mordor's executable registers ten more codec evaluators (CATR, CART, CSTR, CSRT, USTR, SQ01,
+AQ02, CACQ, CRS3, Q101) that no file uses. The dialogue clips are face motion: rotations on the face
+bones (brows, lids, eyes, cheeks, nose, lips, jaw, tongue) with the arms held still.</p>
+<p><strong>Clip events are the same command language</strong> in both games (KeyString hash 0xB9010BE0 in both; for
+example <code>snd fol_cmn_attack_windup; BPW; STARTFACING; AFACE Angry;</code>). Of 89,560 commands in 11,326
+non-dialogue Mordor clips, 51,646 appear exactly (name and argument) in War's orc clips. Every gameplay
+command does (<code>APPLYDAMAGE</code>, <code>AD</code>, <code>BCOL</code> / <code>ECOL</code>, <code>BHITWIN</code>, <code>BCANWIN</code>, <code>BTS</code> / <code>ETS</code>, <code>BPW</code> / <code>EPW</code>, the
+facing commands, <code>ComplexAnim</code>, <code>STOP_ALIGN</code>), and so do the facial expressions (<code>AFACE</code>, <code>RFACE</code>,
+<code>CLFACE</code>). What War does not carry: Mordor's sound verbs (War's executable has no <code>SND</code> verb at all; see
+Audio and video), audio keys its database lacks, and the foot markers (<code>HeelStrike</code>, <code>ToeStrike</code>,
+<code>HeelLift</code>, <code>ToeLift</code>). Mordor registers its verbs as strings (<code>AUDIO_HOOK_KEY</code>, <code>DIALOG_EVENT</code>, <code>SND</code>,
+<code>SND_UI</code>, <code>SND_GROUND</code>, <code>SND_HAND</code>, the footstep verbs, <code>BODY_IMPACT</code>), where War compares hashes.</p>
+<p><strong>War ships Monolith's own ports of some Mordor clips.</strong> War's <code>bip_cmbt_attack_front_1</code>
+(<code>orcinf_cmbt_attack.anix</code>) has the same 56 frames and 1,833 ms as Mordor's <code>Bip_Cmbt_Attack_Front_1</code>;
+retargeted onto War's rig (the hands re-posed as above), Mordor's clip matches the port to a median of
+0.27 degrees per body bone, and the port adds a weapon grip in the fingers. Mordor keeps that grip
+apart: <code>animation\shared\orc\orc_awareness.anix</code> holds <code>Orc_L_Hand_Weapon</code> and <code>Orc_R_Hand_Weapon</code>, one
+static pose on 14 finger bones, while its body clips leave the hand open. War keeps the same two layers
+(<code>orc_awareness_misc.anix</code>) and plays the right one while fighting (41 starts in 250 s of one fight),
+and its clips carry finger poses as well (99 %).</p>
+<h2 id="the-captain-record-factionmember">The captain record (<code>FactionMember</code>)</h2>
+<p>Mordor's <code>FactionMember</code> is 0x3B0 bytes (its pool descriptor at 0x18022E8; War's is 0x528), in a pool
+array with a stride of 0x3B8. Addresses in this section are RVAs of <code>ShadowOfMordor.exe</code>. Fields, in
+the order the save writer (0x85BAE0) writes them where it does:</p>
+<table>
+<thead>
+<tr>
+<th>Offset</th>
+<th>Field</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>+0x48</td>
+<td>u64 id</td>
+</tr>
+<tr>
+<td>+0x50</td>
+<td>u32 the name: the string-id hash of an <code>OrcNameGen1st_%03d</code> key</td>
+</tr>
+<tr>
+<td>+0x54</td>
+<td>pool index</td>
+</tr>
+<tr>
+<td>+0x58</td>
+<td>faction record</td>
+</tr>
+<tr>
+<td>+0x60</td>
+<td>combat tree, which is his class (<code>AI_Archer</code>, <code>_Berserker</code>, <code>_Defender</code>, <code>_Infantry</code>, <code>_Spearman</code>)</td>
+</tr>
+<tr>
+<td>+0x68</td>
+<td>preset member record</td>
+</tr>
+<tr>
+<td>+0x70 / +0x78 / +0x80</td>
+<td>traits: begin, end, u32 capacity; 8 bytes per entry (21 on one captain); the save writes 32 slots</td>
+</tr>
+<tr>
+<td>+0x88</td>
+<td>row record (0 = not seated)</td>
+</tr>
+<tr>
+<td>+0x90</td>
+<td>personality</td>
+</tr>
+<tr>
+<td>+0x98</td>
+<td>a <code>Character/Models</code> override (the preset's <code>OverrideModel</code>), read before any derived model</td>
+</tr>
+<tr>
+<td>+0xA8</td>
+<td>purpose</td>
+</tr>
+<tr>
+<td>+0xB0 / +0xE0 / +0xF0 / +0x100</td>
+<td>member keys: his own; his master's (the captain he guards); his nemesis's; the member whose nemesis he is</td>
+</tr>
+<tr>
+<td>+0x110</td>
+<td>the appearance object</td>
+</tr>
+<tr>
+<td>+0x278 / +0x280</td>
+<td>his bodyguards, 0x10 per entry</td>
+</tr>
+<tr>
+<td>+0x290 / +0x298</td>
+<td>the scar record (from his head's scar setup) and the brand scar record; a non-null brand means branded</td>
+</tr>
+<tr>
+<td>+0x2A0 / +0x2A8</td>
+<td>event history, <code>{Faction/Events/Events record, u16 ...}</code> entries of 0x10, at most 32</td>
+</tr>
+<tr>
+<td>+0x2B8 / +0x2C0</td>
+<td>role / location</td>
+</tr>
+<tr>
+<td>+0x2D8</td>
+<td>scar type (<code>Model/Scar/Types</code>), set by 0x84EE60, which also notifies the faction system</td>
+</tr>
+<tr>
+<td>+0x2F0</td>
+<td>NPC profile GUID</td>
+</tr>
+<tr>
+<td>+0x340</td>
+<td>level (the Army screen's power is level + 1, as in War)</td>
+</tr>
+<tr>
+<td>+0x344</td>
+<td>u32 level-up trait watermark: 0x8627F0 rolls the faction's <code>LevelUpTraitSetup</code> when the level passes it, then raises it</td>
+</tr>
+<tr>
+<td>+0x374</td>
+<td>u32 hash of one of his purpose's <code>PurposeText</code> lines (his "thought"), set by 0x856040 (33 of 33 matched)</td>
+</tr>
+<tr>
+<td>+0x38C / +0x390</td>
+<td>the "new information" bits and the time they were set, by the intel reveal 0x85F0F0</td>
+</tr>
+<tr>
+<td>+0x398</td>
+<td>u16 purpose expiry in faction ticks: <code>FS+0x130</code> plus a random value from <code>MinPurposeTimeOut</code> (2) to <code>MaxPurposeTimeOut</code> (10)</td>
+</tr>
+<tr>
+<td>+0x3A0</td>
+<td>u8 seat column, 255 = not seated</td>
+</tr>
+<tr>
+<td>+0x3A4</td>
+<td>u32 status bits, default 0x01008000: bit 2 <code>IsDead</code> and bit 23 <code>IsMockDead</code> (the names Mordor's own captain document uses), bit 17 decapitated, bit 11 events pending, bit 7 set when he is shown as known on the Army screen</td>
+</tr>
+<tr>
+<td>+0x3A8</td>
+<td>u8 bodyguard list dirty: set on him and his master by 0x84EEF0, cleared when 0x857C40 recomputes the list</td>
+</tr>
+<tr>
+<td>+0x3A9</td>
+<td>u8 intel categories: bit 0 name known, bit 4 strengths and weaknesses known (stage 1 = 0x4F, stage 2 adds 0x30, 0x7F all)</td>
+</tr>
+<tr>
+<td>+0x3AA</td>
+<td>u8 intel level: 2 full, 1 met, 0 unknown, 0xFF never raised; &gt; 0 means known to the player</td>
+</tr>
+</tbody>
+</table>
+<h2 id="orc-content-what-carried-over-to-war">Orc content: what carried over to War</h2>
+<p>War moved every asset path (<code>models\npc\orcs</code> became <code>characters\modelcharacters\orcs</code>; 1 of 448
+Mordor orc model paths exists in War) and renamed its records (0 of 202 preset captains share a name),
+so names cannot say which Mordor orc meshes War kept. Measured by surface distance instead (4,000
+area-weighted samples per mesh, exact point-to-triangle distance, both directions, the 90th percentile
+in cm), each of Mordor's 419 orc meshes against War's 1,578 character meshes: "same" means within
+0.25 cm both ways, "adapted" 1.0, "re-made" 2.0, and "merged" a Mordor piece lying inside a bigger War
+piece. Controls set those limits: different War designs of one slot are at least 3.58 cm apart for
+helmets, 4.28 for chests and 3.88 for one-hand weapons, while any two orc heads are within 2 cm of each
+other, so heads cannot be matched this way.</p>
+<table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>Meshes</th>
+<th>Same</th>
+<th>Adapted</th>
+<th>Merged</th>
+<th>Re-made</th>
+<th>Mordor only</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Flair / accessory</td>
+<td>162</td>
+<td>19</td>
+<td>11</td>
+<td>2</td>
+<td>13</td>
+<td>117</td>
+</tr>
+<tr>
+<td>Hair</td>
+<td>74</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>74</td>
+</tr>
+<tr>
+<td>Weapon</td>
+<td>60</td>
+<td>20</td>
+<td>4</td>
+<td>0</td>
+<td>6</td>
+<td>30</td>
+</tr>
+<tr>
+<td>Armour (class sets)</td>
+<td>38</td>
+<td>1</td>
+<td>0</td>
+<td>1</td>
+<td>3</td>
+<td>33</td>
+</tr>
+<tr>
+<td>Head</td>
+<td>37</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>37</td>
+</tr>
+<tr>
+<td>Legs / body</td>
+<td>16</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>16</td>
+</tr>
+<tr>
+<td>Shield</td>
+<td>5</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>1</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Black Captain body, unique outfit</td>
+<td>5</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Helmet / quiver</td>
+<td>5</td>
+<td>2</td>
+<td>1</td>
+<td>2</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Not wearable (class bases, neck stumps, proxies)</td>
+<td>17</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>17</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>419</strong></td>
+<td><strong>42</strong></td>
+<td><strong>16</strong></td>
+<td><strong>5</strong></td>
+<td><strong>23</strong></td>
+<td><strong>333</strong></td>
+</tr>
+</tbody>
+</table>
+<p>War kept, as the same mesh, the Beheader, Broken Shield, Bug, Metal Beard, Troll Tusk, Master and
+Juggernaut helms, the crown, spiked breastplates, face capes, the Butcher aprons (War's olog apron is
+Mordor's orc apron), two helmets and a set of weapons (crossbow, skull bow, javelin, kris, spiked and pick
+clubs, an elite sword, the saw sword, the shaman staff, throwing axe and spear parts, the huge hammer and
+the branding iron). Mordor's Black Hand sword is the exact mesh of War's <code>nazgul_blackblade</code>. Mordor
+only: all six class armour sets, the Bright Lord outfits, most hair and every head, the bodies and legs,
+the Black Captains' bodies, and 30 weapons (the Master Pike, five spears, axes, maces, swords and the orc
+bow among them).</p>
+<p>At record level both databases are GADB version 17: Mordor 1,234 categories and 232,481 records, War
+2,742 and 694,632. Orc look pieces 362 against 1,150, orc weapon records 158 (60 models) against 237 (97
+models), heads (<code>Model/SimpleModelHeads</code>) 137 against 335, look classes 81 against 185, armour sets 28
+against 17, colour setups 119 against 465, flairs 375 against 2 (War replaced flairs with items and
+tints), and scars 122 against War's 24 scar types (a different system).</p>
 <h2 id="the-army-screen">The Army screen</h2>
 <p>Mordor's hierarchy screen is a world of its own,
 <code>worlds\cinematics\wraith_visions\hierarchymenu_son.bndl</code> (<code>son.arch05</code> entry 15, 232,667,989 bytes,
@@ -181,360 +513,19 @@ placed in the world as objects <code>Hier.Faction_&lt;row&gt;_&lt;column&gt;</co
 <code>.Cam</code> and about 20 points of interest each. The screen's movie is
 <code>interface\flash\widgets\hierarchy.gfx</code>, which holds no logic.</p>
 <h2 id="the-mordor-importer-in-shadow-of-war">The Mordor importer in Shadow of War</h2>
-<p>Shadow of War ships an importer, the Nemesis Forge, that rebuilds a player's Shadow of Mordor follower
-and nemesis as War captains. It is compiled from <code>...\KRAKEN_CODE_STREAM\source\Game\Shared\NemesisForgeUtils.cpp</code>
-(log tag <code>[NEMESISFORGE]:</code>; the logger is compiled out of the shipping build). The captains come from the
-publisher's online service, never from Mordor's local save, and they enter the game through two story
-missions.</p>
-<h3 id="shadow-of-mordor-s-side">Shadow of Mordor's side</h3>
-<p>The two games never exchange data directly: neither executable names the other game, and the profile id
-Shadow of War can attach to its request (<code>FirebirdProfileID</code>, <code>[0x2A364F0]</code>) is a static string initialised
-empty that no code writes, so the request identifies the player by platform user id only. Shadow of Mordor
-reaches the publisher's earlier online platform, Agora (<code>Social/Agora</code>, <code>AgoraUserDataMgr</code>,
-<code>ProfileAttributeData</code>); Shadow of War reaches its successor; the publisher's servers joined the two through
-the player's account.</p>
-<p>In Shadow of Mordor the Nemesis Forge is a Conquest mode. <code>Conquest/Definition::NemesisForge</code> (one of eight
-Conquest definitions) names the world <code>SeaOfNurnen</code>, the game mode <code>GameModes::NemesisForge</code>, the army
-<code>Orc_Faction_NemesisForge</code>, the difficulty range <code>Region_SeaOfNurnen</code> and the tutorial <code>NemesisForge_Intro</code>,
-and serializes its faction with the mode's save. It awards nothing, keeps no leaderboard, and has no
-goal: its completion counts (warchief and captain kills) and failure limits (time, deaths) are all -1. The
-game mode sets <code>CanGainXP</code>, <code>CanSpendCurrency</code>, <code>AllowRuneSlotPurchases</code> and
-<code>AllowRuneSlotUnlockPresentation</code> to false and <code>EnableNemesisNavMakers</code>, <code>CanScriptRegionFaction</code> and its
-own <code>NemesisForgeQuitConfirm</code> to true, with the inventory type <code>DLC1</code>: Talion does not progress there.</p>
-<p>The mode is started from the main menu (<code>MM_NemesisForge</code>, whose enable test reads two bytes of the active
-user's object at <code>+0x3A0</code>: <code>+0x1BB</code> and <code>+0x1BC</code>), with its own restart, continue and quit prompts, a pause
-page and an add-on description. Its army has 32 tracked members, the five orc classes, and rows of 5
-warchiefs and 8, 7 and 5 captains placed in the Sea of Nurnen. <code>CanPopulateNemesisForge</code> is true on exactly
-the two campaign armies (<code>Orc_Faction_BG</code>, <code>Orc_Faction_SoN</code>, of 12 factions) and false on the downloadable
-and challenge armies, while <code>NemesisForgeFromThisFaction</code> is true only on the forge army. 65 of the game's
-503 quests list the forge army among their required factions, all of them Sea of Nurnen side missions
-(trials, duels, beast hunts, riots, executions, assassinations, recruitment, feasts, betrayals, rescues).
-In this mode the Army screen shows two extra states on a living member whose <code>Nemesis</code> state is true:
-<code>NemesisNonBranded</code> and <code>NemesisBranded</code>.</p>
-<p>A captain is serialized as a key / value document (0x8558C0, read back by 0x855F70) of about 60 keys:
-among them <code>FactionRecord</code>, <code>NPCProfileGuid</code>, <code>RowNumber</code>, <code>ColumnNumber</code>, <code>CombatTree</code>, <code>Role</code>,
-<code>RandomSeed</code>, <code>Personality</code>, <code>NameStringIDHash</code>, <code>XPLevel</code>, <code>Trait</code>, <code>IsDead</code>, <code>HasVow</code>, <code>AppliedScarType</code>
-and the death and resurrection records. The faction serializer (0x8EE2B0, <code>FACTIONDATA</code>) writes every member
-this way for saves. A debug tool writes a single captain to a file named <code>&lt;name&gt;_&lt;date&gt;.orc</code> (0x91A800) and
-lists and loads such files, behind the debug command set. Another debug command,
-<code>DebugSpawnAI.NemesisForge.FetchNemesis</code>, is described as querying the forge nemesis from Agora, and the
-debug spawner keeps a forge-nemesis key and a forge-follower key. Shadow of Mordor does not use Shadow of
-War's 13 key names: the reply was built on the server.</p>
-<h3 id="the-switch-and-the-request">The switch and the request</h3>
-<p>The title configuration's boolean <code>nemesis_forge</code> is stored at <code>[GM+0x6D48]+0xD1</code> by the configuration
-parser 0x18368B0 (next to <code>challenges_enabled</code> at <code>+0xD0</code> and <code>conquests</code> at <code>+0xD2</code>). The check 0x1B3ABFC
-has one caller, the world-entry routine 0x1E3E78, and works on the online manager <code>[GM+0x6D30]</code>. It does
-nothing while either stored captain is valid (<code>+0x38</code>, <code>+0x80</code>), or while
-<code>Invasion/Settings.HaltNemesisForgeCheckPredicate</code> (the settings record at <code>+0x468</code>) holds: that is
-<code>IsPastNemesisForgeUsage</code>, a test of <code>StoryState</code> against 300, the end of the campaign. Otherwise it
-tail-jumps to the request 0x1B3AA94, which returns unless the switch is set and no request is in flight
-(<code>+0x28</code>). The request carries the player's <code>FirebirdProfileID</code> (when one is known), the platform user
-id, the platform and the web environment, and registers 0x1B32CD0 as its completion handler. The game
-therefore asks on every world entry until it holds a captain or the campaign is over.</p>
-<h3 id="the-reply-and-the-two-stored-captains">The reply and the two stored captains</h3>
-<p>The completion handler 0x1B3D500 expects a list whose second element is a map holding two lists,
-<code>Follower</code> and <code>Nemesis</code>; the first object of each carries an <code>attributes</code> map. The parser 0x1B3A148
-reads 13 keys from each map into a 0x48-byte payload (vtable 0x1FCB338) and sets its valid byte last.
-The online manager keeps both:</p>
-<table>
-<thead>
-<tr>
-<th>Offset</th>
-<th>Meaning</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>+0x28</code></td>
-<td>u8, a request is in flight</td>
-</tr>
-<tr>
-<td><code>+0x30</code></td>
-<td>the follower payload (valid byte at <code>+0x38</code>)</td>
-</tr>
-<tr>
-<td><code>+0x78</code></td>
-<td>the nemesis payload (valid byte at <code>+0x80</code>)</td>
-</tr>
-<tr>
-<td><code>+0x468</code></td>
-<td>the <code>Invasion/Settings</code> record</td>
-</tr>
-</tbody>
-</table>
-<table>
-<thead>
-<tr>
-<th>Payload offset</th>
-<th>Key</th>
-<th>Type</th>
-<th>Use</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>+0x08</code></td>
-<td>(valid)</td>
-<td>u8</td>
-<td>tested by every consumer</td>
-</tr>
-<tr>
-<td><code>+0x0C</code></td>
-<td><code>CombatTreeRecord</code></td>
-<td>name hash</td>
-<td>the class template and War's <code>Combat/Tree</code></td>
-</tr>
-<tr>
-<td><code>+0x10</code></td>
-<td><code>FactionRecord</code></td>
-<td>name hash</td>
-<td>never read; the parser stores the tree's value here</td>
-</tr>
-<tr>
-<td><code>+0x14</code></td>
-<td><code>NameStringIdHash</code></td>
-<td>name hash</td>
-<td>the name</td>
-</tr>
-<tr>
-<td><code>+0x18</code></td>
-<td><code>PersonalityRecord</code></td>
-<td>name hash</td>
-<td>the personality</td>
-</tr>
-<tr>
-<td><code>+0x1C</code></td>
-<td><code>RoleRecord</code></td>
-<td>name hash</td>
-<td>the title</td>
-</tr>
-<tr>
-<td><code>+0x20</code></td>
-<td><code>RowRecord</code></td>
-<td>name hash</td>
-<td>never read</td>
-</tr>
-<tr>
-<td><code>+0x24</code></td>
-<td><code>ScarTypeRecord</code></td>
-<td>name hash</td>
-<td>the scar type</td>
-</tr>
-<tr>
-<td><code>+0x28</code></td>
-<td><code>ISCurrent</code></td>
-<td>int</td>
-<td>never read</td>
-</tr>
-<tr>
-<td><code>+0x2C</code></td>
-<td><code>MenaceLevel</code></td>
-<td>int</td>
-<td>the level</td>
-</tr>
-<tr>
-<td><code>+0x30</code></td>
-<td><code>RandomSeed</code></td>
-<td>u64</td>
-<td>the look; also copied to the builder specification's <code>+0x170</code></td>
-</tr>
-<tr>
-<td><code>+0x38</code></td>
-<td><code>IsBranded</code></td>
-<td>bool</td>
-<td>the player's follower</td>
-</tr>
-<tr>
-<td><code>+0x39</code></td>
-<td><code>IsWarchief</code></td>
-<td>bool</td>
-<td>never read</td>
-</tr>
-<tr>
-<td><code>+0x3C</code>, <code>+0x40</code></td>
-<td><code>TraitList</code></td>
-<td>count, pointer to 32-bit hashes</td>
-<td>the traits</td>
-</tr>
-</tbody>
-</table>
-<p>Every record value is the 32-bit name hash of a Shadow of Mordor record. No look, colour or memory travels
-in the payload.</p>
-<h3 id="the-two-missions">The two missions</h3>
-<p>Quest jobs ask for the stored captains. The job filler 0x1BD40C4 tests three flags of
-<code>Quest/Jobs/Definition</code> before filling a job the ordinary way: <code>UseNemesisForgeAlly</code>,
-<code>UseNemesisForgeNemesis</code> and <code>UseOnlineArenaOpponent</code>. Of the 849 job records, one carries each forge flag:</p>
-<table>
-<thead>
-<tr>
-<th>Job</th>
-<th>Flag</th>
-<th>Takes</th>
-<th>Mission</th>
-<th>Ordinary builder</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>Rat3_Ally1</code></td>
-<td><code>UseNemesisForgeAlly</code></td>
-<td>the follower</td>
-<td><code>Ratbag3</code>, "Damaged": an allied captain while the player retakes the fortress from Brûz</td>
-<td><code>Rat3_BackupAlly1</code></td>
-</tr>
-<tr>
-<td><code>CapChief_HighPIS</code></td>
-<td><code>UseNemesisForgeNemesis</code></td>
-<td>the nemesis</td>
-<td><code>Gondor2</code>, "The Arena": a champion in Minas Ithil's arena</td>
-<td><code>CapChief_HighPIS</code></td>
-</tr>
-</tbody>
-</table>
-<p>With a valid payload the filler creates the captain from it (0xF636F0), keys the job to him and sends a
-telemetry event (0x1B2CC68, event type 42, with <code>is_follower</code>). Without one, the job's builder record makes
-an ordinary captain, so both missions play the same either way.</p>
-<p>The missions' world scripts stage the result. In "Damaged" (<code>ratbag3_RA03_SO_Script.Follower1Spawn</code>, with
-the prefab <code>followercage.prefab06c</code>) the ally waits in a cage; the script fires the faction event
-<code>AddNemesisAlly</code> (one level more, and the sim-event tag <code>NemesisAlly</code>) and adds the sim event picker
-<code>NemesisAlly_EnterHierarchy</code>, whose duels bring him into the hierarchy. In "The Arena"
-(<code>gondor2_Go02_SO_Script.Captain4Spawn</code>) the nemesis is the fourth captain, and the script uses the items
-<code>GP_Gon2NemForgeCheck</code> and <code>NemesisStory_NemesisForge_AuxBanner_IT</code>, whose UI data
-<code>NemesisStoryUI_NemesisForge</code> gives his nemesis story a banner (<code>UI_Nemesis_Forge</code>, "Nemesis").</p>
-<h3 id="the-conversion">The conversion</h3>
-<p>0xF636F0 takes the army of the current region and calls 0xFD51A0, which takes a member from the
-army's pool, sets his faction and calls 0x1BC05D0. That runs the conversion 0x1C6369C and then the
-ordinary FactionMember builder 0x1BBF928 (see The Nemesis system). The conversion fills the builder's
-specification:</p>
-<ul>
-<li><strong>Class:</strong> the tree hash selects one of the five <code>NemesisForge/FirebirdSimpleModel</code> templates and War's
-  <code>Combat/Tree</code> record of the same name.</li>
-<li><strong>Personality:</strong> <code>FirebirdFactionPersonality.KrakenPersonality</code>; a hash with no row maps to nothing.</li>
-<li><strong>Title:</strong> <code>FirebirdFactionRole.KrakenRole</code>. A hash with no row is searched again in War's own
-  <code>Faction/Roles/Definitions</code> (914 records) by the same hash (0x1C770BC), so a Mordor title that War also
-  has comes through as War's record.</li>
-<li><strong>Level:</strong> <code>max(MinXPLevel, MenaceLevel + 1) - 1</code> (0x114FFD0 is an unsigned maximum; every template's
-  <code>MinXPLevel</code> is 14).</li>
-<li><strong>Name:</strong> kept only when War's string database holds the hash (its has-test, slot 8); otherwise the
-  builder gives him a War name. 0xFD51A0 removes the new member again when the hash is one of five keys
-  reserved for Ratbag.</li>
-<li><strong>Scar type and traits:</strong> <code>FirebirdModelScarType.KrakenScarType</code>; each trait through
-  <code>FirebirdFactionTrait.KrakenTraitPicker</code>, a trait with no row skipped; then the template's
-  <code>TraitMarkers</code> (<code>Marker_OrcRarity_Legendary</code>).</li>
-</ul>
-<p>FactionMember <code>+0x520</code> records how a member was made and is saved with him: 0x1BC05D0 writes 4 after
-the builder's own 2 (the preset path writes 3; two other creation paths write 0 and 1). The template's
-<code>CreationSimEventPicker</code>, <code>NemesisAlly_Levels</code>, introduces him through a sim event that promotes him into
-an empty seat (<code>PromoteEmpty_*</code> events, nav markers always shown); the payload's row is never used.</p>
-<h3 id="the-look">The look</h3>
-<p>No look travels in the payload. The builder's model step 0x1C04F20 rebuilds one from <code>RandomSeed</code>,
-replaying Shadow of Mordor's generator over the Firebird tables:</p>
-<ul>
-<li><strong>Scale:</strong> the low 32 bits of a xorshift of the seed (shifts 13, 7, 17), times 2^-32.</li>
-<li><strong>Random stream:</strong> a 64-bit linear congruential generator, <code>state * 0x0BB38435 + 0x3619636B</code>, whose
-  value is <code>(state &gt;&gt; 32) / 4294967295</code>, started at the seed (0x1C76F8C). The same constants appear
-  throughout both games' executables.</li>
-<li><strong>Weighted picks</strong> (0x1C767E0): one draw, then the first entry whose running weight reaches it; a total
-  weight below 0.0001 picks nothing.</li>
-<li><strong>Order:</strong> body (the template's <code>Models</code> entries whose <code>RequiredScaleRange</code> holds the scale, weighted by
-  the body piece's <code>SelectionWeight</code>), armour, head, helmet, hair (only with <code>CanApplyHair</code>), legs, one
-  draw per accessory, then the colours. The armour, helmet, leg and accessory draws only advance the
-  generator: those parts are not imported.</li>
-<li><strong>Colours:</strong> for each of the nine channels a weighted Firebird colour entry gives a War colour setup and
-  one of 15 colour ids (<code>Red</code>, <code>White</code>, <code>Fleshtone</code> ... <code>Purple</code>). War's entry with that <code>FirebirdColorId</code>
-  (94 of War's 542 colour entries carry one) is rolled with its <code>HueDeltaRange</code> on a copy of the generator
-  state, and then the Firebird entry's <code>NumRandomCalls</code> draws are spent, which keeps the stream aligned
-  with Mordor's own colour roll.</li>
-<li><strong>Result:</strong> the body type, the base model, the head record, the combat tree, and three piece slots set
-  through the engine's slot setter 0x4C62EC (body, head, hair), with slot 7 cleared.</li>
-</ul>
-<p>For a Berserker the body is the Buff torso for a scale up to 0.5 and the Stocky torso from 0.5; the Slim
-entry has no body row and is never chosen.</p>
-<p><strong>The tables</strong> in the shipped GameDB:</p>
-<table>
-<thead>
-<tr>
-<th>Category</th>
-<th>Records</th>
-<th>Examples</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>NemesisForge/FirebirdSimpleModel</code></td>
-<td>5</td>
-<td>the Mordor orc classes <code>AI_Spearman</code>, <code>AI_Infantry</code>, <code>AI_Berserker</code>, <code>AI_Defender</code>, <code>AI_Archer</code></td>
-</tr>
-<tr>
-<td><code>NemesisForge/FirebirdFactionRole</code></td>
-<td>131</td>
-<td><code>Role_LimpLeg</code>, <code>Role_GrogBurner</code>, <code>Role_NeckSnapper</code>, <code>Role_Massive_DLC2</code></td>
-</tr>
-<tr>
-<td><code>NemesisForge/FirebirdFactionTrait</code></td>
-<td>83</td>
-<td><code>Ground_Pound</code>, <code>Flaming_Weapon_Spearman</code>, <code>Monster_Slayer</code>, <code>Quirk_Aggressive</code></td>
-</tr>
-<tr>
-<td><code>NemesisForge/FirebirdFactionPersonality</code></td>
-<td>12</td>
-<td><code>Clever_Sniveling</code>, <code>Psychotic</code>, <code>Commanding_1</code></td>
-</tr>
-<tr>
-<td><code>NemesisForge/FirebirdModelScarType</code></td>
-<td>6</td>
-<td><code>Wraith</code>, <code>Burn</code>, <code>Pin_Cusion</code>, <code>Sack_Head</code>, <code>Eyepatch</code>, <code>Melee</code></td>
-</tr>
-<tr>
-<td><code>NemesisForge/FirebirdSimpleModelHead</code></td>
-<td>30</td>
-<td><code>OrcStk03</code> ...</td>
-</tr>
-<tr>
-<td><code>NemesisForge/FirebirdSimpleModelPiece</code></td>
-<td>76</td>
-<td><code>Smp_Orc_Buff_Hair01_Head03_01</code> ...</td>
-</tr>
-<tr>
-<td><code>NemesisForge/FirebirdSimpleModelColorId</code></td>
-<td>15</td>
-<td><code>Red</code>, <code>White</code>, <code>Fleshtone</code>, <code>Grey</code>, <code>Black</code>, <code>Blue</code></td>
-</tr>
-<tr>
-<td><code>NemesisForge/FirebirdSimpleModelColorSetup</code></td>
-<td>11</td>
-<td><code>Orc_Infantry_Skin_Color</code>, <code>Orc_Hair_Color</code>, <code>Armor_Color_01_Grey</code></td>
-</tr>
-<tr>
-<td><code>_StructuresFirebirdModelSimpleModelEntry</code></td>
-<td>11</td>
-<td><code>Body</code>, <code>BodyType</code>, <code>Head</code>, <code>NumAccessories</code>, <code>RequiredScaleRange</code></td>
-</tr>
-<tr>
-<td><code>_StructuresFirebirdSimpleModelColorEntry</code></td>
-<td>31</td>
-<td><code>ColorId</code>, <code>KrakenColorSetup</code>, <code>NumRandomCalls</code>, <code>SelectionWeight</code></td>
-</tr>
-</tbody>
-</table>
-<h3 id="console-commands-and-other-names">Console commands and other names</h3>
-<p>The console commands <code>NemesisForge.CreateFollower</code> (0x1C775EC) and <code>NemesisForge.CreateNemesis</code> (0x1C77604)
-create the stored follower or nemesis at once through 0x1C77514: if the payload is valid, 0xF636F0 makes
-the captain, then 0x1B5EE34 makes him his army's interrogation subject (army context <code>+0x160</code>) and fires
-the faction's <code>SetInterrogationSubjectEvent</code>. The quest path does not take that last step. The
-executable also names <code>NemesisForge.Override.ClearAll</code>, the configuration keys
-<code>Events_NemesisForgeImportEnabled</code> and <code>Events_NemesisForgeImportSampled</code>, the telemetry event name
-<code>NemesisForgeImport</code>, and a user property <code>User.OwnsShadowOfMordor</code>.</p>
+<p>Shadow of War ships its own importer for Shadow of Mordor captains, the Nemesis Forge: it rebuilds a
+player's Mordor follower and nemesis as War captains from data the publisher's online service returns,
+and brings them in through two story missions. Its switch, payload, conversion tables, the look it
+replays from Mordor's generator and Mordor's own captain document are described in The Nemesis Forge:
+imported captains.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>Whether the replayed body, head, hair and colours equal a generated captain's look in Shadow of Mordor.</li>
-<li>What creates members with creation codes 0 and 1 (FactionMember <code>+0x520</code>).</li>
-<li>What <code>NemesisForge.Override.ClearAll</code> resets, and what <code>User.OwnsShadowOfMordor</code> gates.</li>
-<li>How the two mission scripts use <code>GP_Gon2NemForgeCheck</code> and the banner item.</li>
-<li>Whether the two Army-screen states (<code>NemesisNonBranded</code>, <code>NemesisBranded</code>) mark the nemesis and the
-  follower that are handed over, what sets a member's <code>Nemesis</code> state, and what the forge mode stores on
-  the online platform.</li>
-<li>Which code fills the forge army from the two campaign armies.</li>
-<li>Whether some of War's orc geometry is Mordor geometry carried over (the broom and the Beheader
-  helmet have identical level-of-detail counts in both games).</li>
-</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
+<li>Whether Mordor's engine lays its hand-grip layers (<code>Orc_L_Hand_Weapon</code> / <code>Orc_R_Hand_Weapon</code>) over its
+  body clips, as War plays its copy of them while fighting, and how War blends a layer over a clip's own
+  finger keys.</li>
+<li>Which of the two death bits of Mordor's <code>FactionMember</code> status word, bit 2 (<code>IsDead</code>) or bit 23
+  (<code>IsMockDead</code>), the Army screen shows as dead.</li>
+<li>What Mordor's saved <code>FactionMember</code> floats <code>+0x378</code> - <code>+0x380</code> and the paired values <code>+0x384</code> /
+  <code>+0x388</code> hold (a position and two morale-like stats are the candidates), and whether the 0x3B8 pool
+  stride holds pool data beside each 0x3B0-byte member.</li>
+</ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
