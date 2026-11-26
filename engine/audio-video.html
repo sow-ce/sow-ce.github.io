@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" class="cur" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -94,7 +94,7 @@ xaudio2_9.dll                                       movie sound is Wwise (738 of
 thread), <code>AK::BankManager</code> (vt_0x22D65D8 vf1 0x1312008), <code>AK::IOThread</code> (0x132E474, streaming) and
 <code>AK Suspended</code> (0x1309C78). <code>GameAudioMgrThread</code> is an engine thread (routine 0x181F638). Bink runs
 five threads inside <code>bink2w64.dll</code>, started by <code>BinkStartAsyncThread</code> from the render-side
-initialisation 0x1CB60C0 (via 0x1CD21A0, which also calls <code>BinkSetMemory</code>); Bink's own audio output
+initialization 0x1CB60C0 (via 0x1CD21A0, which also calls <code>BinkSetMemory</code>); Bink's own audio output
 is set up there too (<code>BinkSetSoundSystem2</code> + <code>BinkOpenXAudio2</code>, 0x1CD22AC), and 0x1CB6194 stops the
 threads and frees Bink's globals.</p>
 <p><code>GameAudioMgrThread</code> is started by 0x178C98C when byte <code>[base+0x266D9D9]</code> is set. Its routine
@@ -153,7 +153,7 @@ every method.</p>
 </tr>
 <tr>
 <td>+0x88</td>
-<td>the language folder, <code>char[]</code> (e.g. <code>englishus</code>; vf5 0x7E1ED0 returns its address)</td>
+<td>the language folder, <code>char[]</code> (for example <code>englishus</code>; vf5 0x7E1ED0 returns its address)</td>
 </tr>
 <tr>
 <td>+0xB8</td>
@@ -161,11 +161,78 @@ every method.</p>
 </tr>
 </tbody>
 </table>
-<p>Methods identified: vf1 Init 0x11AC2E4 (registers the "SoundManagerGlobalEmitter"), vf2 Shutdown,
-vf5 language, vf8 0x3AD880 IsEnabled, vf12 0x74ED6C PostEvent without an emitter (2D), vf13
-0x3ADC1C PostEvent on an emitter, vf17 0x49BFBC SetSwitch by name, vf18 / vf19 SetRTPCValue by name
-(0x3AEC6C -&gt; 0x3AEB8C -&gt; 0x3AEBCC), vf20 0x5D7FFC0 (hashes a name and queues message 7), vf32
-0x54FF78 LoadBank, vf33 0x551618 UnloadBank, vf39 0x47CF6C name -&gt; id.</p>
+<p>The identified methods:</p>
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Address</th>
+<th>Method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vf1</td>
+<td>0x11AC2E4</td>
+<td>Init (registers the "SoundManagerGlobalEmitter")</td>
+</tr>
+<tr>
+<td>vf2</td>
+<td></td>
+<td>Shutdown</td>
+</tr>
+<tr>
+<td>vf5</td>
+<td></td>
+<td>language</td>
+</tr>
+<tr>
+<td>vf8</td>
+<td>0x3AD880</td>
+<td>IsEnabled</td>
+</tr>
+<tr>
+<td>vf12</td>
+<td>0x74ED6C</td>
+<td>PostEvent without an emitter (2D)</td>
+</tr>
+<tr>
+<td>vf13</td>
+<td>0x3ADC1C</td>
+<td>PostEvent on an emitter</td>
+</tr>
+<tr>
+<td>vf17</td>
+<td>0x49BFBC</td>
+<td>SetSwitch by name</td>
+</tr>
+<tr>
+<td>vf18 / vf19</td>
+<td></td>
+<td>SetRTPCValue by name (0x3AEC6C -&gt; 0x3AEB8C -&gt; 0x3AEBCC)</td>
+</tr>
+<tr>
+<td>vf20</td>
+<td>0x5D7FFC0</td>
+<td>hashes a name and queues message 7</td>
+</tr>
+<tr>
+<td>vf32</td>
+<td>0x54FF78</td>
+<td>LoadBank</td>
+</tr>
+<tr>
+<td>vf33</td>
+<td>0x551618</td>
+<td>UnloadBank</td>
+</tr>
+<tr>
+<td>vf39</td>
+<td>0x47CF6C</td>
+<td>name -&gt; id</td>
+</tr>
+</tbody>
+</table>
 <h3 id="sound-objects-and-emitters">Sound objects and emitters</h3>
 <p>A <strong>sound object</strong> (vt_0x1DC35E8, pool stride 0x48) is one Wwise game object:</p>
 <table>
@@ -203,16 +270,16 @@ vf5 language, vf8 0x3AD880 IsEnabled, vf12 0x74ED6C PostEvent without an emitter
 </tbody>
 </table>
 <p>Sound objects are created on demand by 0x6861A4 when an emitter has none, up to <strong>725</strong> in all
-(<code>cmp eax, 0x2D5</code> at 0x6861C2), and initialised by 0x686230, which registers the id with Wwise
+(<code>cmp eax, 0x2D5</code> at 0x6861C2), and initialized by 0x686230, which registers the id with Wwise
 (messages 0xB and 0xE) and sends the position (0x3AE0BC). PostEvent refuses a 51st event on one
 object (0x3ADC5B); the end-of-event callback counts the events down.</p>
 <p>The <strong>emitter</strong> is the engine-side structure: <code>+0x00</code> u32 id, <code>+0x08</code> sound object, <code>+0x10</code>
 position, <code>+0x1C</code> orientation, <code>+0x28</code> registered, <code>+0x29</code> enabled, <code>+0x2B</code> has a position, <code>+0x34</code>
 last playing id, <code>+0x38</code> last event id, <code>+0x3C</code> time, <code>+0x60</code> name, <code>+0x90</code> / <code>+0xC8</code> / <code>+0x100</code>
 the last event names (set by 0x3AD6A8).</p>
-<p>In an open-world scene the vector held 52 and then 121 sound objects a few minutes apart; 121 of
-121 passed the back-link check (emitter <code>+0x08</code> equals the object and emitter <code>+0x00</code> its id); ids
-were unique; 94 were positioned and 44 had an event playing. Two sat exactly at the player's
+<p>In an open-world scene the vector held 52 and then 121 sound objects a few minutes apart. The
+back-link check (emitter <code>+0x08</code> equals the object and emitter <code>+0x00</code> its id) passed on 121 of 121,
+the ids were unique, 94 objects were positioned and 44 had an event playing. Two sat exactly at the player's
 position: the player's emitters.</p>
 <h2 id="posting-a-sound">Posting a sound</h2>
 <pre><code>caller (dialogue 0x54D7E0, audio-key job 0x17A210, ...)
@@ -236,7 +303,7 @@ position: the player's emitters.</p>
 <p>0x12F2194 is a second PostEvent entry by event id that copies external sources and calls the same
 core 0x3AD54C. In an idle open-world scene the playing-id counter advanced 30-40 times per second.</p>
 <p><strong>Dialogue lines are Wwise external sources.</strong> The dialogue-event player 0x54D7E0 (it reads the
-<code>AudioHooks/DialogEvents</code> category, cooldowns, facial animation and subtitle behaviour) passes a
+<code>AudioHooks/DialogEvents</code> category, cooldowns, facial animation and subtitle behavior) passes a
 line's file name as the external source of a generic event; the file is Vorbis, looked up in
 <code>sound\&lt;language&gt;\External*.pck</code>. 0xD24F80 builds the event name (<code>"%s%s"</code>) and asks <code>CanPlay</code>
 0x66BC00 first.</p>
@@ -489,13 +556,13 @@ whose entry has no bank (u16 <code>+0x04</code> = 0xFFFF), plays at once. Otherw
    20 events are waiting (<code>+0xB0</code>). Under <code>DoNotPlay</code> (2) the event is dropped and only the load goes
    ahead. <code>DoNotPlay</code> is set on 76 of the 1,958 records, <code>PlayWhenLoaded</code> on 1,882.</li>
 </ol>
-<p><strong>Loading.</strong> A bank is an engine resource: the bank loader (vt_0x22C3850 vf4 0x54FEA4) gets the
-file's bytes, builds a 0x18-byte handle (<code>+0x00</code> the bank id, <code>+0x04</code> size, <code>+0x08</code> data, <code>+0x10</code>
-"not init.bnk", <code>+0x11</code> "not a _Metadata bank") and calls the sound manager's vf32 0x54FF78, which,
-under the bank lock, parks banks until <code>init.bnk</code> has loaded. 0xC378A0 loads one bank: the size
-must be at least 0x14 and the bank's language id (<code>BKHD+0x10</code>) must be 0 or the current language,
-so banks of another language are refused; then 0x12F1A00 copies it into a Wwise pool (or 0x550088
-loads it in place).</p>
+<p><strong>Loading.</strong> A bank is an engine resource. The bank loader (vt_0x22C3850 vf4 0x54FEA4) gets the
+file's bytes, builds a 0x18-byte handle and calls the sound manager's vf32 0x54FF78, which parks
+banks under the bank lock until <code>init.bnk</code> has loaded. The handle holds <code>+0x00</code> the bank id,
+<code>+0x04</code> the size, <code>+0x08</code> the data, <code>+0x10</code> a "not init.bnk" flag and <code>+0x11</code> a "not a _Metadata
+bank" flag. 0xC378A0 loads one bank. The size must be at least 0x14, and the bank's language id
+(<code>BKHD+0x10</code>) must be 0 or the current language, so banks of another language are refused. Then
+0x12F1A00 copies the bank into a Wwise pool, or 0x550088 loads it in place.</p>
 <p><strong>The live bank list.</strong> The bank manager <code>[base+0x26FF9B0]</code> keeps a hash table at <code>+0x90</code> (buckets,
 u32 count of buckets, capacity, item count); entries point at bank slots (vt_0x1DBAA38: <code>+0x10</code> u32
 bank id, <code>+0x18</code> data, <code>+0x20</code> next in the chain, <code>+0x38</code> u64 size). In an open-world scene 83 banks
@@ -521,7 +588,7 @@ effect. Fields read live instead: the dialogue-event priorities (0x66BCA0 / 0x66
   greater than the current line's <code>PriorityContinue</code>; between equal priorities the first line wins.</li>
 <li>A <code>CharacterModel</code> game condition (type 121) compiles to one bit (the payload's u16 at <code>+0x62</code>),
   tested against the speaker's audio-character bit set at <code>+0x188</code> (0x18A8BA -&gt; 0x18BBD8).
-  124 such conditions exist; the player's audio character is <code>[GameAudioManager+0xA5138]</code>.</li>
+  There are 124 such conditions; the player's audio character is <code>[GameAudioManager+0xA5138]</code>.</li>
 <li>Audio characters (vt_0x1F797A8; a pool inside the audio manager at <code>+0x38</code>, stride 0x4F8) keep a
   copy of their captain's event history at <code>+0x248</code>, taken when the character spawns.</li>
 <li><code>CCharacter.AddAudioHookKey</code> 0x2D9B1C(character, key) fires a key on a character directly; keys
@@ -533,41 +600,43 @@ on 17,214, pointing into the 17,239 <code>AudioHooks/DialogEvents</code> records
 to set are inline structures: <code>_StructuresAudioHookNextKey</code> <code>{AudioHookKey, DelaySeconds}</code> (set on
 590) and <code>_StructuresAudioHookSetSwitch</code> <code>{SwitchName, SwitchValue}</code>.</p>
 <h3 id="what-an-animation-can-play">What an animation can play</h3>
-<p>An animation clip's events reach the character through its anim-event handler (vf19 0x4CD070 of the
-character classes, here read on <code>CPlayerObj</code>, vt_0x1F96818). It hashes each command's verb (0x813BCC upper-cases the
-first character, 0x569FF8 folds the rest as <code>h = h * 31 + upper(c)</code>) and hands the hash to each
-component, the character's <code>+0x2680</code>, its combat object <code>+0x26A8</code>, its visual <code>+0x2348</code> and the
-non-player part <code>+0x1AF0</code>, each of which compares it with constants. A name table at 0x1F96580 holds
-16-byte rows <code>{u32 hash, pad, char* name}</code>; <code>AUDIO_HOOK_KEY</code> (0x88C44F8C) is compared in six functions
-(0x4CDA66, 0x769598, 0x787ED2, 0x7A3FB8, 0x7BA2EC, 0x1A3B2AC), and <code>FOOTSTEP_L</code> / <code>_R</code> / <code>_KEY</code>,
-<code>BODY_IMPACT</code>, <code>SURFACEIMPACT</code>, <code>GROUNDCHECK</code> and <code>AUDIO_HOOK_KEY_UI</code> / <code>_UI_ALWAYS</code> have their hashes
-in the code.</p>
+<p>An animation clip's events reach the character through its anim-event handler, vf19 0x4CD070 of the
+character classes (read here on <code>CPlayerObj</code>, vt_0x1F96818). The handler hashes each command's verb
+(0x813BCC upper-cases the first character, and 0x569FF8 folds the rest as <code>h = h * 31 + upper(c)</code>) and
+hands the hash to each component in turn: the character itself at <code>+0x2680</code>, its combat object at
+<code>+0x26A8</code>, its visual at <code>+0x2348</code> and the non-player part at <code>+0x1AF0</code>. Each component compares the
+hash with constants. A name table at 0x1F96580 holds 16-byte rows <code>{u32 hash, pad, char* name}</code>.
+<code>AUDIO_HOOK_KEY</code> (0x88C44F8C) is compared in six functions (0x4CDA66, 0x769598, 0x787ED2, 0x7A3FB8,
+0x7BA2EC, 0x1A3B2AC), and <code>FOOTSTEP_L</code> / <code>_R</code> / <code>_KEY</code>, <code>BODY_IMPACT</code>, <code>SURFACEIMPACT</code>, <code>GROUNDCHECK</code>
+and <code>AUDIO_HOOK_KEY_UI</code> / <code>_UI_ALWAYS</code> have their hashes in the code as well.</p>
 <p><strong>There is no sound verb.</strong> The hashes of <code>SND</code>, <code>SND_GROUND</code>, <code>SND_SCUFF</code>, <code>SND_PIVOT</code>, <code>SND_UI</code>,
 <code>DIALOG_EVENT</code>, <code>DIALOG_KEY</code>, <code>SOUNDEVENT</code>, <code>FOOTSTEP</code> and <code>FOOTSTEP_FL</code> / <code>_FR</code> occur nowhere in the
-executable as compared values, while 144 of the 204 verbs the orc clips write do (the other 60 are
-misspellings). A clip therefore posts a Wwise event only through an <code>AudioHooks/Keys</code> record
-(<code>audio_hook_key &lt;key&gt;</code>) or a footstep type, which is itself a key (<code>fts_step</code>, <code>fts_run</code>, <code>fts_scuff</code>,
-<code>fts_land</code>, <code>fts_jump</code>, <code>fts_walk</code>, <code>fts_step_l</code> and others, whose events are conditioned on the
-surface). The game's 77,040 clips (4,565 files) write <code>audio_hook_key</code> 121,048 times with 1,715
-distinct keys, and <code>snd</code> 326 times in 216 clips of 48 files, older text carried over in boss, Nazgul
-and prototype files, which plays nothing. Some clips also name keys the database does not have
-(<code>fol_cmn_recoil</code>, <code>fol_cmn_pivot</code>); those are silent too.</p>
+executable as compared values, whereas 144 of the 204 verbs that the orc clips write do; the other 60
+are misspellings. A clip therefore posts a Wwise event only through an <code>AudioHooks/Keys</code> record
+(<code>audio_hook_key &lt;key&gt;</code>) or through a footstep type, which is itself a key (<code>fts_step</code>, <code>fts_run</code>,
+<code>fts_scuff</code>, <code>fts_land</code>, <code>fts_jump</code>, <code>fts_walk</code>, <code>fts_step_l</code> and others, whose events depend on the
+surface).</p>
+<p>The game's 77,040 clips (in 4,565 files) write <code>audio_hook_key</code> 121,048 times, naming 1,715 distinct
+keys. They write <code>snd</code> 326 times, in 216 clips of 48 files: older text carried over in boss, Nazgul and
+prototype files, which plays nothing. Some clips also name keys that the database does not contain
+(<code>fol_cmn_recoil</code>, <code>fol_cmn_pivot</code>); these are silent as well.</p>
 <h2 id="video">Video</h2>
-<p><strong><code>WBMovieMgr</code></strong> (vt_0x230B308, 5 methods, <code>WBMovieMgr.cpp</code>). vf2 0x32F930 <code>Create(out, name, flags)</code>:
-a <code>.vid</code> name goes to 0x33048C (a resource request of type 0x10 through the resource system,
-<code>malloc(0x168)</code>, constructor 0x3306A0, then vf22 with the UHD setting <code>[base+0x272EC80]</code>); any other
-name goes to 0x1CA0538, which accepts only <code>.bk2</code>, <code>.bik</code> and <code>.mp4</code>, and only while byte
-<code>[base+0x2A37714]</code> is set (it is clear in the shipped game). vf3 0x1CA0608 and vf4 0x331170 call
+<p><strong><code>WBMovieMgr</code></strong> (vt_0x230B308, 5 methods, <code>WBMovieMgr.cpp</code>). vf2 0x32F930 is
+<code>Create(out, name, flags)</code>. A <code>.vid</code> name goes to 0x33048C: a resource request of type 0x10 through
+the resource system, <code>malloc(0x168)</code>, the constructor 0x3306A0, then vf22 with the UHD setting
+<code>[base+0x272EC80]</code>. Any other name goes to 0x1CA0538, which accepts only <code>.bk2</code>, <code>.bik</code> and <code>.mp4</code>,
+and only while the byte <code>[base+0x2A37714]</code> is set; it is clear in the shipped game. vf3 0x1CA0608 and vf4 0x331170 call
 vf5(bool) and vf16(float) on every live video under the list lock.</p>
-<p><strong>A video resource</strong> (vt_0x2005158, 0x168 bytes; base class vt_0x1DB1800, constructor 0x33092C:
-<code>+0x08</code> list node, <code>+0x18</code> reference count): <code>+0x20</code> the Bink player, <code>+0x28</code> a lock, <code>+0x50</code> a
-copy of the play state, <code>+0x58</code> / <code>+0x60</code> state. vf22 0x33058C queues it to the render ring;
-0x3305D0 links it into the global video list (head 0x267E400, node = resource + 8, lock 0x2A37718).
+<p><strong>A video resource</strong> (vt_0x2005158) is 0x168 bytes. Its base class (vt_0x1DB1800, constructor
+0x33092C) holds <code>+0x08</code> a list node and <code>+0x18</code> the reference count; the resource adds <code>+0x20</code> the
+Bink player, <code>+0x28</code> a lock, <code>+0x50</code> a copy of the play state and <code>+0x58</code> / <code>+0x60</code> state. vf22
+0x33058C queues it to the render ring, and 0x3305D0 links it into the global video list (head 0x267E400, node = resource + 8, lock 0x2A37718).
 vf23 0x529BF8 opens the file (Bink player vf6) and vf25 0x33232C is the per-frame update (decode via
 0x33236C, then copy player <code>+0x168</code> to <code>+0x50</code>). The render command 0x3322BC walks the list on the
 render thread every frame and calls vf25 on each video.</p>
-<p><strong>The Bink player</strong> (vt_0x1DB1740, 0x3F0 bytes, constructor 0x330830): <code>+0x08</code> the <code>HBINK</code>, <code>+0xF8</code>
-open state (0 open, 3 failed), <code>+0x168</code> play state (2 = failed to open), <code>+0x170</code> the file name.
+<p><strong>The Bink player</strong> (vt_0x1DB1740, 0x3F0 bytes, constructor 0x330830) holds <code>+0x08</code> the <code>HBINK</code>,
+<code>+0xF8</code> the open state (0 open, 3 failed), <code>+0x168</code> the play state (2 = failed to open) and <code>+0x170</code>
+the file name.
 vf14 0x331D78 <code>Open(name, flags)</code> calls <code>BinkOpenWithOptions</code> with a custom file callback 0x7A9EA8
 that reads through the engine's file layer (0x1CD2194). vf15 0x331358 pauses, vf7 0x331620 sets
 volume and speakers, vf11 0x332420 registers frame buffers. <code>HBINK</code>: <code>+0x00</code> width, <code>+0x04</code>
@@ -582,14 +651,14 @@ AdditionalAssetBundle, Loop, MenuBackgroundVideo, CanSkip, FullScreen, RenderGam
 ScreenPosition, PauseGame, PauseAI, PauseMovieOnLastFrame, RenderBars, PlayCreditsOnFinish, fade-in
 and fade-out frames, SyncVideoToWwiseAudio, WwiseAudioKey, SkipSoundKey, GlobalBusKey,
 StopGlobalBusKey, CommandSet, Sounds, Events, OverlayVideos, OverlayMaterial and
-RequiredSubtitleEntries. Records name a <code>.vid</code>; the engine opens the <code>.vib</code> beside it. 939 records
-carry a path: 725 resolve to a shipped movie (711 distinct files) and 214 name movies that do not
+RequiredSubtitleEntries. Records name a <code>.vid</code>; the engine opens the <code>.vib</code> beside it. A path is
+set on 939 records: 725 resolve to a shipped movie (711 distinct files) and 214 name movies that do not
 ship (cut skill-progression, attribute and trait clips). Flag counts: SyncVideoToWwiseAudio 947,
 PauseGame 943, CanSkip 919, Loop 740, FullScreen 210. Event lists live in
 <code>Interface/Movies/Events/{PresentationEvents, BossInfoEvent, UIVideoElementEvents, HUDWidgetConfig,
 GameEvents}</code>.</p>
 <p>The game ships 743 movie files under <code>game\cinematics\videos</code> (about 10 GB) and
-<code>game\interface\videos</code> (about 2 GB): 12.85 GB and 3.8 hours in all. 668 are Bink 2 (<code>KB2j</code> 661,
+<code>game\interface\videos</code> (about 2 GB): 12.85 GB and 3.8 hours in all. Of these, 668 are Bink 2 (<code>KB2j</code> 661,
 <code>KB2i</code> 7) and 71 Bink 1 (<code>BIKi</code>), all named <code>.vib</code>; the header word at <code>+0x04</code> is the file size
 minus 8 in 739 of 739. Resolutions: 1024 x 512 (479, the UI clips), 1920 x 1080 (125, the
 cinematics), 512 x 256 (76), 4 x 4 (56 placeholder clips of the third story DLC), 1280 x 720 (2) and
