@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -152,31 +152,38 @@ LTMR</code>, about 1.28 MB with no typed section header, then <code>FAST FOTP AS
 </tr>
 </tbody>
 </table>
-<p><strong><code>IVMG</code>, the inventory</strong>, in order: a header (<code>04 3, 00 mode, 0C, 10 size, 05 (...), 00 PlayerSkin00,
-04 &lt;one above the highest item id&gt;, 04 729, 0C 1</code>); the owned stacks <code>{00 item, 04 count, 04, 04 n,
-n x 04, 0C}</code> (714 on a finished save; the Mirian currency is a stack too); 14 bools; then the gear
-records <code>{04 id, 04 level, 02 0, 00 Inventory/Items, 00 EquippedWeaponData, 00 0, 0C, 0C, 04 n, n x 00
-Affix/Definition, 04 0, 05 GUID low, 05 GUID high, 0F source product, 02 0, 0C has-nemesis}</code> followed,
-when set, by a nemesis block (<code>00 NemesisGear, 00 Description, 00 Role, 04 seed, 04 seed, 0C</code>, then
-optionally an upgrade tier, art, a <code>Combat/Challenge/Eval</code> challenge with its progress and a weighted
-<code>Faction/Loot/Tag</code> list) and two closing bools; then 25 per-slot entries <code>{0C, [04 item id]}</code>
-(one per inventory slot); then reward items and 8 gem sockets <code>{00 SocketType, 0C, 00 SocketType,
-00 gem}</code>, and DLC flags.</p>
+<p><strong><code>IVMG</code>, the inventory</strong>, holds, in order:</p>
+<ul>
+<li>a header (<code>04 3, 00 mode, 0C, 10 size, 05 (...), 00 PlayerSkin00, 04 &lt;one above the highest item id&gt;, 04 729, 0C 1</code>);</li>
+<li>the owned stacks <code>{00 item, 04 count, 04, 04 n, n x 04, 0C}</code> (714 on a finished save; the Mirian
+  currency is a stack too);</li>
+<li>14 bools;</li>
+<li>the gear records
+  <code>{04 id, 04 level, 02 0, 00 Inventory/Items, 00 EquippedWeaponData, 00 0, 0C, 0C, 04 n, n x 00 Affix/Definition, 04 0, 05 GUID low, 05 GUID high, 0F source product, 02 0, 0C has-nemesis}</code>,
+  followed, when set, by a nemesis block (<code>00 NemesisGear, 00 Description, 00 Role, 04 seed, 04 seed, 0C</code>,
+  then optionally an upgrade tier, art, a <code>Combat/Challenge/Eval</code> challenge with its progress and a
+  weighted <code>Faction/Loot/Tag</code> list) and two closing bools;</li>
+<li>25 per-slot entries <code>{0C, [04 item id]}</code> (one per inventory slot);</li>
+<li>reward items and 8 gem sockets <code>{00 SocketType, 0C, 00 SocketType, 00 gem}</code>, and DLC flags.</li>
+</ul>
 <p><strong>The front-screen card.</strong> The card printer 0xDF9370 reads the slot info
 <code>[CGameClientShell+0xEB8] + 0x1C8 + GameModes.SaveSlot * 0x298</code>: it prints <code>ceilf(+0x24 minutes)</code>
 as hours and minutes and <code>floorf(+0x20)</code> as the completion percentage. Both come from the slot's save
 summary: its value 3 is the completion in percent and its value 4 the play time in minutes (a
-summary holding 100.0 and 14,655 showed on the card as "100 %" and "244h 15m"); for a game mode with
-<code>GameModes.UseHighScore</code> (the fourth story DLC's mode) it prints the score from the <code>GMSC</code> entry found
-by 0xFAD1B0(<code>[base+0x2A36278]</code>, mode) (the first entry with <code>+0x80</code> equal to the mode and <code>+0x50</code>
-non-zero, score at <code>+0x68</code>).</p>
+summary holding 100.0 and 14,655 showed on the card as "100 %" and "244h 15m"). For a game mode with
+<code>GameModes.UseHighScore</code> (the fourth story DLC's mode), it prints the score from the <code>GMSC</code> entry found
+by 0xFAD1B0(<code>[base+0x2A36278]</code>, mode): the first entry with <code>+0x80</code> equal to the mode and <code>+0x50</code>
+non-zero, score at <code>+0x68</code>.</p>
 <h2 id="saving-and-starting-a-new-game">Saving and starting a new game</h2>
 <p><strong>The save switch.</strong> Both world-save paths read <code>GameModes.CanSave</code> of the current game mode
-(<code>[base+0x2A36260]</code>; <code>SinglePlayer</code> in the campaign) and skip the save when it is clear: the save
-task (vt_0x1F6CC40 vf3 0x52C70C -&gt; 0x52C664, which also refuses on the client shell's state at
-<code>+0xE38</code>, flags at <code>+0x189</code> / <code>+0x194</code> and <code>+0xA20</code>; accessor 0x52C5EC) and the world save 0x5B7B58
-("Attempting to save the game without a world to restore", test at 0x5B7BA8). <code>CanSave</code> is packed
-bool 13 of the record's first cell. It ships clear on <code>QuestReplay</code> (story mission replays) and
+(<code>[base+0x2A36260]</code>; <code>SinglePlayer</code> in the campaign) and skip the save when it is clear:</p>
+<ul>
+<li>the save task (vt_0x1F6CC40 vf3 0x52C70C -&gt; 0x52C664, which also refuses on the client shell's state
+  at <code>+0xE38</code>, flags at <code>+0x189</code> / <code>+0x194</code> and <code>+0xA20</code>; accessor 0x52C5EC);</li>
+<li>the world save 0x5B7B58 ("Attempting to save the game without a world to restore", test at
+  0x5B7BA8).</li>
+</ul>
+<p><code>CanSave</code> is packed bool 13 of the record's first cell. It ships clear on <code>QuestReplay</code> (story mission replays) and
 <code>Benchmark</code>: the engine is built to run a world that never saves. <code>SaveCurrentWorld</code> (bit 3) is a
 second gate inside 0x5B7B58.</p>
 <p><strong>The mode-select screen</strong> (<code>GameModeSelect</code>; layer class vt_0x1F92AF0, record
@@ -188,9 +195,9 @@ is <code>+0x1C8 + SaveSlot * 0x298</code>, whose <code>+0x08</code> is non-null 
 <ul>
 <li>0xD07AA0(mode, 0) is the mode's availability: 0 not ready, 1 / 2 a DLC not owned / not installed,
   3 playable. 0xE37610(layer) tests whether the highlighted mode has a save.</li>
-<li><code>OnAction</code> (vf12 0xE39590): action <code>0x20</code> (MenuEnter) leads to 0xE39E00 - availability 1 / 2 opens
-  the DLC store, 3 with a save continues (0xCF8ED0), 3 without a save starts a new game by pushing the
-  <code>Difficulty</code> layer with the mode at <code>instance+0x9C8</code>. Action <code>0x54</code> (the "Delete Saved Game" prompt,
+<li><code>OnAction</code> (vf12 0xE39590): action <code>0x20</code> (MenuEnter) leads to 0xE39E00, where availability 1 / 2
+  opens the DLC store, 3 with a save continues (0xCF8ED0), and 3 without a save starts a new game by
+  pushing the <code>Difficulty</code> layer with the mode at <code>instance+0x9C8</code>. Action <code>0x54</code> (the "Delete Saved Game" prompt,
   key 2 / pad X) opens a confirmation when the mode is playable and has a save.</li>
 <li>Delete 0xE3B650 resets every save-data chunk handler (0x184CA5C), the mode's <code>GMSC</code> entry
   (0xFADDC0) and the slot info, and sets the row's world to <code>GameModes.DefaultWorld</code>. Deleting and then
@@ -204,10 +211,10 @@ is <code>+0x1C8 + SaveSlot * 0x298</code>, whose <code>+0x08</code> is non-null 
 Game+ card: <code>NewGamePlusPresentationItem</code> (<code>Inventory/Items/Player_PresentNewGamePlusDialog</code>), a
 bundle path that ships in no archive, an image, an icon, a command set
 (<code>Profile/CommandSets/NewGamePlusConfirm</code>), the title "Congratulations!" and a description key with
-no string - but <code>NewGamePlusPresentationEvent</code> is null, and the player-UI tick 0x5218C8 builds
+no string. However, <code>NewGamePlusPresentationEvent</code> is null, and the player-UI tick 0x5218C8 builds
 nothing without it. No restart logic stands behind the card. The console command
 <code>UI.NewGamePlusDialog</code> (registered by 0xB2220) only sets a byte at <code>+0x98</code> of the player's
-<code>+0x2F98</code> object, which nothing else in the analysed code writes; <code>Quest/Quests.ShowNewGameDialogOnComplete</code>
+<code>+0x2F98</code> object, which nothing else in the analyzed code writes; <code>Quest/Quests.ShowNewGameDialogOnComplete</code>
 has a field binding but no reader. The game's own delete warning lists what a new game keeps: all
 boosts, unused training orders, undeployed follower orcs and unopened chests ("available in Act 2").</p>
 <h2 id="the-player-profile-and-settings">The player profile and settings</h2>
@@ -350,12 +357,51 @@ When the profile loads (0x17C65FC) the engine polls four gamepad ports through t
 by <code>CP_Binding_PC</code>.</p>
 <h3 id="commands-buttons-and-bindings">Commands, buttons and bindings</h3>
 <p><code>Profile/Commands</code> (382 records) defines one command per action: <code>ActionID</code> (a string enum; at run
-time commands are keyed by the enum index), <code>CommandType</code> (<code>ECommandType</code>, named in the executable's enum table: <code>COM_MOVE</code> 0 on 119 commands,
-<code>COM_INV</code> 1 on none, <code>COM_VIEW</code> 2 on 9 - yaw, pitch, their accelerations, the debug camera's four and <code>CenterView</code> -, <code>COM_MISC</code> 3 on 8 - the message-box
-confirm and deny commands and <code>DebugMenuActivate1</code>-<code>4</code> -, <code>COM_WEAP</code> 4 on <code>CombatSecondary01</code> and
-<code>02</code>, and <code>kNumCommandTypes</code> 5, the count used as "none", on 244),
-<code>Event</code> (289 of 382), <code>IgnoreWaitForOff</code>, and two button slots per platform: <code>PCKeyboard</code>,
-<code>PCGamepad</code>, <code>XBoxOne</code> and <code>ps4</code>. The keyboard binds 226 commands (60 in both slots), the PC gamepad
+time commands are keyed by the enum index), <code>CommandType</code>, <code>Event</code> (289 of 382), <code>IgnoreWaitForOff</code>,
+and two button slots per platform: <code>PCKeyboard</code>, <code>PCGamepad</code>, <code>XBoxOne</code> and <code>ps4</code>. <code>CommandType</code> is an
+<code>ECommandType</code>, named in the executable's enum table:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Type</th>
+<th>Commands</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>COM_MOVE</code></td>
+<td>119</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>COM_INV</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>COM_VIEW</code></td>
+<td>9: yaw, pitch, their accelerations, the debug camera's four and <code>CenterView</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>COM_MISC</code></td>
+<td>8: the message-box confirm and deny commands and <code>DebugMenuActivate1</code>-<code>4</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>COM_WEAP</code></td>
+<td><code>CombatSecondary01</code> and <code>02</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>kNumCommandTypes</code>, the count, used as "none"</td>
+<td>244</td>
+</tr>
+</tbody>
+</table>
+<p>The keyboard binds 226 commands (60 in both slots), the PC gamepad
 275, the console pads 270 each. <code>Profile/BindingSets</code> (17) group commands in a <code>CommandList</code> plus
 <code>CommandCharacterModelOverrides</code> (alternative commands for the <code>Eltariel</code> and <code>Baranor</code> model
 types); <code>Debug</code> and <code>DebugSyncAction</code> are marked <code>DebugOnly</code>. <code>Profile/Inputs/PC/Bindings</code> holds nine
@@ -506,11 +552,12 @@ stack read in free roam held <code>StateSupported</code> (priority 15) below <co
 <li>GARRISON has seven locks, <code>Root_Store.LockedIndicatorPredicates</code> (primaries 1896 to 1902): not connected, Minas
   Ithil not unlocked, under age, an active quest, the store inaccessible (0x1893780 -&gt; 0x1B22AF0 -&gt; 0x17F5DC4), the
   game out of date (the build number the service reports above the client's 8874), and not the main game.</li>
-<li>The client commerce object is <code>CUser+0xDB8</code> (vt_0x1F71020), <code>CUser</code> =
-  <code>([base+0x26FFA98]+0xE90).users[0]</code>: <code>+0x49</code> initialised, <code>+0x4B</code> / <code>+0x4C</code> / <code>+0x4D</code> definitions,
-  inventory and catalog loading (<code>+0x4E</code> has no writer in the executable), <code>+0x5D</code> store requested; wallets at
-  <code>+0x158</code> (paid Gold), <code>+0x160</code> (earned) and <code>+0x168</code> (social: the Spoils of War); boost state at <code>+0x100</code> (XP
-  multiplier), <code>+0x110</code> (end time) and <code>+0x120</code> / <code>+0x138</code> (Spoils), parsed by 0x17F6998.</li>
+<li>The client commerce object is <code>CUser+0xDB8</code> (vt_0x1F71020), where <code>CUser</code> =
+  <code>([base+0x26FFA98]+0xE90).users[0]</code>. It holds <code>+0x49</code> initialized, <code>+0x4B</code> / <code>+0x4C</code> / <code>+0x4D</code>
+  definitions, inventory and catalog loading (<code>+0x4E</code> has no writer in the executable) and <code>+0x5D</code> store
+  requested; the wallets at <code>+0x158</code> (paid Gold), <code>+0x160</code> (earned) and <code>+0x168</code> (social: the Spoils of
+  War); and the boost state at <code>+0x100</code> (XP multiplier), <code>+0x110</code> (end time) and <code>+0x120</code> / <code>+0x138</code>
+  (Spoils), parsed by 0x17F6998.</li>
 <li><strong>Bring-up.</strong> The commerce tick 0x472D44 waits for the platform user-info request to succeed (<code>+0x60</code>, set only at
   0x17F79B5 in 0x17F7894); until then it retries forever and <code>+0x49</code> is never set. Then it calls LoadCatalog
   (0x472E4D). A catalog failure (0x17F5F68) empties the list, and the catalog is not asked for again.</li>
@@ -551,7 +598,7 @@ name, <code>trait_picker_list</code>, <code>trait_marker_list</code> and <code>t
 <code>*_name</code> keys, <code>rarity_string_id</code>, <code>specialization_string_id</code>, <code>status_effect_string_id</code>). <code>Inventory</code> holds
 <code>fmi_equipment_list</code> (per item <code>Item</code>, <code>WeaponData</code>, <code>ArmorData</code>, <code>Affixes</code>, <code>Source</code>, <code>GUID64A</code> / <code>B</code>, <code>iLvl</code> ...),
 <code>smc_flaircolor_list</code> and <code>smc_nonequipment_record_list</code>; <code>smc_storage</code> holds <code>BodyType</code>, <code>smc_bodymodel_record</code> (the
-rig), <code>smc_headModel_record</code>, 16 <code>smc_*_piece_record</code> (appearance cells 0 to 15), 15 colour words (no faction war
+rig), <code>smc_headModel_record</code>, 16 <code>smc_*_piece_record</code> (appearance cells 0 to 15), 15 color words (no faction war
 paint, no default) and <code>smc_storage_appearancetags</code>. Not exported: <code>FM+0x180</code> (the birth army, the record the size
 bonus comes from; see Characters, the player and the camera), appearance cells 16 to 22, the design cells and material
 overrides.</p>
@@ -563,20 +610,20 @@ back as <code>trait_picker_list</code> re-added through 0x7CD03C and rolled by t
 its picker's roll does not travel. <code>random_seed</code> is stored at <code>FM+0x168</code> (0x1BC243E): a downloaded captain keeps the
 uploader's seed. Callers: 0x1BC04E4 (the online arena opponent and Garrison followers), 0x1BD3BD8 (a Conquest or
 Vendetta fort's <code>member_array</code>) and 0xF58270.</p>
-<p><strong>The import redraws armour from the items.</strong> In 0x1BC21B4 the appearance comes first (<code>SMCStorage</code> -&gt;
+<p><strong>The import redraws armor from the items.</strong> In 0x1BC21B4 the appearance comes first (<code>SMCStorage</code> -&gt;
 0x1C05970(appearance), at 0x1BC2BAA), then the inventory (<code>Inventory</code> -&gt; 0x1C112F8(<code>FM+0x50</code>), at 0x1BC2BD5), and
-then, unconditionally, 0x61BAD4(<code>FM+0x50</code>, appearance) at 0x1BC2BE5, which puts every armour item's own design back
-over its cell and the items' flair colours over the palette (see Captain appearance). So an armour cell that differs
+then, unconditionally, 0x61BAD4(<code>FM+0x50</code>, appearance) at 0x1BC2BE5, which puts every armor item's own design back
+over its cell and the items' flair colors over the palette (see Captain appearance). So an armor cell that differs
 from the item that holds it never reaches another player.</p>
 <h3 id="the-garrison">The Garrison</h3>
 <p>GARRISON's Followers section is the player's online garrison. At the end of an online match 0x1B36D7C calls
 0x1B3BA78(match), the match state being <code>[GM+0x6D30]+0x100</code>: <code>+0x18</code> the mode (<code>Invasion/Modes</code>), <code>+0x28</code> the army,
 <code>+0x140</code> the dominated captains' handles (0x10 bytes each), <code>+0x188</code> the imported followers (pushed back by
 <code>PushFromInvasionToOriginal</code> 0x1BC3870). When the mode's <code>SendDominatedEnemiesToGarrison</code> is set (reader 0xF55D10:
-true for ranked Conquest and Vendetta, false for friend Conquest) it takes the army's followers (bit 27, 0xFD04E0) and
-calls <code>AddToGarrison</code> 0xF6B7A0(FS, fm, notification, 0, 0, 0): its fourth argument 1 also pulls the orc out of his
-army (0x1C25FA8), the stack arguments check capacity and set <code>garrison+0x50</code> when full, and the army must be among the
-army contexts.</p>
+true for ranked Conquest and Vendetta, false for friend Conquest), it takes the army's followers (bit 27, 0xFD04E0) and
+calls <code>AddToGarrison</code> 0xF6B7A0(FS, fm, notification, 0, 0, 0). With a fourth argument of 1 it also pulls the orc out of
+his army (0x1C25FA8); the stack arguments check capacity and set <code>garrison+0x50</code> when full; and the army must be among
+the army contexts.</p>
 <ul>
 <li><code>Garrison::Add</code> 0xFCB3A0 makes no follower, pool or mode test. It refuses an orc whose online id <code>FM+0x3D0</code>
   (<code>&lt;prefix&gt;_NPC_&lt;n&gt;</code>, exported as <code>npc_profile_guid</code>) is empty or already among the rows. <code>FM+0x476</code> is the service's
@@ -601,10 +648,10 @@ members still there after the return).</p>
 <p>The invasion manager is <code>[GM+0x6D30]</code>. A fort is published by a queue of regions:</p>
 <ul>
 <li><strong>Marking.</strong> The manager's save-chunk writer (vt_0x1F6E9D8 vf4, 0x6246C0, which calls the save serializers 0x36C94C
-  and 0x36E044) tail-calls 0x624724: when <code>mgr+0x47E</code> (set by the fort-upgrade purchase 0x17DEB8C and by 0x17DF750,
-  <code>Interface/Shared.DefaultFortGroup</code>) or <code>mgr+0x47D</code> is set and <code>mgr+0x47C</code> is clear, it queues the current region
-  (<code>FS+0x1B0</code>) if that region's Overlord has flag bit 27 (or the developer byte 0x2A36438 is set), then clears both
-  bytes. 0x631B64(mgr) is the engine's own "mark the fort": <code>mgr+0x47D</code> = 1 and, only while <code>mgr+0x47C</code> is set (an
+  and 0x36E044) tail-calls 0x624724. That function queues the current region (<code>FS+0x1B0</code>) when <code>mgr+0x47E</code> (set by
+  the fort-upgrade purchase 0x17DEB8C and by 0x17DF750, <code>Interface/Shared.DefaultFortGroup</code>) or <code>mgr+0x47D</code> is set
+  and <code>mgr+0x47C</code> is clear, provided that region's Overlord has flag bit 27 (or the developer byte 0x2A36438 is set);
+  it then clears both bytes. 0x631B64(mgr) is the engine's own "mark the fort": <code>mgr+0x47D</code> = 1 and, only while <code>mgr+0x47C</code> is set (an
   online match is running), 0x1B3BEE8 unless 0x17BF3E8(<code>mgr+0x100</code>). <code>+0x47D</code> is touched by 0x624724 (read, clear) and 0x631B64
   (write) only, and 0x631B64 has one caller, 0x630644. So a marked fort goes up at the game's next save; Vendetta and
   Garrison uploads carry an orc as he is at the moment they are sent.</li>
@@ -637,7 +684,7 @@ members still there after the return).</p>
 <code>FD_FortUpgradeGroupContribution</code> (15) when 0x4F6644 passes and 0x4F7B8C does not. A lone level-80 Overlord gives
 exactly the published 160. Two early-outs return stored values (<code>[mgr+0x2D4]</code>, <code>UIManager+0x13C</code>).</p>
 <p><strong>The rating screen</strong> draws the service's ranking reply as sent. Its rollup, read on nine accounts, is the combined
-rating = total assault + total defence, each the sum over <code>island</code> (Núrnen), <code>mtnpass</code> (Cirith Ungol), <code>snowMtn</code>
+rating = total assault + total defense, each the sum over <code>island</code> (Núrnen), <code>mtnpass</code> (Cirith Ungol), <code>snowMtn</code>
 (Seregost) and <code>volcano</code> (Gorgoroth), the screen's four rows; <code>desert</code> (Lithlad) is stored but counted in neither, and
 <code>minasIthil</code> reads 0. The best assault rating is the maximum over every region. A region's id on the wire is the P919
 hash of its name (6 of 6).</p>
@@ -688,7 +735,7 @@ job 1 <code>ArenaOnlineOther</code> = <code>UseOnlineArenaOpponent</code>, build
 0xE24AE0 sends a matchmaking request; its reply parser 0xF74430 reads <code>{Id, Info, Overlord}</code> or an
 error string. The opponent goes through 0xF548C0, the same orc importer as Vendetta and Conquest
 (0x1B41894), is level-checked by 0xF58EF0 and stored as <code>__online_arena_opponent__</code>. Launching
-(0xF72D30, quest enter 0xEA7700) sends the current region's Overlord, serialised by <strong>0x1BC5044</strong>(fm,
+(0xF72D30, quest enter 0xEA7700) sends the current region's Overlord, serialized by <strong>0x1BC5044</strong>(fm,
 map), the engine's orc exporter (also used for publishing, Vendetta and Conquest; see Online orcs for
 the 71 keys it writes).</p>
 <h2 id="open-questions">Open questions</h2>
