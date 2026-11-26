@@ -2,6 +2,7 @@
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
+<a href="builds.html" data-p="builds">Game builds: Steam, GOG and Microsoft Store</a>
 <a href="executable.html" data-p="executable">The executable: sections, functions, vtables, libraries</a>
 <a href="engine-core.html" data-p="engine-core">Engine core: managers, globals and key objects</a>
 <a href="threads-frame.html" class="cur" data-p="threads-frame">Threads and the frame</a>
@@ -23,11 +24,15 @@
 <a href="combat.html" data-p="combat">Combat: attacks, targeting, predicates and resources</a>
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
+<a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
 <a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
+<a href="haedirs.html" data-p="haedirs">Haedirs: towers, seeing stones and fast travel</a>
 <a href="outposts.html" data-p="outposts">Outposts, strongholds and fortress upgrades</a>
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
+<a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
 <a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="threads-and-the-frame">Threads and the frame</h1><p class=\"lede\">Every engine thread and its routine, how a thread is started, what the main thread does each frame and in what order, and how the render thread consumes the main thread&#x27;s commands, renders the scene and presents.</p>
 <h2 id="the-threads">The threads</h2>
@@ -326,12 +331,13 @@ tick; it calls, in this order (each call with the object it runs on; <code>scene
 <li><code>scene+0x7D8</code> render restart 0x4E1538</li>
 <li><code>GM+0x6C68</code> the faction system's fort-assault composition 0x1E2BC4, then <code>GM+0x6CC8</code>
    fort-assault setup 0x4F4BDC</li>
-<li><code>GM+0x6D30</code> loading progress 0x1E3E78 (it reports <code>ENTER_WORLD_HANG_DETECTED</code>)</li>
+<li><code>GM+0x6D30</code> the online manager's update 0x1E3E78 (the enter-world checks; it reports
+   <code>ENTER_WORLD_HANG_DETECTED</code>)</li>
 <li><code>scene+0x7E8</code> bundle unloads and world UI 0x16D9CC, <code>scene+0x868</code> the character bundle manager
    0x4B4FFC, <code>scene+0x7E0</code> presentation bundles 0x5211DC</li>
 <li>the collision global 0x2FD3B8, <code>scene+0x7A8</code> slow motion 0x5CF55C, <code>scene+0x7B0</code> dynamic object
    groups 0x5AC9AC, <code>scene+0x7D0</code> resurrection and ambient areas 0x6978C8</li>
-<li><code>GM+0x6D28</code> gifts and world items 0x6EBE70, <code>GM+0x6C60</code> the quest system 0x4A859C, <code>GM+0x6D98</code>
+<li><code>GM+0x6D28</code> world items, gifts and the seeing stones 0x6EBE70, <code>GM+0x6C60</code> the quest system 0x4A859C, <code>GM+0x6D98</code>
    weather 0x43C574</li>
 <li>world reset 0x1789F0C, then <code>GM+0x6D90</code> 0x179F64 (it walks a vector of objects and calls
     0x179F98 on each one whose byte <code>+0x252</code> is set)</li>
@@ -493,4 +499,4 @@ reporter 0x1C8AD0C, and every successful present increments the counter at <code
 <li>What kinds of payload the deferred-delivery buffer at <code>U+0x690</code> carries, and who records them.</li>
 <li>Whether a longer countdown written into <code>obj+0xD0</code> after an NPC's Update would thin out distant
   NPCs safely: it depends on whether the skipped systems use the frame step or elapsed time.</li>
-</ul><p class="muted">Shadow of War (Steam), game version 1.21. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
+</ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
