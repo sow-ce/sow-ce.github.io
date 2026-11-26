@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -132,7 +132,7 @@ assert hook.</p>
 <li><strong>Steamworks without Steam.</strong> It still imports four Steamworks functions,
   <code>SteamInternal_ContextInit</code>, <code>SteamInternal_CreateInterface</code>, <code>SteamAPI_GetHSteamPipe</code> and
   <code>SteamAPI_GetHSteamUser</code>, so <code>steam_api64.dll</code> ships beside it. It does not import <code>SteamAPI_Init</code>,
-  which the Steam build calls first in its initialisation (0x11798AC).</li>
+  which the Steam build calls first in its initialization (0x11798AC).</li>
 <li><strong>Exports.</strong> Steam's 286 names plus <code>GetModuleVersion</code>.</li>
 </ul>
 <p>Its section table is an ordinary one, and its names say what each section holds:</p>
@@ -354,8 +354,8 @@ and GOG.</p>
   Steam's, and those compared byte for byte (<code>Patch_DLC3</code>, 3,437,374,050 bytes, and the config list)
   are identical.</li>
 <li><strong>The Store</strong> ships 66: Steam's without those five, <code>Blade</code>, <code>Lithlad</code>, <code>Patch_04</code>,
-  <code>Patch_04_LC</code> and <code>Presentations_ptbr</code> (the package declares no Brazilian Portuguese). 37 of the 66
-  have Steam's sizes. The other 29 (<code>Patch_03</code> and <code>Patch_05</code> - <code>Patch_13</code>, <code>Patch_DLC1</code> - <code>Patch_DLC5</code>,
+  <code>Patch_04_LC</code> and <code>Presentations_ptbr</code> (the package declares no Brazilian Portuguese). Of the 66,
+  37 have Steam's sizes. The other 29 (<code>Patch_03</code> and <code>Patch_05</code> - <code>Patch_13</code>, <code>Patch_DLC1</code> - <code>Patch_DLC5</code>,
   each with its <code>_LC</code> twin except <code>Patch_12_LC</code>) carry the updates in another split: Steam's <code>Patch_09</code> is
   5,545,787,101 bytes and the Store's 546,573,005; Steam's <code>Patch_12</code> is an empty archive and the
   Store's holds 311,972,138 bytes, while the Store's <code>Patch_08</code> is the empty one.</li>
@@ -379,13 +379,13 @@ rebuild 0x1BC3AA8 has no standalone copy, only its callees.</p>
 <p><strong>The Store build is a separate compile</strong> of the same source for the Universal Windows Platform,
 linked ten minutes after Steam's. Stack frames differ (the dead-body cull's locals at <code>[rsp+0x20]</code>
 and <code>[rbp+0x67]</code> on Steam sit at <code>[rsp+0x30]</code> and <code>[rsp+0x38]</code> on the Store), so many bodies do not
-match byte for byte; the same alignment pairs about 84,000 functions and 26,000 data addresses, and
-the rest is matched by structure: strings, call-graph position, constants and the field offsets a
+match byte for byte. The same alignment pairs about 84,000 functions and 26,000 data addresses; the
+rest is matched by structure: strings, call-graph position, constants and the field offsets a
 function uses.</p>
-<p><strong>Registration tables pair exactly.</strong> Tables the engine fills at start-up keep their order and ids:
-the 110 attack-predicate registrations have the same kinds and flags in the same order on Steam and
+<p><strong>Registration tables pair exactly.</strong> Tables the engine fills at start-up keep their order and ids.
+The 110 attack-predicate registrations have the same kinds and flags in the same order on Steam and
 GOG, and the 40 animation codec evaluators of the three codec registration tables pair one to one on
-GOG and the Store by the FourCC each registration carries as an immediate (see Animation).</p>
+GOG and the Store, by the FourCC each registration carries as an immediate (see Animation).</p>
 <h3 id="object-layouts">Object layouts</h3>
 <p>Object layouts agree wherever they were compared. Read in running games with the Steam build's field
 offsets, the captain records (<code>FactionMember</code>) and characters read correctly on 542 of 542 captains in
@@ -405,7 +405,7 @@ characters on the Store.</p>
 (vt_0x1FDABD0 on Steam) has 10,223 objects on Steam and GOG and 14,809 on the Store, with the
 constructors confirming the class.</p>
 <h3 id="globals">Globals</h3>
-<p>Globals keep their order within a run of one object file's data, so neighbours keep their
+<p>Globals keep their order within a run of one object file's data, so neighbors keep their
 distances: the client shell's slot is 0x10 below the GameManager's and the main scene's 0x08 above it
 in all three builds. Across the image the shift changes from run to run, and no single offset
 converts addresses. One block of flags is laid out differently: the engine switch bytes 0x2A34D67,
@@ -521,7 +521,7 @@ converts addresses. One block of flags is laid out differently: the engine switc
 <td>0x2BF5D78</td>
 </tr>
 <tr>
-<td>armour re-dress from the items</td>
+<td>armor re-dress from the items</td>
 <td>0x61BAD4</td>
 <td>0x60FF04</td>
 <td>0x34E3980</td>
@@ -575,14 +575,14 @@ slot holds an object whose vtable pairs with Steam's <code>MainScene</code> vtab
 <li><strong>A class through its descriptor:</strong> the class-name string, the create function that references it,
   the constructor it calls, and the vtable that constructor stores at <code>[this]</code>.</li>
 <li><strong>A factory by its allocation size</strong>, and a function by the one caller both images share.</li>
-<li><strong>An import thunk is never a function's twin.</strong> Where Steam calls an initialiser, the Store build
-  calls <code>memset</code> at the same position (the initialiser itself, Steam's 0x596E84, exists in the Store
+<li><strong>An import thunk is never a function's twin.</strong> Where Steam calls an initializer, the Store build
+  calls <code>memset</code> at the same position (the initializer itself, Steam's 0x596E84, exists in the Store
   build instruction for instruction at 0x34644D0), so a pairing by call position alone names the
   <code>memset</code> import thunk.</li>
 </ul>
 <h2 id="the-platform-layer">The platform layer</h2>
 <h3 id="steam_1">Steam</h3>
-<p><code>SteamAPI_Init</code> is the first call of the game's initialisation 0x11798AC, and the storage interface
+<p><code>SteamAPI_Init</code> is the first call of the game's initialization 0x11798AC, and the storage interface
 comes from the <code>SteamClient017</code> interface's slot 17 (0x1179068). The save reader 0x119A2C8 reads
 through Steam's remote storage when the platform object's cloud check (its slot 221) passes: it asks
 <code>ISteamRemoteStorage::GetFileSize</code> (slot 15, through 0x11A6FB8), allocates that many bytes and calls
@@ -597,14 +597,14 @@ number.</p>
 <p>Addresses and offsets in this section are the Store build's own.</p>
 <ul>
 <li><strong>The app container.</strong> The game process runs with an app-container token at low integrity, inside
-  a job object. It can read its own package and the package's per-user data folders
-  (<code>%LOCALAPPDATA%\Packages\WarnerBros.Interactive.WB-Kraken_ktmk1xygcecda\LocalState</code> among them);
-  other folders of the Windows profile, such as Downloads, deny it, and it may start child processes.</li>
+  a job object. It can read its own package and the package's per-user data folders, among them
+  <code>%LOCALAPPDATA%\Packages\WarnerBros.Interactive.WB-Kraken_ktmk1xygcecda\LocalState</code>. Other folders
+  of the Windows profile, such as Downloads, deny it access. It may start child processes.</li>
 <li><strong>Xbox Live.</strong> The Store build signs the player in through the Xbox Live services library. The
-  local profile (Store vtable 0x2C411C0, reached from the client shell's user list <code>+0xEB8</code>, current
-  index <code>+0xED0</code>) holds the sign-in wrapper at <code>+0x168</code>; through it, <code>[+0x30]</code> is the services
-  library's user and <code>[+0x10]</code> that user's implementation, whose wide strings are the Xbox user id
-  (<code>+0x18</code>), the gamertag (<code>+0x38</code>) and the web account id (<code>+0x98</code>).</li>
+  local profile is reached from the client shell's user list (<code>+0xEB8</code>, current index <code>+0xED0</code>) and
+  has the Store vtable 0x2C411C0. It holds the sign-in wrapper at <code>+0x168</code>, whose <code>[+0x30]</code> is the
+  services library's user; that user's implementation, at <code>[+0x10]</code>, holds the Xbox user id (<code>+0x18</code>),
+  the gamertag (<code>+0x38</code>) and the web account id (<code>+0x98</code>) as wide strings.</li>
 <li><strong>The storage request.</strong> After the sign-in completes, the profile asks for save storage through
   0xF60720 (also reached from its vtable slot 2). Before the request proper, at 0xF60B15, it calls
   <code>StoreConfiguration.IsStoreWebAccountId</code> with the web account id and never uses the result. When
