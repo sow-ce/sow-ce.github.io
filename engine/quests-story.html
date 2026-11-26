@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" class="cur" data-p="quests-story">Quests, story and scenes</a>
@@ -44,15 +44,67 @@
 <code>:SetValue(v)</code>; the method tables are registered by 0x1B46E44, 0x1B46EF4 and 0x1B46FA4 (Set,
 SetValueByRecord, Get, GetSerializeId, TestPredicate). The getter core is 0x1E154C(store, record) and
 the bool setter 0x59A1D8(store, record, value).</p>
-<p>The variable <code>StoryState</code> carries the campaign stage (its stages, from its own description): 5
-intro, 100 Act 1, 105 after the intro of the Shadow of the Past, 110 after Gondor 1, 198 / 199 Blade
-1, 200 Act 2, 205 / 210 after the Ratbag and Carnan steps, 230 after Carnan 3, 290 during the finale,
-300 after the finale.</p>
+<p>The variable <code>StoryState</code> carries the campaign stage; its own description lists the stages:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Stage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5</td>
+<td>intro</td>
+</tr>
+<tr>
+<td>100</td>
+<td>Act 1</td>
+</tr>
+<tr>
+<td>105</td>
+<td>after the intro of the Shadow of the Past</td>
+</tr>
+<tr>
+<td>110</td>
+<td>after Gondor 1</td>
+</tr>
+<tr>
+<td>198 / 199</td>
+<td>Blade 1</td>
+</tr>
+<tr>
+<td>200</td>
+<td>Act 2</td>
+</tr>
+<tr>
+<td>205 / 210</td>
+<td>after the Ratbag and Carnan steps</td>
+</tr>
+<tr>
+<td>230</td>
+<td>after Carnan 3</td>
+</tr>
+<tr>
+<td>290</td>
+<td>during the finale</td>
+</tr>
+<tr>
+<td>300</td>
+<td>after the finale</td>
+</tr>
+</tbody>
+</table>
 <p><strong>Global-variable predicates</strong> (<code>Quest/GlobalVarPredicates</code>, 290 records) gate quests and scenes.
-The evaluator 0x1E1118: with <code>AndTest</code> (the default) every test must pass, otherwise any one; a
-bool test (0x1DFF70) passes when the value equals <code>RequiredValue</code>; an int test (0x1E1470) when
-<code>Min &lt;= value &lt;= Max</code> inclusive; a test without a variable fails; with no tests an AND passes and an
-OR fails. 330 of the 573 variables are read by no GameDB record (scripts may still read them).</p>
+In the evaluator 0x1E1118:</p>
+<ul>
+<li>with <code>AndTest</code> (the default) every test must pass, otherwise any one;</li>
+<li>a bool test (0x1DFF70) passes when the value equals <code>RequiredValue</code>, and an int test (0x1E1470)
+  when <code>Min &lt;= value &lt;= Max</code> (inclusive);</li>
+<li>a test without a variable fails;</li>
+<li>with no tests, an AND passes and an OR fails.</li>
+</ul>
+<p>Of the 573 variables, 330 are read by no GameDB record (scripts may still read them).</p>
 <p><strong>Quests.</strong> The quest system is <code>[GM+0x6C60]</code>. Its table at <code>+0x18</code>: entries of 0x40 bytes,
 count at <code>+0x08</code>, category at <code>+0x10</code>; an entry is <code>+0x00</code> the <code>Quest/Quests</code> record, <code>+0x28</code> the
 placed quest object (null when its region is not loaded) and the byte <code>+0x34</code> the completion counter.
@@ -145,7 +197,7 @@ TeleportToObject and slot 110 (<code>+0x370</code>) TeleportToPoint (coordinates
 <code>CCharacter.TeleportToLastKnowNavMeshPos</code> 0x19B7AA0 is the engine's own "unstuck", also queued.</p>
 <h2 id="story-characters">Story characters</h2>
 <p>A story character is a <code>Faction/PresetMembers</code> record (203 exist); a built orc carries it at
-<code>FM+0x190</code> (FactionMember; see The Nemesis system). Two paths build them: army initialisation
+<code>FM+0x190</code> (FactionMember; see The Nemesis system). Two paths build them: army initialization
 (<code>Faction/Definition.PresetMembers</code>, 0xFDAC54) and quests, whose <code>PrefetchPresetFactionMembers</code> are
 built fresh at the quest's LoadFactionBundles state (0x625D98 -&gt; 0x62662C -&gt; the army of the
 current region -&gt; 0x62666C). The build sequence:</p>
@@ -270,18 +322,22 @@ role list <code>GP_RoleCategory_WitchKing</code>, morale <code>Immune</code>, <c
   followers (the script plays <code>BL015_030_Sul_KillsFollowers</code> when the player's dominated orcs die to it).</li>
 <li><strong>The job that picks him</strong>, <code>Quest/Jobs/Definition::GP_Suladan</code> (<code>RequiredPresetFactionMember</code> his preset,
   <code>CanBePresetFactionMember</code> and <code>MustBeAlive</code> true, builder chance 1.0, alias <code>PS_Subject</code>, no follower filter),
-  runs twice on the story's path: Minas Ithil's <code>NazgulTime</code> adds the picker <code>Nazgul_Promote_Suladan</code> -&gt; the sim event
-  <code>Promote_Suladan_WC</code> (<code>SubjectAlwaysWins</code>): he becomes a Minas Morgul warchief; <code>StartShadowWar</code> adds
+  runs twice on the story's path. Minas Ithil's <code>NazgulTime</code> adds the picker <code>Nazgul_Promote_Suladan</code> -&gt; the sim
+  event <code>Promote_Suladan_WC</code> (<code>SubjectAlwaysWins</code>), and he becomes a Minas Morgul warchief. <code>StartShadowWar</code> adds
   <code>EjectWarchief</code> for <code>GP_Isildur</code> and <code>GP_Suladan</code>, which the finale fires right after <code>StoryState</code> is set to 300.
   So any second living member built from his preset can be taken by either step until then. In a save at StoryState
   300 the game's own copy is a "Ringwraith" at level 10, in Minas Ithil, with no row, not a follower.</li>
 </ul>
 <h2 id="betrayal-and-region-ownership">Betrayal and region ownership</h2>
-<p>The shipped data never lets the player's Overlord betray: all 18 betrayal ambush definitions list
-Overlord in <code>ExcludedRowRanks</code> (91 of 100 ambush definitions do), the betrayal job
-<code>General_Betrayal</code> picks only captain and warchief rows, and the hit-your-follower betrayal
-(<code>ImmediateBetrayal_Predicate</code>: 3 hits in 3 s, then 5 in 6 s) requires <code>IsOverlord_Not</code>. No
-Overlord-specific betrayal voice exists; a forced betrayal plays the Overlord's own personality line.
+<p>The shipped data never lets the player's Overlord betray:</p>
+<ul>
+<li>all 18 betrayal ambush definitions list Overlord in <code>ExcludedRowRanks</code> (91 of 100 ambush
+  definitions do);</li>
+<li>the betrayal job <code>General_Betrayal</code> picks only captain and warchief rows;</li>
+<li>the betrayal triggered by hitting a follower (<code>ImmediateBetrayal_Predicate</code>: 3 hits in 3 s, then 5
+  in 6 s) requires <code>IsOverlord_Not</code>.</li>
+</ul>
+<p>No Overlord-specific betrayal voice exists; a forced betrayal plays the Overlord's own personality line.
 <code>AI_BecomeHighestLevelFollower_Betrayal</code> takes a provided ambusher (<code>NeverPickAmbusherWithJob</code>),
 and <code>TriggerAmbush</code> is 0x6DDCB8.</p>
 <p><strong>Region ownership has two planes.</strong></p>
@@ -290,7 +346,7 @@ and <code>TriggerAmbush</code> is 0x6DDCB8.</p>
   returns the region's Overlord, and its wrappers (0x7D18BC, 0x1E47AC) test bit 27 of his <code>FM+0x508</code>,
   nothing else. An Overlord who betrays therefore takes the fortress with him, and a region can be held
   while its captains stay enemies (Minas Ithil was held with 21 enemy captains in one save). The
-  fort-defence script (<code>OwnerNamedOnSpawn</code>) converts any named defender, the Overlord included, to the
+  fort-defense script (<code>OwnerNamedOnSpawn</code>) converts any named defender, the Overlord included, to the
   attackers on a <code>FA_FollowerBetraysPlayer</code> event.</li>
 <li><strong>The ground.</strong> <code>Faction:GetAreaPlayerOwned</code> (0x696FF0) reads a table of 180 areas from
   0x6221F0(FS, <code>[FS+0x1B8]</code>): the object's <code>+0x78</code> holds <code>{area record, u8 owned at +8}</code> entries of 0x10
@@ -317,7 +373,7 @@ fortress quest (<code>Quest/Types.IsFortAssault</code>). <code>SetAllAreasPlayer
 so a conquest takes the fortress's areas only. Losing a fortress is the mirror: <code>_to_Sauron</code> and
 <code>DisableFortFastTravel</code> (the item off, the bool false). <code>GameData.&lt;Region&gt;Fort</code> changes the fortress at once
 (the fort's <code>FortStatusInit</code> subscribes to its change event and runs <code>FortOwnerIsPlayer</code>), while the area flag
-is what placed prefabs read when they initialise.</p>
+is what placed prefabs read when they initialize.</p>
 <h2 id="army-transforms">Army transforms</h2>
 <p><code>Faction/Transforms</code> holds four records (AddOlogs, AddBerserkers, AddDefenders, AddSpearmen). The
 game applies them once, when the Shelob mission in Cirith Ungol completes (<code>mtnpass/shelob1</code>
@@ -358,14 +414,18 @@ failed spy chief and finally the default.</p>
 <li>Object predicates bind actors mostly by <strong>inventory items</strong>, which the scene scripts hand out
   (<code>AddInventoryItem</code>).</li>
 </ul>
-<p><strong>The sequence evaluator</strong> 0x3650B4 (called per pool entry by the start routine 0x43E6B8; the
-queued message is its context: subject at <code>ctx+0x88</code>, source at <code>ctx+0x80</code>) tests, in order: the
-player predicate; the source predicate (a source, when present, must pass the object predicate and
-is bound to its actor by 0x43EE28; a failure fails the branch); the assumed-target predicate (the
-subject; none fails the branch); the player's-target predicate (0x182B5F0 -&gt; 0x523B0C(<code>[player+0x2FA0]</code>)
-= the player's own combat object's current target; null while idle, which fails the branch); and
-the AI-spawn predicate last, so a spawn anchored on the target sees a source-bound victim. Field
-reads go through a per-category slot table (<code>[base+0x2645720]</code> -&gt; static slots at 0x2892A70, 0x48
+<p><strong>The sequence evaluator</strong> 0x3650B4 is called per pool entry by the start routine 0x43E6B8, and the
+queued message is its context (subject at <code>ctx+0x88</code>, source at <code>ctx+0x80</code>). It tests, in order:</p>
+<ol>
+<li>the player predicate;</li>
+<li>the source predicate: a source, when present, must pass the object predicate and is bound to its
+   actor by 0x43EE28, and a failure fails the branch;</li>
+<li>the assumed-target predicate (the subject; none fails the branch);</li>
+<li>the player's-target predicate (0x182B5F0 -&gt; 0x523B0C(<code>[player+0x2FA0]</code>) = the player's own combat
+   object's current target; null while idle, which fails the branch);</li>
+<li>the AI-spawn predicate last, so a spawn anchored on the target sees a source-bound victim.</li>
+</ol>
+<p>Field reads go through a per-category slot table (<code>[base+0x2645720]</code> -&gt; static slots at 0x2892A70, 0x48
 bytes each). The evaluator does not check that the target is still alive: the target test reaches
 the held-item test 0x24DF7C(<code>[char+0x2348]</code>, item) through 0x365882 -&gt; 0x2F1768 -&gt; 0x275BE0, so a
 character being removed (inventory component already cleared) faults there.</p>
@@ -445,17 +505,17 @@ is a lock that was never released; the fader's state byte <code>+0x08</code> say
 </tr>
 </tbody>
 </table>
-<p>Reason 2 is held at every arrival in a region (its sites are not read), reason 4 was held for 12 s at a mission
-start until the player's build flag fell, and reason 3 for 1 to 2 s while the player scenes <code>EnterZone_Player_EVT</code>
-and <code>Resurrect_Player_EVT</code> ran; bit 11 of <code>+0xD4</code> flicks on for about a second many times a minute in ordinary
+<p>Reason 2 is held at every arrival in a region (its sites are not read). Reason 4 was held for 12 s at a mission
+start, until the player's build flag fell, and reason 3 for 1 to 2 s while the player scenes <code>EnterZone_Player_EVT</code>
+and <code>Resurrect_Player_EVT</code> ran. Bit 11 of <code>+0xD4</code> turns on for about a second, many times a minute, in ordinary
 play. A lock bit alone therefore does not mean a dark screen: the state byte beside it does. A mission start that
 takes lock 3 and whose fade-up scene never plays leaves the screen black over an Active mission (see Outposts,
 strongholds and fortress upgrades, "The assault missions").</p>
 <h3 id="execution-variants">Execution variants</h3>
-<p>Which animation a sync kill plays is a variant table: <code>AnimationData.AnimOverridePicker</code> /
-<code>AnimOverrides</code> -&gt; <code>Combat/AttackAnimOverride</code> -&gt; an entry chosen by the attacker's weapon class
-(0x2D5430, which checks the source's character type <code>[combat+0x60]</code> and weapon type per entry) -&gt;
-<code>_StructuresCombatAttackAnimOverride</code> variants (Weight, source and target animations, the source's
+<p>The animation a sync kill plays comes from a variant table. <code>AnimationData.AnimOverridePicker</code> /
+<code>AnimOverrides</code> lead to <code>Combat/AttackAnimOverride</code>, whose entry is chosen by the attacker's weapon
+class (0x2D5430, which checks the source's character type <code>[combat+0x60]</code> and weapon type per entry);
+the entry holds <code>_StructuresCombatAttackAnimOverride</code> variants (Weight, source and target animations, the source's
 weapon animation, PresentationCameraType, SeverActionTarget and <code>Pred_*</code> gates). The chooser 0x2D5828
 keeps variants with weight &gt; 0 that pass every gate, then picks at random by weight (0x1B3B90) among
 those not played within <code>RecentAttackWindow</code>; when all are recent it plays the oldest, so one passing
@@ -481,7 +541,7 @@ WeaponTypeList/Olog_All</code>), so an olog holding an orc-typed weapon item dra
 <td>follow the actor</td>
 </tr>
 <tr>
-<td>Fort defence: the Overlord arrives (<code>FortDefense_OverlordArrival_EVT</code>)</td>
+<td>Fort defense: the Overlord arrives (<code>FortDefense_OverlordArrival_EVT</code>)</td>
 <td><code>FortDefense_Overlord</code></td>
 <td>follow the actor; the voice line rides the presentation, so any orc delivers it</td>
 </tr>
@@ -517,15 +577,15 @@ WeaponTypeList/Olog_All</code>), so an olog holding an orc-typed weapon item dra
 </tr>
 </tbody>
 </table>
-<p>85 of the 860 <code>Presentation/Events</code> belong to fortress assaults and defences, with 103 relays.
+<p>Of the 860 <code>Presentation/Events</code>, 85 belong to fortress assaults and defenses, with 103 relays.
 Script keys (<code>FA_Intro_UnhideOverlord_SK</code>, <code>FD_OV_Arrive_DoorOpen_SK</code> ...) do not stop a scene;
 they are signals the siege layer's scripts listen to.</p>
-<p><strong>The keep-top execution</strong> (<code>FortAssault_Intro_Overlord_EVT</code>, sequence "Spychief Failed"): a fort
-shot and a keep shot; scale set on both actors; the attack <code>FA_OV_Spychief_Walkout_AN</code> (clip
-<code>OrcOV_Orc_Sync_Spyfail_A</code>, sync <code>Sync_FA_Intro_OV_Spychief_Fail</code>: the victim is aligned to the
-Overlord, off-navmesh movement allowed, <code>DmgForm_All_Instakill</code>); the voice
-<code>PR_FA_Intro_Ov1_SpyFound_Bundled</code>, a kill camera, the crowd speech; then <code>NextEvent</code> to the
-followers' scene. The siege script dismounts and hides the Overlord, teleports him and the spy chief
+<p><strong>The keep-top execution</strong> (<code>FortAssault_Intro_Overlord_EVT</code>, sequence "Spychief Failed") plays a
+fort shot and a keep shot, sets the scale on both actors and runs the attack
+<code>FA_OV_Spychief_Walkout_AN</code> (clip <code>OrcOV_Orc_Sync_Spyfail_A</code>, sync <code>Sync_FA_Intro_OV_Spychief_Fail</code>:
+the victim is aligned to the Overlord, off-navmesh movement allowed, <code>DmgForm_All_Instakill</code>). The
+voice <code>PR_FA_Intro_Ov1_SpyFound_Bundled</code>, a kill camera and the crowd speech follow, and <code>NextEvent</code>
+leads to the followers' scene. The siege script dismounts and hides the Overlord, teleports him and the spy chief
 to the balcony markers, gives the spy chief <code>ScriptItem_DoNotExplodeOnDeath</code> and
 <code>SetNeverSimulate(true)</code>, and queues the relay when the player arrives.</p>
 <p>Actor items and their save flags:</p>
@@ -648,14 +708,17 @@ lies 47-57 m down the hall from its fortress's throne-view camera, on its axis.<
 </tr>
 </tbody>
 </table>
-<p>Each refuses a dead NPC and creates an AI animate task. Useful smart objects:
-<code>Bip_Prisoner_Hostage_Kneeling_Looping</code> (kneel as a hostage); <code>Bip_KillHostage_Single</code> (attack type
-<code>KillHostage_Single</code>: head chop, head rip, neck break, gut stab or a shot, chosen by weapon; each a
-sync where the executioner walks to the victim, victim filter <code>P0070_BipedsExceptSlaves</code>; a Nazgul
-variant exists); <code>Picker_Bip_HostageExecute_(Un)Sheathed</code> (executions by species and weapon);
-<code>SO_OvrlrdSitting</code> (the throne), <code>SO_ChantLoop</code> (the siege chant), <code>Bip_Cheer_Looping</code>,
-<code>TrlCave_Sitting_Looping</code> and <code>DEMO_Overlord_SitChair</code>. Both characters of an execution must share a
-walkable surface.</p>
+<p>Each refuses a dead NPC and creates an AI animate task. The smart objects scenes use include:</p>
+<ul>
+<li><code>Bip_Prisoner_Hostage_Kneeling_Looping</code> (kneel as a hostage);</li>
+<li><code>Bip_KillHostage_Single</code> (attack type <code>KillHostage_Single</code>: head chop, head rip, neck break, gut stab
+  or a shot, chosen by weapon; each a sync where the executioner walks to the victim, victim filter
+  <code>P0070_BipedsExceptSlaves</code>; a Nazgul variant exists);</li>
+<li><code>Picker_Bip_HostageExecute_(Un)Sheathed</code> (executions by species and weapon);</li>
+<li><code>SO_OvrlrdSitting</code> (the throne), <code>SO_ChantLoop</code> (the siege chant), <code>Bip_Cheer_Looping</code>,
+  <code>TrlCave_Sitting_Looping</code> and <code>DEMO_Overlord_SitChair</code>.</li>
+</ul>
+<p>Both characters of an execution must share a walkable surface.</p>
 <p><code>CCharacter::AddInventoryItem</code> 0x1E6B88(char, item) gives an item (0x1C01E0(<code>[char+0x2348]</code>, item, 1)
 plus a refresh 0x114E0C8); <code>RemoveInventoryItem</code> is 0x4F12B4. <code>FM+0x48</code> is a FactionMember's spawned
 character.</p>
@@ -677,5 +740,5 @@ character.</p>
 <li>What set Núrnen's fortress areas when its Overlord became a follower without a transform being applied: the
   best candidate is the sim-event result step 0x62258C; reading the area table before and after a world load
   around a plain follower change would settle it.</li>
-<li>Where the screen fader's reasons 2, 5 and 6 are locked, and which owner flicks bit 11 of <code>+0xD4</code>.</li>
+<li>Where the screen fader's reasons 2, 5 and 6 are locked, and which owner toggles bit 11 of <code>+0xD4</code>.</li>
 </ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
