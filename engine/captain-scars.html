@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Captain scars and the return from death - Shadow of War engine reference</title><meta name="description" content="The scar system as data and code: scar setups, types, variants and the parts they hand out, AddScar and the give path&#x27;s rule that only slotless items pass their pairs on, what each part does to a captain&#x27;s armour, scar decals and their layers, limb replacements and the sever hides, and how a return from death chooses its scar."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Captain scars and the return from death - Shadow of War engine reference</title><meta name="description" content="The scar system as data and code: scar setups, types, variants and the parts they hand out, AddScar and the give path&#x27;s rule that only slotless items pass their pairs on, what each part does to a captain&#x27;s armor, scar decals and their layers, limb replacements and the sever hides, and how a return from death chooses its scar."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" class="cur" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -34,11 +34,11 @@
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
 <a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
-<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="captain-scars-and-the-return-from-death">Captain scars and the return from death</h1><p class=\"lede\">The scar system as data and code: scar setups, types, variants and the parts they hand out, AddScar and the give path&#x27;s rule that only slotless items pass their pairs on, what each part does to a captain&#x27;s armour, scar decals and their layers, limb replacements and the sever hides, and how a return from death chooses its scar.</p>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="captain-scars-and-the-return-from-death">Captain scars and the return from death</h1><p class=\"lede\">The scar system as data and code: scar setups, types, variants and the parts they hand out, AddScar and the give path&#x27;s rule that only slotless items pass their pairs on, what each part does to a captain&#x27;s armor, scar decals and their layers, limb replacements and the sever hides, and how a return from death chooses its scar.</p>
 <p>A scar is not a model: it is a set of items a scar type hands out, each painting decals on the head or
-the body, hiding part of the body or taking an armour slot. The engine gives scars through <code>AddScar</code>,
+the body, hiding part of the body or taking an armor slot. The engine gives scars through <code>AddScar</code>,
 titles, rewards, events and the return from death, and they live in the captain's item lists like any
-armour (see Captain appearance).</p>
+armor (see Captain appearance).</p>
 <h2 id="the-scar-data">The scar data</h2>
 <p>A combat tree names its setup, and the setup lists the types it may carry:</p>
 <pre><code>Combat/Tree.ScarSetup -&gt; Combat/Scar/Setup (Orc 22 entries, Olog 18)
@@ -85,27 +85,28 @@ earlier scar items, so a rebuild drops a scar given by <code>AddScar</code>.</p>
 builder becomes an instance, is equipped (0x61B868) and the give returns at once (0x355600 -&gt;
 0x3556EC), never reaching the pair loop at 0x35568D. A builderless item is filed in the look-record
 list (<code>FM+0x130</code>) when it has a <code>BodyModelChange</code> or any override, then gives each pair recursively with
-the same source; its return value is whether it was filed, whatever its pairs did. Consequences:</p>
+the same source; its return value says whether it was filed, regardless of what its pairs did. The
+consequences:</p>
 <ul>
 <li><strong>Burns never registers.</strong> All four variants of each kind are bundles with no builder and no override
-  of their own: they are filed nowhere and the give returns false although every pair landed, so
-  <code>AddScar</code> writes no <code>FM+0x370</code>, re-dresses nothing and counts no use. In one save 0 of 116
+  of their own. They are filed nowhere, and the give returns false although every pair landed, so
+  <code>AddScar</code> writes no <code>FM+0x370</code>, re-dresses nothing and counts no use. In one save, 0 of 116
   scarred captains held Burns as their type, and one carried a Burns part.</li>
-<li><strong>A slotted variant's pairs never arrive.</strong> Poison's (<code>orc_poison_head_0x</code>: the scar body,
-  <code>orc_poison_body_rightArm</code>, <code>Tumor_Chest</code>, <code>IT_empty_shoulders</code>), the orc Mauled heads'
-  (<code>Body_Scar_BodyReplacement</code> and <code>orc_multipleScars_body_01</code>, 7 decals), Sack_Head's
-  (<code>HeadReplacement_DoNotScarHead</code>) and Metal_Head's (<code>orc_metalHead_head</code>, the same decals the head
-  carries itself). 0 of 3 Poison holders carried any pair; the control, 2 of 2 olog Mauled holders, whose
-  heads are slotless, carried <code>olog_cuts_body_leftBody</code> and the scar body.</li>
+<li><strong>A slotted variant's pairs never arrive.</strong> This affects Poison (<code>orc_poison_head_0x</code>, whose pairs are
+  the scar body, <code>orc_poison_body_rightArm</code>, <code>Tumor_Chest</code> and <code>IT_empty_shoulders</code>), the orc Mauled
+  heads (<code>Body_Scar_BodyReplacement</code> and <code>orc_multipleScars_body_01</code>, 7 decals), Sack_Head
+  (<code>HeadReplacement_DoNotScarHead</code>) and Metal_Head (<code>orc_metalHead_head</code>, the same decals the head
+  carries itself). No Poison holder carried any pair (0 of 3); in the control, 2 of 2 olog Mauled
+  holders, whose heads are slotless, carried <code>olog_cuts_body_leftBody</code> and the scar body.</li>
 <li><strong>The olog Burns bundles exclude <code>Trait_Olog</code> themselves</strong>, so an olog never gets one through
   <code>AddScar</code> (their parts require <code>Trait_Olog</code>).</li>
 <li>No slot-taking part has a slotless twin carrying the same override records (0 of 29).</li>
 </ul>
-<h2 id="what-a-part-does-to-his-armour">What a part does to his armour</h2>
+<h2 id="what-a-part-does-to-his-armor">What a part does to his armor</h2>
 <table>
 <thead>
 <tr>
-<th>Part's design (armour slot)</th>
+<th>Part's design (armor slot)</th>
 <th>Parts</th>
 </tr>
 </thead>
@@ -153,13 +154,18 @@ the same source; its return value is whether it was filed, whatever its pairs di
 </tbody>
 </table>
 <p>Decal-only parts take no slot. The plain body draws no decals; its scar twin does (see Captain
-appearance, "Material overrides and decals"). So, by the items the give path really delivers: Poison,
-Branded_Slave and Mauled (and the olog Poison) bare the head; Burns bares the head and takes slots 0, 2
-and 10 on an orc and 0, 2, 3 and 10 on an olog; Metal_Head and Sack_Head replace the head; MetalJaw uses
-slot 9; ExposedBrain, DaggerHead and AxeHead are helmets; cuts, eye wounds, Facepeele and Shamed are
-decals only; the claws use the accessory slot and the curse the body.</p>
+appearance, "Material overrides and decals"). Judged by the items the give path actually delivers:</p>
+<ul>
+<li>Poison, Branded_Slave and Mauled (and the olog Poison) bare the head;</li>
+<li>Burns bares the head and takes slots 0, 2 and 10 on an orc, and 0, 2, 3 and 10 on an olog;</li>
+<li>Metal_Head and Sack_Head replace the head;</li>
+<li>MetalJaw uses slot 9;</li>
+<li>ExposedBrain, DaggerHead and AxeHead are helmets;</li>
+<li>cuts, eye wounds, Facepeele and Shamed are decals only;</li>
+<li>the claws use the accessory slot, and the curse the body.</li>
+</ul>
 <h2 id="scar-decals">Scar decals</h2>
-<p>296 of the 378 <code>Inventory/MaterialOverride</code> records carry a <code>ScarLayer</code>. Each layer is a slice of the
+<p>Of the 378 <code>Inventory/MaterialOverride</code> records, 296 carry a <code>ScarLayer</code>. Each layer is a slice of the
 scar array, and the game names each as one kind of mark:</p>
 <table>
 <thead>
@@ -281,16 +287,17 @@ scar array, and the game names each as one kind of mark:</p>
 </tr>
 </tbody>
 </table>
-<p>So the game ships one vein pattern as a decal, layer 0. The records place their decals by default, for
-example <code>orc_Serpent_Eye_L</code> at layer 26, UV (0.437, 0.854), scale 2; <code>olog_spider_Head_LEye</code> at layer
-39, (0.59, 0.83), scale 1.43; and <code>orc_Hide_Head_Eye_L</code> is a hide, <code>k_nSeverMask</code> 4 (the left eye). The
+<p>So the game ships one vein pattern as a decal, layer 0. Each record carries a default placement for its
+decal: <code>orc_Serpent_Eye_L</code>, for example, sits at layer 26, UV (0.437, 0.854), scale 2, and
+<code>olog_spider_Head_LEye</code> at layer 39, (0.59, 0.83), scale 1.43. <code>orc_Hide_Head_Eye_L</code> is a hide
+instead, <code>k_nSeverMask</code> 4 (the left eye). The
 head and body shaders draw decal slots 0-7 only, filled lowest first; a captain whose own wounds hold
 those slots draws no further decal (one olog held 12 body decal entries, stitches in slots 0-3 and cuts
 in 4-11, and anything added landed at 12 and up).</p>
 <h2 id="limbs-and-hides">Limbs and hides</h2>
 <p>Six designs replace a limb: <code>AD_L_Arm_Claw</code>, <code>AD_BigClawL_Accessory</code>, <code>AD_R_Leg_Claw</code>, <code>AD_NazgulArm</code>,
 <code>AD_Blight_Arms</code> (accessory slot 7) and <code>AD_Zog_Legs</code> (legs slot 5, one Slim piece for every body).
-Five of them share armour slot 7, so a captain holds one limb of those as an item. The orc's own limb
+Five of them share armor slot 7, so a captain can hold only one of those five limbs as an item. The orc's own limb
 is hidden by the item's <code>PassiveMaterialOverrides</code>, not by the piece: an <code>Inventory/MaterialOverride</code>
 names a model piece and a <code>SeverMask</code> over the sever groups:</p>
 <table>
@@ -336,15 +343,15 @@ the forearms with the hands (8, 32) and the upper arms (16, 64); the chest (985,
 vertices) carries no group, so no mask hides the chest. On gear the vertex alpha is the sever side of a
 limb part: shoulder pieces carry 16 on the left and 64 on the right, inside the masks of
 <code>orc_Hide_Armor_Armu_L</code> / <code>_R</code> (24 / 96), and the Easterling plate arms 8 / 32.</p>
-<p>The claw and peg-leg items hide only the body skin and its LOD; the game ships armour hides that no item
+<p>The claw and peg-leg items hide only the body skin and its LOD. The game ships armor hides that no item
 uses (<code>orc_Hide_Armor_Arml_L</code>, piece 10 mask 8; <code>orc_Hide_Armor_Legl_R</code>, piece 12 mask 2; the olog twins
-the same), so the limb's armour still draws over a claw. Two overrides on the same piece and key do not
+the same), so the limb's armor still draws over a claw. Two overrides on the same piece and key do not
 combine: only one store's value of a key is used. <code>NazgulArm</code> (orcs only) puts <code>Orc_&lt;body&gt;_NazgulArm</code> in
-the accessory slot (<code>orc_buff_nazgularm.skel</code>, <code>orc_nazgularm.mat</code> on <code>gear_alphatest_lod1</code> with its own
-512 x 512 atlas: pale skin, dark veins, rot at the hand and metal plates painted into the diffuse; its
-tint <code>Metal_Leather_FactionCloth</code> has no skin layer), with three hides (<code>orc_Hide_Body_Armu_R</code> mask 96,
-<code>orc_Hide_Armor_Arml_R</code> 32, <code>orc_Hide_Armor_Armu_R</code>) that cut the orc's own right arm and its armour
-away. It comes from <code>Role_Accursed</code>, <code>Role_Hand</code> and <code>Role_StormBringer</code>. The Blight arms (mask 120)
+the accessory slot, with three hides (<code>orc_Hide_Body_Armu_R</code> mask 96, <code>orc_Hide_Armor_Arml_R</code> 32,
+<code>orc_Hide_Armor_Armu_R</code>) that cut the orc's own right arm and its armor away. The piece uses
+<code>orc_buff_nazgularm.skel</code> and <code>orc_nazgularm.mat</code> on <code>gear_alphatest_lod1</code>, with its own 512 x 512
+atlas: pale skin, dark veins, rot at the hand and metal plates painted into the diffuse; its tint
+<code>Metal_Leather_FactionCloth</code> has no skin layer. It comes from <code>Role_Accursed</code>, <code>Role_Hand</code> and <code>Role_StormBringer</code>. The Blight arms (mask 120)
 come with <code>IT_empty_arms</code> (<code>Role_Blight</code>, <code>PlagueBringer</code>) and <code>Blight_Shoulders</code>.</p>
 <p>Replace values: <code>L_Arm_Claw</code> 20, <code>R_Leg_Claw</code> 20, <code>BigClawL</code> 10, <code>NazgulArm</code> 0, <code>Blight_Arms</code>,
 <code>IT_empty_arms</code>, <code>Blight_Shoulders</code> and <code>Zog_Legs</code> 10. Of the 8 limb items only <code>L_Arm_Claw</code>
