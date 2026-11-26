@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" class="cur" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -176,7 +176,7 @@ order, and the cloth dispatcher binds them to the compute shader's resources in 
 <li><strong>The frame stencil.</strong> n0 - n3 are not constraints. The solver rebuilds each particle's normal as
   normalize(a × c + c × b + b × d + d × a), where a - d are the vectors to n0, n1, n2 and n3 (the fan runs
   n0, n2, n1, n3). The tangent is normalize(P[n0] − P[n1]). A slot that names the particle itself contributes
-  nothing, which is how a particle with fewer neighbours is padded (10,409 of 73,580 slots).</li>
+  nothing, which is how a particle with fewer neighbors is padded (10,409 of 73,580 slots).</li>
 <li><strong>Constraints.</strong> On all 44,937 edges, wi = invMass_i / (invMass_i + invMass_j), wi + wj = 1, and rest equals
   the exact rest distance. No edge joins two pinned particles.</li>
 <li><strong>Batches.</strong> The eight counts add up to the edge count, and no particle appears twice inside one batch (118
@@ -395,14 +395,14 @@ transform and capsule counts come from the cloth file's first two blob bytes.</p
 <p>The cloth materials use the <code>gpu_cloth</code> shader trees (<code>solid\gpu_cloth\gpuclothspecalphatestnocul.fxo</code>,
 <code>gpuclothspecalphatestnocultintsever.fxo</code>) or the wraith <code>*_gpucloth</code> trees. Every vertex program of the first
 (15 of 15) reads <code>k_ClothPosBuffer</code>, a 48-byte structured buffer indexed by the vertex id, holding position,
-velocity, normal and tangent. Texture coordinates and colour still come from the mesh. The previous-frame
+velocity, normal and tangent. Texture coordinates and color still come from the mesh. The previous-frame
 position for motion vectors is position − velocity · cb0[26].z, and <code>k_ClothInvTransform1</code> - <code>3</code> map the
 result back.</p>
 <h2 id="havok-cloth">Havok Cloth</h2>
 <p>Havok Cloth data sits in the skeleton's <code>0xDCDCFF04</code> block as Havok tagfiles (<code>hclClothData</code>,
 <code>hclSimClothData</code>, skin and mesh-deform operators, capsule colliders, bone-plane constraints); its setup
-classes carry the 2015.1 suffix (<code>hctClothSetup20151Options</code>). 153 of the 24,378 skeleton sections carry
-some. It works in metres, and it reads the wearer's bones through the same piece-to-rig table as the mesh. The
+classes carry the 2015.1 suffix (<code>hctClothSetup20151Options</code>). Of the 24,378 skeleton sections, 153 carry
+some. It works in meters, and it reads the wearer's bones through the same piece-to-rig table as the mesh. The
 <code>Cloth.*</code> console variables (<code>MaxTimeStep</code>, <code>SettleNumSteps</code>, <code>RunAsTask</code>, <code>ScaleUpBoneCloth</code> and others) and
 the <code>hcl*Task</code> classes belong to it, not to the GPU cloth.</p>
 <h2 id="open-questions">Open questions</h2>
