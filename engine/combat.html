@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Combat: attacks, targeting, predicates and resources - Shadow of War engine reference</title><meta name="description" content="How combat is decided and executed: combat objects, the compiled attack cache and its 105 predicate evaluators, targeting and the three copies of a lock range, the player&#x27;s input tree and aerial moves, ranged shots, cooldowns, Might and ammunition, health and damage (the apply path, the pushed health bar, the evaluator&#x27;s floor, the hit dispatcher and its friendly-fire gate, damage formulas and their cache), weapon elements, procs and slow motion, weapon-buff effects, capture points, the fight circle that decides who attacks, combat actions and states, area attacks, the player&#x27;s execution companions, struggles and hit categories."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Combat: attacks, targeting, predicates and resources - Shadow of War engine reference</title><meta name="description" content="How combat is decided and executed: combat objects; the compiled attack cache and its 105 predicate evaluators; targeting and the three copies of a lock range; the player&#x27;s input tree and aerial moves; ranged shots; cooldowns, Might and ammunition; health and damage (the apply path, the pushed health bar, the evaluator&#x27;s floor, the hit dispatcher and its friendly-fire gate, damage formulas and their cache); weapon elements, procs and slow motion; weapon-buff effects; capture points; the fight circle that decides who attacks; combat actions and states; area attacks; the player&#x27;s execution companions; struggles and hit categories."><link rel="stylesheet" href="engine.css"></head><body><div class="wrap"><nav class="side"><a href="index.html">Contents and search</a>
 <a href="https://sow-ce.github.io/">Home</a>
 <h2>Foundations</h2>
 <a href="overview.html" data-p="overview">About this reference</a>
@@ -15,7 +15,7 @@
 <a href="rendering.html" data-p="rendering">Rendering: the D3D11 layer, passes, shaders and lighting</a>
 <a href="vfx.html" data-p="vfx">Visual effects: ClientFX data and runtime</a>
 <a href="audio-video.html" data-p="audio-video">Audio (Wwise) and video (Bink)</a>
-<a href="animation.html" data-p="animation">Animation: clips, behaviour graphs and the runtime</a>
+<a href="animation.html" data-p="animation">Animation: clips, behavior graphs and the runtime</a>
 <a href="physics.html" data-p="physics">Physics: Havok integration</a>
 <a href="cloth.html" data-p="cloth">Cloth: GPU cloth and Havok Cloth</a>
 <h2>Gameplay systems</h2>
@@ -25,7 +25,7 @@
 <a href="items.html" data-p="items">Items: inventory, gear, affixes, gems and skills</a>
 <a href="nemesis.html" data-p="nemesis">The Nemesis system: factions, captains and the army</a>
 <a href="nemesis-forge.html" data-p="nemesis-forge">The Nemesis Forge: imported captains</a>
-<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armour, colour and scars</a>
+<a href="captain-appearance.html" data-p="captain-appearance">Captain appearance: bodies, armor, color and scars</a>
 <a href="captain-scars.html" data-p="captain-scars">Captain scars and the return from death</a>
 <a href="captain-traits.html" data-p="captain-traits">Captain traits, classes and personalities</a>
 <a href="quests-story.html" data-p="quests-story">Quests, story and scenes</a>
@@ -34,7 +34,11 @@
 <a href="ui.html" data-p="ui">User interface: Scaleform, menus and the debug menu</a>
 <a href="quest-start-screen.html" data-p="quest-start-screen">The mission start screen</a>
 <a href="saves-online.html" data-p="saves-online">Saves, the store and the network layer</a>
-<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="combat-attacks-targeting-predicates-and-resources">Combat: attacks, targeting, predicates and resources</h1><p class=\"lede\">How combat is decided and executed: combat objects, the compiled attack cache and its 105 predicate evaluators, targeting and the three copies of a lock range, the player&#x27;s input tree and aerial moves, ranged shots, cooldowns, Might and ammunition, health and damage (the apply path, the pushed health bar, the evaluator&#x27;s floor, the hit dispatcher and its friendly-fire gate, damage formulas and their cache), weapon elements, procs and slow motion, weapon-buff effects, capture points, the fight circle that decides who attacks, combat actions and states, area attacks, the player&#x27;s execution companions, struggles and hit categories.</p>
+<a href="shadow-of-mordor.html" data-p="shadow-of-mordor">Comparison with Shadow of Mordor</a></nav><main><h1 id="combat-attacks-targeting-predicates-and-resources">Combat: attacks, targeting, predicates and resources</h1><p class=\"lede\">How combat is decided and executed: combat objects; the compiled attack cache and its 105 predicate evaluators; targeting and the three copies of a lock range; the player&#x27;s input tree and aerial moves; ranged shots; cooldowns, Might and ammunition; health and damage (the apply path, the pushed health bar, the evaluator&#x27;s floor, the hit dispatcher and its friendly-fire gate, damage formulas and their cache); weapon elements, procs and slow motion; weapon-buff effects; capture points; the fight circle that decides who attacks; combat actions and states; area attacks; the player&#x27;s execution companions; struggles and hit categories.</p>
+<p>Every combatant carries a combat object, and every attack is a record whose compiled predicates decide when it may
+run. This chapter follows an attack from those records through targeting, input and damage, then covers resources,
+weapon elements and slow motion, capture points, the fight circle, combat states and actions, area attacks, the
+player's execution companions, struggles and hit categories.</p>
 <h2 id="combat-objects">Combat objects</h2>
 <p>Every combatant has a <strong>combat object</strong> (vt_0x1F995E0) at <code>CCharacter+0x26A8</code> (mirrored at
 <code>+0x2978</code>):</p>
@@ -132,9 +136,9 @@
 </tr>
 </tbody>
 </table>
-<p><code>CCharacter+0x2410</code> (mirror <code>+0x2EF0</code>) is the character's <code>Character/Alignments</code> record (52:
-<code>Player</code>, <code>PlayerFollower</code>, <code>BuddyFollower</code>, <code>Orc_FactionA</code>, <code>Troll_Cave</code>, <code>Warg_Brown</code> ...) and
-<code>+0x23B8</code> its follower byte. Dead characters leave the spawn manager's array, so its count is a count
+<p><code>CCharacter+0x2410</code> (mirror <code>+0x2EF0</code>) is the character's <code>Character/Alignments</code> record (one of 52, among them
+<code>Player</code>, <code>PlayerFollower</code>, <code>BuddyFollower</code>, <code>Orc_FactionA</code>, <code>Troll_Cave</code> and <code>Warg_Brown</code>), and
+<code>+0x23B8</code> is its follower byte. Dead characters leave the spawn manager's array, so its count is a count
 of the living. Destructible props (for example <code>Env_Destroy_FirePit</code>) are combat objects too and can
 be targeted.</p>
 <p>The player's combat component is <code>[player+0x2FA0]</code> (<code>comp+0x08</code> = the player). It holds FreeAim at
@@ -167,19 +171,19 @@ teleport, translation scaling, item slot to draw, ranged overrides) and <code>At
 </tr>
 </tbody>
 </table>
-<p>An <strong>attack entry</strong>: <code>+0x00</code> the <code>Combat/Attack</code> record, <code>+0x18</code> the damage formula (a plain pointer
-to a <code>Combat/Stat/Formula/Damage</code> record: <code>DmgForm_All_Instakill</code> 1,681 entries, <code>DmgForm_ZERO</code>
-1,563, <code>DmgForm_AI_Melee</code> 809; null in 8,879 attacks that ship no formula), and <code>+0x40 .. +0x48</code> the
-compiled predicate pairs <code>{evaluator, record}</code> (0x10 each). A change to a predicate record's value is
+<p>An <strong>attack entry</strong> holds <code>+0x00</code> the <code>Combat/Attack</code> record, <code>+0x18</code> the damage formula and
+<code>+0x40 .. +0x48</code> the compiled predicate pairs <code>{evaluator, record}</code> (0x10 each). The damage formula is a plain
+pointer to a <code>Combat/Stat/Formula/Damage</code> record (<code>DmgForm_All_Instakill</code> in 1,681 entries, <code>DmgForm_ZERO</code> in
+1,563, <code>DmgForm_AI_Melee</code> in 809); it is null in the 8,879 attacks that ship no formula. A change to a predicate record's value is
 seen at the next test; linking an attack to a different predicate record takes effect only when the
 compiled pair changes too.</p>
-<p><strong>A compiled pool entry</strong> (<code>[[GM+0x6CD8]+0x8088] + recordIndex * 0x48</code>, data at <code>+0x08</code>): <code>+0x00</code>
-an attack-type restriction and its vector (0x3FC280), <code>+0x20</code> a combat-state restriction and its
+<p><strong>A compiled pool entry</strong> (<code>[[GM+0x6CD8]+0x8088] + recordIndex * 0x48</code>, data at <code>+0x08</code>) holds at <code>+0x00</code>
+an attack-type restriction and its vector (0x3FC280), and at <code>+0x20</code> a combat-state restriction and its
 vector (0x3FC254, tested against the current state <code>[[0x2F5288(component)]+0x2F0]+0x58</code>). They are
 compiled at load from the pool's original attacks.</p>
 <h2 id="attack-predicates">Attack predicates</h2>
 <p><code>Combat/AttackPredicates/*</code> holds 124 predicate types with 9,311 records (one or two fields each;
-<code>PredicateAttackTypeIncluded</code> alone has 5,806). 14,593 attacks carry predicates, compiled into 95,979
+<code>PredicateAttackTypeIncluded</code> alone has 5,806). In all, 14,593 attacks carry predicates, compiled into 95,979
 pairs. <strong>The 105 predicate types in use map one to one onto 105 evaluator functions</strong>, a contiguous
 library at 0xECF9E0 - 0xEE4FB0; the other 19 types are used by no attack. An evaluator takes the
 record in <code>rcx</code> and the test context in <code>rdx</code>. By number of uses:</p>
@@ -724,21 +728,21 @@ record in <code>rcx</code> and the test context in <code>rdx</code>. By number o
 <p>A lock range exists in three copies, and only the third gates acquisition:</p>
 <ol>
 <li>the GameDB value <code>Combat/Target.WeightData.DistanceRange</code> (a pair in the shared float pool);</li>
-<li>the compiled <code>Combat/Target</code> entry in the targeting cache (compiler 0x1C0B634): <code>+0x0C</code> maximum
-   range, <code>+0x14</code> maximum range without input, <code>+0x168</code> maximum angle, <code>+0x20</code> / <code>+0x24</code> screen width
-   and height, compiled boolean pairs <code>{present, value}</code> from <code>+0x194</code>; <code>+0x190</code> holds
-   <code>MaxDistance_PlayerAlly</code> x 100 (the field is authored in metres) and the byte <code>+0x1B5</code> enables it;
-   <code>+0x195</code> RequireLOS; <code>+0x1A0</code> the outside-screen test (off for every player selector);
+<li>the compiled <code>Combat/Target</code> entry in the targeting cache (compiler 0x1C0B634), which holds <code>+0x0C</code> the
+   maximum range, <code>+0x14</code> the maximum range without input, <code>+0x168</code> the maximum angle, <code>+0x20</code> / <code>+0x24</code> the
+   screen width and height, and compiled boolean pairs <code>{present, value}</code> from <code>+0x194</code>. <code>+0x190</code> holds
+   <code>MaxDistance_PlayerAlly</code> x 100 (the field is authored in meters), and the byte <code>+0x1B5</code> enables it;
+   <code>+0x195</code> is RequireLOS, <code>+0x1A0</code> the outside-screen test (off for every player selector) and
    <code>+0x1B0</code> / <code>+0x1B1</code> RequireStraightPath;</li>
 <li><strong>the player's live targeters</strong>: the container at <code>comp+0x5C0</code> keeps a pool at <code>+0x18 / +0x20</code> of
    0x80-byte targeters (vt_0x1DB1040; <code>+0x28</code> the current target, <code>+0x30</code> the <code>Combat/Target</code>
    record, <strong><code>+0x38</code> the range</strong>; 114 in the player's pool) and lists at <code>+0x48 / +0x50</code> (0x20-byte
    <code>{key, begin, end, capacity}</code>, 192 lists keyed by candidate character type). Every list is sorted
    by range, longest first, and acquisition (0x18D06C) returns at the first targeter whose range is
-   below the candidate's distance; keeping a target (0x18CDD4) checks <code>+0x38</code> too. Membership in a
+   below the candidate's distance. Keeping a target (0x18CDD4) checks <code>+0x38</code> too. Membership in a
    list is the type filter.</li>
 </ol>
-<p>The candidate filter 0x18626C has 38 logged rejection reasons (<code>[COMBAT|TARGET]</code>); a follower is
+<p>The candidate filter 0x18626C has 38 logged rejection reasons (<code>[COMBAT|TARGET]</code>). A follower is
 rejected (0x366B88) when the ally byte is set and its distance exceeds the ally maximum. The scorer
 is 0x30B2D4. <code>RequireStraightPath</code> rejects any target without a straight walkable path (sword
 selectors set it, the bow does not), which excludes enemies below a rooftop. The compiled ally byte
@@ -747,60 +751,60 @@ any distance".</p>
 <h2 id="the-player-s-input-tree">The player's input tree</h2>
 <p><code>Combat/Node</code> = {Type, Predicate -&gt; a primary {Input, Chord}, Pools[] -&gt; <code>Combat/Pool.Attacks[]</code>,
 Links[], RequiredTransitionType, KBMNode}. 0x310C00(node, isGamepad) returns the node's keyboard and
-mouse variant (KBMNode, field 16; node slot array at 0x2650EE0) and its six callers resolve every node
+mouse variant (KBMNode, field 16; node slot array at 0x2650EE0), and its six callers resolve every node
 of a list through it. The player's tree (<code>Combat/Tree::Player_Character</code>) has 146 roots (192 <code>PC_*</code>
 nodes in all).</p>
 <ul>
-<li><strong>Input records:</strong> the <code>ActionID</code> cell is the action id itself (Light 0xA247C387, Heavy ...388,
-  Stun ...389, Dash ...38A; keyboard-only actions 0xE8C05C0x); <code>InputType</code> 0 press, 1 release, 2 held,
-  3 held for the previous node. <code>GameChanger_WraithDash_HeldPrev</code> (Light + mode 3) is a shipped
+<li><strong>Input records.</strong> The <code>ActionID</code> cell is the action id itself (Light 0xA247C387, Heavy ...388,
+  Stun ...389, Dash ...38A; keyboard-only actions 0xE8C05C0x). <code>InputType</code> is 0 for press, 1 release, 2 held
+  and 3 held for the previous node. <code>GameChanger_WraithDash_HeldPrev</code> (Light + mode 3) is a shipped
   hold-to-chain.</li>
-<li><strong>Holds:</strong> <code>MinHeldDuration</code> (0x6FEF14) passes on a released button only when the release time
-  equals the current time, which never happens in practice; every shipped hold therefore uses
+<li><strong>Holds.</strong> <code>MinHeldDuration</code> (0x6FEF14) passes on a released button only when the release time
+  equals the current time, which never happens in practice. Every shipped hold therefore uses
   InputType 2 plus <code>MinHeldDuration</code> (for example <code>Tackle_Attempt</code>, <code>Riding_KillMount</code>). An input
   entry is <code>{u32 press, u32 release, u16 action}</code> (0x19B488).</li>
 <li>The input-driven node runner 0x30FD80 is reached only from the player tick (0x162560 &lt;-
   0x43B8F4); AI combat has no virtual controller. It picks an attack with <code>PickAttack</code> 0x275730,
-  which runs <code>PoolCheck</code> 0x3FBA8C on each of the node's pools: the pool's predicate
-  (<code>_StructuresCombatPoolPredicate</code>) can require an item - typically a skill item - tested by
-  0x276E1C(inventory, list), and a pool that fails is rejected before any attack predicate runs (a
-  null item skips the test). The pool rejection log 0x19C83AC is an empty <code>ret</code> in the shipped build.</li>
+  which runs <code>PoolCheck</code> 0x3FBA8C on each of the node's pools. The pool's predicate
+  (<code>_StructuresCombatPoolPredicate</code>) can require an item, typically a skill item, tested by
+  0x276E1C(inventory, list); a pool that fails is rejected before any attack predicate runs, and a
+  null item skips the test. The pool rejection log 0x19C83AC is an empty <code>ret</code> in the shipped build.</li>
 <li>AI attacks carry no target selector (<code>AttackData.Target</code> is null): an AI's target comes from its
   perception and threat picker.</li>
 </ul>
-<p><strong>Synchronised attacks.</strong> <code>Combat/Sync.InitialAlignment</code> decides who moves: 0 moves the attacker to
-the victim (EnableAlignment), 1 with <code>TeleportDuringInterpolation</code> moves the victim to the attacker.
-Any synchronised kill therefore closes the distance itself. <code>AttackData.Teleport</code> -&gt;
+<p><strong>Synchronized attacks.</strong> <code>Combat/Sync.InitialAlignment</code> decides who moves: 0 moves the attacker to
+the victim (EnableAlignment), and 1 with <code>TeleportDuringInterpolation</code> moves the victim to the attacker.
+Any synchronized kill therefore closes the distance itself. <code>AttackData.Teleport</code> -&gt;
 <code>Combat/AttackTeleport</code> (11 records) teleports at attack start without a sync. <code>AttackData.AOE</code> -&gt;
-<code>Combat/AOE</code> spawns an area attack (1,840 attacks set it); <code>AttackData.AOEOnStart</code> fires it at the
-start, otherwise only a clip event (such as <code>PL_WraithAOE</code>) fires it. The Shadow Strike kills already
+<code>Combat/AOE</code> spawns an area attack (1,840 attacks set it). <code>AttackData.AOEOnStart</code> fires it at the
+start; otherwise only a clip event (such as <code>PL_WraithAOE</code>) fires it. The Shadow Strike kills already
 sever the head (<code>SeverActionTarget</code> Head, <code>SeverTargetOnKill</code>). A swapped animation changes what
 plays; the attack record keeps what it applies (its categories and actions).</p>
 <p><strong>Aerial combat is ordinary data.</strong> The fell beast's death-from-above moves are combat nodes and pools like any
-other (<code>AI_FellBeast_DFA_Shallow_*</code>, <code>_Steep_*</code> and <code>_Troll_*</code>, each with <code>Into</code>, <code>Attack</code> and <code>Out</code>), the player's
-gliding is a set of input predicates (<code>Combat/Predicates/Input::DLC4_Gliding_Start</code>, <code>_Exit</code>, <code>_DFA</code>, <code>_Ranged</code> ...)
-and behaviour-state lists (<code>PC_Gliding</code>, <code>DLC4_Gliding</code>, <code>DLC4_GlidingRanged</code>, <code>Aerial_Ranged</code>,
+other (<code>AI_FellBeast_DFA_Shallow_*</code>, <code>_Steep_*</code> and <code>_Troll_*</code>, each with <code>Into</code>, <code>Attack</code> and <code>Out</code>). The player's
+gliding is a set of input predicates (for example <code>Combat/Predicates/Input::DLC4_Gliding_Start</code>, <code>_Exit</code>, <code>_DFA</code> and
+<code>_Ranged</code>) and behavior-state lists (<code>PC_Gliding</code>, <code>DLC4_Gliding</code>, <code>DLC4_GlidingRanged</code>, <code>Aerial_Ranged</code>,
 <code>AerialRanged_Active</code>), and aerial archery's animations are the player graph's <code>PL_AerialRanged_*</code> nodes. The aerial
-bow mode <code>PC_Ranged_Sniper_Aerial</code> is chosen only while the player's behaviour states include falling, jumping,
+bow mode <code>PC_Ranged_Sniper_Aerial</code> is chosen only while the player's behavior states include falling, jumping,
 wall-jumping or gliding (see Characters, the player and the camera, for the ground predicate every ground shot
 carries).</p>
 <h2 id="ranged-attacks">Ranged attacks</h2>
-<p>The attack's target comes from 0x76A890(component, attack) in two lanes: when the attack's selector
-equals FreeAim's <code>+0x88</code> (the draw mode's <code>TargetOverride</code>), FreeAim's ray-cast targeter <code>[fa+0xB0]</code>
-- what the reticle is on; otherwise the selector's live targeter in <code>comp+0x5C0</code> - the lock. A
-targeted projectile never ray-casts: the shot (0x4CDE54 -&gt; 0x2E8994 -&gt; 0xFC15A0) and the projectile
+<p>The attack's target comes from 0x76A890(component, attack) in two lanes. When the attack's selector
+equals FreeAim's <code>+0x88</code> (the draw mode's <code>TargetOverride</code>), the target is FreeAim's ray-cast targeter
+<code>[fa+0xB0]</code>, which is what the reticle is on; otherwise it is the selector's live targeter in <code>comp+0x5C0</code>, the
+lock. A targeted projectile never ray-casts: the shot (0x4CDE54 -&gt; 0x2E8994 -&gt; 0xFC15A0) and the projectile
 update (0x116E64 -&gt; 0x11734B) find the target alive (0x1A4F2F0) and apply the hit at its node
 (0x4EBED0), so walls do not stop a locked arrow.</p>
-<p>The reticle colour is FreeAim's state byte <code>fa+0x4CA</code>, set by 0x1A0EE8 from the target in FreeAim's
-weak handle (<code>fa+0x30</code>): 0 hidden, 1 nothing, 2 neutral, 3 hostile, 4 ally, 5 a world point; 0x114C588
-passes it to the HUD crosshair. Each frame 0x379578 ray-casts: a character hit goes to
-0xFA640 -&gt; 0xFA788(fa, player, combat object, hit), anything else to 0xFA788(fa, player, 0, 0), which
+<p>The reticle color is FreeAim's state byte <code>fa+0x4CA</code>, set by 0x1A0EE8 from the target in FreeAim's
+weak handle (<code>fa+0x30</code>): 0 hidden, 1 nothing, 2 neutral, 3 hostile, 4 ally and 5 a world point. 0x114C588
+passes it to the HUD crosshair. Each frame 0x379578 ray-casts. A character hit goes to
+0xFA640 -&gt; 0xFA788(fa, player, combat object, hit), and anything else to 0xFA788(fa, player, 0, 0), which
 clears FreeAim's targeter through its vf1 (0x18D298). The draw-snap aim assist (0x19F9E0 -&gt; 0x19E73C,
 <code>CP_RangedAutoTarget</code>) does not steer the shot and expires after about 0.4 s.</p>
 <h2 id="resources">Resources</h2>
 <p><strong>Cooldowns are one latched end time.</strong> <code>CheckCooldown</code> 0x493320 returns <code>[obj+0x10] - now</code>,
 floored at 0. <code>StartCooldown</code> 0x1A78B34 evaluates <code>MinTime</code> and <code>MaxTime</code> through the stat-value
-evaluator 0x30F42C when the cooldown starts, takes MinTime plus a random fraction of the difference
+evaluator 0x30F42C when the cooldown starts. It takes MinTime plus a random fraction of the difference
 (0x1B3C6C; MinTime alone when MaxTime is not larger), multiplies by 1000.0 (the float at 0x202E644) and
 stores <code>now + milliseconds</code>, so a duration change applies at the next use. The time source 0xF23310
 reads one of four of the engine's clocks chosen by <code>Combat/Cooldown.TimerType</code> (<code>obj+0x14</code>; 0 the
@@ -808,135 +812,144 @@ unscaled clock 0x2702550, 1 the world 0x2702598, 2 the real-time clock 0x2702590
 0x2702548; see Engine core). Every combat character owns a cooldown table at
 <code>[combat+0x5A0]</code>: <code>+0x00</code> slots (stride 0x20: <code>+0x00</code> key, <code>+0x08</code> record, <code>+0x18</code> the u32 end
 time, <code>+0x1C</code> the clock id), <code>+0x08</code> count (356 = the whole <code>Combat/Cooldown</code> category), <code>+0x10</code> the
-category; the start path 0xF13920 indexes it by record index. Of the 356 cooldown records 342 use a
-raw value, 8 a formula (the summon wheel: mounts and followers, through <code>MountCoolDown</code> and
+category. The start path 0xF13920 indexes it by record index. Of the 356 cooldown records, 342 use a
+raw value, 8 a formula (the summon wheel's mounts and followers, through <code>MountCoolDown</code> and
 <code>FollowerCoolDown</code>) and 6 a variable.</p>
 <p><strong>Might</strong> is a charge meter at <code>combat+0x338</code> (vt_0x1DAA9C0: owner <code>+0x20</code>, value <code>+0x2D0</code>, maximum
-<code>+0x3A8</code> = 200, two chunks of <code>+0x348</code> = 100); Wrath is the same class at <code>combat+0x340</code>. A hit's
+<code>+0x3A8</code> = 200, two chunks of <code>+0x348</code> = 100). Wrath is the same class at <code>combat+0x340</code>. A hit's
 gain is not a <code>Combat/ResourceGain</code> record: <code>IncrementHitCounter</code> 0x2DC668 -&gt; <code>AddCharge</code> 0xFFA8C
-takes the amount from a table compiled into the meter at <code>+0x28 / +0x30</code> (the player's: 62 entries of
-0x18 bytes, <code>{Combat/Category, item list, stat value option}</code>, first category match wins, the last
-entry is the default). <code>Combat/ResourceGain</code> is the other path (<code>ApplyResourceChange</code> 0x59CD94, used
+takes the amount from a table compiled into the meter at <code>+0x28 / +0x30</code>. The player's table has 62 entries of
+0x18 bytes, <code>{Combat/Category, item list, stat value option}</code>; the first category match wins, and the last
+entry is the default. <code>Combat/ResourceGain</code> is the other path (<code>ApplyResourceChange</code> 0x59CD94, used
 by executions and abilities). <code>FillToMax</code> 0x19D37B0(combat object) -&gt; <code>SetValue</code> 0x44FCD0 fills the
-meter; its only caller is the buff system (<code>Combat/Buffs.FillChargeMeterOnRemoveBuff</code>, 0x451EF0), and
+meter. Its only caller is the buff system (<code>Combat/Buffs.FillChargeMeterOnRemoveBuff</code>, 0x451EF0), and
 the path allocates from the engine heap, so it belongs on the main thread.</p>
-<p><strong>Ammunition</strong> is the object at <code>combat+0x2F8</code> (player only): <code>+0x20</code> owner, <code>+0x28</code> six slots of
-0x90 for ammunition types 2-7 (slot 0 = arrows; <code>AddResource</code> 0x19D24F8): slot <code>+0x54</code> maximum,
-<code>+0x60</code> / <code>+0x68</code> / <code>+0x70</code> the stat variables <code>Int_AmmoCount</code>, <code>Int_AmmoCount1..6</code> and
-<code>HasFullAmmo</code>, <code>+0x88</code> the stored count, <code>+0x8C</code> HUD slot; <code>+0x38C</code> the reference count of the
-<code>Combat/Buffs.UnlimitedAmmo</code> buff. The setter 0xEE9D40(slot, count, owner) clamps to the maximum,
-returns when the count equals the stored one, stores it, updates the stat variables (0xEE9FC0), the
-quiver visual (0xEE9F20) and the HUD. Refills: 0xEE5BE0 (all) and 0xEE5CD0 (one type), both gated on
+<p><strong>Ammunition</strong> is the object at <code>combat+0x2F8</code> (player only). It holds the owner at <code>+0x20</code>, six slots of
+0x90 at <code>+0x28</code> for ammunition types 2-7 (slot 0 = arrows; <code>AddResource</code> 0x19D24F8) and, at <code>+0x38C</code>, the reference
+count of the <code>Combat/Buffs.UnlimitedAmmo</code> buff. A slot holds the maximum at <code>+0x54</code>, the stat variables
+<code>Int_AmmoCount</code>, <code>Int_AmmoCount1..6</code> and <code>HasFullAmmo</code> at <code>+0x60</code> / <code>+0x68</code> / <code>+0x70</code>, the stored count at <code>+0x88</code>
+and the HUD slot at <code>+0x8C</code>. The setter 0xEE9D40(slot, count, owner) clamps to the maximum,
+returns when the count equals the stored one, stores it, and updates the stat variables (0xEE9FC0), the
+quiver visual (0xEE9F20) and the HUD. The refills are 0xEE5BE0 (all) and 0xEE5CD0 (one type), both gated on
 <code>GameModes.CanRefillAmmo</code>, and 0xEE5CB0 (ungated). The ammunition tick 0x45144C refills every frame
-when the byte <code>[base+0x2A34D6C]</code> is set or the unlimited-ammo buff is active: the engine's own
+when the byte <code>[base+0x2A34D6C]</code> is set or the unlimited-ammo buff is active. That byte is the engine's own
 infinite-ammunition switch, written nowhere in the shipped code. Arrows are spent by
 <code>Combat/ResourceGain</code> records with a negative additive value (<code>SniperShot_Spend</code>,
 <code>NormalShot_Spend</code>, <code>ShadowStrike_ToNav_Spend</code> -1, <code>ShadowStep_Spend</code> -2, <code>AllAmmo_Spend</code> -50).</p>
 <h2 id="health-and-damage">Health and damage</h2>
-<p><strong>The damage info</strong> passed with a hit: <code>+0x20</code> the attacker's combat object (0 when there is none), <code>+0x28</code> the
-damage, <code>+0x30</code> the attack or source. <code>ApplyDamageInternal</code> 0x2E4BE8(combat, info) reads <code>[[info+0x20]+0x40]</code> (the
+<p><strong>The damage info</strong> passed with a hit holds <code>+0x20</code> the attacker's combat object (0 when there is none), <code>+0x28</code>
+the damage and <code>+0x30</code> the attack or source. <code>ApplyDamageInternal</code> 0x2E4BE8(combat, info) reads <code>[[info+0x20]+0x40]</code> (the
 attacker's player slot) before <code>Faction::TriggerAmbush</code> (0x2E4E3A) and compares it with the target's mount (0x2E4C41).</p>
-<p><strong><code>ApplyDamageInternal</code></strong>, read whole (163 instructions): a dead target returns at once; a mounted target can pass the
-damage to the mount's combat object; <code>ActionsOnAttackHit_Target</code> 0xF10D50 runs; 0x2E4E80 copies the info into the
-last-damage record. Then:</p>
+<p><strong><code>ApplyDamageInternal</code></strong> (163 instructions, read whole) works as follows. A dead target returns at once. A mounted
+target can pass the damage to the mount's combat object. <code>ActionsOnAttackHit_Target</code> 0xF10D50 runs, and 0x2E4E80
+copies the info into the last-damage record. Then:</p>
 <ul>
 <li>A damage of at most 1e-4 in size (<code>[0x202E860]</code>) takes the zero branch: the owner's vf83 and 0x2E54BC, and nothing
   else (no state interrupt, no HUD push, no player branch).</li>
 <li>For the player only, 0x778E88(<code>[GM+0x6D18]</code>, health + damage, damage, source) records it in a 10-slot ring of recent
   damage at <code>+0x938</code>.</li>
 <li>Health = min(health - damage, maximum). At 0 or below the kill 0x4A022C runs, health is set to 0 and <code>+0x4A0</code> to 1,
-  all in this one call on the main thread, with no can-die gate, so no later frame can undo it; otherwise 0x2E54BC.</li>
-<li>The ratio is stored, the listener called, then 0x1E51B0(combat, health, source, attacker), then the AI (0x441228) or
-  player (0xF364A0) reaction.</li>
+  all in this one call on the main thread, with no can-die gate, so no later frame can undo it. Otherwise 0x2E54BC
+  runs.</li>
+<li>The ratio is stored and the listener called; then 0x1E51B0(combat, health, source, attacker) runs, then the AI
+  (0x441228) or player (0xF364A0) reaction.</li>
 <li>A second kill test follows for a living character whose byte <code>char+0x23BD</code> is set (0x11548B0).</li>
 </ul>
 <p><strong>The health bar is pushed; nothing polls health.</strong> 0x1E51B0 updates the stat variables through 0x1E52D4 (the records
-at <code>[[GM+0x6CD8]+0x8360]</code> health and <code>+0x8368</code> the ratio), the health-triggered states 0x1E5F14
-(<code>Combat/States/Auto.HealthRemainRange</code>, <code>Definitions.InterruptOnHit</code>), then 0x1E6018(char, health). On the player
-(<code>char+0x2700</code>) that keeps the last health and a running delta at <code>[GM+0x6D18]+0xBE4</code> / <code>+0xBEC</code> and calls
-0x188F098(health, maximum): <code>hud = [[UIManager]+0x30]+0x48</code>, 0x4AACDC(hud, hud+0x318, health, maximum), and the
-<code>LowHealth</code> byte <code>hud+0x1370</code> follows ratio &lt;= 0.25 (<code>[0x202E9BC]</code>); the element's target value is at <code>+0x1F4</code> and its
-maximum at <code>+0x200</code>, and the change animates after <code>Interface/ElementSetup.HUDResourceAnimationDelay</code> (150 ms). It checks
-<code>[UIManager+0x30]</code> but not the object under it. NPCs get a health nav marker instead. A write of the health value
+at <code>[[GM+0x6CD8]+0x8360]</code> health and <code>+0x8368</code> the ratio) and the health-triggered states 0x1E5F14
+(<code>Combat/States/Auto.HealthRemainRange</code>, <code>Definitions.InterruptOnHit</code>), then calls 0x1E6018(char, health). On the
+player (<code>char+0x2700</code>), that function keeps the last health and a running delta at <code>[GM+0x6D18]+0xBE4</code> / <code>+0xBEC</code> and
+calls 0x188F098(health, maximum). That call takes <code>hud = [[UIManager]+0x30]+0x48</code> and runs 0x4AACDC(hud, hud+0x318,
+health, maximum), and the <code>LowHealth</code> byte <code>hud+0x1370</code> follows ratio &lt;= 0.25 (<code>[0x202E9BC]</code>). The element's target
+value is at <code>+0x1F4</code> and its maximum at <code>+0x200</code>, and the change animates after
+<code>Interface/ElementSetup.HUDResourceAnimationDelay</code> (150 ms). The call checks <code>[UIManager+0x30]</code> but not the object
+under it. NPCs get a health nav marker instead. A write of the health value
 alone therefore leaves the bar where it was: read live once, health 722 of 722 stood beside a ratio of 0.5523 and a bar
 at 398.8 of 722.</p>
 <p><strong>The engine's setters.</strong> <code>AddHealth</code> 0x37FEE0(combat, delta) refuses a dead target, clamps health + delta to [0,
-maximum], stores the ratio, calls the listener and pushes (0x1E51B0(combat, health, 0, 0)); its callers include
+maximum], stores the ratio, calls the listener and pushes (0x1E51B0(combat, health, 0, 0)). Its callers include
 <code>CCharacter::Heal</code> 0x19B6584, the Health cheat 0x65ADCC (delta = maximum), <code>SetResource</code> 0x19D9C7C and <code>AddResource</code>
 0x19D24F8. The maximum refresh 0x37EFCC(combat) stores a new maximum when the stat is dirty or differs from
 <code>[[combat+0x5F8]+0x50]</code>, clamps health down to it and pushes, so a raw write of the maximum is undone wherever it runs.
 Regeneration 0x44D1CC runs at most every 100 ms, not while dead or while the current state's <code>AllowHealthRegen</code> is
 false, and reads the stored ratio.</p>
-<p><strong>The damage evaluator</strong> 0x3643E8 (794 instructions) applies a floor, <code>TargetMinHealth</code>, the highest of: the
-formula's <code>TargetMinHealthFinal</code> plus 0x6C74D8 (an auto state's <code>ClampHealth</code>); <code>Player.MinHealth</code>, the float at
-0x2A418D8, for the player only; <code>PlayerFollower.MinHealth</code> (0x2A418DC) for followers, else 0x2A418E0 for other NPCs; the
-defence record's <code>_StructuresCombatStatValue.MinHealth</code>; and the character's own floor <code>char+0x2500</code> (set by
-<code>CCharacter::SetMinHealthPct</code> 0x19B7294 as pct x maximum). The three globals sit in writable data, have one reader each
-and no writer, and read 0.0. Then, in health points: a floor above the current health makes the damage 0; a hit that
-would cross it is cut to health - floor (0x364F49). With <code>dl</code> = 1 the evaluator returns the target's whole health as
-damage (0x3644BD); 0x2E3B6C, 0x6A4194 and 0x115401C pass 0; 0x6A4194 with <code>r8b</code> = 1 is a lethal-hit prediction
+<p><strong>The damage evaluator</strong> 0x3643E8 (794 instructions) applies a floor, <code>TargetMinHealth</code>, which is the highest of:</p>
+<ul>
+<li>the formula's <code>TargetMinHealthFinal</code> plus 0x6C74D8 (an auto state's <code>ClampHealth</code>);</li>
+<li><code>Player.MinHealth</code>, the float at 0x2A418D8, for the player only;</li>
+<li><code>PlayerFollower.MinHealth</code> (0x2A418DC) for followers, otherwise 0x2A418E0 for other NPCs;</li>
+<li>the defense record's <code>_StructuresCombatStatValue.MinHealth</code>;</li>
+<li>the character's own floor <code>char+0x2500</code> (set by <code>CCharacter::SetMinHealthPct</code> 0x19B7294 as pct x maximum).</li>
+</ul>
+<p>The three globals sit in writable data, have one reader each and no writer, and read 0.0. The floor then works in
+health points: a floor above the current health makes the damage 0, and a hit that would cross it is cut to
+health - floor (0x364F49). With <code>dl</code> = 1 the evaluator returns the target's whole health as damage (0x3644BD);
+0x2E3B6C, 0x6A4194 and 0x115401C pass 0. 0x6A4194 with <code>r8b</code> = 1 is a lethal-hit prediction
 (health - damage &lt;= 0), which the floor also answers. After the floor the evaluator applies the bonus-damage (critical)
-scalar <code>FormulaBonusDamageScalarOverride</code>, the victim's current defence record (<code>[ctx+0x58]</code>,
+scalar <code>FormulaBonusDamageScalarOverride</code>, the victim's current defense record (<code>[ctx+0x58]</code>,
 <code>_StructuresCombatStatValue.DamageAmount</code> -&gt; <code>_StructuresCombatModifier</code> multiply / add) and two global multipliers.
 <code>PlayerCanTakeDamageFromAllies</code> governs the player as the victim of his allies.</p>
-<p>Developer bytes in the same path, written by no shipped code: <code>[0x2674820]</code> = 1 (0 makes the player take 0),
+<p>The same path reads developer bytes that no shipped code writes: <code>[0x2674820]</code> = 1 (0 makes the player take 0),
 <code>[0x2A34D67]</code> (the player's hits forced to 1,000,000, and also any attacker-less hit on a victim whose <code>+0x2700</code> is 0)
-and <code>[0x2A34D68]</code> (non-player attackers do 0, the hit continues).</p>
+and <code>[0x2A34D68]</code> (non-player attackers do 0, and the hit continues).</p>
 <p><strong>The hit dispatcher</strong> 0x2EE394 (16 call sites in 15 functions, 638 instructions) handles a hit before any damage:</p>
 <ul>
 <li>The invulnerability test (<code>[[GM+0x6CA8]+0x30]</code>, 0x115441C: the target or its rider is the player) sits at the top and
   leaves with 0, so the whole hit is discarded: no attack data, <code>CanTakeDamage</code>, evaluator, hit state (0x2EFD44,
   0x2E3AAC), hit counter (0x2DC668), <code>ApplyBuffListOnHit</code>, hit effect (0xEAEDD0), damage over time or threat.</li>
-<li><strong>The friendly-fire gate</strong> at 0x2EE58B: 0x2EF0E4(attacker side, target <code>char+0x23E0</code>) false drops the hit whole. It
-  is false only when 0x18BC88 returns 1. The attacker side is the attack's <code>_StructuresCombatAttackData.AlignmentOverride</code>
-  (<code>...Branded</code> when 0x1156B94 says the attacker is branded) when set, else a copy of the attacker's own side.</li>
+<li><strong>The friendly-fire gate</strong> sits at 0x2EE58B: when 0x2EF0E4(attacker side, target <code>char+0x23E0</code>) returns false, the
+  hit is dropped whole. It is false only when 0x18BC88 returns 1. The attacker side is the attack's
+  <code>_StructuresCombatAttackData.AlignmentOverride</code> (<code>...Branded</code> when 0x1156B94 says the attacker is branded) when set,
+  otherwise a copy of the attacker's own side.</li>
 <li>After the evaluator, 0x2EE6F3 overwrites the damage with 1,000,000 (<code>[0x202E470]</code>) when its eighth argument is set or
   <code>[0x2A34D67]</code> is on with a player attacker. Of the 16 sites, 7 pass a literal 0, 8 a cleared register and 1 forwards;
   the one that can pass 1 is the melee hit test 0x2C658C (<code>ApplyDamageRange</code>, "Hit - Distance ... Angle"), with
   <code>r10b</code> = 1 when the attacker's <code>+0x691</code> is set and its <code>+0xA8</code> is the target (0x2C6A53). 0x19D9C24 (one caller,
   0x2C3D68) sets <code>+0x691</code> only while <code>+0xA8</code> and the current attack match its arguments, and <code>StopAttack</code> 0x2EA790 clears
-  it: a transient per-attack state of synchronised kills.</li>
+  it. It is a transient per-attack state of synchronized kills.</li>
 <li>The hit effect 0xEAEDD0 -&gt; 0x1CDE00 keeps the damage in the hit event (<code>+0x38</code>; <code>+0x00</code> position, <code>+0x0C</code> normal) and
-  tests only its sign: above 0 fires <code>[[GM+0x6CD8]+0x8320 / +0x8328]</code>, below 0 <code>+0x8330 / +0x8338</code>, and 0 fires
-  nothing.</li>
+  tests only its sign: a damage above 0 fires <code>[[GM+0x6CD8]+0x8320 / +0x8328]</code>, one below 0 fires
+  <code>+0x8330 / +0x8338</code>, and 0 fires nothing.</li>
 </ul>
-<p><strong>Sides at the gate.</strong> A character's effective side is the 0x58-byte stack at <code>char+0x23E0</code> (see AI, "Sides"): <code>+0x30</code>
-its <code>Character/Alignments</code> record (0 = none, and the gate lets the hit through) and from <code>+0x38</code> seven u32 slot ids,
-record indices in <code>Character/Alignments</code>; an id of N or more is skipped, not a terminator (0x18BCAD; Talion reads
-0xFFFFFFFF six times, then 7). 0x18BC88(table, row, column) returns the first non-zero cell of the relation matrix over
-the two sides' id pairs (the row's ids outer), 2 when all are 0, and 0 when either side has no record: <strong>1 friendly, 2
-neutral, 3 hostile</strong>. The matrix ships 1,802 zero cells, 278 friendly, 201 neutral and 423 hostile, and it is not
-symmetric. Live, 48 of 48 followers read Talion as 2 and Talion reads them as 1, and 7 of 7 enemies are 3 both ways:
-followers' hits never land on Talion, and Talion's land on followers. The sides that call Talion a friend: as followers
-<code>PlayerFollower</code>, <code>PlayerFollower_Beast</code>, <code>BuddyFollower</code>, <code>BuddyFollower_Beast</code>, <code>WraithInfight</code>, <code>Branded</code>,
-<code>WraithInfight_Beast</code> (Talion -&gt; them 2), and <code>Aligned_AllFriendly</code>, <code>GP_PlayerBuddyAI</code>, <code>Despawn_BuddyDismiss</code> (1).
-The table object has 33 code readers, 15 of them through 0x18BC88.</p>
-<p><strong>The attacker-less hit</strong> 0xEADE70(victim, ...) has no side test: <code>CanTakeDamage</code> (0xEAE22F), the evaluator, the force
-at 0xEAE431 (victim <code>+0x2700</code> = 0), apply 0x42B290 and the kill 0x4A022C. Six callers: the damage-over-time tick 0x2E7BA4
+<p><strong>Sides at the gate.</strong> A character's effective side is the 0x58-byte stack at <code>char+0x23E0</code> (see AI, "Sides"). It
+holds its <code>Character/Alignments</code> record at <code>+0x30</code> (0 = none, and the gate lets the hit through) and from <code>+0x38</code> seven
+u32 slot ids, which are record indices in <code>Character/Alignments</code>. An id of N or more is skipped, not a terminator
+(0x18BCAD; Talion reads 0xFFFFFFFF six times, then 7). 0x18BC88(table, row, column) returns the first non-zero cell of
+the relation matrix over the two sides' id pairs (the row's ids outer), 2 when all are 0, and 0 when either side has no
+record. The values are <strong>1 friendly, 2 neutral, 3 hostile</strong>. The matrix ships 1,802 zero cells, 278 friendly, 201
+neutral and 423 hostile, and it is not symmetric. In a live game, 48 of 48 followers read Talion as 2 while Talion
+reads them as 1, and 7 of 7 enemies are 3 both ways. Followers' hits therefore never land on Talion, while Talion's
+land on followers. The sides that call Talion a friend are, as followers, <code>PlayerFollower</code>, <code>PlayerFollower_Beast</code>,
+<code>BuddyFollower</code>, <code>BuddyFollower_Beast</code>, <code>WraithInfight</code>, <code>Branded</code> and <code>WraithInfight_Beast</code> (Talion reads them as
+2), and also <code>Aligned_AllFriendly</code>, <code>GP_PlayerBuddyAI</code> and <code>Despawn_BuddyDismiss</code> (1). The table object has 33 code
+readers, 15 of them through 0x18BC88.</p>
+<p><strong>The attacker-less hit</strong> 0xEADE70(victim, ...) has no side test. It runs <code>CanTakeDamage</code> (0xEAE22F), the evaluator,
+the force at 0xEAE431 (victim <code>+0x2700</code> = 0), the apply 0x42B290 and the kill 0x4A022C. It has six callers: the
+damage-over-time tick 0x2E7BA4
 (whose source <code>[dot+0x48]</code> is null or the victim), the area tick 0x2E6BFC, the melee routine 0x2C642C (when the
 attacker's combat object is not resolved by 0x1A6CCE0), the projectile handler 0xFC15A0, 0xF43270 and 0x1BF8B30.
 <code>CCharacter::Die</code> calls <code>ApplyDamageInternal</code> directly with 100,000, past every floor.</p>
-<p><strong>Damage formulas.</strong> <code>Combat/Stat/Formula/Damage</code> (353 records; 101 are the player's) is a node list; each node
+<p><strong>Damage formulas.</strong> <code>Combat/Stat/Formula/Damage</code> (353 records; 101 are the player's) is a node list. Each node
 (<code>_StructuresCombatFormulaDamageNode</code>) has an optional <code>VariablePredicate</code> / <code>DamagePredicate</code>, an <code>Operation</code>
 (<code>Combat/Stat/Formula/FloatOperation</code>) and <code>ReturnImmediateIfPassPredicates</code>, and is evaluated per hit by 0x3643E8 with
 both sides' stat sheets (<code>VariableSource</code> 0 the formula's own side, 1 the other, 0x2783D4). An operation (0x362C34)
-sums its ADD entries minus its SUB entries into A, and its MUL entries (they add up, 1.0 when there are none), divided
-by the summed DIV entries unless those are about 0, into M; <code>OperationType</code> 0 gives (value + A) x M, 1 gives value x M +
-A. The largest shipped float constant is 9999 (<code>MultiplyBy9999</code>). <strong>Nested formulas are cached per character, without an
-attacker:</strong> an entry with <code>FormulaSource</code> 1 calls 0x363DB0(the other side's sheet, formula, 0), which returns
-<code>[entry+0x14]</code> from <code>sheet+0x48</code> (0x40-byte entries by record index, count <code>sheet+0x50</code>) and recomputes through
-0x362688 only when the entry's dirty bytes (<code>+0x08</code>, <code>+0x09</code>) are set; a missing entry gives 0.0. So a record edit
-reads back and changes nothing until its entry is recomputed. Of the player's 101 formulas, 2 clamp their output, 88
+sums its ADD entries minus its SUB entries into A. It sums its MUL entries (they add up, 1.0 when there are none),
+divided by the summed DIV entries unless those are about 0, into M. <code>OperationType</code> 0 gives (value + A) x M, and 1
+gives value x M + A. The largest shipped float constant is 9999 (<code>MultiplyBy9999</code>). <strong>Nested formulas are cached per
+character, without an attacker.</strong> An entry with <code>FormulaSource</code> 1 calls 0x363DB0(the other side's sheet, formula, 0),
+which returns <code>[entry+0x14]</code> from <code>sheet+0x48</code> (0x40-byte entries by record index, count <code>sheet+0x50</code>) and recomputes
+through 0x362688 only when the entry's dirty bytes (<code>+0x08</code>, <code>+0x09</code>) are set. A missing entry gives 0.0. A record
+edit therefore reads back but changes nothing until its entry is recomputed. Of the player's 101 formulas, 2 clamp their output, 88
 reach five shared defender sub-formulas (<code>Equip_BonusDef_Beasts</code> / <code>Undead</code> / <code>Uruks_DefScalar</code>,
 <code>Gem_GreenRing_DefScalar</code>, <code>Prestige_MountDefScalar</code>), the most shared per-hit victim predicates reach 32
 (<code>IsTarget_Monster</code>, <code>IsCursedTarget</code>, <code>IsEnraged_Target</code>, <code>IsPoisoned_Target</code>), and the most shared operations are
 <code>Oper_DmgAll_ZERO</code> (68) and <code>Oper_DmgAll_InstaKill</code> (24). Characters carry a bool stat <code>IsPlayerFollower</code>.</p>
 <h2 id="weapon-elements-procs-and-slow-motion">Weapon elements, procs and slow motion</h2>
 <p><strong>A captain's weapon element lives on the attack; the item only unlocks it.</strong> The trait <code>Curse_Weapon</code> gives the
-items <code>CursedWeapon</code>, <code>Item_HasAnElementalWeaponFromTrait</code> and <code>Item_HasACurseTrait</code>; the hit is the category
+items <code>CursedWeapon</code>, <code>Item_HasAnElementalWeaponFromTrait</code> and <code>Item_HasACurseTrait</code>. The hit is the category
 <code>ApplyStatusEffect_Curse_WeaponKindRequired</code> (<code>PredicateHasItem CursedWeapon</code>, <code>ApplyBuffListOnHit
 Curse_NoBonusKind_Weapon</code>), which the attacks themselves list. Of the 16,976 attacks, 1,234 carry the curse
-category, 1,328 fire, 1,370 poison and 1,225 all three; the freeze categories sit only on the player's attacks
+category, 1,328 fire, 1,370 poison and 1,225 all three. The freeze categories sit only on the player's attacks
 (<code>PC_ApplyStatusEffect_Freeze_WeaponKindRequired</code> 509, <code>_Dagger</code> 170).</p>
 <p><strong>An orc weapon's glow is a lookup on the weapon, keyed by a tag on the buff.</strong> Buff apply walks
 <code>ClientFXAttachItemSlot</code> twice: <code>EquipmentFXType</code> -&gt; 0x4F4834(vc, slot, type) (0x453658) and <code>EquipmentFXSequence</code> -&gt;
@@ -946,97 +959,99 @@ player's weapons a tag draws nothing). Four tags exist: Poison 304, Cursed 301, 
 a cut element: <code>Combat/Buffs::SavageWeapon</code> has no holder, and <code>Weapon_Bloody</code> is named only by 150 pairs. The
 player's blade looks come from the charged-weapon table (<code>Combat/FX/ChargeWeaponFX</code>: <code>PC_WeaponBuff_Fire</code> / <code>_Freeze</code>
 / <code>_Poison</code> / <code>_Curse</code>, <code>PC_FireSword01</code>, <code>CurseSword</code>, <code>BL_ChargedSword</code>) and the buffs' FX contexts.</p>
-<p><strong>Frozen is an animation rate:</strong> <code>PC_Freeze_FreezingWeapon</code> is <code>StateFlags Quick_Stunned</code> for 7-10 s with
+<p><strong>Frozen is an animation rate.</strong> <code>PC_Freeze_FreezingWeapon</code> is <code>StateFlags Quick_Stunned</code> for 7-10 s with
 <code>Combat/States/AnimRateController::Frozen</code> taking the rate to 0.0 over 0.5-0.9 s. Nothing freezes the player.</p>
-<p><strong>Procs run on a captain's own buff.</strong> 225 <code>Combat/Buffs/Procs/Definitions</code> (151 with player predicates);
+<p><strong>Procs run on a captain's own buff.</strong> There are 225 <code>Combat/Buffs/Procs/Definitions</code> (151 with player predicates).
 <code>Buff_Trait_Lifesteal.Procs</code> -&gt; <code>ProcDef_AI_Lifesteal</code> (<code>MustBeDispatchSource</code> 1) heals the captain on a hit. Proc
 predicates are <code>Quest/AutoObjectives</code> of type 15 (<code>AI_HitPlayer</code> = SourceAttackHit + target type <code>Player_Character</code> +
 <code>SourceAttackCanIncrementHitCounter</code>). A proc's predicate can test the victim's stats (<code>StatPredicateTarget</code> -&gt;
-<code>Combat/Stat/Formula/VariablePredicate</code>), and procs carry <code>TargetAppliedState</code>. 27 shipped <code>*_Clear</code> buffs share a
-<code>Group</code> with the buff they clear: a group is a replace rule (0x36A35C refreshes the same buff and removes another of its
-group first).</p>
-<p><strong>A buff's flags on its holder</strong> (apply 0x452ED8, remove 0x451EF0): <code>NativePredicates</code> strings through
-0x375044(<code>[char+0x28]+0x120</code>, name, true); <code>BoolStatVar</code> through 0x1E4874(<code>[combat+0x318]</code>, variable, true), the entry
-found by 0x1E4948 in the stat table's <code>+0x90</code> {entries, u32 count, category} (0x18 bytes each, <code>{record, u8 value at
-+0x08}</code>, indexed by record index; "Bad record index" when the category differs); <code>ClientFXSequence</code> on any holder,
-<code>ClientFXSequencePlayer</code> on the player only. A buff with <code>LimitRawMoveMag</code> of 0 or more stores it through the NPC
+<code>Combat/Stat/Formula/VariablePredicate</code>), and procs carry <code>TargetAppliedState</code>. The 27 shipped <code>*_Clear</code> buffs share a
+<code>Group</code> with the buff they clear. A group is a replace rule: 0x36A35C refreshes the same buff and first removes another
+of its group.</p>
+<p><strong>A buff's flags reach its holder</strong> (apply 0x452ED8, remove 0x451EF0) by three routes: <code>NativePredicates</code> strings go
+through 0x375044(<code>[char+0x28]+0x120</code>, name, true); <code>BoolStatVar</code> goes through 0x1E4874(<code>[combat+0x318]</code>, variable,
+true), with the entry found by 0x1E4948 in the stat table's <code>+0x90</code> {entries, u32 count, category}
+(0x18 bytes each, <code>{record, u8 value at
++0x08}</code>, indexed by record index; "Bad record index" when the category differs); <code>ClientFXSequence</code> applies on any
+holder, and <code>ClientFXSequencePlayer</code> on the player only. A buff with <code>LimitRawMoveMag</code> of 0 or more stores it through the NPC
 planner <code>[char+0x2CE8]</code>, which on the player is a self-pointing container head, so on the player the store lands inside
 his own object, with no fault.</p>
 <p><strong>Slow motion.</strong> Every slow-motion wrapper tail-jumps to the request 0x5D08B8(<code>[base+0x2A86888]</code>, slot, record or 0,
-flag), and the lowest slot runs: 4 0x5BB5E0, 5 0x19CFF60, 6 scripts (<code>System::SlowMoStart</code> 0x626C98), 7 0x19CFD60, 8
-0x19CFDE0, 9 0x19CFEE0, 10 the player's weapon modes 0x7A35D8, 11 presentation elements 0x5D09E0, 12 0x4359DC, 13 the buff
-clear 0x19CFCEC, 14 an attack's <code>AISlowMo</code> 0x7BEB48, 15 0x6EEFC4, 16 0x19CFE60; so a weapon mode outranks a presentation.
-A scale is <code>(1, N)</code>, N times slower, a shared float-pool pair. A buff's <code>SlowMo</code> field only stops a slow motion (its
-accessor 0x451E14 has one caller, the remove path, which clears slot 13); a buff starts one through <code>ForcedWeaponMode</code>
-(holder <code>[char+0x560]</code>, 0x19D9B94) -&gt; the mode's <code>SlowMo</code> -&gt; a <code>SlowMo</code> record in slot 10 (<code>PC_Buff_GameChanger</code>,
-<code>DLC4_SlowMo_OnBrutalStealth</code>; 7 buffs set the field), and it ends with the buff (read on 3 of 3 such buffs, in the
-same 50 ms sample). 9 of 332 slow-motion records leave the world alone and slow only the player: <code>DLC4_GC_1_SM</code> 2x for
-10 s, <code>PlayerDeath_SM</code> 4x, <code>Predeath_Savior_Ranged_Paused_SM</code> 5x, <code>Kill_Sync_Obituary_Far_SM</code> 10x,
+flag), and the lowest slot runs. The slots are 4 0x5BB5E0, 5 0x19CFF60, 6 scripts (<code>System::SlowMoStart</code> 0x626C98),
+7 0x19CFD60, 8 0x19CFDE0, 9 0x19CFEE0, 10 the player's weapon modes 0x7A35D8, 11 presentation elements 0x5D09E0, 12
+0x4359DC, 13 the buff clear 0x19CFCEC, 14 an attack's <code>AISlowMo</code> 0x7BEB48, 15 0x6EEFC4 and 16 0x19CFE60, so a weapon
+mode outranks a presentation. A scale is <code>(1, N)</code>, meaning N times slower, stored as a shared float-pool pair. A
+buff's <code>SlowMo</code> field only stops a slow motion (its accessor 0x451E14 has one caller, the remove path, which clears
+slot 13). A buff starts one through <code>ForcedWeaponMode</code> (holder <code>[char+0x560]</code>, 0x19D9B94) -&gt; the mode's <code>SlowMo</code> -&gt; a
+<code>SlowMo</code> record in slot 10 (<code>PC_Buff_GameChanger</code>, <code>DLC4_SlowMo_OnBrutalStealth</code>; 7 buffs set the field), and the slow
+motion ends with the buff (read on 3 of 3 such buffs, in the same 50 ms sample). Of the 332 slow-motion records, 9
+leave the world alone and slow only the player: <code>DLC4_GC_1_SM</code> 2x for 10 s, <code>PlayerDeath_SM</code> 4x, <code>Predeath_Savior_Ranged_Paused_SM</code> 5x, <code>Kill_Sync_Obituary_Far_SM</code> 10x,
 <code>Predeath_LoseMinigame_SM</code> 11x, <code>Predeath_Savior_Entrance_SM</code> 30x, <code>Predeath_Savior_Ranged_SM</code> and <code>_Release_SM</code> 50x.
 Under <code>DLC4_GC_1_SM</code> the clocks read <code>world 1.000 player 0.500</code>: the player's own motion follows his clock (see
 Characters, the player and the camera, for why his movement record's speed multiplier does not).</p>
-<p><strong>The player's element buffs</strong> (<code>Flame_Weapon</code>, <code>Frost_Weapon</code>, <code>Poison_Weapon</code>, <code>Curse_Weapon</code>, melee slot):
-<code>Flame_Weapon</code> lasts 10 s and is a chance bonus <code>{C_PC_ApplyFire, +1.0}</code>; <code>Frost_Weapon</code> the same on
-<code>C_PC_ApplyFreeze</code>, with no FX type or context; <code>Curse_Weapon</code> adds the material state <code>_Curse</code>.</p>
+<p><strong>The player's element buffs</strong> are <code>Flame_Weapon</code>, <code>Frost_Weapon</code>, <code>Poison_Weapon</code> and <code>Curse_Weapon</code>, in the melee
+slot. <code>Flame_Weapon</code> lasts 10 s and is a chance bonus <code>{C_PC_ApplyFire, +1.0}</code>; <code>Frost_Weapon</code> is the same on
+<code>C_PC_ApplyFreeze</code>, with no FX type or context; and <code>Curse_Weapon</code> adds the material state <code>_Curse</code>.</p>
 <h2 id="weapon-buff-effects">Weapon-buff effects</h2>
 <p>The engine's <code>[COMBAT|WEAPONBUFFFX]</code> system draws a buff's effect on an equipped weapon, driven by buff apply and
 remove through <code>ClientFXAttachItemSlot</code> -&gt; <code>Combat/Predicates/InventorySlot.Slot</code>.</p>
 <ul>
-<li><strong>The store</strong> <code>[vc+0x4A8]</code> is a 0xA0-byte block made on first use (0x4F4964): <code>EquipmentFXType[10]</code> then
-  <code>ClientFXSequence[10]</code>, by equip slot (0 sword, 1 dagger, 2 bow); every accessor asserts slot &lt; 10. Set type
-  0x4F4834(vc, slot, type) stores it (0x115F614) and re-dresses (0x4F49C0); clear type 0x1BC9CB0 clears only while the
-  slot still holds that type. Set sequence 0x1BCE998 stores it in the block and at <code>holder+0x1A8</code> and redraws nothing;
-  0x1BC9C40 clears it. The getters (0x4F48E4, 0x4F4904) have one caller, the holder build 0x40014C. A slot's holder is
+<li><strong>The store</strong> <code>[vc+0x4A8]</code> is a 0xA0-byte block made on first use (0x4F4964), holding <code>EquipmentFXType[10]</code> and
+  then <code>ClientFXSequence[10]</code> by equip slot (0 sword, 1 dagger, 2 bow). Every accessor asserts slot &lt; 10. The type
+  setter 0x4F4834(vc, slot, type) stores it (0x115F614) and re-dresses (0x4F49C0); the type clear 0x1BC9CB0 clears only
+  while the slot still holds that type. The sequence setter 0x1BCE998 stores it in the block and at <code>holder+0x1A8</code> and
+  redraws nothing; 0x1BC9C40 clears it. The getters (0x4F48E4, 0x4F4904) have one caller, the holder build 0x40014C. A slot's holder is
   <code>[vc+0x38 + slot*0x28]</code>: each equip entry is a 0x28-byte reference at <code>vc+0x18 + slot*0x28</code> (vt_0x1DB7630; <code>+0x20</code> the
   target, the holder, 0 for an empty slot).</li>
 <li><strong>The re-dress</strong> 0x4F49C0(holder, type) caches the type at <code>holder+0x1B0</code> and returns at once when it is unchanged or
   the parts vector <code>holder+0x148</code> is empty. Otherwise each part <code>[[holder+0x148][i]]+0x20</code> gets <code>holder+0x1A8</code> when set,
-  else the weapon look's own pair for the type: 0x3FE1FC(look, type, part) takes the first <code>EquipmentFXActive</code> pair whose
-  <code>FXType</code> matches and its <code>FXSequence[part]</code> only while part &lt; count, else 0 (0x3FE04C the same on <code>EquipmentFX</code>). So a
-  one-hand orc look's pairs hold one sequence (part 0), a shipped two-weapon look holds each twice
-  (<code>Orc_1HB_MeatBoneClubX2</code>: <code>Weapon_Fire</code>, <code>Weapon_Fire</code>), and a Defender's shield (part 1) never takes his spear's
-  effect. A set sequence overrides the look's pairs, and a type change is what makes it show. The generic orc
-  sequences: base Bleeding -&gt; <code>Weapon_Bloody</code>, Cursed -&gt; <code>Weapon_Cursed</code>, Poison -&gt; <code>Weapon_Poison</code>; active Cursed -&gt;
-  <code>Weapon_Cursed_Active</code>, Flaming -&gt; <code>Weapon_Fire</code> (Flaming lives in the active list only), Poison -&gt;
-  <code>Weapon_Poison_Active</code>.</li>
+  otherwise the weapon look's own pair for the type. 0x3FE1FC(look, type, part) takes the first <code>EquipmentFXActive</code> pair
+  whose <code>FXType</code> matches and its <code>FXSequence[part]</code> only while part &lt; count, otherwise 0 (0x3FE04C does the same on
+  <code>EquipmentFX</code>). A one-hand orc look's pairs therefore hold one sequence (part 0), a shipped two-weapon look holds each
+  twice (<code>Orc_1HB_MeatBoneClubX2</code>: <code>Weapon_Fire</code>, <code>Weapon_Fire</code>), and a Defender's shield (part 1) never takes his
+  spear's effect. A set sequence overrides the look's pairs, and a type change is what makes it show. The generic orc
+  sequences in the base list are Bleeding -&gt; <code>Weapon_Bloody</code>, Cursed -&gt; <code>Weapon_Cursed</code> and Poison -&gt; <code>Weapon_Poison</code>;
+  in the active list they are Cursed -&gt; <code>Weapon_Cursed_Active</code>, Flaming -&gt; <code>Weapon_Fire</code> (Flaming lives in the active
+  list only) and Poison -&gt; <code>Weapon_Poison_Active</code>.</li>
 <li><strong>The parts own their players.</strong> 0x3FE0F0(fx, sequence) stores <code>fx+0x1C8</code> and, when the part has renderables
   (<code>fx+0x120</code>), makes a player at <code>fx+0x188</code> if there is none, binds it to <code>fx+0x58</code> and starts the sequence
-  (<code>EnterFXUseTarget</code>); sequence 0 stops it (0x771BDC). 0x3FE2A0 is the same for <code>fx+0x1D0</code> and the player <code>fx+0x190</code>,
-  then 0x3FE488 runs each active player only while <code>[fx+0x1E5]</code> is set and <code>[fx+0x1E4]</code> is not (0x7B24B4).</li>
+  (<code>EnterFXUseTarget</code>). Sequence 0 stops it (0x771BDC). 0x3FE2A0 does the same for <code>fx+0x1D0</code> and the player
+  <code>fx+0x190</code>; then 0x3FE488 runs each active player only while <code>[fx+0x1E5]</code> is set and <code>[fx+0x1E4]</code> is not (0x7B24B4).</li>
 <li><strong>The active window belongs to the animations.</strong> <code>[fx+0x1E5]</code> is written for every part of all 10 holders at once by
   0x1BCEAE8(vc, bool) -&gt; 0x1BDF444(holder, bool), whose one caller is the model-string dispatcher 0x4CDE54
   (<code>[COMBAT|MODELSTRING]</code>): the clip event <code>ENABLEWEAPONFX</code> (hash 0x630F8E71) sets it and <code>DISABLEWEAPONFX</code>
   (0x715E0EB6) clears it.</li>
 <li><strong>Re-equip order.</strong> The holder build 0x40014C re-dresses the new holder before it copies the sequence to <code>+0x1A8</code>, so
   a re-worn item shows nothing until the next type change.</li>
-<li>Of the 11 buffs with weapon effects only <code>FX_GondorWeapon_*</code> set a sequence, and they name no slot. Of 1,727
-  <code>Client/ClientFXSequence</code> records 74 are named for weapons, swords or blades; <code>PC_WeaponBuff_Fire</code> and
+<li>Of the 11 buffs with weapon effects, only <code>FX_GondorWeapon_*</code> set a sequence, and they name no slot. Of 1,727
+  <code>Client/ClientFXSequence</code> records, 74 are named for weapons, swords or blades. <code>PC_WeaponBuff_Fire</code> and
   <code>StormbringerWeaponFX</code> are played by nothing (0 holders, against 172 for <code>Weapon_Fire</code>), and their files ship in no
   container.</li>
 </ul>
 <h2 id="capture-points">Capture points</h2>
-<p>How a fort or outpost point fills, from the code and the shipped records.</p>
+<p>A fort or outpost capture point fills as follows, according to the code and the shipped records.</p>
 <ul>
-<li><strong>The tick</strong> 0x6546E8 -&gt; 0xF324F0 -&gt; 0x362304(manager, node, dt), once per node. The manager holds 256 character slots
-  (0x28 bytes: <code>+0x00</code> character, <code>+0x10</code> node, <code>+0x18</code> rate, <code>+0x1C</code> side, <code>+0x1D</code> present, <code>+0x1F</code> advancing), a node
-  list at <code>+0x2838 .. +0x2840</code>, the player's node at <code>+0x2850</code> and his rate at <code>+0x2858</code>; <code>+0x285E</code> set skips the tick.
+<li><strong>The tick</strong> runs 0x6546E8 -&gt; 0xF324F0 -&gt; 0x362304(manager, node, dt) once per node. The manager holds 256 character
+  slots (0x28 bytes: <code>+0x00</code> character, <code>+0x10</code> node, <code>+0x18</code> rate, <code>+0x1C</code> side, <code>+0x1D</code> present, <code>+0x1F</code> advancing),
+  a node list at <code>+0x2838 .. +0x2840</code>, the player's node at <code>+0x2850</code> and his rate at <code>+0x2858</code>. When <code>+0x285E</code> is set,
+  the tick is skipped.
   Rates are summed per side into two pairs, presence and advance. The player counts for presence inside the shape at
   <code>[node+0x240]</code> and for advance inside the one at <code>[node+0x270]</code>, into which <code>CaptureRadius</code> is copied (0x4A62C4).</li>
-<li><strong>The node</strong> (<code>BattleNodeCapture</code>, vt_0x1FB9E90): <code>+0x580</code> the <code>AI/BattleNodeCapture</code> record, <code>+0x590</code> the full
-  amount, <code>+0x594</code> the current amount, <code>+0x598</code> a cap (used when 0 or more), <code>+0x5AC</code> the holder (0 defence, 1 offence, 2
-  neutral), <code>+0x5AD</code> status, <code>+0x5BC</code> active. <code>SetCaptured</code> 0x7B16A8 copies <code>MaximumAmount</code> into <code>+0x594</code>, <code>ResetCapture</code>
-  0x1ACE498 copies <code>InitialAmount</code>.</li>
-<li><strong><code>CaptureRatio</code> is no speed.</strong> 0x361B6C reads it every tick (default 1.5, <code>[0x202E8F4]</code>), and 0x362068 uses it only to
-  decide who holds the point: from holder 0, presence[1] &gt; ratio x presence[0] flips it to 1; holder 1 stays while
-  presence[0] &lt;= ratio x presence[1]; from 2 the larger side takes it.</li>
-<li><strong>Speed</strong> is 0x361FC8: holder 1 moves (advance[1] - advance[0]) x dt when <code>OffenseCanAdvance</code> is set and that is
-  positive; holder 0 moves (advance[0] - advance[1]) x -1 x dt when <code>DefenseCanAdvance</code> is set; holder 2 does not move.
-  Defenders inside the radius therefore subtract from the attackers' rate. 0x76B588 adds a rise and snaps at <code>+0x590</code>
-  (returning 4, else 3); 0x361A34 applies a fall and stops at 0 (returning 0, else 1).</li>
+<li><strong>The node</strong> (<code>BattleNodeCapture</code>, vt_0x1FB9E90) holds <code>+0x580</code> the <code>AI/BattleNodeCapture</code> record, <code>+0x590</code> the
+  full amount, <code>+0x594</code> the current amount, <code>+0x598</code> a cap (used when 0 or more), <code>+0x5AC</code> the holder (0 defense,
+  1 offense, 2 neutral), <code>+0x5AD</code> the status and <code>+0x5BC</code> the active flag. <code>SetCaptured</code> 0x7B16A8 copies
+  <code>MaximumAmount</code> into <code>+0x594</code>, and <code>ResetCapture</code> 0x1ACE498 copies <code>InitialAmount</code>.</li>
+<li><strong><code>CaptureRatio</code> is not a speed.</strong> 0x361B6C reads it every tick (default 1.5, <code>[0x202E8F4]</code>), and 0x362068 uses it
+  only to decide who holds the point. From holder 0, presence[1] &gt; ratio x presence[0] flips it to 1; holder 1 stays
+  while presence[0] &lt;= ratio x presence[1]; and from 2 the larger side takes it.</li>
+<li><strong>Speed</strong> is 0x361FC8. Holder 1 moves (advance[1] - advance[0]) x dt when <code>OffenseCanAdvance</code> is set and that value
+  is positive; holder 0 moves (advance[0] - advance[1]) x -1 x dt when <code>DefenseCanAdvance</code> is set; and holder 2 does
+  not move. Defenders inside the radius therefore subtract from the attackers' rate. 0x76B588 adds a rise and snaps at
+  <code>+0x590</code> (returning 4, otherwise 3); 0x361A34 applies a fall and stops at 0 (returning 0, otherwise 1).</li>
 <li><strong>The rate</strong> 0x3625C0(combat, side) takes the tree's <code>AssaultCaptureRateOffense</code> or <code>...Defense</code> and evaluates it
-  through the cached 0x363DB0 (above). Of 281 trees, 24 use the player's pair, 41 <code>Assault_Capture_Off_Rate</code> /
-  <code>Def_Rate</code>, 1 <code>DLC3_Assault_Capture_Off_Rate_Talion</code>. <code>Assault_Player_Capture_Rate</code> is 7, times 1.3 under
-  <code>DLC4_OutpostReward_FasterCapture</code> and times 2.0 under <code>DLC4_CaptureFaster</code>, unclamped; <code>Defense_Player_Capture_Rate</code>
+  through the cached 0x363DB0 (above). Of 281 trees, 24 use the player's pair, 41 use <code>Assault_Capture_Off_Rate</code> /
+  <code>Def_Rate</code>, and 1 uses <code>DLC3_Assault_Capture_Off_Rate_Talion</code>. <code>Assault_Player_Capture_Rate</code> is 7, times 1.3 under
+  <code>DLC4_OutpostReward_FasterCapture</code> and times 2.0 under <code>DLC4_CaptureFaster</code>, unclamped. <code>Defense_Player_Capture_Rate</code>
   adds 9999.</li>
 </ul>
 <table>
@@ -1068,118 +1083,294 @@ remove through <code>ClientFXAttachItemSlot</code> -&gt; <code>Combat/Predicates
 <p>All three have <code>InitialAmount</code> 0, <code>CaptureRatio</code> 1.0, <code>OffenseCanAdvance</code> true and <code>DefenseCanAdvance</code> false.</p>
 <h2 id="the-fight-circle">The fight circle</h2>
 <p>The fight circle decides which NPCs attack a target, how many at once and when.</p>
-<p><strong>Data</strong> (27 categories under <code>Combat/FightCircle/*</code> and <code>_StructuresCombatCircle*</code>):</p>
+<p><strong>Data.</strong> The fight circle's data spans 27 categories under <code>Combat/FightCircle/*</code> and <code>_StructuresCombatCircle*</code>:</p>
 <ul>
-<li><code>Circle</code> (15, one per target kind: Player, Player_Eltariel, AI_Talion, Troll, Warg, FellBeast,
-  Balrog, Cage, Barrel ...): ArcAngle, BucketRays (8 for the player), PreDeathAttackerLock (6 s for the
-  player), <code>DefaultPlaybook[]</code>.</li>
+<li><code>Circle</code> (15, one per target kind, among them Player, Player_Eltariel, AI_Talion, Troll, Warg, FellBeast,
+  Balrog, Cage and Barrel) holds ArcAngle, BucketRays (8 for the player), PreDeathAttackerLock (6 s for the
+  player) and <code>DefaultPlaybook[]</code>.</li>
 <li><code>PlayBook</code> (41) -&gt; <code>PlaySets[]</code> -&gt; <code>Plays[]</code>. A <code>Play</code> has a <code>SelectionWeight</code> (a weighted pick; 0 =
   never), difficulty weights, a predicate, delays on hit / miss / counter / abort, global cooldowns and
   <code>Stages[]</code> -&gt; <code>StageNodes</code> (a small state machine with next-stage links) -&gt; <code>Stage</code>.</li>
-<li><code>Stage</code> (201): <strong>NumAttackersMin / NumAttackersMax</strong> (1-16), AttackType, MultiAttackerDelay, Role
-  (distance, camera, off-screen and last-attacker weights, stat predicates). (min, max) pairs: (1,1)
-  160, (1,5) 6, (1,3) 5, (8,8) 5, (5,5) 5, (2,2) 3, (1,4) 3, (4,4) 3, (16,16) 3, (1,16) 2, (1,6) 1,
+<li><code>Stage</code> (201) holds <strong>NumAttackersMin / NumAttackersMax</strong> (1-16), AttackType, MultiAttackerDelay and Role
+  (distance, camera, off-screen and last-attacker weights, stat predicates). The (min, max) pairs are (1,1)
+  160, (1,5) 6, (1,3) 5, (8,8) 5, (5,5) 5, (2,2) 3, (1,4) 3, (4,4) 3, (16,16) 3, (1,16) 2, (1,6) 1 and
   (5,10) 1.</li>
-<li><code>Participant</code> (59, per attacker kind: RequireLOSToAttack, FarDistance, RunDistance ...), <code>Setup</code>
-  (11), <code>Rings</code> (28 radius bands), <code>CirclePolicy</code> (16).</li>
+<li>Other categories include <code>Participant</code> (59, per attacker kind, with fields such as RequireLOSToAttack,
+  FarDistance and RunDistance), <code>Setup</code> (11), <code>Rings</code> (28 radius bands) and <code>CirclePolicy</code> (16).</li>
 </ul>
-<p><strong>Against the player</strong> (<code>VS_Player_Default</code>, 42 plays): melee is <code>PC_BaseMelee</code> (weight 0.1) -&gt; stage
-<code>PC_Melee_Single</code> with one attacker; <code>PC_DoubleMelee</code> (two attackers) has weight 0.0, so two-orc
-melee plays never start; <code>PC_BaseMeleeAndRanged</code> and <code>PC_BaseRange</code> add <code>PC_Ranged_Single</code> (1-3
+<p><strong>Against the player</strong> (<code>VS_Player_Default</code>, 42 plays), melee is <code>PC_BaseMelee</code> (weight 0.1), whose stage
+<code>PC_Melee_Single</code> has one attacker. <code>PC_DoubleMelee</code> (two attackers) has weight 0.0, so two-orc
+melee plays never start. <code>PC_BaseMeleeAndRanged</code> and <code>PC_BaseRange</code> add <code>PC_Ranged_Single</code> (1-3
 archers). The mass stages belong to the Nazgul (5 melee with a 1.2 s stagger, 5 or 4 ranged), the
 no-path case (<code>PC_Ranged_Multi</code> 2-6, <code>PC_Melee_NoPath</code> 5-10), goblins (6, 1-16) and the fellbeast
-(5). Pre-death: <code>PC_BasePredeath</code>, weight 100,000, one attacker.</p>
+(5). The pre-death play is <code>PC_BasePredeath</code>, with weight 100,000 and one attacker.</p>
 <p><strong>Runtime.</strong> The fight-circle manager is the AI world's <code>+0x28</code> (<code>MainScene+0x778</code>); its <code>+0x48</code> is
-an intrusive list of circles (the list node is the circle object, about 0x200 bytes). The tick: the
+an intrusive list of circles (the list node is the circle object, about 0x200 bytes). The tick runs the
 scene tick -&gt; AI world tick 0x1F7304 -&gt; 0x6DE538(manager) -&gt; 0x377528 (walk the circles) -&gt;
 0x3775A4(circle, now) -&gt; 0x377744 (only while the byte 0x267358C is set) -&gt; 0x377830 -&gt; 0x3778D4 /
-0x4259A0 -&gt; 0x425B60 -&gt; 0x425C3C, which reads the stage's NumAttackersMin and Max on every stage start,
-then <code>count = min + rand(max - min)</code> (0x426840), clamped to the role's candidates (0x11D89C), and
-assigns attackers one by one with the stage's delay. Statics: 0x2673584 = 500 ms, 0x2673588 = 100 ms
-(the play re-evaluation interval). A circle: <code>+0x38</code> the target's combat object, <code>+0x1A0</code> the current
-attacker's, <code>+0x1E4</code> / <code>+0x1E8</code> world-clock timestamps (the 100 ms and 500 ms checks), <code>+0x1F4</code> the
+0x4259A0 -&gt; 0x425B60 -&gt; 0x425C3C. That function reads the stage's NumAttackersMin and Max on every stage start,
+computes <code>count = min + rand(max - min)</code> (0x426840), clamps it to the role's candidates (0x11D89C) and
+assigns attackers one by one with the stage's delay. The statics are 0x2673584 = 500 ms and 0x2673588 = 100 ms
+(the play re-evaluation interval). A circle holds <code>+0x38</code> the target's combat object, <code>+0x1A0</code> the current
+attacker's, <code>+0x1E4</code> / <code>+0x1E8</code> world-clock timestamps (the 100 ms and 500 ms checks) and <code>+0x1F4</code> the
 number of participants. An NPC joins when its target changes (0x37CA3C "Target just changed." -&gt;
 0x37CAA4 -&gt; 0x2C1004 -&gt; 0x2C0FCC -&gt; 0x2C0144 -&gt; 0x2C0280, the circle's playbook accessor 0x2C0C6C)
-and from planner steps; the planner's <code>CircleTarget</code> / <code>CircleAlly</code> steps are the NPCs waiting their
+and from planner steps. The planner's <code>CircleTarget</code> / <code>CircleAlly</code> steps are the NPCs waiting their
 turn (see AI).</p>
 <h2 id="combat-actions">Combat actions</h2>
-<p><code>Combat/Actions/*</code> holds 60 action types with 938 records (InventoryItemAdd 245, AudioKey 187,
+<p><code>Combat/Actions/*</code> holds 60 action types with 938 records; the largest are InventoryItemAdd 245, AudioKey 187,
 InventoryItemRemove 145, NPCSummon 50, BuffRemove 34, CreateTrapAtSource 33, CombatMeterAdjustment
-30, FactionEventAdd 30, ResourceGain 26, AOERemove 18 ...). 0x1A6E090 registers one handler per type
+30, FactionEventAdd 30, ResourceGain 26 and AOERemove 18. 0x1A6E090 registers one handler per type
 through 0xF17060 as <code>{category, handler}</code> pairs; most handlers lie in 0xF12810 - 0xF16F60.</p>
-<p>StartCooldown 0xF13920, CreateTrapAtSource 0x1A6ED34, CreateTrapAtTarget 0x1A6EE6C,
-CombatMeterAdjustment 0x1A6EFB0, CombatMeterClearSource 0xF15E00, PauseStateTimer 0x1A6F02C, SetBrand
-0x1A6F080, SetPlayerFollower 0x1A6F0B8, SeverFactionMember 0x1A6F1F8, StartRangedDrawTimer 0x1A6F25C,
-StartConeSequence 0xF169B0, SetVisible 0x1A6F1A4, TeleportToRangedTargetLocation 0x1A6F264,
-ConsumeDamageCounterCharge 0xF13820, ConsumeHitCounterCharge 0xF13870, NPCSummon 0xF15EE0, NPCDismiss
-0xF15EC0, StopAISlowMo 0xF16DD0, ResetStruggleCount 0xF16840, ClearAllDOTBuffs 0xF137B0,
-DifficultyIncrementKillCount 0xF13A80, ClearGruntTrait 0xF137C0, InventoryItemAdd 0xF14220,
-InventoryItemRemove 0xF15C60, FactionEventAdd 0xF13BF0, FactionAmbushTrigger 0xF13BB0,
-ConditionalResourceGain 0xF137E0, AOERemove 0xF128C0, BehaviorStateAddTemporary 0xF13280,
-CreateNavMarkerAttack 0xF13A10, ResourceGain 0xF16930, AudioKey 0xF12960, BuffRemove 0xF13340,
-MeleeFX 0xF15DC0, DespawnNPC 0xF13A60, DespawnNPCOffscreen 0xF13A70, CancelAttackMount 0xF13750,
-CancelAttackRider 0xF13760, UIProgressMeterStart 0xF16F00, UIProgressMeterStop 0xF16F30,
-SheatheWeapon 0xF16980, QuestStartAmbient 0xF167C0, StateFlagRemove 0xF169E0, StateTagVolumeAttach
-0xF16A00, StateTagVolumeClear 0xF16DA0, InventoryItemSlotVisible 0xF15CF0, AOECreate 0xF12810,
-AOEPickerCreate 0xF12870, ProfileStatIncrement 0xF16660, ModelString 0xF15E60, ChainCreate 0xF13770,
-ChainReturn 0xF13790, RemoveAttachedProjectiles 0xF167D0, AmmoResourceTypeActivate 0xF12930,
-CooldownReset 0xF138C0, WeaponAnimStart 0xF16F60, BuddyMarkTarget 0xF132F0, BuddyClearTarget
-0xF132D0, InventoryItemDropLoot 0xF14FA0, InventoryItemConvertToResource 0xF14E20.</p>
+<p>The handlers by type:</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Handler</th>
+<th>Type</th>
+<th>Handler</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>StartCooldown</td>
+<td>0xF13920</td>
+<td>CreateTrapAtSource</td>
+<td>0x1A6ED34</td>
+</tr>
+<tr>
+<td>CreateTrapAtTarget</td>
+<td>0x1A6EE6C</td>
+<td>CombatMeterAdjustment</td>
+<td>0x1A6EFB0</td>
+</tr>
+<tr>
+<td>CombatMeterClearSource</td>
+<td>0xF15E00</td>
+<td>PauseStateTimer</td>
+<td>0x1A6F02C</td>
+</tr>
+<tr>
+<td>SetBrand</td>
+<td>0x1A6F080</td>
+<td>SetPlayerFollower</td>
+<td>0x1A6F0B8</td>
+</tr>
+<tr>
+<td>SeverFactionMember</td>
+<td>0x1A6F1F8</td>
+<td>StartRangedDrawTimer</td>
+<td>0x1A6F25C</td>
+</tr>
+<tr>
+<td>StartConeSequence</td>
+<td>0xF169B0</td>
+<td>SetVisible</td>
+<td>0x1A6F1A4</td>
+</tr>
+<tr>
+<td>TeleportToRangedTargetLocation</td>
+<td>0x1A6F264</td>
+<td>ConsumeDamageCounterCharge</td>
+<td>0xF13820</td>
+</tr>
+<tr>
+<td>ConsumeHitCounterCharge</td>
+<td>0xF13870</td>
+<td>NPCSummon</td>
+<td>0xF15EE0</td>
+</tr>
+<tr>
+<td>NPCDismiss</td>
+<td>0xF15EC0</td>
+<td>StopAISlowMo</td>
+<td>0xF16DD0</td>
+</tr>
+<tr>
+<td>ResetStruggleCount</td>
+<td>0xF16840</td>
+<td>ClearAllDOTBuffs</td>
+<td>0xF137B0</td>
+</tr>
+<tr>
+<td>DifficultyIncrementKillCount</td>
+<td>0xF13A80</td>
+<td>ClearGruntTrait</td>
+<td>0xF137C0</td>
+</tr>
+<tr>
+<td>InventoryItemAdd</td>
+<td>0xF14220</td>
+<td>InventoryItemRemove</td>
+<td>0xF15C60</td>
+</tr>
+<tr>
+<td>FactionEventAdd</td>
+<td>0xF13BF0</td>
+<td>FactionAmbushTrigger</td>
+<td>0xF13BB0</td>
+</tr>
+<tr>
+<td>ConditionalResourceGain</td>
+<td>0xF137E0</td>
+<td>AOERemove</td>
+<td>0xF128C0</td>
+</tr>
+<tr>
+<td>BehaviorStateAddTemporary</td>
+<td>0xF13280</td>
+<td>CreateNavMarkerAttack</td>
+<td>0xF13A10</td>
+</tr>
+<tr>
+<td>ResourceGain</td>
+<td>0xF16930</td>
+<td>AudioKey</td>
+<td>0xF12960</td>
+</tr>
+<tr>
+<td>BuffRemove</td>
+<td>0xF13340</td>
+<td>MeleeFX</td>
+<td>0xF15DC0</td>
+</tr>
+<tr>
+<td>DespawnNPC</td>
+<td>0xF13A60</td>
+<td>DespawnNPCOffscreen</td>
+<td>0xF13A70</td>
+</tr>
+<tr>
+<td>CancelAttackMount</td>
+<td>0xF13750</td>
+<td>CancelAttackRider</td>
+<td>0xF13760</td>
+</tr>
+<tr>
+<td>UIProgressMeterStart</td>
+<td>0xF16F00</td>
+<td>UIProgressMeterStop</td>
+<td>0xF16F30</td>
+</tr>
+<tr>
+<td>SheatheWeapon</td>
+<td>0xF16980</td>
+<td>QuestStartAmbient</td>
+<td>0xF167C0</td>
+</tr>
+<tr>
+<td>StateFlagRemove</td>
+<td>0xF169E0</td>
+<td>StateTagVolumeAttach</td>
+<td>0xF16A00</td>
+</tr>
+<tr>
+<td>StateTagVolumeClear</td>
+<td>0xF16DA0</td>
+<td>InventoryItemSlotVisible</td>
+<td>0xF15CF0</td>
+</tr>
+<tr>
+<td>AOECreate</td>
+<td>0xF12810</td>
+<td>AOEPickerCreate</td>
+<td>0xF12870</td>
+</tr>
+<tr>
+<td>ProfileStatIncrement</td>
+<td>0xF16660</td>
+<td>ModelString</td>
+<td>0xF15E60</td>
+</tr>
+<tr>
+<td>ChainCreate</td>
+<td>0xF13770</td>
+<td>ChainReturn</td>
+<td>0xF13790</td>
+</tr>
+<tr>
+<td>RemoveAttachedProjectiles</td>
+<td>0xF167D0</td>
+<td>AmmoResourceTypeActivate</td>
+<td>0xF12930</td>
+</tr>
+<tr>
+<td>CooldownReset</td>
+<td>0xF138C0</td>
+<td>WeaponAnimStart</td>
+<td>0xF16F60</td>
+</tr>
+<tr>
+<td>BuddyMarkTarget</td>
+<td>0xF132F0</td>
+<td>BuddyClearTarget</td>
+<td>0xF132D0</td>
+</tr>
+<tr>
+<td>InventoryItemDropLoot</td>
+<td>0xF14FA0</td>
+<td>InventoryItemConvertToResource</td>
+<td>0xF14E20</td>
+</tr>
+</tbody>
+</table>
 <h2 id="combat-states">Combat states</h2>
-<p><code>Combat/States/*</code> (8 categories, 846 records):</p>
+<p><code>Combat/States/*</code> has 8 categories with 846 records:</p>
 <ul>
 <li><strong>Definitions</strong> (112 states, 30 fields) say what a state permits: InterruptOnHit,
   EnableCollisionCapsule, AICanSeeThrough, EnemyAICanTarget, CanPlayerTarget, AllowHealthRegen,
-  AllowPlayerDetection, DisableSenses, AllowFleeing, ForceFall, DisableAllTraitCatalysts,
-  ReplanOnRemove, fail and pre-death conditions, health adjustment and an attack on exit, a buff, a
+  AllowPlayerDetection, DisableSenses, AllowFleeing, ForceFall, DisableAllTraitCatalysts and
+  ReplanOnRemove. They also hold fail and pre-death conditions, health adjustment and an attack on exit, a buff, a
   command set (the player's inputs while in it), a presentation event, a struggle pool, an animation
   rate controller and the transition graph (TransitionIntoFlags, RemainInStateFlags, included and
   excluded transitions). States include KnockDown, Stunned, Blinded, OnFire, Grabbed, Vulnerable,
   Raised, Cursed, RuneFeared, SmokeScreen, WraithPinned / SpiderPinned, Bip_BleedOut, Player_Death,
   the bosses' pre-death states, ambient states (Caged, Kneeling, Sitting, Mourning) and boss phases.</li>
-<li><strong>AppliedState</strong> (364): how a state is applied (base chance, chance formula, buff chance, duration
+<li><strong>AppliedState</strong> (364) describes how a state is applied (base chance, chance formula, buff chance, duration
   and overrides, flags, a HUD prompt).</li>
-<li><strong>Flag</strong> (113), <strong>Setup</strong> (31, per character type: valid states, overrides, buff replacements).</li>
-<li><strong>Auto</strong> (36): health-triggered states - activation and remain ranges, filters, health clamps: the
-  boss phases (<code>AI_Balrog_ClampHealth_50Pct</code> / <code>_75Pct</code>, <code>AI_ArPharazon_Phase2_35PctHealth</code> /
-  <code>_65PctHealth</code>, <code>AI_FellBeast_HealthAdjust</code> ...).</li>
+<li><strong>Flag</strong> has 113 records, and <strong>Setup</strong> (31) gives per character type the valid states, overrides and buff
+  replacements.</li>
+<li><strong>Auto</strong> (36) holds the health-triggered states, with activation and remain ranges, filters and health clamps;
+  the clamps include the boss phases (for example <code>AI_Balrog_ClampHealth_50Pct</code> / <code>_75Pct</code>,
+  <code>AI_ArPharazon_Phase2_35PctHealth</code> / <code>_65PctHealth</code> and <code>AI_FellBeast_HealthAdjust</code>).</li>
 </ul>
-<p><code>CCharacter::ApplyCombatState</code> 0x19B3230 -&gt; the combat object -&gt; 0x19D2834 -&gt; 0x105704(the state
-machine <code>[combat+0x2F0]</code>, state, 0, <code>[combat+0xE0]</code>). The script binding <code>ApplyCombatState</code> 0x1B751F4
+<p>A state is applied through the chain <code>CCharacter::ApplyCombatState</code> 0x19B3230 -&gt; the combat object -&gt; 0x19D2834 -&gt;
+0x105704(the state machine <code>[combat+0x2F0]</code>, state, 0, <code>[combat+0xE0]</code>). The script binding <code>ApplyCombatState</code> 0x1B751F4
 resolves its record through the cached-category slot 0x27008D0 (<code>Combat/States/AppliedState</code>).</p>
 <h2 id="area-attacks-and-ragdolls">Area attacks and ragdolls</h2>
-<p><strong><code>Combat/AOE</code></strong> (627 records: Tick, Timer, TickDelay, MaxAOELength, StartNode (a bone), Alignment,
-UseTargetLocation, UseRayCast, RecalcStartEachTick, CanHitSource, HitOncePerSpecialAttack ...) and
-<strong><code>Combat/AOE/Tick</code></strong> (752 records, 56 fields: Radius, Angle, dynamic radius, MaxAIToHit (-1 =
-unlimited), HitAllAI, CanHitMainWorld, attack overrides ...), plus <code>Combat/AOE/Picker</code> (33),
+<p>Area attacks are data in <strong><code>Combat/AOE</code></strong> (627 records, with fields such as Tick, Timer, TickDelay, MaxAOELength,
+StartNode (a bone), Alignment, UseTargetLocation, UseRayCast, RecalcStartEachTick, CanHitSource and
+HitOncePerSpecialAttack) and <strong><code>Combat/AOE/Tick</code></strong> (752 records, 56 fields, among them Radius, Angle, dynamic radius,
+MaxAIToHit (-1 = unlimited), HitAllAI, CanHitMainWorld and attack overrides), plus <code>Combat/AOE/Picker</code> (33),
 <code>ProjectileTarget</code> (5) and <code>ProjectileSpray</code> (2). Area ticks apply damage through tick attacks whose
 compiled predicates decide who may be hit.</p>
-<p><strong>Ragdolls</strong> (14 categories): <code>Ragdoll</code> has two bodies (Orc_Base, OlogHai_Base), each a brain and 19
-joint constraints (38 <code>Ragdoll/Constraints</code> records); <code>Ragdoll/Behaviors</code> (18: strength and stiffness
-ranges and masks, sequences), <code>Sequences</code> (16), <code>TargetPoses</code> (32), <code>ConstraintTargetPose</code> (112),
-<code>BehaviorControllers</code> (13), float ranges, masks and audio tables: the Havok active-ragdoll tuning.</p>
+<p><strong>Ragdolls</strong> span 14 categories, which hold the Havok active-ragdoll tuning. <code>Ragdoll</code> has two bodies (Orc_Base,
+OlogHai_Base), each with a brain and 19 joint constraints (38 <code>Ragdoll/Constraints</code> records). The other categories
+include <code>Ragdoll/Behaviors</code> (18: strength and stiffness ranges and masks, sequences), <code>Sequences</code> (16), <code>TargetPoses</code>
+(32), <code>ConstraintTargetPose</code> (112), <code>BehaviorControllers</code> (13), float ranges, masks and audio tables.</p>
 <h2 id="the-player-s-execution-companions">The player's execution companions</h2>
-<p><code>Combat/PlayerCompanion/*</code> defines the spectral companions that execute for the player:
-<code>Setup::Player</code> -&gt; groups <code>Execution_Lvl1/2/3</code> (Quantity 20, a combat prop with its own tree, 68
-<code>CB_*</code> execution attacks, selector <code>CB_Duel_Instakill</code>), triggered while the parent attack carries
+<p><code>Combat/PlayerCompanion/*</code> defines the spectral companions that execute for the player.
+<code>Setup::Player</code> links the groups <code>Execution_Lvl1/2/3</code> (Quantity 20, a combat prop with its own tree, 68
+<code>CB_*</code> execution attacks, selector <code>CB_Duel_Instakill</code>), which trigger while the parent attack carries
 an included category, on input or at a hit-counter value. The groups are compiled when the player's
 model is set (build 0x1881264, called from 0x183C0B8, which sits under the player's model and skin
-setters); changing the records later has no effect until then.</p>
-<p>A compiled group (vt_0x1F7A188, stride 0x2B0): <code>+0x18</code> the group record, <code>+0x40</code> owner, <code>+0xA0 /
+setters). Changing the records later has no effect until then.</p>
+<p>A compiled group (vt_0x1F7A188, stride 0x2B0) holds <code>+0x18</code> the group record, <code>+0x40</code> owner, <code>+0xA0 /
 +0xA8</code> included categories, <code>+0xB8 / +0xC0</code> excluded, <code>+0xD0</code> companion type, <code>+0xD8</code> prop, <code>+0xF8</code>
 effect sequence, <code>+0x104</code> auto-trigger hit count, <code>+0x13D</code> can evaluate input, <code>+0x13E</code> swallow
 input, <code>+0x13F</code> parent must have an active attack, <code>+0x140</code> parent must reject input, <code>+0x142</code>
-auto-pick on an enemy's counter window, <code>+0x143</code> auto-trigger on the hit counter, <code>+0x120 / +0x128</code>
-required item / buff. The manager is <code>[comp+0xC68]</code>, its groups at <code>+0x58 / +0x60</code>.</p>
+auto-pick on an enemy's counter window, <code>+0x143</code> auto-trigger on the hit counter, and <code>+0x120 / +0x128</code>
+required item / buff. The manager is <code>[comp+0xC68]</code>, with its groups at <code>+0x58 / +0x60</code>.</p>
 <ul>
 <li>At every player attack start, 0x2C3D68 -&gt; 0x4E8B54 -&gt; per group 0x4E9094 latches the group when the
   attack has an included category and no excluded one.</li>
 <li>Input goes through 0x4E85D0: first a swallow pass over a separate vector (<code>mgr+0x70</code>, holding only
   <code>Counter_FromGTD</code>), then the player's own tree, then the normal pass 0x4E8B94 over the groups.
-  A group passes its gates (swallow flag clear, can evaluate input, latched, the item-slot mask, the
-  parent's input decision, the event id - small command ids such as 0x6B attack, 0x6C, 0x85 - and its
-  required buff and item), gets an instance (0x65A990: one per latch with a budget, otherwise up to
-  Quantity), then <code>EvalNodes</code> 0x795E7C picks an attack (<code>PickAttack</code>) and a target (0x76A890 with the
+  A group must pass its gates: the swallow flag clear, can evaluate input, latched, the item-slot mask, the
+  parent's input decision, the event id (small command ids such as 0x6B attack, 0x6C and 0x85), and its
+  required buff and item. It then gets an instance (0x65A990: one per latch with a budget, otherwise up to
+  Quantity), and <code>EvalNodes</code> 0x795E7C picks an attack (<code>PickAttack</code>) and a target (0x76A890 with the
   player's component), places the companion (0x18800FC) and starts it (0x1888918).</li>
 <li><code>EvalNodes</code> evaluates every attack with the player as the attacker, so attacker-side predicates
   (Focus, distance, direction) are measured from the player.</li>
@@ -1193,7 +1384,7 @@ required item / buff. The manager is <code>[comp+0xC68]</code>, its groups at <c
 <h2 id="struggles">Struggles</h2>
 <p>A struggle is the player's input minigame inside a paired animation: the Last Chance ring before death,
 button mashes, holds, stick directions and aiming. Struggles run only for the player; the other
-participant just plays its half of the paired animation.</p>
+participant only plays its half of the paired animation.</p>
 <h3 id="data">Data</h3>
 <table>
 <thead>
@@ -1285,8 +1476,8 @@ each kind as follows:</p>
 </tr>
 </tbody>
 </table>
-<p>Results are <code>ECombatStruggleResult</code> Fail 0, Success 1, Perfect 2 (0x862BDC); the widget position type is
-None 0, SourceNode 1, TargetNode 2 (0x862B00). The buttons are the actions <code>CombatStruggle01</code> to
+<p>The results are <code>ECombatStruggleResult</code> Fail 0, Success 1 and Perfect 2 (0x862BDC). The widget position type is
+None 0, SourceNode 1 or TargetNode 2 (0x862B00). The buttons are the actions <code>CombatStruggle01</code> to
 <code>CombatStruggle10</code>, enabled by the command set <code>Profile/CommandSets.CombatStruggle</code> (127 of 132 struggles).
 The Last Chance ring is drawn with three materials (<code>lastchance_red.mat</code> for the moving ring,
 <code>lastchance_blue.mat</code> for the win ring, <code>lastchance_white.mat</code> for the perfect ring) whose alpha reference
@@ -1342,24 +1533,24 @@ participant's rider, so a mounted player struggles through the mount's paired an
 order and returns the first whose predicates pass (0x18464E4: count range or count formula, buff, the
 player's items, the target's items, stat predicates, the target's health range). From the passing option
 it takes the struggle at index <code>min(count, n - 1)</code> (0x18458F4), so an option's list is a difficulty ladder
-indexed by how many struggles of that type already happened, and its last entry repeats.</p>
-<p>Each count-table entry is {type record, u32 count, u32 expiry in ms, stat-variable link}; the live table
+indexed by how many struggles of that type have already happened, and its last entry repeats.</p>
+<p>Each count-table entry is {type record, u32 count, u32 expiry in ms, stat-variable link}. The live table
 holds one entry per type, in record order. Starting a struggle adds 1 (0x17B2858 -&gt; 0xCB03A0), sets the
 expiry to now + ResetCooldown x 1000 on the engine's millisecond clock (<code>[[0x2702598]+0x8]+0x18</code>) and mirrors
 the count into the type's stat. Reading an expired count zeroes it (0xCAF140). Entering a state with a fail
-condition resets every type marked ResetCountOnDeath (0x6EF838); Success / Perfect / Fail apply
-ResetCountOnPerfect and ResetCountOnLose (0x74B130); the combat action ResetStruggleCount 0xF16840 resets one
+condition resets every type marked ResetCountOnDeath (0x6EF838). Success / Perfect / Fail apply
+ResetCountOnPerfect and ResetCountOnLose (0x74B130), and the combat action ResetStruggleCount 0xF16840 resets one
 type.</p>
 <h3 id="starting">Starting</h3>
 <ul>
-<li>From a paired animation: 0xFB268 -&gt; 0x6EF978 -&gt; 0x6EF9DC. From a combat state: the state change 0x2C14C8 -&gt;
-  0x6EF838 -&gt; 0x6EF908 -&gt; 0x6F0000, which requires the state machine's <code>+0x58</code> to equal the state being
-  entered and the state's timer to be running (0x6F03CC takes the largest remaining time over the 0x20-byte
-  timer entries at <code>[state machine+0x00]</code>, skipping paused ones). <code>+0x58</code> of the state machine is therefore
-  the current state.</li>
+<li>From a paired animation, a struggle starts through 0xFB268 -&gt; 0x6EF978 -&gt; 0x6EF9DC. From a combat state, it starts
+  through the state change 0x2C14C8 -&gt; 0x6EF838 -&gt; 0x6EF908 -&gt; 0x6F0000, which requires the state machine's <code>+0x58</code> to
+  equal the state being entered and the state's timer to be running (0x6F03CC takes the largest remaining time over
+  the 0x20-byte timer entries at <code>[state machine+0x00]</code>, skipping paused ones). <code>+0x58</code> of the state machine is
+  therefore the current state.</li>
 <li>0x6EF9DC orders source and target by <code>TargetStruggle</code>, shows the option's HUD prompt, allows Perfect
-  only if the player owns the sync's required item, then builds one object per input kind: QuickTime
-  0x18421C0 (0x170 bytes, vt_0x1F76D28), Aim 0x1842120 (0x180, vt_0x1F76C80), PressCount 0x1842198 (0x178,
+  only if the player owns the sync's required item, and then builds one object per input kind. The objects are
+  QuickTime 0x18421C0 (0x170 bytes, vt_0x1F76D28), Aim 0x1842120 (0x180, vt_0x1F76C80), PressCount 0x1842198 (0x178,
   vt_0x1F76C28), Hold 0x1842148 (0x1B8, vt_0x1F76CF0), InputDirection 0x1842170 (0x150, vt_0x1F76D60) and
   Ring 0x18421E8 (0x198, vt_0x1F76CB8), all on the base constructor 0x1842490 with seven virtual slots
   (0 destructor, 1 update, 2 finish with a result, 4 done, 5 kind-specific start).</li>
@@ -1379,37 +1570,38 @@ source's paired clip (0x1143C0), so slow motion and animation rate stretch the w
 Fail is reported as Success when the struggle's can-lose byte is 0 or the static byte 0x2671491 is 0 (it is
 1 in the executable and live, and no code writes it).</p>
 <ul>
-<li>After a paired animation: Fail plays <code>StruggleLoseSync</code>, Success <code>StruggleWinSync</code>, Perfect
-  <code>StrugglePerfectSync</code> (falling back to the win sync); the matching audio key plays (Perfect falls back to
-  Win); the next paired animation starts through 0x19D96B8; then the script event
+<li>After a paired animation, Fail plays <code>StruggleLoseSync</code>, Success <code>StruggleWinSync</code> and Perfect
+  <code>StrugglePerfectSync</code> (falling back to the win sync). The matching audio key plays (Perfect falls back to
+  Win), the next paired animation starts through 0x19D96B8, and then the script event
   <code>CCharacter.OnCombatStruggleEnd</code> (its P919 hash stored at 0x272911C by 0x42E6490) fires with won and perfect
   flags.</li>
-<li>After a combat state: Success and Perfect clear the state (0x19D2834 with no state).</li>
+<li>After a combat state, Success and Perfect clear the state (0x19D2834 with no state).</li>
 <li>The common finish 0x1847188 plays the type's OnFail / OnSuccess / OnPerfect presentation event with the
   struggle's camera type.</li>
 </ul>
-<p><strong>Button mash (PressCount).</strong> Phase byte <code>+0x16E</code>: waiting, window open at <code>BSW</code>, counting, timed out, done.
-The required button (<code>+0x168</code>) is a weighted random pick over the struggle's input list (0x18451F4). Each
-right press increments <code>+0x16D</code>; reaching <code>+0x16C</code> wins (0x1846B38); a wrong press fails when
-FailOnIncorrectInput is set; passing <code>ESW</code> fails. Both counters are single bytes (the start stores
+<p><strong>Button mash (PressCount).</strong> The phase byte <code>+0x16E</code> steps through waiting, window open at <code>BSW</code>, counting, timed
+out and done. The required button (<code>+0x168</code>) is a weighted random pick over the struggle's input list (0x18451F4).
+Each right press increments <code>+0x16D</code>, and reaching <code>+0x16C</code> wins (0x1846B38). A wrong press fails when
+FailOnIncorrectInput is set, and passing <code>ESW</code> fails. Both counters are single bytes (the start stores
 <code>NumPressesForWin</code> with <code>mov [obj+0x16C], al</code> at 0x6B11216 and the input compares bytes at 0x1846B78), so the
 value is taken modulo 256: the "impossible" goblin mash with 999999 presses needs 63.</p>
 <p><strong>Last Chance ring (Ring).</strong> The start (0x6B12660) moves the effective end of the window earlier by
 <code>Interface/Shared.LastChanceInputLagBuffer</code> (ms, <code>+0xF8</code>), evaluates the three ring scales against the
 player's stats and converts them to alpha references: perfect <code>+0x170</code> = 0.025 x (1 - 0.2 x P / 50) +
-0.0075, win <code>+0x174</code> = 0.85 + 0.2 x (1 - 0.5 x W / 100), moving ring <code>+0x178</code> = 0.05 + 0.45 x (1 - M / 1500);
-<code>+0x184</code> = 1 - Lose / 100, <code>+0x188</code> FailTimeStart, <code>+0x18C</code> failure allowed (AllowFailure and 0x2671491),
-<code>+0x138</code> CanGetPerfect. The update 0x1848304 opens the window at <code>BSW</code> and starts the struggle's slow-motion
-record; at the shortened end it enters the failing phase when failure is allowed and resolves Fail at <code>ESW</code>.
+0.0075, win <code>+0x174</code> = 0.85 + 0.2 x (1 - 0.5 x W / 100) and moving ring <code>+0x178</code> = 0.05 + 0.45 x (1 - M / 1500).
+It also stores <code>+0x184</code> = 1 - Lose / 100, <code>+0x188</code> FailTimeStart, <code>+0x18C</code> failure allowed (AllowFailure and
+0x2671491) and <code>+0x138</code> CanGetPerfect. The update 0x1848304 opens the window at <code>BSW</code> and starts the struggle's
+slow-motion record. At the shortened end it enters the failing phase when failure is allowed, and it resolves Fail at
+<code>ESW</code>.
 When failure is not allowed, 0x1847B20 instead saves the source's animation rate (<code>[combat
 object+0x260]+0xB0</code>) and sets it to 0, so the paired animation, and with it the struggle clock, holds until
 the player presses; resolving (0x18473D8) restores it, ends the slow motion and plays the cursor effect.</p>
 <h2 id="hit-categories">Hit categories</h2>
-<p>What a hit does to its target and its attacker is a <code>Combat/Category</code> record: 2,559 of them, with
+<p>What a hit does to its target and its attacker is a <code>Combat/Category</code> record. There are 2,559 of them, with
 412 <code>Combat/Category/Lists</code> that group them for the category predicates (see the predicate table
 above). By name, 1,009 are the player's (<code>PC_*</code>), 755 the AI's (<code>AI_*</code>), 98 and 87 belong to the two
 story-DLC heroes (<code>PLBar_*</code>, <code>PLBoG_*</code>), and the rest cover the Wraith, dominations, resurrections,
-environment ignitions and kill cameras. Each record has 49 fields; how many of the 2,559 set each:</p>
+environment ignitions and kill cameras. Each record has 49 fields; the table gives how many of the 2,559 set each:</p>
 <table>
 <thead>
 <tr>
@@ -1435,7 +1627,7 @@ environment ignitions and kill cameras. Each record has 49 fields; how many of t
 <tr>
 <td><code>AppliedState</code></td>
 <td>475</td>
-<td><code>Combat/States/AppliedState</code> (<code>KD_100PCT_ShortDur</code>, <code>PC_AltFire_Stun</code>, <code>PC_Ranged_Burn</code> ...)</td>
+<td><code>Combat/States/AppliedState</code> (for example <code>KD_100PCT_ShortDur</code>, <code>PC_AltFire_Stun</code> and <code>PC_Ranged_Burn</code>)</td>
 <td>0x2DE270</td>
 </tr>
 <tr>
@@ -1483,13 +1675,13 @@ environment ignitions and kill cameras. Each record has 49 fields; how many of t
 <tr>
 <td><code>MoraleModifierTarget</code></td>
 <td>68</td>
-<td><code>AI/Morale/Modifiers</code> (<code>Player_HOG</code>, <code>Player_Wraith_Flee</code> ...)</td>
+<td><code>AI/Morale/Modifiers</code> (for example <code>Player_HOG</code> and <code>Player_Wraith_Flee</code>)</td>
 <td>0x65E84C (0x2EE394)</td>
 </tr>
 <tr>
 <td><code>FireData</code></td>
 <td>58</td>
-<td><code>Fire/IgnitionTypes</code> (<code>FlameArrow</code>, <code>Explosion_Freeze</code> ...)</td>
+<td><code>Fire/IgnitionTypes</code> (for example <code>FlameArrow</code> and <code>Explosion_Freeze</code>)</td>
 <td>0x4EB26C (0x4EA0A4, the area-effect code)</td>
 </tr>
 <tr>
@@ -1513,25 +1705,25 @@ environment ignitions and kill cameras. Each record has 49 fields; how many of t
 <tr>
 <td><code>StateOverride</code></td>
 <td>27</td>
-<td><code>Combat/States/Definitions</code> (<code>WraithPinned_L</code>, <code>WraithStunned</code> ...)</td>
+<td><code>Combat/States/Definitions</code> (for example <code>WraithPinned_L</code> and <code>WraithStunned</code>)</td>
 <td>0x65387C</td>
 </tr>
 <tr>
 <td><code>PredicateHasItem</code></td>
 <td>22</td>
-<td><code>Inventory/Items</code> (<code>FlamingWeapon</code> ...)</td>
+<td><code>Inventory/Items</code> (for example <code>FlamingWeapon</code>)</td>
 <td></td>
 </tr>
 <tr>
 <td><code>RagdollReaction</code></td>
 <td>11</td>
-<td><code>Combat/RagdollReaction</code> (<code>Bip_Reaction_Death_Generic</code> ...)</td>
+<td><code>Combat/RagdollReaction</code> (for example <code>Bip_Reaction_Death_Generic</code>)</td>
 <td>0x65E990 (0x2F8460, the dead-body path)</td>
 </tr>
 <tr>
 <td><code>DamageData</code> / <code>DamageSelfData</code></td>
 <td>8 / 9</td>
-<td><code>Combat/Damage</code> (<code>KillSelf</code> ...)</td>
+<td><code>Combat/Damage</code> (for example <code>KillSelf</code>)</td>
 <td></td>
 </tr>
 <tr>
@@ -1544,32 +1736,28 @@ environment ignitions and kill cameras. Each record has 49 fields; how many of t
 </table>
 <p><code>ForceRecognitionWithThreat</code> (2,151), <code>ApplyStateOverrideAtStart</code> (2,556), <code>ClearAllCombatStateClearPrevious</code>
 (2,546), <code>ClearAllTargetCombatStateClearPrevious</code> (2,556) and <code>EnablePresentations</code> (2,553) are set almost
-everywhere. Six fields are set on no record - <code>PredicateEnergyLevel</code>, <code>NonLocalScreenShakeFX</code>,
-<code>ClearCooldownTargetOnStart</code>, <code>AddItems</code>, <code>RemoveItems</code> and <code>AddItemsOnBrand</code> - although the code reads
-at least four of them (accessors 0x2DDFAC, 0x666C58, 0x2DEC50, 0x2CAB30): supported, never used.</p>
+everywhere. Six fields are set on no record (<code>PredicateEnergyLevel</code>, <code>NonLocalScreenShakeFX</code>,
+<code>ClearCooldownTargetOnStart</code>, <code>AddItems</code>, <code>RemoveItems</code> and <code>AddItemsOnBrand</code>), although the code reads
+at least four of them (accessors 0x2DDFAC, 0x666C58, 0x2DEC50, 0x2CAB30): they are supported but never used.</p>
 <h2 id="open-questions">Open questions</h2>
 <ul>
-<li>Whether the player's buffs time out on his own clock (a 5 s buff lasted 9.6 - 9.7 s under a slow motion that halved
-  his clock).</li>
-<li>Whether <code>holder+0x1E5</code> marks a sheathed weapon: the charge player 0x44F5A8 picks <code>FXSequenceSheathed</code> when
-  0x1154918 reads it set, and it is a different object from the parts' <code>+0x1E5</code>; and which clips send
-  <code>ENABLEWEAPONFX</code> / <code>DISABLEWEAPONFX</code>.</li>
-<li>What the other direct callers of <code>ApplyDamageInternal</code> do (0x19B39E4, 0x643058, 0x2E0520, 0x15B444, 0x106D04,
-  0x42B290), how fall damage is applied, and what the regeneration bands at <code>+0x120</code> / <code>+0x180</code> are.</li>
-<li>
-<p>What sets a cached formula entry's dirty bytes (<code>+0x08</code> / <code>+0x09</code>), whether a capture node's <code>+0x590</code> always equals
-  <code>MaximumAmount</code>, and whether the engine sets the <code>IsPlayerFollower</code> stat on live followers.</p>
-</li>
-<li>
-<p>What the combat state machine's <code>+0x60</code> holds next to the current state at <code>+0x58</code>.</p>
-</li>
-<li>What the fight circle's <code>+0x188</code> / <code>+0x190</code> pointers hold.</li>
-<li>How the Last Chance press is judged: the ring's input listener (vt_0x1F76BE0 slot 1 -&gt; 0x1846974) and
-  where <code>LastChanceRingForgivenessBuffer</code> (read by 0x18434A8) enters the comparison.</li>
-<li>The update logic of the Aim, Hold, InputDirection and QuickTime struggles.</li>
-<li>Which records use the 32 pools no shipped paired animation references (the BH3 sequence, warg and troll
+<li>Do the player's buffs time out on his own clock? A 5 s buff lasted 9.6 - 9.7 s under a slow motion that halved
+  his clock.</li>
+<li>Does <code>holder+0x1E5</code> mark a sheathed weapon? The charge player 0x44F5A8 picks <code>FXSequenceSheathed</code> when
+  0x1154918 reads it set, and it is a different object from the parts' <code>+0x1E5</code>. Which clips send
+  <code>ENABLEWEAPONFX</code> / <code>DISABLEWEAPONFX</code>?</li>
+<li>What do the other direct callers of <code>ApplyDamageInternal</code> do (0x19B39E4, 0x643058, 0x2E0520, 0x15B444, 0x106D04,
+  0x42B290)? How is fall damage applied, and what are the regeneration bands at <code>+0x120</code> / <code>+0x180</code>?</li>
+<li>What sets a cached formula entry's dirty bytes (<code>+0x08</code> / <code>+0x09</code>)? Does a capture node's <code>+0x590</code> always equal
+  <code>MaximumAmount</code>, and does the engine set the <code>IsPlayerFollower</code> stat on live followers?</li>
+<li>What does the combat state machine's <code>+0x60</code> hold next to the current state at <code>+0x58</code>?</li>
+<li>What do the fight circle's <code>+0x188</code> / <code>+0x190</code> pointers hold?</li>
+<li>How is the Last Chance press judged? The open parts are the ring's input listener (vt_0x1F76BE0 slot 1 -&gt;
+  0x1846974) and where <code>LastChanceRingForgivenessBuffer</code> (read by 0x18434A8) enters the comparison.</li>
+<li>What is the update logic of the Aim, Hold, InputDirection and QuickTime struggles?</li>
+<li>Which records use the 32 pools that no shipped paired animation references (the BH3 sequence, warg and troll
   domination, the pinned-state mash and several boss pre-deaths): a later database layer, quest scripts, or
-  the combat-state path.</li>
-<li>What 0x6A3BE4 contributes on a Fail: it plays the current attack's presentation event on the player's
+  the combat-state path?</li>
+<li>What does 0x6A3BE4 contribute on a Fail? It plays the current attack's presentation event on the player's
   presentation component.</li>
 </ul><p class="muted">Addresses: Shadow of War (Steam), game version 1.21; GOG and Microsoft Store in <a href="builds.html">Game builds</a>. An unofficial fan research project, not affiliated with or endorsed by Warner Bros. Games, Monolith Productions or Middle-earth Enterprises. Middle-earth: Shadow of War belongs to its owners.</p></main></div></body></html>
