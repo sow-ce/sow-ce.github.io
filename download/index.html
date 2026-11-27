@@ -37,7 +37,7 @@ a{color:var(--accent-hi);text-decoration-thickness:1px;text-underline-offset:3px
 a:hover{color:#b8e8ff}
 h1,h2,h3{text-wrap:balance;margin:0}
 p{margin:0}
-code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril)}
+code{font-family:var(--f-mono);font-size:.92em;color:var(--mithril);overflow-wrap:anywhere}
 :focus-visible{outline:2px solid var(--accent-hi);outline-offset:3px;border-radius:4px}
 .wrap{width:100%;max-width:var(--max);margin-inline:auto;padding-left:max(clamp(16px,4vw,40px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,4vw,40px),env(safe-area-inset-right,0px))}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -183,18 +183,7 @@ section[id]{scroll-margin-top:72px}
 .sec-head h2{font:700 clamp(2rem,4vw,3rem)/1.08 var(--f-display);margin-top:12px}
 .sec-lead{color:var(--dim);margin-top:14px;margin-inline:auto;font-size:17px;max-width:40em;text-wrap:balance}
 
-/* coming next (2026-11-21): the next update's one loader, featured right under the hero; the hero's notice links here */
-.next{background:radial-gradient(ellipse 70% 60% at 50% 0%,rgba(102,191,242,.11),transparent 72%),var(--bg-deep);border-block:1px solid var(--edge);box-shadow:inset 0 1px 0 rgba(102,191,242,.22)}
-.next .sec-head h2{color:var(--mithril)}
-.next-steps{list-style:none;margin:0 auto;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(14px,2vw,22px);max-width:1060px}
-.next-steps li{background:var(--panel);border:1px solid var(--edge);border-radius:var(--r);padding:26px 24px 24px;text-align:center;min-width:0}
-.next-n{display:inline-grid;place-items:center;width:42px;height:42px;border-radius:50%;border:1px solid var(--accent-deep);background:rgba(102,191,242,.10);color:var(--accent-hi);font:700 19px/1 var(--f-display)}
-.next-steps h3{font:600 18px/1.35 var(--f-body);margin-top:14px}
-.next-steps p{color:var(--dim);font-size:15.5px;line-height:1.6;margin-top:8px;text-wrap:pretty}
-.next-points{list-style:none;margin:clamp(22px,3vw,32px) auto 0;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:10px 12px}
-.next-points li{padding:7px 14px;border:1px solid var(--accent-deep);border-radius:999px;color:var(--accent-hi);font-size:14.5px;background:rgba(15,15,20,.7)}
-.next-note{text-align:center;color:var(--dim);margin-top:clamp(20px,3vw,28px);font-size:15px;text-wrap:balance}
-@media (max-width:860px){.next-steps{grid-template-columns:minmax(0,1fr);max-width:560px}}
+/* the hero's notice as a link (2026-11-21): it links to a featured section under the hero while the page has one */
 a.notice{text-decoration:none}
 a.notice:hover{border-color:var(--accent);color:var(--text)}
 
@@ -240,7 +229,7 @@ a.notice:hover{border-color:var(--accent);color:var(--text)}
 .chip::before{content:none}
 .cl-new{--k:var(--accent)}.cl-improved{--k:var(--ok)}.cl-fixed{--k:var(--warn)}.cl-issue{--k:var(--bad)}.cl-other{--k:var(--dim)}
 .cl-sec ul{margin:10px auto 0;padding-left:22px;display:grid;gap:8px;min-width:0;width:fit-content;max-width:100%;text-align:left}
-.cl-sec li{color:var(--dim);line-height:1.55}
+.cl-sec li{color:var(--dim);line-height:1.55;overflow-wrap:anywhere}
 .cl-sec li b{color:var(--text);font-weight:600}
 .cl-sec li::marker{color:var(--k)}
 .hist{margin-top:30px;border-top:1px solid var(--edge);padding-top:20px}
@@ -389,9 +378,7 @@ html.harvest{
 .harvest .hero-ring circle[stroke="#66bff2"]{stroke:#ec8f45}
 .harvest .hero::after{background:radial-gradient(circle calc(var(--ring)*.5) at 50% 50%,rgba(17,14,12,.86) 46%,rgba(17,14,12,.4) 62%,rgba(17,14,12,0) 80%)}
 @media (max-width:720px){.harvest .hero::after{background:radial-gradient(circle calc(var(--ring)*.5) at 50% 50%,rgba(17,14,12,.84) 62%,rgba(17,14,12,.6) 84%,rgba(17,14,12,.35) 100%)}}
-.harvest .notice,.harvest .owner-hint,.harvest .next-points li{background:rgba(17,14,12,.7)}
-.harvest .next{background:radial-gradient(ellipse 70% 60% at 50% 0%,rgba(236,143,69,.11),transparent 72%),var(--bg-deep);box-shadow:inset 0 1px 0 rgba(236,143,69,.24)}
-.harvest .next-n{background:rgba(236,143,69,.10)}
+.harvest .notice,.harvest .owner-hint{background:rgba(17,14,12,.7)}
 .harvest .rail-item[aria-pressed="true"]{background:rgba(236,143,69,.12)}
 .harvest .feat-tools input:focus{box-shadow:0 0 0 3px rgba(236,143,69,.2)}
 .harvest .final{background:radial-gradient(ellipse 70% 120% at 50% 0%,rgba(236,143,69,.11),transparent 62%),var(--bg)}
@@ -508,7 +495,7 @@ html.harvest{
     <li><b>Garrison and the Market may not load or work properly.</b> Both rely on WB's servers and on parts of the game that were changed or switched off years ago. They can fail to load, show the wrong content or stop working at any time. Nothing you open, earn or buy through them is guaranteed.</li>
     <li><b>It adds to your game folder.</b> The setup puts its files in the game's <code>x64\sowframework</code> and <code>Mods</code> folders, keeps a copy of itself there for SoW-CE Tools, and SoW:CE starts the game through its own launcher. New builds replace SoW:CE's own files, once you've said yes. It doesn't change the game's own files. If an older version installed the Armory weapons, the update puts <code>hotchunk.arch06</code> and <code>x64\default.archcfg</code> back. If another mod changed them in the meantime they're left alone, and Steam's Verify integrity (or Verify / Repair in GOG Galaxy) has to restore them.</li>
     <li><b>Your saves are at risk.</b> Some things you do with the menu get written into your save, and uninstalling SoW:CE doesn't undo them. A save that holds an Armory weapon from an older version hasn't been tested without it. SoW:CE backs up your saves when the game starts, but don't rely on that alone. Keep your own copies.</li>
-    <li><b>Mods can clash.</b> Other mods and tools can conflict with SoW:CE, and nobody has tested every combination.</li>
+    <li><b>Mods can clash, and they're other people's work.</b> Other mods and tools can conflict with SoW:CE, and nobody has tested every combination. SoW:CE checks every file of a mod it installs, but it can't vouch for what a mod does, and a Mod Loader plugin is a program that runs inside the game: only switch one on if you trust where it came from.</li>
   </ol>
 
   <h2 id="updates">Remove it before you update</h2>
@@ -524,11 +511,11 @@ html.harvest{
   <p>Uninstalling takes SoW-CE Tools with it, so keep the setup file for this, or come back here for a new one. If Windows updates on its own and the game won't start or asks to be activated, do the same thing: clean remove first, get the game running by itself, then reinstall.</p>
 
   <h2 id="terms">Terms of use</h2>
-  <p class="updated">Last updated 17 November 2026</p>
+  <p class="updated">Last updated 27 November 2026</p>
   <p>By downloading or installing SoW:CE, you accept the risks above and the terms below.</p>
   <ol>
     <li><b>Use at your own risk.</b> SoW:CE is provided "as is", with no warranty of any kind. The mod author isn't responsible for any loss or damage that comes from using it, including lost saves or progress, damaged game files, problems with your PC, losing access to the game or its DLC, or action taken against your WB, Steam, GOG or Microsoft account.</li>
-    <li><b>You need your own copy of the game.</b> That means a legitimate copy of Middle-earth: Shadow of War on Steam, GOG or the Microsoft Store. Don't use SoW:CE to play a copy you don't own, get DLC you haven't paid for, or get around the game's DRM.</li>
+    <li><b>You need your own copy of the game.</b> That means a legitimate copy of Middle-earth: Shadow of War on Steam, GOG or the Microsoft Store, and for the Shadow of Mordor content, your own copy of Middle-earth: Shadow of Mordor, which it's built from on your PC. Don't use SoW:CE to play a copy you don't own, get DLC you haven't paid for, or get around the game's DRM.</li>
     <li><b>The game's own terms still apply.</b> WB's terms, and the Steam Subscriber Agreement, GOG's User Agreement or the Microsoft Store's terms, still cover the game and your accounts, and they may not allow mods. Checking them, and accepting that risk, is up to you.</li>
     <li><b>Play fair.</b> Don't use SoW:CE to cheat against other players, harass anyone or interfere with WB's services.</li>
     <li><b>Free to use, not to sell.</b> Screenshots and videos are welcome, but don't sell SoW:CE, charge for access to it, or re-upload it elsewhere without the mod author's permission.</li>
@@ -545,7 +532,7 @@ html.harvest{
   <fieldset class="gate" id="prereqs" disabled>
     <legend>Confirm your setup</legend>
     <label class="tick"><input type="checkbox" autocomplete="off"><span>I own a legitimate copy of Shadow of War.</span></label>
-    <label class="tick"><input type="checkbox" autocomplete="off"><span>It's the Steam or GOG version, game version 1.21.</span></label>
+    <label class="tick"><input type="checkbox" autocomplete="off"><span>It's the Steam, GOG or Microsoft Store copy, game version 1.21.</span></label>
     <label class="tick"><input type="checkbox" autocomplete="off"><span>All of the game's DLC is downloaded and installed.</span></label>
     <label class="tick"><input type="checkbox" autocomplete="off"><span>I'm on 64-bit Windows 10 or 11, or I know Linux and the Steam Deck are experimental.</span></label>
     <label class="tick"><input type="checkbox" autocomplete="off"><span>I've made my own backup of my saves.</span></label>
@@ -554,7 +541,7 @@ html.harvest{
   <div class="dl-box">
     <a class="btn btn-primary btn-lg is-off" id="dl" aria-disabled="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 20h16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Download mod menu</span></a>
     <p class="dl-status" id="dl-status" role="status" aria-live="polite">Confirm you've read this page first.</p>
-    <p class="dl-file">SoWCE_Setup_20261117.exe &middot; 152.7 MB<br>SHA-256 6803dead397f3a3246dace3fd7ac7ee709472170eb3ac71d9b4e67fcbb8c4edf</p>
+    <p class="dl-file">SoWCE_Setup_20261127.exe &middot; 239.0 MB<br>SHA-256 60551ff97e714e61dba70bb1af0914c15515a097cd5ad4a2afb128df47aca08b</p>
     <p class="dl-next">After the download, follow the <a href="../#install">install steps</a>.</p>
   </div>
 </main>
@@ -579,7 +566,7 @@ html.harvest{
 <script>
 (function () {
   "use strict";
-  var LINK = "https://github.com/sow-ce/sow-ce.github.io/releases/download/beta/SoWCE_Setup_20261117.exe";
+  var LINK = "https://github.com/sow-ce/sow-ce.github.io/releases/download/beta/SoWCE_Setup_20261127.exe";
   var terms = document.getElementById("ok-terms");
   var group = document.getElementById("prereqs");
   var boxes = Array.prototype.slice.call(group.querySelectorAll('input[type="checkbox"]'));
